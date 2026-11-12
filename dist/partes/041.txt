@@ -1,4 +1,15 @@
-bFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
+("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
+    end)
+
+    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill Entity", 5, function()
+        print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
+    TabFeatures:CreateDivider()
+
+    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
         print("🚀 Teleport Speed: " .. string.format("%.2f", val))
     end)
 

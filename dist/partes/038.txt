@@ -1,4 +1,19 @@
-onds = durationToSeconds(track.Duration)
+     return coverAssetOrErr
+            end
+        end
+
+        return track.Cover or ""
+    end
+
+    local function playTrack(index)
+        local track = SpotifyState.Catalog[index]
+        if not track then
+            return
+        end
+
+        SpotifyState.SelectedIndex = index
+        SpotifyState.CurrentTrack = track
+        SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
         SpotifyState.CurrentPausedPosition = 0
         SpotifyState.IsPlaying = true
 
@@ -59,7 +74,7 @@ onds = durationToSeconds(track.Duration)
         end)
 
         SpotifyState.IsPlaying = true
-        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
+        updatePlayerFromTrack(track, index, GetText("Reproduciendo", "Playing"))
         syncPlaybackUI()
     end
 
@@ -1038,13 +1053,4 @@ onds = durationToSeconds(track.Duration)
             ZIndex = 525,
         })
         local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.75,
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(barBack, 999)
-        FP.Bar = mk("Fra
+            Parent =

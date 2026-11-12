@@ -1,4 +1,13 @@
-me", {
+ FP.Full,
+            Size = UDim2.new(1, -24, 0, 4),
+            Position = UDim2.new(0, 12, 1, -12),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.75,
+            BorderSizePixel = 0,
+            ZIndex = 525,
+        })
+        corner(barBack, 999)
+        FP.Bar = mk("Frame", {
             Parent = barBack,
             Size = UDim2.new(0, 0, 1, 0),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -1147,12 +1156,4 @@ me", {
             ZIndex = 43,
         })
 
-        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
-        FavPage.rows[#FavPage.rows + 1] = row
-        Row.MouseEnter:Connect(function()
-            row.Hover = true
-            Row.BackgroundTransparency = 0.9
-            FavPage.paintRow(row)
-        end)
-        Row.MouseLeave:Connect(function()
-            row.Hover = 
+        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars

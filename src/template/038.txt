@@ -1065,6 +1065,7 @@
         })
         Row.Name = "SpotifySongCard_" .. index
         corner(Row, 12)
+        stroke(Row, Color3.fromRGB(95, 95, 100), 1, 0.78)
 
         local TapArea = mk("TextButton", {
             Parent = Row, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,

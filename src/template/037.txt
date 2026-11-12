@@ -58,7 +58,7 @@ dPosition = 0
         end)
 
         SpotifyState.IsPlaying = true
-        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
+        updatePlayerFromTrack(track, index, GetText("Reproduciendo", "Playing"))
         syncPlaybackUI()
     end
 

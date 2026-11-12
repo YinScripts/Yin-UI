@@ -712,25 +712,25 @@
         end
 
         local titleTop = coverPad + coverSize + 4
-        local sidePad = m.compact and 9 or 11
+        local sidePad = m.compact and 7 or 9
         local textW = math.max(40, cellW - sidePad * 2)
 
         if rowData.Title then
-            rowData.Title.Size = UDim2.fromOffset(textW, m.compact and 20 or 24)
+            rowData.Title.Size = UDim2.fromOffset(textW, 24)
             rowData.Title.Position = UDim2.new(0, sidePad, 0, titleTop)
             rowData.Title.TextSize = m.compact and 11 or 13
         end
 
         if rowData.Artist then
-            rowData.Artist.Size = UDim2.fromOffset(textW, 14)
-            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 20 or 24))
+            rowData.Artist.Size = UDim2.fromOffset(textW, 12)
+            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + 24)
             rowData.Artist.TextSize = m.compact and 9 or 10
         end
 
         if rowData.Duration then
-            rowData.Duration.Visible = m.cardHeight >= 120
+            rowData.Duration.Visible = m.cardHeight >= 125
             rowData.Duration.Size = UDim2.fromOffset(44, 16)
-            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 20 or 24) + 16)
+            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + 24 + 16)
             rowData.Duration.TextSize = 9
             rowData.Duration.TextXAlignment = Enum.TextXAlignment.Left
         end
@@ -762,6 +762,10 @@
         local side = 4
         local availableW = math.max(0, width - (side * 2) - (gapX * (columns - 1)))
         local cellW = math.max(90, math.floor(availableW / columns))
+        local logicalHeight = spotifyLogicalSize(SongList).Y
+        if logicalHeight > 0 then
+            SpotifyState._CatalogCardHeight = math.clamp(math.floor((logicalHeight - gapY - 8) / 2), 84, 164)
+        end
         local m = getSpotifyMetrics()
         local rowAvailW = math.max(0, width - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local rowCoverSize = math.floor(math.min(math.max(42, math.floor(rowAvailW / m.gridColumns) - 20), m.coverMax))

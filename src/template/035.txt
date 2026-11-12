@@ -772,8 +772,8 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
         local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
         local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
         -- Dos filas visibles, con límites para mantener controles legibles en móviles.
-        local cardHeight = height > 0 and math.clamp(math.floor((height - 160) / 2), 90, 164) or 140
-        local coverMax = math.max(44, cardHeight - 45)
+        local cardHeight = SpotifyState._CatalogCardHeight or (height > 0 and math.clamp(math.floor((height - 166) / 2), 84, 164) or 140)
+        local coverMax = math.max(32, cardHeight - 46)
 
         return {
             compact = compact,
@@ -1267,10 +1267,14 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
         Parent = NowPlayingCard,
         Size = UDim2.new(1, -28, 0, 48),
         Position = UDim2.new(0, 14, 0, 351),
-        BackgroundTransparency = 1,
+        BackgroundColor3 = Color3.fromRGB(14, 14, 16),
+        BackgroundTransparency = 0.48,
         BorderSizePixel = 0,
-        ZIndex = 20,
+        ZIndex = 12,
     })
+    corner(Controls, 16)
+    stroke(Controls, Color3.fromRGB(105, 105, 110), 1, 0.75)
+    spotifyGlass(Controls, 12)
 
     local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
         local btn = mk("ImageButton", {
