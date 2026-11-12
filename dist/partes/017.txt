@@ -676,17 +676,44 @@
         mk("UIListLayout", {Parent = nav.List, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Center}, nav.List)
         mk("UIPadding", {Parent = nav.List, PaddingTop = UDim.new(0, 3), PaddingBottom = UDim.new(0, 3)}, nav.List)
 
-        local function makeControl(name, text, visible)
+        local function makeControl(name, symbol, visible)
+            -- Botón circular hundido, con doble flecha según el estado de navegación.
             local button = mk("TextButton", {
                 Name = name, Parent = Body, Size = UDim2.fromOffset(34, 34),
-                Position = UDim2.new(0, 12, 1, -40), BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.12, BorderSizePixel = 0, Text = text, TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold, TextSize = 23, AutoButtonColor = false, Visible = visible, ZIndex = 22,
+                Position = UDim2.new(0, 12, 1, -40), BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.06, BorderSizePixel = 0, Text = "",
+                AutoButtonColor = false, Visible = visible, ZIndex = 22,
             })
-            button:SetAttribute("ThemeRole", "Secondary")
-            button:SetAttribute("ThemeTextRole", "Text")
-            corner(button, 9)
-            stroke(button, Theme.Stroke, 1.1, 0.28)
+            button:SetAttribute("ThemeRole", "Background")
+            corner(button, 999)
+            local border = stroke(button, Theme.Stroke, 1, 0.55)
+            border:SetAttribute("ThemeRole", "Stroke")
+            local scale = mk("UIScale", {Parent = button, Scale = 1})
+            for i = 1, 2 do
+                local arrow = mk("TextLabel", {
+                    Parent = button, Name = "Chevron" .. i,
+                    Size = UDim2.fromOffset(14, 30), Position = UDim2.fromOffset(4 + (i - 1) * 10, 1),
+                    BackgroundTransparency = 1, Text = symbol, TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold, TextSize = 22, ZIndex = 23,
+                })
+                arrow:SetAttribute("ThemeTextRole", "Text")
+            end
+            button.MouseEnter:Connect(function()
+                TweenService:Create(scale, TweenInfo.new(0.14), {Scale = 1.06}):Play()
+            end)
+            button.MouseLeave:Connect(function()
+                TweenService:Create(scale, TweenInfo.new(0.14), {Scale = 1}):Play()
+            end)
+            button.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    TweenService:Create(scale, TweenInfo.new(0.08), {Scale = 0.92}):Play()
+                end
+            end)
+            button.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+                    TweenService:Create(scale, TweenInfo.new(0.16), {Scale = 1}):Play()
+                end
+            end)
             return button
         end
 
