@@ -1,4 +1,4 @@
-ndColor3 = Color3.fromRGB(255, 255, 255),
+    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BackgroundTransparency = 0.75,
             BorderSizePixel = 0,
             ZIndex = 525,
@@ -1154,4 +1154,4 @@ ndColor3 = Color3.fromRGB(255, 255, 255),
         })
 
         local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
-        FavPage.rows[#FavPage
+        FavPage.r

@@ -1,4 +1,5 @@
-              Size = UDim2.new(1, -24, 0, 34),
+,
+                        Size = UDim2.new(1, -24, 0, 34),
                         Position = UDim2.new(0, 12, 0, 36),
                         BackgroundTransparency = 1,
                         ZIndex = 7,
@@ -972,4 +973,4 @@
             resetScrollTop(TabPage)
 
             if not isMirror then
-                Window._RegisterGlobalOp
+                Window._Regi

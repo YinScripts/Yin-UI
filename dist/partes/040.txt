@@ -1,4 +1,4 @@
-.rows + 1] = row
+ows[#FavPage.rows + 1] = row
         Row.MouseEnter:Connect(function()
             row.Hover = true
             Row.BackgroundTransparency = 0.9
@@ -1075,4 +1075,4 @@ if DEMO_ACTIVO then
         print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
     end)
 
-    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill 
+    TabFeatures:CreateFloatingButton("Eliminar Enti

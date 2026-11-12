@@ -100,7 +100,6 @@ startPos = Main.Position
 
     -- Iconos normales: descarga en segundo plano y conserva el recurso original si falla.
     local YinIcons = { cache = {}, loading = {}, waiting = {} }
-    Window._YinIcons = YinIcons
     function YinIcons.get(name, callback)
         if YinIcons.cache[name] then callback(YinIcons.cache[name]); return end
         if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
@@ -502,7 +501,7 @@ startPos = Main.Position
         if Boom and Boom.Icon then
             local isNav = Window._ApplyNavidadIcon(Boom.Icon)
             Boom.Icon.Size = isNav and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 14, 0, 14)
-            Boom.Icon.ImageColor3 = Color3.new(1, 1, 1)
+            Boom.Icon.ImageColor3 = isNav and Color3.new(1, 1, 1) or getContrastColor(Theme.Accent)
         end
         for _, img in ipairs(Window._NavidadIcons) do
             if img.Parent then Window._ApplyNavidadIcon(img) end
@@ -1033,4 +1032,4 @@ startPos = Main.Position
         TabIconCarousel.Velocity = 0
         renderTabCarousel()
         if TabIconCarousel.ActiveTab then
-            focusTabCa
+          

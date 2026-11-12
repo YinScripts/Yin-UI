@@ -1,4 +1,5 @@
- CopyBtn = button(shareRow, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
+})
+    local CopyBtn = button(shareRow, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
     local ImportBtn = button(shareRow, "Cargar código", "Load code", "Secondary", { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new(0.5, 4, 0, 0), TextSize = 11 })
     CopyBtn.MouseButton1Click:Connect(function()
         local saved = recToSaved(ED.rec, "share")
@@ -767,5 +768,4 @@
         BorderSizePixel = 0,
         ZIndex = 9,
     })
-    CL.hero:SetAttribute("ThemeRole", "Secondary")
-    
+    CL.hero:SetAttribute("ThemeRole", "Seco

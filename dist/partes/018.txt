@@ -1,4 +1,4 @@
-rousel(TabIconCarousel.ActiveTab, false)
+  focusTabCarousel(TabIconCarousel.ActiveTab, false)
         end
     end
 
@@ -957,5 +957,4 @@ rousel(TabIconCarousel.ActiveTab, false)
                     local sValue = math.clamp(_linkedSliderRef._value or sMin, sMin, sMax)
 
                     local SliderRow = mk("Frame", {
-                        Parent = FloatingWindow,
-          
+                        Parent = FloatingWindow

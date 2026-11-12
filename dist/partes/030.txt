@@ -1,4 +1,4 @@
-n = 0
+   local turn = 0
         if self.LastLook then
             turn = math.acos(math.clamp(self.LastLook:Dot(look), -1, 1)) / math.max(delta, 1 / 240)
         end
@@ -1055,4 +1055,4 @@ n = 0
         local defaultPercent = (spec.max - spec.min) == 0 and 0 or math.clamp((spec.default - spec.min) / (spec.max - spec.min), 0, 1)
         local defaultTick = mk("Frame", {
             Parent = bar,
-            Size = UDim2.fromOffset(2, 14),
+            Size = UDim2.fromOf

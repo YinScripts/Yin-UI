@@ -1,4 +1,4 @@
-0,
+TextSize = 10,
             Font = Enum.Font.GothamBold,
             TextXAlignment = Enum.TextXAlignment.Center,
             TextTruncate = Enum.TextTruncate.AtEnd,
@@ -1010,4 +1010,3 @@
         CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
         CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
         CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
-        Cam

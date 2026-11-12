@@ -1,4 +1,4 @@
-
+xtSize = 10,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             ClearTextOnFocus = false,
@@ -1170,4 +1170,4 @@
             BackgroundTransparency = 1,
             Text = GetText(info[2], info[3]),
             TextColor3 = Theme.Text,
-            TextSize = 1
+            

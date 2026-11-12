@@ -1,4 +1,4 @@
-Entity", 5, function()
+dad", "Kill Entity", 5, function()
         print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
     end)
 

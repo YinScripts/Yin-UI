@@ -1,4 +1,4 @@
-            holdInput = input
+                        holdInput = input
                                 prevScroll = TabPage.ScrollingEnabled
                                 TabPage.ScrollingEnabled = false -- que la página no se mueva mientras lo arrastran
                                 ctl.Grab()
@@ -928,4 +928,4 @@
                 elapsed = elapsed + dt
                 local cycle = (elapsed * 0.25) % 1
                 
-                local color = Col
+                local

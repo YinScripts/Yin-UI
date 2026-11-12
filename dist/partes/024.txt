@@ -1,4 +1,4 @@
-or3.fromRGB(
+ color = Color3.fromRGB(
                     math.floor(255 * cycle),
                     math.floor(255 * cycle),
                     math.floor(255 * cycle)
@@ -1014,4 +1014,4 @@ or3.fromRGB(
                             Text = "",
                             TextColor3 = Theme.Text,
                             Font = Enum.Font.Code,
-                            TextSize = 10,
+                            Te

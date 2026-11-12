@@ -1,4 +1,4 @@
-bgColor and 0 or 1,
+nsparency = bgColor and 0 or 1,
             Image = asset(imageId),
             ImageColor3 = imageColor or Color3.new(1, 1, 1),
             AutoButtonColor = false,
@@ -1142,4 +1142,4 @@ bgColor and 0 or 1,
         local coverPath = "YinYang_Cover_" .. cacheName
         local coverExists = false
 
-        if isfile then
+        if

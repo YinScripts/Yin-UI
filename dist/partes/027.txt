@@ -1,4 +1,5 @@
-eraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
+
+        CameraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
         CameraSunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "CurrentCamera"},
     }
 
@@ -806,4 +807,4 @@ eraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", paren
                 touched = true
             end
         end
-        for _, child in ipa
+        for _, 

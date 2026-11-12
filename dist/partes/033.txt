@@ -1,4 +1,4 @@
-"),
+ ICON IN USE"),
         TextColor3 = Theme.TextDim,
         Font = Enum.Font.GothamBlack,
         TextSize = 9,
@@ -840,4 +840,4 @@
         end
         local side = sframe(Ghost, { Size = UDim2.new(0, 22, 1, -20), Position = UDim2.fromOffset(0, 20), BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, ZIndex = SZ + 21 })
         for i = 0, 3 do
-            corner(sframe(side, { Size = UDim2.fromOffset(12, 12), Position = UDim2.fromOffset(5, 6 + i * 18), BackgroundColor3 = i == 0 and Theme.Accent or Theme.AccentOff, ZIndex = SZ + 22 }
+            corner(sframe(side, { Size = UDim2.fromOffset(12, 12), Position = UDim2.fromOffset(5, 6 + i * 18), BackgroundColor3 = i == 0 and Theme.Accent or Theme.AccentOff, ZIndex

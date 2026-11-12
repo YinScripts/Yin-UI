@@ -1,4 +1,4 @@
-), 4)
+ = SZ + 22 }), 4)
         end
         for i = 0, 3 do
             local row = sframe(Ghost, { Size = UDim2.new(1, -36, 0, 16), Position = UDim2.new(0, 28, 0, 28 + i * 22), BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.2, ZIndex = SZ + 21 })
@@ -800,5 +800,4 @@
     CodeBox.PlaceholderText = GetText("Pegá acá un código YYLOGO1:...", "Paste a YYLOGO1:... code here")
     corner(CodeBox, 9)
     pad(CodeBox, 0, 10, 10, 0)
-    local shareRow = mk("Frame", { Parent = ShareCard, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
-    local
+    local shareRow = mk("Frame", { Parent = ShareCard, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 

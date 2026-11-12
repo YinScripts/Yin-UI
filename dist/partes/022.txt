@@ -1,4 +1,4 @@
-tedIndex)
+ (i == selectedIndex)
                     c.Card.BackgroundColor3 = isSel and Theme.Accent or Theme.Secondary
                     c.Card.BackgroundTransparency = isSel and 0 or 0.4
                     c.Stroke.Color = isSel and Theme.Accent or Theme.Stroke
@@ -856,4 +856,4 @@ tedIndex)
                         Grab.InputBegan:Connect(function(input)
                             if holdInput then return end
                             if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                    
+        

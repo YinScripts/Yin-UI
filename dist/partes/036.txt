@@ -1,4 +1,5 @@
-corner(CL.hero, 16)
+ndary")
+    corner(CL.hero, 16)
     stroke(CL.hero, Theme.Stroke, 1, 0.55)
     CL.emblem = mk("Frame", {
         Parent = CL.hero,
@@ -1197,4 +1198,4 @@ corner(CL.hero, 16)
             Parent = parent,
             Size = UDim2.new(0, size, 0, size),
             BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 
+            BackgroundTra

@@ -1,4 +1,4 @@
-tion(self, {
+sterGlobalOption(self, {
                     Id = nameSpanish .. "::" .. textSpanish,
                     NameSpanish = textSpanish,
                     NameEnglish = textEnglish,
@@ -1021,4 +1021,4 @@ tion(self, {
                             card.ZIndex = isActive and 50 or 20 - math.min(distance, 4)
                             for _, descendant in ipairs(card:GetDescendants()) do
                                 if descendant:IsA("GuiObject") then
-                                    descendant.ZIndex = isAc
+                                    descendant.Z

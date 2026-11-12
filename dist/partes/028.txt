@@ -1,4 +1,4 @@
-irs(part:GetChildren()) do
+child in ipairs(part:GetChildren()) do
             if child:IsA("SurfaceAppearance") then
                 table.insert(record.children, {kind = "appearance", instance = child})
                 pcall(function() child.Parent = nil end)
@@ -971,5 +971,4 @@ irs(part:GetChildren()) do
 
     function ShaderSilhouette:_applyTerrain()
         if not self.Enabled then return end
-        if self.TerrainWaterColor == nil then
-     
+        if self.TerrainWaterColor == ni

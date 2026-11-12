@@ -1,4 +1,4 @@
-tive and 51 or 21 - math.min(distance, 4)
+Index = isActive and 51 or 21 - math.min(distance, 4)
                                 end
                                 if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
                                     descendant.TextTransparency = isActive and 0 or 0.35
@@ -1043,4 +1043,4 @@ tive and 51 or 21 - math.min(distance, 4)
 
             local function refreshSelection()
                 for i, c in ipairs(cards) do
-                    local isSel = selectable and (i == selec
+                    local isSel = selectable and

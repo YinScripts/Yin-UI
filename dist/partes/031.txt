@@ -1,4 +1,4 @@
-
+fset(2, 14),
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(defaultPercent, 0, 0.5, 0),
             BackgroundColor3 = Theme.TextDim,
@@ -753,5 +753,4 @@
         local data = presetData
         shaderCreateModeCard(ShaderModeGrid, {
             key = data[3],
-            labelES = data[1],
-     
+            labelES = da

@@ -1,4 +1,4 @@
-
+ isfile then
             local okFile, resultFile = pcall(function()
                 return isfile(coverPath)
             end)
@@ -1084,4 +1084,4 @@
             Parent = FP.Full,
             Size = UDim2.new(1, -24, 0, 4),
             Position = UDim2.new(0, 12, 1, -12),
-            Backgrou
+        
