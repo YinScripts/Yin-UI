@@ -933,32 +933,21 @@
                         child.Visible = false
                     end
                 end
+                -- El borde del panel y la línea comparten el mismo eje geométrico.
                 local panel = mk("Frame", {
-                    Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(1, 0),
-                    Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(1, 1),
-                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.10,
+                    Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
+                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.34,
                     BorderSizePixel = 0, ZIndex = 9,
                 })
                 panel:SetAttribute("ThemeRole", "Background")
-                corner(panel, 14)
-                -- Corte diagonal en la propia capa: evita el bloque rectangular de la versión anterior.
-                local panelMask = mk("UIGradient", {
-                    Parent = panel, Rotation = 16,
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 1),
-                        NumberSequenceKeypoint.new(0.40, 1),
-                        NumberSequenceKeypoint.new(0.405, 0),
-                        NumberSequenceKeypoint.new(1, 0),
-                    }),
-                })
                 local separator = mk("Frame", {
                     Name = "OptionDivider", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(0.40, 0, 0.5, 0), Size = UDim2.fromOffset(1, 96),
-                    Rotation = 16, BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.22, BorderSizePixel = 0, ZIndex = 10,
+                    Position = UDim2.new(0.40, 0, 0.5, 0), Size = UDim2.fromOffset(2, 96),
+                    Rotation = 16, BackgroundColor3 = Color3.new(1, 1, 1),
+                    BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 10,
                 })
-                separator:SetAttribute("ThemeRole", "Accent")
                 corner(separator, 2)
+                local dividerGradient = mk("UIGradient", {Parent = separator, Rotation = 90})
                 FavBtn.BackgroundColor3 = Theme.Secondary
                 FavBtn.BackgroundTransparency = 0.2
                 FavBtn:SetAttribute("ThemeRole", "Secondary")
@@ -1017,6 +1006,10 @@
                 local function updateRim()
                     local accent = Theme.Accent or Theme.Stroke
                     local second = Theme.ToggleOn or accent
+                    dividerGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(1, second),
+                    })
                     rimGradient.Color = ColorSequence.new({
                         ColorSequenceKeypoint.new(0, accent),
                         ColorSequenceKeypoint.new(0.70, accent),
@@ -1040,9 +1033,21 @@
                     if logicalWidth <= 0 then return end
                     local narrow = logicalWidth < 330
                     Holder.Size = UDim2.new(1, 0, 0, narrow and 118 or 92)
-                    panel.Size = narrow and UDim2.new(1, -16, 0, 67) or UDim2.fromScale(1, 1)
-                    panel.Position = narrow and UDim2.new(1, -8, 1, -72) or UDim2.fromScale(1, 0)
-                    panelMask.Enabled = not narrow
+                    if narrow then
+                        panel.Rotation = 0
+                        panel.Size = UDim2.new(1, -16, 0, 67)
+                        panel.Position = UDim2.new(0.5, 0, 1, -38.5)
+                    else
+                        local angle = math.rad(16)
+                        local panelWidth = logicalWidth * 2
+                        local panelHeight = math.max(276, 2 * (92 + logicalWidth * math.sin(angle)))
+                        -- Centro del borde izquierdo después de rotar, igual al centro de la línea.
+                        local edgeX, edgeY = logicalWidth * 0.40, 46
+                        panel.Size = UDim2.fromOffset(panelWidth, panelHeight)
+                        panel.Position = UDim2.fromOffset(edgeX + panelWidth * math.cos(angle) / 2,
+                            edgeY + panelWidth * math.sin(angle) / 2)
+                        panel.Rotation = 16
+                    end
                     separator.Visible = not narrow
                     rim.Position = narrow and UDim2.fromOffset(1, 1) or UDim2.new(0.40, 0, 0, 1)
                     rim.Size = narrow and UDim2.new(1, -2, 1, -2) or UDim2.new(0.60, -1, 1, -2)
