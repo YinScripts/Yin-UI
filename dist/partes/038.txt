@@ -1,4 +1,4 @@
-     SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
+onds = durationToSeconds(track.Duration)
         SpotifyState.CurrentPausedPosition = 0
         SpotifyState.IsPlaying = true
 
@@ -676,7 +676,7 @@
                 Boom.Disc.Visible = not active
                 BoomboxInput.Visible = not active
                 BoomboxPlaceholder.Visible = not active and BoomboxInput.Text == ""
-                BannerFrame.Visible = true
+                BannerFrame.Visible = not (Window._SpotifyAmbient and Window._SpotifyAmbient.Active)
                 if active then
                     B.layout()
                 else
@@ -1047,5 +1047,4 @@
             ZIndex = 525,
         })
         corner(barBack, 999)
-        FP.Bar = mk("Frame", {
-            Parent
+        FP.Bar = mk("Fra

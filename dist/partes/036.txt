@@ -248,7 +248,7 @@
         })
         corner(A.Frame, 10)
         A.Image = mk("ImageLabel", {
-            Parent = A.Frame, Size = UDim2.new(1, 0, 1.48, 0), Position = UDim2.new(0, 0, -0.34, 0), BackgroundTransparency = 1,
+            Parent = A.Frame, Size = UDim2.new(1, 0, 1.80, 0), Position = UDim2.new(0, 0, -0.69, 0), BackgroundTransparency = 1,
             Image = "", ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.12, ZIndex = 5,
         })
         local shade = mk("Frame", {
@@ -619,8 +619,8 @@
         local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
         local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
         -- Dos filas visibles, con límites para mantener controles legibles en móviles.
-        local cardHeight = height > 0 and math.clamp(math.floor((height - 160) / 2), 100, 164) or 140
-        local coverMax = math.max(40, cardHeight - 68)
+        local cardHeight = height > 0 and math.clamp(math.floor((height - 160) / 2), 90, 164) or 140
+        local coverMax = math.max(44, cardHeight - 45)
 
         return {
             compact = compact,
@@ -1229,4 +1229,4 @@
         TextSize = 19,
         TextColor3 = spotifyText,
         TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.T
+        TextYAlignment = Enum.Te

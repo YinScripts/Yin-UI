@@ -1,4 +1,5 @@
-kgroundTransparency = 1
+false
+            Row.BackgroundTransparency = 1
             FavPage.paintRow(row)
         end)
         FavPage.paintRow(row)
@@ -1075,4 +1076,4 @@ if DEMO_ACTIVO then
     TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
     TabFeatures:CreateDivider()
 
-    local SliderTeleportSpeed = TabFeatures:CreateSlider("T
+    local SliderTeleportSpeed = Ta

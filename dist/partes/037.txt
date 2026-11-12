@@ -1,4 +1,4 @@
-extYAlignment.Center,
+xtYAlignment.Center,
         ZIndex = 21,
     })
 
@@ -607,7 +607,7 @@ extYAlignment.Center,
 
         local m = getSpotifyMetrics()
         local cardH = m.cardHeight
-        local coverPad = m.compact and 9 or 11
+        local coverPad = m.compact and 6 or 8
         local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
         local coverSize = math.max(42, cellW - 20)
@@ -627,26 +627,26 @@ extYAlignment.Center,
             rowData.Cover.Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad)
         end
 
-        local titleTop = coverPad + coverSize + (m.compact and 8 or 10)
+        local titleTop = coverPad + coverSize + 4
         local sidePad = m.compact and 9 or 11
-        local textW = math.max(40, coverSize + 20 - sidePad * 2)
+        local textW = math.max(40, cellW - sidePad * 2)
 
         if rowData.Title then
-            rowData.Title.Size = UDim2.fromOffset(textW, m.compact and 22 or 26)
+            rowData.Title.Size = UDim2.fromOffset(textW, m.compact and 20 or 24)
             rowData.Title.Position = UDim2.new(0, sidePad, 0, titleTop)
             rowData.Title.TextSize = m.compact and 11 or 13
         end
 
         if rowData.Artist then
-            rowData.Artist.Size = UDim2.fromOffset(textW, 16)
-            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 24 or 28))
+            rowData.Artist.Size = UDim2.fromOffset(textW, 14)
+            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 20 or 24))
             rowData.Artist.TextSize = m.compact and 9 or 10
         end
 
         if rowData.Duration then
             rowData.Duration.Visible = m.cardHeight >= 120
             rowData.Duration.Size = UDim2.fromOffset(44, 16)
-            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 24 or 28) + 16)
+            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 20 or 24) + 16)
             rowData.Duration.TextSize = 9
             rowData.Duration.TextXAlignment = Enum.TextXAlignment.Left
         end
@@ -659,7 +659,7 @@ extYAlignment.Center,
 
         if rowData.Play then
             rowData.Play.AnchorPoint = Vector2.new(1, 1)
-            rowData.Play.Size = UDim2.fromOffset(30, 30)
+            rowData.Play.Size = UDim2.fromOffset(20, 20)
             rowData.Play.Position = UDim2.new(1, -8, 0, coverPad + coverSize - 4)
         end
 
@@ -1134,4 +1134,4 @@ extYAlignment.Center,
 
         SpotifyState.SelectedIndex = index
         SpotifyState.CurrentTrack = track
-   
+        SpotifyState.CurrentTrackSec

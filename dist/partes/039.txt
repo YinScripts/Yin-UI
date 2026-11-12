@@ -1,4 +1,5 @@
- = barBack,
+me", {
+            Parent = barBack,
             Size = UDim2.new(0, 0, 1, 0),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BorderSizePixel = 0,
@@ -1154,5 +1155,4 @@
             FavPage.paintRow(row)
         end)
         Row.MouseLeave:Connect(function()
-            row.Hover = false
-            Row.Bac
+            row.Hover = 

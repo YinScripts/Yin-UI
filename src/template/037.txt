@@ -675,7 +675,7 @@ dPosition = 0
                 Boom.Disc.Visible = not active
                 BoomboxInput.Visible = not active
                 BoomboxPlaceholder.Visible = not active and BoomboxInput.Text == ""
-                BannerFrame.Visible = true
+                BannerFrame.Visible = not (Window._SpotifyAmbient and Window._SpotifyAmbient.Active)
                 if active then
                     B.layout()
                 else

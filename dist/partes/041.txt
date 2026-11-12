@@ -1,4 +1,4 @@
-eleport Speed", 1.0, 100.0, 23.1, function(val)
+bFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
         print("🚀 Teleport Speed: " .. string.format("%.2f", val))
     end)
 
