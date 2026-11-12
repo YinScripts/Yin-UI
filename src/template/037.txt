@@ -599,7 +599,8 @@ dPosition = 0
     do
         local B = {active = false, second = -1}
         B.root = mk("Frame", {Name = "BoomboxSpotify", Parent = BoomboxPill,
-            Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 14})
+            Size = UDim2.fromScale(1 / 0.75, 1 / 0.75), BackgroundTransparency = 1, Visible = false, ZIndex = 14})
+        mk("UIScale", {Scale = 0.75}, B.root)
         B.cover = mk("ImageLabel", {Parent = B.root, Size = UDim2.fromOffset(32, 32),
             Position = UDim2.new(0, 5, 0.5, -16), BackgroundColor3 = Color3.fromRGB(35, 35, 35),
             BorderSizePixel = 0, Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 15})
@@ -656,11 +657,14 @@ dPosition = 0
         end)
         function B.layout()
             if not B.active then return end
-            local width = math.clamp(TopBar.AbsoluteSize.X * 0.50, 240, 390)
-            BoomboxPill.Size = UDim2.fromOffset(width, 40)
-            BoomboxPill.Position = UDim2.new(0.5, -width / 2, 0.5, -20)
+            -- AbsoluteSize ya incluye MainScale; convertir a unidades locales evita aplicar la escala dos veces.
+            local parentScale = math.max(MainScale.Scale, 0.01)
+            local width = math.clamp((TopBar.AbsoluteSize.X / parentScale) * 0.37, 180, 280)
+            BoomboxPill.Size = UDim2.fromOffset(width, 30)
+            BoomboxPill.Position = UDim2.new(0.5, -width / 2, 0, 3)
         end
         TopBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(B.layout)
+        MainScale:GetPropertyChangedSignal("Scale"):Connect(B.layout)
         SpotifyState.RefreshBoombox = function()
             local sound = SpotifyState.CurrentSound
             local active = sound ~= nil and SpotifyState.CurrentTrack ~= nil
