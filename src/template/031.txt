@@ -572,6 +572,13 @@
 
     local okChat, chatResult = pcall(YinYang._BuildChatGlobal, {
         Host = ChatHost,
+        Glass = function(parent)
+            local image = mk("ImageLabel", {Name = "ChatGlass", Parent = parent,
+                Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+                ImageTransparency = 0.35, ScaleType = Enum.ScaleType.Stretch, ZIndex = parent.ZIndex})
+            corner(image, 18)
+            YinIcons.get("spotify-glass", function(asset) if image.Parent then image.Image = asset end end)
+        end,
         OverlayParent = ScreenGui.Parent,
         OnlineLabel = TopBarOnlineLabel,
         SetBadge = setChatBadge,
@@ -588,6 +595,82 @@
         ScreenGui.Destroying:Connect(function() pcall(ChatApi.Destroy) end)
     else
         warn("[ChatGlobal] No se pudo iniciar el chat: " .. tostring(chatResult))
+    end
+
+    -- Vista inmersiva del chat: un único fondo del tema cubre toda la ventana.
+    do
+        local A = {Active = false}
+        Window._ChatAmbient = A
+        local shade = mk("Frame", {Name = "ChatAmbientShade", Parent = Main,
+            Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 7, 11),
+            BackgroundTransparency = 0.48, BorderSizePixel = 0, Visible = false, ZIndex = 6})
+        corner(shade, 10)
+        function A.Layout()
+            if not A.Active then return end
+            local compact = Window.CompactNavigation == true
+            local side = compact and 58 or 118
+            ContentArea.Position = UDim2.new(0, side, 0, -56)
+            ContentArea.Size = UDim2.new(1, -side, 1, 56)
+            TabListArt.Visible = false
+            CatImage.Visible = false
+            local rail = Body:FindFirstChild("CompactTabRail")
+            if rail then rail.BackgroundTransparency = 0.68 end
+            if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(compact and 66 or 0) end
+        end
+        function A.enter()
+            if A.Active then return end
+            A.Active = true
+            A.saved = {visible = {}, top = TopBar.BackgroundTransparency,
+                tabs = TabList.BackgroundTransparency, titleSize = TitleLabel.Size,
+                titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex,
+                badgeFrameZ = DaraHubLabel.Parent.ZIndex}
+            for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
+                TitleDivider, TopBarArt, TabListArt, CatImage, Main:FindFirstChild("RotatingSubText")}) do
+                if obj then A.saved.visible[obj] = obj.Visible; obj.Visible = false end
+            end
+            BackgroundArt.Parent = Main
+            BackgroundArt.AnchorPoint = Vector2.new(0, 0)
+            BackgroundArt.Position = UDim2.fromOffset(0, 0)
+            BackgroundArt.Size = UDim2.fromScale(1, 1)
+            shade.Visible = true
+            TopBar.BackgroundTransparency = 1
+            TabList.BackgroundTransparency = 1
+            TitleLabel.Size = UDim2.fromOffset(106, 26)
+            TitleLabel.ZIndex = 60
+            DaraHubLabel.Parent.ZIndex = 60
+            DaraHubLabel.ZIndex = 61
+            A.Layout()
+        end
+        function A.leave()
+            if not A.Active then return end
+            A.Active = false
+            shade.Visible = false
+            for obj, visible in pairs(A.saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
+            Window._ApplyFullBackground()
+            TopBar.BackgroundTransparency = A.saved.top
+            TabList.BackgroundTransparency = A.saved.tabs
+            TitleLabel.Size = A.saved.titleSize
+            TitleLabel.ZIndex = A.saved.titleZ
+            DaraHubLabel.ZIndex = A.saved.badgeZ
+            DaraHubLabel.Parent.ZIndex = A.saved.badgeFrameZ
+            local compact = Window.CompactNavigation == true
+            local side = compact and 58 or 118
+            ContentArea.Position = UDim2.new(0, side, 0, 0)
+            ContentArea.Size = UDim2.new(1, -side, 1, 0)
+            TabListArt.Visible = not compact
+            CatImage.Visible = not compact and Theme.ThemeName == "Dark"
+            local rail = Body:FindFirstChild("CompactTabRail")
+            if rail then rail.BackgroundTransparency = 0.10 end
+            if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(0) end
+        end
+        track(ChatTabPage:GetPropertyChangedSignal("Visible"):Connect(function()
+            task.defer(function()
+                if ChatTabPage.Parent then
+                    if ChatTabPage.Visible then A.enter() else A.leave() end
+                end
+            end)
+        end))
+        if ChatTabPage.Visible then A.enter() end
     end
 
     RefreshLibraryLanguage = function()

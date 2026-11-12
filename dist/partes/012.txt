@@ -1,8 +1,4 @@
-tor2.new(0, 0),
-            Position = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
-            TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 11, Visible = false, ZIndex = 5,
-        }, UI.BackButton)
-        corner(UI.BackCount, 9)
+   corner(UI.BackCount, 9)
         mk("UIPadding", {PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)}, UI.BackCount)
         UI.HeaderAvatar = mk("ImageLabel", {
             Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(52, 9),
@@ -79,6 +75,8 @@ tor2.new(0, 0),
             BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Visible = false,
         }, Root)
         corner(UI.NewChatBar, 19)
+        UI.NewChatBar.BackgroundTransparency = 0.24
+        if ctx.Glass then ctx.Glass(UI.NewChatBar) end
         UI.icon(UI.NewChatBar, UI.ICON.search, 16, THEME.DIM, {Position = UDim2.fromOffset(14, 11)})
         UI.NewChatBox = mk("TextBox", {
             Size = UDim2.new(1, -120, 1, 0), Position = UDim2.fromOffset(40, 0),
@@ -545,11 +543,12 @@ tor2.new(0, 0),
         local unread = tonumber(e.unread) or 0
         if e.pinned then
             local card = mk("TextButton", {
-                Size = UDim2.new(1, 0, 0, 86), BackgroundColor3 = THEME.PANEL, BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 86), BackgroundColor3 = THEME.PANEL, BackgroundTransparency = 0.24, BorderSizePixel = 0,
                 Text = "", AutoButtonColor = true, LayoutOrder = order,
             }, UI.HomeList)
             corner(card, 20)
-            stroke(card, UI.C.line, 1, 0)
+            if ctx.Glass then ctx.Glass(card) end
+            stroke(card, UI.C.line, 1, 0.65)
             mk("UIGradient", {
                 Rotation = 0,
                 Color = ColorSequence.new(Color3.fromRGB(40, 28, 64), Color3.fromRGB(18, 18, 18)),
@@ -845,4 +844,6 @@ tor2.new(0, 0),
         Chat.hideOverlays()
         if kind == "private" then
             uid = tonumber(uid)
-            if not uid or uid == LocalPlayer.User
+            if not uid or uid == LocalPlayer.UserId then return end
+            Chat.kind = "private"
+            Chat.room = Chat.dmR

@@ -1,7 +1,4 @@
-t ~= "" and out ~= sample
-            return Tr.robloxOk
-        end
-        Tr.one = function(text)
+ function(text)
             if Tr.probe() then
                 local out = Tr.roblox(text, Tr.lang)
                 if out and out ~= "" then return out, nil end
@@ -215,6 +212,11 @@ t ~= "" and out ~= sample
     Chat.layoutHost()
     return {
         Chat = Chat,
+        SetHeaderInset = function(inset)
+            inset = math.max(0, tonumber(inset) or 0)
+            Header.Position = UDim2.fromOffset(inset, 0)
+            Header.Size = UDim2.new(1, -inset, 0, 58)
+        end,
         GetSideNotifs = function() return Chat.settings.SideNotifs ~= false end,
         SetSideNotifs = function(v)
             Chat.settings.SideNotifs = v and true or false
@@ -1104,12 +1106,4 @@ function YinYang:CreateWindow(title_text, startTheme)
         local tw2 = TweenService:Create(
             Main,
             TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { BackgroundTransparency = 1 }
-        )
-
-        activeWindowTween = tw1
-        tw1:Play()
-        tw2:Play()
-
-        tw1.Completed:Once(function()
-   
+            { BackgroundTranspar

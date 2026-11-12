@@ -1,4 +1,120 @@
-1,
+end
+
+    local function createFloatingPlayer()
+        if FloatingPlayer and FloatingPlayer.Parent then return end
+        FloatingPlayer = mk("Frame", {
+            Parent = Window.ScreenGui,
+            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
+            Position = UDim2.new(0.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
+            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            Visible = SpotifyState.FloatingPlayerVisible,
+            Active = true,
+            ZIndex = 520,
+        })
+        FP.Corner = mk("UICorner", {Parent = FloatingPlayer, CornerRadius = UDim.new(0, 18)})
+        FP.Outline = stroke(FloatingPlayer, Color3.fromRGB(255, 255, 255), 1, 0.86)
+        FP.Ring = mk("UIStroke", {Parent = FloatingPlayer, Color = spotifyGreen, Thickness = 2, Transparency = 0.05, Enabled = false})
+
+        FP.Backdrop = mk("ImageLabel", {
+            Parent = FloatingPlayer,
+            Size = UDim2.new(1, 0, 1, 0),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = "",
+            ImageTransparency = 0.62,
+            ScaleType = Enum.ScaleType.Crop,
+            ZIndex = 521,
+        })
+        mk("UICorner", {Parent = FP.Backdrop, CornerRadius = UDim.new(0, 18)})
+        FP.Shade = mk("Frame", {
+            Parent = FloatingPlayer,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BorderSizePixel = 0,
+            ZIndex = 522,
+        })
+        mk("UICorner", {Parent = FP.Shade, CornerRadius = UDim.new(0, 18)})
+        mk("UIGradient", {
+            Parent = FP.Shade,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.2),
+                NumberSequenceKeypoint.new(1, 0.5),
+            }),
+        })
+
+        FP.Drag = mk("TextButton", {
+            Parent = FloatingPlayer,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 523,
+        })
+
+        FP.Full = mk("Frame", {
+            Parent = FloatingPlayer,
+            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
+            BackgroundTransparency = 1,
+            ZIndex = 524,
+        })
+        FP.Cover = mk("ImageLabel", {
+            Parent = FP.Full,
+            Size = UDim2.fromOffset(76, 76),
+            Position = UDim2.new(0, 12, 0, 12),
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BorderSizePixel = 0,
+            Image = "",
+            ScaleType = Enum.ScaleType.Crop,
+            ZIndex = 525,
+        })
+        corner(FP.Cover, 10)
+        stroke(FP.Cover, Color3.fromRGB(255, 255, 255), 1, 0.8)
+        FP.Fallback = mk("TextLabel", {
+            Parent = FP.Cover,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "♪",
+            TextColor3 = spotifyGreen,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 26,
+            ZIndex = 526,
+        })
+        FP.Title = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 18),
+            Position = UDim2.new(0, 100, 0, 12),
+            BackgroundTransparency = 1,
+            Text = GetText("Selecciona una canción", "Select a song"),
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+        FP.Artist = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 14),
+            Position = UDim2.new(0, 100, 0, 31),
+            BackgroundTransparency = 1,
+            Text = "Spotify",
+            TextColor3 = Color3.fromRGB(200, 200, 200),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+
+        local controls = mk("Frame", {
+            Parent = FP.Full,
+            Size = UDim2.fromOffset(170, 38),
+            Position = UDim2.new(0, 96, 0, 50),
+            BackgroundTransparency = 1,
             ZIndex = 525,
         })
         FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
@@ -1021,126 +1137,4 @@
         FavPage.MiniTitle.Visible = solid
     end)
 
-    FavPage.isCurrent = function(index)
-        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
-    end
-
-    FavPage.paintRow = function(row)
-        local current = FavPage.isCurrent(row.Index)
-        local playing = current and SpotifyState.IsPlaying and SpotifyState.CurrentSound ~= nil
-        row.Title.TextColor3 = current and spotifyGreen or spotifyText
-        row.Number.TextColor3 = current and spotifyGreen or Color3.fromRGB(179, 179, 179)
-        row.Number.Visible = not playing and not row.Hover
-        row.Bars.Visible = playing and not row.Hover
-        row.HoverIcon.Visible = row.Hover == true
-        row.HoverIcon.Image = playing and FavPage.PAUSE or FavPage.PLAY
-    end
-
-    FavPage.paint = function()
-        for _, row in ipairs(FavPage.rows) do
-            FavPage.paintRow(row)
-        end
-        local playingFav = SpotifyState.CurrentSound ~= nil and SpotifyState.IsPlaying and isLiked(SpotifyState.SelectedIndex)
-        FavPage.PlayIcon.Image = playingFav and FavPage.PAUSE or FavPage.PLAY
-        FavPage.MiniIcon.Image = FavPage.PlayIcon.Image
-        local shuffle = SpotifyState.Shuffle == true
-        FavPage.ShuffleBtn.TextColor3 = shuffle and spotifyGreen or Color3.fromRGB(179, 179, 179)
-        FavPage.ShuffleDot.Visible = shuffle
-    end
-
-    FavPage.toggleRow = function(index)
-        if FavPage.isCurrent(index) and SpotifyState.CurrentSound then
-            SpotifyState.FavQueue = true
-            togglePlayback()
-        else
-            FavPage.play(index)
-        end
-    end
-
-    FavPage.makeRow = function(index, position)
-        local song = SpotifyState.Catalog[index]
-        if not song then
-            return
-        end
-        local Row = mk("TextButton", {
-            Parent = FavPage.Body,
-            Size = UDim2.new(1, 0, 0, 58),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Text = "",
-            AutoButtonColor = false,
-            LayoutOrder = position,
-            ZIndex = 42,
-        })
-        corner(Row, 6)
-
-        local Number = mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.fromOffset(24, 58),
-            Position = UDim2.new(0, 12, 0, 0),
-            BackgroundTransparency = 1,
-            Text = tostring(position),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 14,
-            TextColor3 = Color3.fromRGB(179, 179, 179),
-            ZIndex = 43,
-        })
-        local HoverIcon = mk("ImageLabel", {
-            Parent = Row,
-            Size = UDim2.fromOffset(14, 14),
-            Position = UDim2.new(0, 17, 0.5, -7),
-            BackgroundTransparency = 1,
-            Image = FavPage.PLAY,
-            ImageColor3 = Color3.fromRGB(255, 255, 255),
-            ScaleType = Enum.ScaleType.Fit,
-            Visible = false,
-            ZIndex = 43,
-        })
-        local Bars = mk("Frame", {
-            Parent = Row,
-            Size = UDim2.fromOffset(14, 14),
-            Position = UDim2.new(0, 17, 0.5, -7),
-            BackgroundTransparency = 1,
-            Visible = false,
-            ZIndex = 43,
-        })
-        local bars = {}
-        for b = 1, 3 do
-            local bar = mk("Frame", {
-                Parent = Bars,
-                Size = UDim2.new(0, 3, 0.5, 0),
-                AnchorPoint = Vector2.new(0, 1),
-                Position = UDim2.new(0, (b - 1) * 5, 1, 0),
-                BackgroundColor3 = spotifyGreen,
-                BorderSizePixel = 0,
-                ZIndex = 44,
-            })
-            bars[b] = bar
-        end
-
-        local Cover = mk("ImageLabel", {
-            Parent = Row,
-            Size = UDim2.fromOffset(42, 42),
-            Position = UDim2.new(0, 48, 0.5, -21),
-            BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-            BorderSizePixel = 0,
-            Image = FavPage.covers[index] or "",
-            ScaleType = Enum.ScaleType.Crop,
-            ZIndex = 43,
-        })
-        corner(Cover, 4)
-        if not FavPage.covers[index] then
-            task.spawn(function()
-                local ok, img = pcall(resolveTrackCoverImage, song)
-                if ok and type(img) == "string" and img ~= "" then
-                    FavPage.covers[index] = img
-                    if Cover.Parent then
-                        Cover.Image = img
-                    end
-                end
-            end)
-        end
-
-        local Title = mk("TextLabel", {
-            Paren
+    FavPage.isCurrent = function(i

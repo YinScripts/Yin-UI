@@ -1,4 +1,133 @@
-set no está disponible en este ejecutor; no se puede mostrar la portada: " .. coverPath)
+n.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
+
+        if isLiked(SpotifyState.SelectedIndex) then
+            LikeBtn.Image = asset(116559368303288)
+        else
+            LikeBtn.Image = asset(116559368303288)
+        end
+        refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
+        if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
+        if SpotifyState.OnPlaybackChanged then
+            pcall(SpotifyState.OnPlaybackChanged)
+        end
+    end
+
+    local function updateProgress(track, sound)
+        local total = track and durationToSeconds(track.Duration) or 0
+        if sound and sound.TimeLength and sound.TimeLength > 0 then
+            total = math.max(total, math.floor(sound.TimeLength))
+        end
+        total = math.max(total, 1)
+
+        local current = 0
+        if sound and sound.TimePosition then
+            current = math.floor(sound.TimePosition)
+        end
+
+        ProgressTimeLeft.Text = secondsToClock(current)
+        ProgressTimeRight.Text = (track and track.IsUserSong and sound and sound.TimeLength > 0)
+            and secondsToClock(sound.TimeLength)
+            or (track and track.Duration or secondsToClock(total))
+        ProgressFill.Size = UDim2.new(clamp(current / total, 0, 1), 0, 1, 0)
+        refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer(current / total) end
+        if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
+    end
+
+    local function ensureTrackCached(track)
+        local cacheName = track.CacheName
+        local audioExists = false
+        local audioPath = cacheName
+
+        if isfile then
+            local okFile, resultFile = pcall(function()
+                return isfile(audioPath)
+            end)
+            audioExists = okFile and resultFile == true
+        end
+
+        if not audioExists then
+            if not writefile then
+                return false, "writefile_unavailable"
+            end
+
+            local okDownload, data = pcall(function()
+                return game:HttpGet(track.AudioURL, true)
+            end)
+
+            if not okDownload or type(data) ~= "string" or #data < 10 then
+                return false, "download_failed"
+            end
+
+            local okWrite = pcall(function()
+                writefile(audioPath, data)
+            end)
+
+            if not okWrite then
+                return false, "cache_write_failed"
+            end
+        end
+
+        local customAsset = audioPath
+        if getcustomasset then
+            local okAsset, resultAsset = pcall(function()
+                return getcustomasset(audioPath)
+            end)
+            if okAsset and type(resultAsset) == "string" then
+                customAsset = resultAsset
+            end
+        end
+
+        return true, customAsset
+    end
+
+    local function ensureCoverCached(track)
+        if not track.CoverURL or track.CoverURL == "" then
+            return false, "no_cover_url"
+        end
+
+        local cacheName = track.CoverCacheName
+        if not cacheName or cacheName == "" then
+            return false, "no_cover_cache_name"
+        end
+
+        local coverPath = "YinYang_Cover_" .. cacheName
+        local coverExists = false
+
+        if isfile then
+            local okFile, resultFile = pcall(function()
+                return isfile(coverPath)
+            end)
+            coverExists = okFile and resultFile == true
+        end
+
+        if not coverExists then
+            if not writefile then
+                return false, "writefile_unavailable"
+            end
+
+            local okDownload, data = pcall(function()
+                return game:HttpGet(track.CoverURL, true)
+            end)
+
+            if not okDownload or type(data) ~= "string" or #data < 10 then
+                warn("[YinYang Spotify] Falló la descarga de portada (" .. tostring(track.CoverURL) .. "): " .. tostring(data))
+                return false, "download_failed"
+            end
+
+            local okWrite = pcall(function()
+                writefile(coverPath, data)
+            end)
+
+            if not okWrite then
+                warn("[YinYang Spotify] Falló writefile para la portada: " .. coverPath)
+                return false, "cache_write_failed"
+            end
+        end
+
+        if not getcustomasset then
+            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la portada: " .. coverPath)
             return false, "getcustomasset_unavailable"
         end
 
@@ -943,120 +1072,4 @@ set no está disponible en este ejecutor; no se puede mostrar la portada: " .. c
         FP.Full.Visible = not FP.mini
         FP.Disc.Visible = FP.mini
         FP.Ring.Enabled = FP.mini
-    end
-
-    local function createFloatingPlayer()
-        if FloatingPlayer and FloatingPlayer.Parent then return end
-        FloatingPlayer = mk("Frame", {
-            Parent = Window.ScreenGui,
-            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
-            Position = UDim2.new(0.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
-            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
-            BackgroundTransparency = 0,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
-            Visible = SpotifyState.FloatingPlayerVisible,
-            Active = true,
-            ZIndex = 520,
-        })
-        FP.Corner = mk("UICorner", {Parent = FloatingPlayer, CornerRadius = UDim.new(0, 18)})
-        FP.Outline = stroke(FloatingPlayer, Color3.fromRGB(255, 255, 255), 1, 0.86)
-        FP.Ring = mk("UIStroke", {Parent = FloatingPlayer, Color = spotifyGreen, Thickness = 2, Transparency = 0.05, Enabled = false})
-
-        FP.Backdrop = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, 0, 1, 0),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 1,
-            Image = "",
-            ImageTransparency = 0.62,
-            ScaleType = Enum.ScaleType.Crop,
-            ZIndex = 521,
-        })
-        mk("UICorner", {Parent = FP.Backdrop, CornerRadius = UDim.new(0, 18)})
-        FP.Shade = mk("Frame", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BorderSizePixel = 0,
-            ZIndex = 522,
-        })
-        mk("UICorner", {Parent = FP.Shade, CornerRadius = UDim.new(0, 18)})
-        mk("UIGradient", {
-            Parent = FP.Shade,
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.2),
-                NumberSequenceKeypoint.new(1, 0.5),
-            }),
-        })
-
-        FP.Drag = mk("TextButton", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 523,
-        })
-
-        FP.Full = mk("Frame", {
-            Parent = FloatingPlayer,
-            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
-            BackgroundTransparency = 1,
-            ZIndex = 524,
-        })
-        FP.Cover = mk("ImageLabel", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(76, 76),
-            Position = UDim2.new(0, 12, 0, 12),
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-            BorderSizePixel = 0,
-            Image = "",
-            ScaleType = Enum.ScaleType.Crop,
-            ZIndex = 525,
-        })
-        corner(FP.Cover, 10)
-        stroke(FP.Cover, Color3.fromRGB(255, 255, 255), 1, 0.8)
-        FP.Fallback = mk("TextLabel", {
-            Parent = FP.Cover,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = "♪",
-            TextColor3 = spotifyGreen,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 26,
-            ZIndex = 526,
-        })
-        FP.Title = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 18),
-            Position = UDim2.new(0, 100, 0, 12),
-            BackgroundTransparency = 1,
-            Text = GetText("Selecciona una canción", "Select a song"),
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-        FP.Artist = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 14),
-            Position = UDim2.new(0, 100, 0, 31),
-            BackgroundTransparency = 1,
-            Text = "Spotify",
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-
-        local controls = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(170, 38),
-            Position = UDim2.new(0, 96, 0, 50),
-            BackgroundTransparency = 
+    

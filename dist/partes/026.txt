@@ -1,4 +1,10 @@
-rCancel.MouseButton1Click:Connect(closeColorPicker)
+(color)
+    end
+    PickerRed.FocusLost:Connect(applyRGBFields)
+    PickerGreen.FocusLost:Connect(applyRGBFields)
+    PickerBlue.FocusLost:Connect(applyRGBFields)
+    PickerClose.MouseButton1Click:Connect(closeColorPicker)
+    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
     PickerApply.MouseButton1Click:Connect(function()
         if pickerTarget then
             local selected = pickerColor()
@@ -1024,8 +1030,4 @@ rCancel.MouseButton1Click:Connect(closeColorPicker)
         return spec.parent
     end
 
-    local ShaderTargets = {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
-        Atmosphere = {kind = 
+    local ShaderTargets =

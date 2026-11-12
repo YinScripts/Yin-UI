@@ -1,4 +1,100 @@
-)
+,
+        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
+        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/NmV4sUQan",
+        TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
+    })
+    CopyBtn.MouseEnter:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1.02}):Play() end)
+    CopyBtn.MouseLeave:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1}):Play() end)
+    local copyToken = 0
+    CopyBtn.MouseButton1Click:Connect(function()
+        local ok = pcall(function() setclipboard(DISCORD_LINK) end)
+        copyToken = copyToken + 1
+        local mine = copyToken
+        CopyScale.Scale = 0.96
+        TweenService:Create(CopyScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(CopyBtn, TweenInfo.new(0.2), {BackgroundColor3 = ok and GREEN or Color3.fromRGB(237, 66, 69)}):Play()
+        CopyLabel:SetAttribute("TextSpanish", ok and "✓ ¡Link copiado!" or "No se pudo copiar")
+        CopyLabel:SetAttribute("TextEnglish", ok and "✓ Link copied!" or "Could not copy")
+        CopyLabel.Text = ok and GetText("✓ ¡Link copiado!", "✓ Link copied!") or GetText("No se pudo copiar", "Could not copy")
+        task.delay(2.5, function()
+            if mine ~= copyToken or not CopyBtn.Parent then return end
+            TweenService:Create(CopyBtn, TweenInfo.new(0.25), {BackgroundColor3 = BLURPLE}):Play()
+            CopyLabel:SetAttribute("TextSpanish", "Copiar invitación")
+            CopyLabel:SetAttribute("TextEnglish", "Copy invite")
+            CopyLabel.Text = GetText("Copiar invitación", "Copy invite")
+        end)
+    end)
+
+    local Footer = mk("Frame", {
+        Parent = CredRoot_, Size = UDim2.new(1, 0, 0, 34),
+        BackgroundTransparency = 1, LayoutOrder = 9, ZIndex = 10,
+    })
+    for _, x in ipairs({0, 0.62}) do
+        local line = mk("Frame", {
+            Parent = Footer, Size = UDim2.new(0.38, 0, 0, 1), Position = UDim2.new(x, 0, 0, 9),
+            BackgroundColor3 = Theme.Stroke, BorderSizePixel = 0, ZIndex = 11,
+        })
+        line:SetAttribute("ThemeRole", "Stroke")
+        mk("UIGradient", {
+            Parent = line,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, x == 0 and 1 or 0),
+                NumberSequenceKeypoint.new(1, x == 0 and 0 or 1),
+            }),
+        })
+    end
+    local FooterIcon = mk("ImageLabel", {
+        Parent = Footer, Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0.5, -7, 0, 2),
+        BackgroundTransparency = 1, Image = "rbxassetid://132202203337109",
+        ImageColor3 = Theme.Stroke, ScaleType = Enum.ScaleType.Fit, ZIndex = 12,
+    })
+    FooterIcon:SetAttribute("ThemeImageRole", "Stroke")
+    text({
+        Parent = Footer, Size = UDim2.new(1, 0, 0, 13), Position = UDim2.new(0, 0, 0, 20),
+        Font = Enum.Font.GothamMedium, TextSize = 9, TextColor3 = Theme.Stroke,
+        TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 11,
+    }, "© 2026 Yin Yang | Script Hub  •  Todos los derechos reservados.",
+       "© 2026 Yin Yang | Script Hub  •  All rights reserved.", "Stroke")
+
+    end
+
+    Window:CreateCreditsTab()
+
+    local function BuildLogoTab()
+    local TabLogo = Window:CreateTab("Logo", "Logo", "rbxassetid://102470093365848")
+    local LogoPage = TabLogo.Page
+
+    LogoPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    LogoPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    LogoPage.ScrollBarThickness = 2
+    LogoPage.ScrollingEnabled = true
+
+    mk("UIPadding", {
+        Parent       = LogoPage,
+        PaddingTop   = UDim.new(0, 10),
+        PaddingLeft  = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+    })
+    mk("UIListLayout", {
+        Parent            = LogoPage,
+        Padding           = UDim.new(0, 8),
+        SortOrder         = Enum.SortOrder.LayoutOrder,
+        FillDirection     = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
+
+    -- Cabecera: el icono en uso, en grande
+    local LP = {cards = {}}
+    LP.hero = mk("Frame", {
+        Parent = LogoPage,
+        Size = UDim2.new(1, 0, 0, 104),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        LayoutOrder = 0,
+        ZIndex = 11,
+    })
     LP.hero:SetAttribute("ThemeRole", "Secondary")
     corner(LP.hero, 16)
     stroke(LP.hero, Theme.Stroke, 1, 0.55)
@@ -780,83 +876,4 @@
         local s = sframe(Stage, { Name = "SceneLight", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
         vgrad(s, Color3.fromRGB(246, 247, 251), Color3.fromRGB(222, 226, 236))
         for i = 1, 3 do
-            corner(sframe(s, { Size = UDim2.new(0.5, 0, 0, 14), Position = UDim2.new(0.38, 0, 0.3 + i * 0.13, 0), BackgroundColor3 = Color3.fromRGB(205, 210, 222), ZIndex = SZ + 1 }), 7)
-        end
-        return s
-    end
-    -- Transparente: tablero de ajedrez para ver los bordes reales de cada imagen
-    function Scenes.checker()
-        local s = sframe(Stage, { Name = "SceneChecker", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(205, 205, 210) })
-        -- solo los cuadros claros (el fondo ya es el gris): 12 filas x 24 columnas de 18 px
-        for r = 0, 11 do
-            for c = 0, 23 do
-                if (r + c) % 2 == 0 then
-                    sframe(s, { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(c * 18, r * 18), BackgroundColor3 = Color3.fromRGB(245, 245, 248), ZIndex = SZ + 1 })
-                end
-            end
-        end
-        return s
-    end
-    local SceneFrames = {}
-    local HUD -- controles de celular (se ocultan en "Transparente")
-    local function setBackdrop(key)
-        LS.backdrop = key
-        if not SceneFrames[key] then
-            SceneFrames[key] = Scenes[key]()
-        end
-        for k, f in pairs(SceneFrames) do
-            f.Visible = k == key
-        end
-        if HUD then HUD.Visible = key ~= "checker" end
-        StageStroke.Color = key == "light" and Color3.fromRGB(150, 155, 170) or Color3.new(0, 0, 0)
-    end
-
-    -- HUD de celular encima del juego: barra superior, joystick y botón de saltar real de Roblox
-    HUD = sframe(Stage, { Name = "MockHud", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = SZ + 12 })
-    do
-        local top = sframe(HUD, { Size = UDim2.fromOffset(62, 24), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Color3.fromRGB(18, 18, 22), BackgroundTransparency = 0.3, ZIndex = SZ + 12 })
-        corner(top, 12)
-        local menu = sframe(top, { Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, ZIndex = SZ + 13 })
-        for i = 0, 2 do
-            corner(sframe(menu, { Size = UDim2.fromOffset(12, 2), Position = UDim2.fromOffset(2, 3 + i * 4), BackgroundColor3 = WHITE, ZIndex = SZ + 14 }), 1)
-        end
-        local chat = round(sframe(top, { Size = UDim2.fromOffset(14, 12), Position = UDim2.fromOffset(32, 5), BackgroundTransparency = 1, ZIndex = SZ + 13 }))
-        mk("UIStroke", { Parent = chat, Color = WHITE, Thickness = 1.5 })
-        sframe(top, { Size = UDim2.fromOffset(4, 4), Position = UDim2.fromOffset(34, 15), Rotation = 45, BackgroundColor3 = WHITE, ZIndex = SZ + 13 })
-        -- joystick
-        local ring = round(sframe(HUD, { Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -12), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.75, ZIndex = SZ + 12 }))
-        mk("UIStroke", { Parent = ring, Color = WHITE, Thickness = 2, Transparency = 0.45 })
-        local knob = round(sframe(ring, { Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = WHITE, BackgroundTransparency = 0.45, ZIndex = SZ + 13 }))
-        TweenService:Create(knob, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 7, 0.5, -4) }):Play()
-        -- botón de saltar: misma textura y recorte que usa Roblox (TouchJump, sin presionar)
-        mk("ImageLabel", {
-            Parent = HUD,
-            Size = UDim2.fromOffset(46, 46),
-            AnchorPoint = Vector2.new(1, 1),
-            Position = UDim2.new(1, -16, 1, -14),
-            BackgroundTransparency = 1,
-            Image = "rbxasset://textures/ui/Input/TouchControlsSheetV2.png",
-            ImageRectOffset = Vector2.new(1, 146),
-            ImageRectSize = Vector2.new(144, 144),
-            ZIndex = SZ + 12,
-        })
-    end
-
-    -- Ventana "fantasma" de la librería: se abre/cierra al tocar el botón, como la real
-    local Ghost = mk("CanvasGroup", {
-        Parent = Stage,
-        Size = UDim2.new(0.6, 0, 0.72, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.55, 0.5),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        GroupTransparency = 1,
-        Visible = false,
-        ZIndex = SZ + 20,
-    })
-    Ghost:SetAttribute("ThemeRole", "Background")
-    corner(Ghost, 10)
-    stroke(Ghost, Theme.Stroke, 1.2, 0.2)
-    local GhostScale = mk("UIScale", { Parent = Ghost, Scale = 0.85 })
-    do
-        local bar = sframe(Ghost, { Size = UDim2.new(1, 0, 0, 20)
+            corner(sframe(s, { Size = UDim2.new(0.5, 0, 0, 14), Position = UDim2.new(0.38, 0, 0.3 + i * 0.13, 0), Backg

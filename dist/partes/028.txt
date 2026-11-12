@@ -1,4 +1,9 @@
-Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+  end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
     function ShaderReflections:_stripPartTextures(part)
         if self.TextureOriginal[part] ~= nil then return end
         local owner = part:FindFirstAncestorOfClass("Model")
@@ -959,8 +964,4 @@ Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar cara
         pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
         pcall(function() part.Reflectance = 0 end)
 
-        for _, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-                    self.Original[child] = {}
-                    pcall(function() self
+        for 

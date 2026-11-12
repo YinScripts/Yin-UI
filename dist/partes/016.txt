@@ -1,4 +1,12 @@
-         if activeWindowTween == tw1 then
+ency = 1 }
+        )
+
+        activeWindowTween = tw1
+        tw1:Play()
+        tw2:Play()
+
+        tw1.Completed:Once(function()
+            if activeWindowTween == tw1 then
                 activeWindowTween = nil
             end
             setMainGlowEnabled(false)
@@ -1151,6 +1159,4 @@
         local drag = false
         local dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
-                drag = true
-                dragStart = input
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or i

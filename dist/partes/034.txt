@@ -1,4 +1,83 @@
-, BackgroundColor3 = Theme.Secondary, ZIndex = SZ + 21 })
+roundColor3 = Color3.fromRGB(205, 210, 222), ZIndex = SZ + 1 }), 7)
+        end
+        return s
+    end
+    -- Transparente: tablero de ajedrez para ver los bordes reales de cada imagen
+    function Scenes.checker()
+        local s = sframe(Stage, { Name = "SceneChecker", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(205, 205, 210) })
+        -- solo los cuadros claros (el fondo ya es el gris): 12 filas x 24 columnas de 18 px
+        for r = 0, 11 do
+            for c = 0, 23 do
+                if (r + c) % 2 == 0 then
+                    sframe(s, { Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(c * 18, r * 18), BackgroundColor3 = Color3.fromRGB(245, 245, 248), ZIndex = SZ + 1 })
+                end
+            end
+        end
+        return s
+    end
+    local SceneFrames = {}
+    local HUD -- controles de celular (se ocultan en "Transparente")
+    local function setBackdrop(key)
+        LS.backdrop = key
+        if not SceneFrames[key] then
+            SceneFrames[key] = Scenes[key]()
+        end
+        for k, f in pairs(SceneFrames) do
+            f.Visible = k == key
+        end
+        if HUD then HUD.Visible = key ~= "checker" end
+        StageStroke.Color = key == "light" and Color3.fromRGB(150, 155, 170) or Color3.new(0, 0, 0)
+    end
+
+    -- HUD de celular encima del juego: barra superior, joystick y botón de saltar real de Roblox
+    HUD = sframe(Stage, { Name = "MockHud", Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = SZ + 12 })
+    do
+        local top = sframe(HUD, { Size = UDim2.fromOffset(62, 24), Position = UDim2.fromOffset(8, 8), BackgroundColor3 = Color3.fromRGB(18, 18, 22), BackgroundTransparency = 0.3, ZIndex = SZ + 12 })
+        corner(top, 12)
+        local menu = sframe(top, { Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(6, 4), BackgroundTransparency = 1, ZIndex = SZ + 13 })
+        for i = 0, 2 do
+            corner(sframe(menu, { Size = UDim2.fromOffset(12, 2), Position = UDim2.fromOffset(2, 3 + i * 4), BackgroundColor3 = WHITE, ZIndex = SZ + 14 }), 1)
+        end
+        local chat = round(sframe(top, { Size = UDim2.fromOffset(14, 12), Position = UDim2.fromOffset(32, 5), BackgroundTransparency = 1, ZIndex = SZ + 13 }))
+        mk("UIStroke", { Parent = chat, Color = WHITE, Thickness = 1.5 })
+        sframe(top, { Size = UDim2.fromOffset(4, 4), Position = UDim2.fromOffset(34, 15), Rotation = 45, BackgroundColor3 = WHITE, ZIndex = SZ + 13 })
+        -- joystick
+        local ring = round(sframe(HUD, { Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0, 1), Position = UDim2.new(0, 16, 1, -12), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.75, ZIndex = SZ + 12 }))
+        mk("UIStroke", { Parent = ring, Color = WHITE, Thickness = 2, Transparency = 0.45 })
+        local knob = round(sframe(ring, { Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = WHITE, BackgroundTransparency = 0.45, ZIndex = SZ + 13 }))
+        TweenService:Create(knob, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 7, 0.5, -4) }):Play()
+        -- botón de saltar: misma textura y recorte que usa Roblox (TouchJump, sin presionar)
+        mk("ImageLabel", {
+            Parent = HUD,
+            Size = UDim2.fromOffset(46, 46),
+            AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -16, 1, -14),
+            BackgroundTransparency = 1,
+            Image = "rbxasset://textures/ui/Input/TouchControlsSheetV2.png",
+            ImageRectOffset = Vector2.new(1, 146),
+            ImageRectSize = Vector2.new(144, 144),
+            ZIndex = SZ + 12,
+        })
+    end
+
+    -- Ventana "fantasma" de la librería: se abre/cierra al tocar el botón, como la real
+    local Ghost = mk("CanvasGroup", {
+        Parent = Stage,
+        Size = UDim2.new(0.6, 0, 0.72, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.55, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        GroupTransparency = 1,
+        Visible = false,
+        ZIndex = SZ + 20,
+    })
+    Ghost:SetAttribute("ThemeRole", "Background")
+    corner(Ghost, 10)
+    stroke(Ghost, Theme.Stroke, 1.2, 0.2)
+    local GhostScale = mk("UIScale", { Parent = Ghost, Scale = 0.85 })
+    do
+        local bar = sframe(Ghost, { Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = Theme.Secondary, ZIndex = SZ + 21 })
         bar:SetAttribute("ThemeRole", "Secondary")
         mk("TextLabel", { Parent = bar, Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundTransparency = 1, Text = "Yin Yang", TextColor3 = Theme.Text, TextSize = 10, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = SZ + 22 })
         for i = 0, 2 do
@@ -702,88 +781,4 @@
         rebuildLayerCards()
         changed()
         task.defer(function()
-            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
-        end)
-    end)
-    rebuildLayerCards = function()
-        activeSlider = nil
-        for _, ch in ipairs(LayersHolder:GetChildren()) do
-            if ch:IsA("Frame") then ch:Destroy() end
-        end
-        for i = 1, #ED.rec.Layers do
-            layerCard(i)
-        end
-        AddLayerBtn.Visible = #ED.rec.Layers < 3
-    end
-
-    -- =====================================================================
-    -- 5) SONIDOS
-    -- =====================================================================
-    sectionTitle(Content, "SONIDOS (OPCIONAL)", "SOUNDS (OPTIONAL)", 9, "Al tocar el botón y uno de fondo mientras flota", "On tap, plus an ambient one while it floats")
-    local SoundCard = card(Content, 10)
-    pad(SoundCard, 10, 10, 10, 10)
-    list(SoundCard, 8)
-    local function soundInput(order, es, en, getId, setId, getVol)
-        local row = mk("Frame", { Parent = SoundCard, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 3 })
-        label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, 0, 0, 16), ZIndex = Z + 4 })
-        local box = mk("TextBox", {
-            Parent = row,
-            Size = UDim2.new(1, -84, 0, 30),
-            Position = UDim2.fromOffset(0, 20),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.2,
-            BorderSizePixel = 0,
-            Text = "",
-            PlaceholderColor3 = Theme.TextDim,
-            TextColor3 = Theme.Text,
-            TextSize = 11,
-            Font = Enum.Font.Code,
-            ClearTextOnFocus = false,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = Z + 4,
-        })
-        box:SetAttribute("ThemeRole", "Background")
-        box:SetAttribute("ThemeTextRole", "Text")
-        box:SetAttribute("PlaceholderSpanish", "ID del sonido (vacío = el de siempre)")
-        box:SetAttribute("PlaceholderEnglish", "Sound ID (empty = default)")
-        box.PlaceholderText = GetText("ID del sonido (vacío = el de siempre)", "Sound ID (empty = default)")
-        corner(box, 9)
-        pad(box, 0, 10, 10, 0)
-        local test = button(row, "Probar", "Test", "Accent", { Size = UDim2.fromOffset(76, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 20), TextSize = 11 })
-        box.FocusLost:Connect(function()
-            setId(CL.CleanAsset(box.Text))
-            box.Text = getId()
-        end)
-        test.MouseButton1Click:Connect(function()
-            local id = CL.CleanAsset(box.Text)
-            if id == "" then
-                playSound(Sounds.Click, 0.6)
-            else
-                playSound(id, getVol())
-            end
-        end)
-        return box
-    end
-    local clickBox = soundInput(1, "Sonido al tocar", "Tap sound", function() return ED.rec.ClickSound.Id end, function(v) ED.rec.ClickSound.Id = v end, function() return ED.rec.ClickSound.Volume end)
-    local clickVol = slider(SoundCard, 2, "Volumen al tocar", "Tap volume", { 0, 1, 0.05, 0.6, "" }, 0.6, function(v) ED.rec.ClickSound.Volume = v end)
-    local idleBox = soundInput(3, "Sonido de fondo (con la ventana cerrada)", "Ambient sound (window closed)", function() return ED.rec.IdleSound.Id end, function(v) ED.rec.IdleSound.Id = v end, function() return ED.rec.IdleSound.Volume end)
-    local idleEvery = slider(SoundCard, 4, "Cada cuántos segundos", "Every how many seconds", { 3, 120, 1, 15, "s" }, 15, function(v) ED.rec.IdleSound.Interval = v end)
-    local idleVol = slider(SoundCard, 5, "Volumen de fondo", "Ambient volume", { 0, 1, 0.05, 0.15, "" }, 0.15, function(v) ED.rec.IdleSound.Volume = v end)
-    refreshSoundCard = function()
-        clickBox.Text = ED.rec.ClickSound.Id or ""
-        clickVol.Set(ED.rec.ClickSound.Volume or 0.6, false)
-        idleBox.Text = ED.rec.IdleSound.Id or ""
-        idleEvery.Set(ED.rec.IdleSound.Interval or 15, false)
-        idleVol.Set(ED.rec.IdleSound.Volume or 0.15, false)
-    end
-
-    -- =====================================================================
-    -- 6) COMPARTIR
-    -- =====================================================================
-    sectionTitle(Content, "COMPARTIR", "SHARE", 11, "Pasale el código a un amigo y él lo pega acá", "Send the code to a friend and they paste it here")
-    local ShareCard = card(Content, 12)
-    pad(ShareCard, 10, 10, 10, 10)
-    list(ShareCard, 8)
-    local CodeBox = mk("TextBox", {
-        Parent = ShareCard,
-        Size = UDim2.new(1, 0, 
+            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 26
