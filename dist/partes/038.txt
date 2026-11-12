@@ -866,24 +866,54 @@ set = pcall(function()
             Parent = N.root, Size = UDim2.new(1, -16, 0, 36), Position = UDim2.new(0, 8, 0, 53),
             BackgroundTransparency = 1, ZIndex = 56,
         })
-        function N.button(index, icon, es, en)
+        function N.button(index, iconName, fallback, es, en)
             local button = mk("TextButton", {
                 Parent = N.nav, Size = UDim2.new(1/3, 0, 1, 0), Position = UDim2.new((index-1)/3, 0, 0, 0),
-                BackgroundTransparency = 1, Text = icon .. "  " .. GetText(es, en),
-                Font = Enum.Font.GothamBold, TextColor3 = spotifyDim, TextSize = 11,
-                TextTruncate = Enum.TextTruncate.AtEnd, AutoButtonColor = false, ZIndex = 57,
+                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 57,
             })
-            button:SetAttribute("TextSpanish", icon .. "  " .. es)
-            button:SetAttribute("TextEnglish", icon .. "  " .. en)
-            return button
+            local content = mk("Frame", {
+                Parent = button, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 57,
+            })
+            mk("UIListLayout", {
+                Parent = content, FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
+                SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
+            })
+            local glyph = mk("TextLabel", {
+                Parent = content, Size = UDim2.fromOffset(16, 16), LayoutOrder = 1,
+                BackgroundTransparency = 1, Text = fallback, Font = Enum.Font.GothamBold,
+                TextColor3 = spotifyDim, TextSize = 15, ZIndex = 58,
+            })
+            local image = mk("ImageLabel", {
+                Parent = content, Size = UDim2.fromOffset(16, 16), LayoutOrder = 1,
+                BackgroundTransparency = 1, Image = "", ImageColor3 = spotifyDim,
+                ScaleType = Enum.ScaleType.Fit, Visible = false, ZIndex = 58,
+            })
+            local label = mk("TextLabel", {
+                Parent = content, Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X,
+                LayoutOrder = 2, BackgroundTransparency = 1, Text = GetText(es, en),
+                Font = Enum.Font.GothamBold, TextColor3 = spotifyDim, TextSize = 11, ZIndex = 58,
+            })
+            label:SetAttribute("TextSpanish", es)
+            label:SetAttribute("TextEnglish", en)
+            YinIcons.get(iconName, function(assetId)
+                if image.Parent then
+                    image.Image = assetId
+                    image.Visible = true
+                    glyph.Visible = false
+                end
+            end)
+            return button, label, image, glyph
         end
-        N.home = N.button(1, "⌂", "Inicio", "Home")
-        N.search = N.button(2, "⌕", "Buscar", "Search")
-        N.library = N.button(3, "♫", "Mis canciones", "My songs")
+        N.home, N.homeLabel, N.homeIcon, N.homeGlyph = N.button(1, "home", "⌂", "Inicio", "Home")
+        N.search, N.searchLabel, N.searchIcon, N.searchGlyph = N.button(2, "search", "⌕", "Buscar", "Search")
+        N.library, N.libraryLabel, N.libraryIcon, N.libraryGlyph = N.button(3, "music", "♫", "Mis canciones", "My songs")
         SpotifyState.RefreshCatalogNavigation = function()
-            N.home.TextColor3 = not SpotifyState.MySongsView and spotifyText or spotifyDim
-            N.search.TextColor3 = spotifyDim
-            N.library.TextColor3 = SpotifyState.MySongsView and spotifyText or spotifyDim
+            local homeColor = not SpotifyState.MySongsView and spotifyText or spotifyDim
+            local libraryColor = SpotifyState.MySongsView and spotifyText or spotifyDim
+            N.homeLabel.TextColor3, N.homeIcon.ImageColor3, N.homeGlyph.TextColor3 = homeColor, homeColor, homeColor
+            N.searchLabel.TextColor3, N.searchIcon.ImageColor3, N.searchGlyph.TextColor3 = spotifyDim, spotifyDim, spotifyDim
+            N.libraryLabel.TextColor3, N.libraryIcon.ImageColor3, N.libraryGlyph.TextColor3 = libraryColor, libraryColor, libraryColor
         end
         function N.openView(mySongs, focus)
             if FavPage.hide then FavPage.hide() end
@@ -1043,50 +1073,4 @@ set = pcall(function()
             Text = "♪",
             TextColor3 = spotifyGreen,
             Font = Enum.Font.GothamBlack,
-            TextSize = 26,
-            ZIndex = 526,
-        })
-        FP.Title = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 18),
-            Position = UDim2.new(0, 100, 0, 12),
-            BackgroundTransparency = 1,
-            Text = GetText("Selecciona una canción", "Select a song"),
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-        FP.Artist = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 14),
-            Position = UDim2.new(0, 100, 0, 31),
-            BackgroundTransparency = 1,
-            Text = "Spotify",
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-
-        local controls = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(170, 38),
-            Position = UDim2.new(0, 96, 0, 50),
-            BackgroundTransparency = 1,
-            ZIndex = 525,
-        })
-        FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
-        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
-        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
-        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
-        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
-        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
-        FP.PlayBtn.BackgroundTransparency = 0
-        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
-        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
-        nextBtn.Position = UDim2.ne
+ 

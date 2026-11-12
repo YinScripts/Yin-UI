@@ -1,4 +1,50 @@
-w(0, 122, 0.5, -17)
+           TextSize = 26,
+            ZIndex = 526,
+        })
+        FP.Title = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 18),
+            Position = UDim2.new(0, 100, 0, 12),
+            BackgroundTransparency = 1,
+            Text = GetText("Selecciona una canción", "Select a song"),
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+        FP.Artist = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 14),
+            Position = UDim2.new(0, 100, 0, 31),
+            BackgroundTransparency = 1,
+            Text = "Spotify",
+            TextColor3 = Color3.fromRGB(200, 200, 200),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+
+        local controls = mk("Frame", {
+            Parent = FP.Full,
+            Size = UDim2.fromOffset(170, 38),
+            Position = UDim2.new(0, 96, 0, 50),
+            BackgroundTransparency = 1,
+            ZIndex = 525,
+        })
+        FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
+        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
+        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
+        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
+        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
+        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
+        FP.PlayBtn.BackgroundTransparency = 0
+        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
+        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
 
         FP.Time = mk("TextLabel", {
             Parent = FP.Full,
@@ -1100,60 +1146,4 @@ w(0, 122, 0.5, -17)
             ScaleType = Enum.ScaleType.Crop,
             ZIndex = 43,
         })
-        corner(Cover, 4)
-        if not FavPage.covers[index] then
-            task.spawn(function()
-                local ok, img = pcall(resolveTrackCoverImage, song)
-                if ok and type(img) == "string" and img ~= "" then
-                    FavPage.covers[index] = img
-                    if Cover.Parent then
-                        Cover.Image = img
-                    end
-                end
-            end)
-        end
-
-        local Title = mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.new(1, -230, 0, 20),
-            Position = UDim2.new(0, 102, 0, 10),
-            BackgroundTransparency = 1,
-            Text = song.Name,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 15,
-            TextColor3 = spotifyText,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 43,
-        })
-        mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.new(1, -230, 0, 16),
-            Position = UDim2.new(0, 102, 0, 31),
-            BackgroundTransparency = 1,
-            Text = song.Artist,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 13,
-            TextColor3 = Color3.fromRGB(179, 179, 179),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 43,
-        })
-        local Heart = mk("TextButton", {
-            Parent = Row,
-            Size = UDim2.fromOffset(36, 36),
-            Position = UDim2.new(1, -126, 0.5, -18),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 45,
-        })
-        mk("ImageLabel", {
-            Parent = Heart,
-            Size = UDim2.fromOffset(18, 18),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 1,
-            Image = FavPage.HEART_ON,
-            ImageColor3 = spotifyGreen,
-  
+        corner(Co

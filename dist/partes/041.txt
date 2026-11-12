@@ -1,4 +1,69 @@
-    print("ESP: " .. (state and "ON" or "OFF"))
+ "Yin AI"
+            end)
+
+            waiting = false
+
+            if ok and reply then
+                table.insert(history, { role = "assistant", content = reply })
+                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 120, 255))
+            else
+                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
+            end
+        end)
+    end
+
+    LocalPlayer.Chatted:Connect(function(msg)
+        local text = tostring(msg):match("^[/]IA%s+(.+)$")
+        if not text then return end
+        text = text:match("^%s*(.-)%s*$")
+        if text == "" then return end
+        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
+        ask(text)
+    end)
+
+    task.delay(1.5, function()
+        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
+    end)
+
+    print("Yin AI integrada — usa /IA mensaje en el chat")
+end)()
+
+
+local DEMO_ACTIVO = false
+
+if DEMO_ACTIVO then
+    task.wait(0.5)
+    
+    print("\n" .. string.rep("=", 60))
+    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
+    print(string.rep("=", 60))
+    
+    local ConfigCargada = LoadConfig()
+    local TemaInicial = "Dark"
+    if ConfigCargada and ConfigCargada.theme then
+        TemaInicial = ConfigCargada.theme
+    end
+
+    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
+    
+    DemoUI:SetTheme(TemaInicial)
+    
+    local TabFeatures = DemoUI:CreateTab("Features")
+    
+    TabFeatures:CreateLabel("Toggles", 14)
+    TabFeatures:CreateDivider()
+
+    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
+        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
+    end
+
+
+    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
+        print("Aimbot: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
+        print("ESP: " .. (state and "ON" or "OFF"))
     end)
 
     createToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)

@@ -1,4 +1,60 @@
-          ScaleType = Enum.ScaleType.Fit,
+ver, 4)
+        if not FavPage.covers[index] then
+            task.spawn(function()
+                local ok, img = pcall(resolveTrackCoverImage, song)
+                if ok and type(img) == "string" and img ~= "" then
+                    FavPage.covers[index] = img
+                    if Cover.Parent then
+                        Cover.Image = img
+                    end
+                end
+            end)
+        end
+
+        local Title = mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.new(1, -230, 0, 20),
+            Position = UDim2.new(0, 102, 0, 10),
+            BackgroundTransparency = 1,
+            Text = song.Name,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 15,
+            TextColor3 = spotifyText,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.new(1, -230, 0, 16),
+            Position = UDim2.new(0, 102, 0, 31),
+            BackgroundTransparency = 1,
+            Text = song.Artist,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        local Heart = mk("TextButton", {
+            Parent = Row,
+            Size = UDim2.fromOffset(36, 36),
+            Position = UDim2.new(1, -126, 0.5, -18),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 45,
+        })
+        mk("ImageLabel", {
+            Parent = Heart,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = FavPage.HEART_ON,
+            ImageColor3 = spotifyGreen,
+            ScaleType = Enum.ScaleType.Fit,
             ZIndex = 46,
         })
         mk("TextLabel", {
@@ -1008,69 +1064,4 @@ REGLAS DE RESPUESTA:
                     error(data.error or "AI returned no response")
                 end
 
-                return data.reply, data.name or "Yin AI"
-            end)
-
-            waiting = false
-
-            if ok and reply then
-                table.insert(history, { role = "assistant", content = reply })
-                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 120, 255))
-            else
-                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
-            end
-        end)
-    end
-
-    LocalPlayer.Chatted:Connect(function(msg)
-        local text = tostring(msg):match("^[/]IA%s+(.+)$")
-        if not text then return end
-        text = text:match("^%s*(.-)%s*$")
-        if text == "" then return end
-        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
-        ask(text)
-    end)
-
-    task.delay(1.5, function()
-        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
-    end)
-
-    print("Yin AI integrada — usa /IA mensaje en el chat")
-end)()
-
-
-local DEMO_ACTIVO = false
-
-if DEMO_ACTIVO then
-    task.wait(0.5)
-    
-    print("\n" .. string.rep("=", 60))
-    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
-    print(string.rep("=", 60))
-    
-    local ConfigCargada = LoadConfig()
-    local TemaInicial = "Dark"
-    if ConfigCargada and ConfigCargada.theme then
-        TemaInicial = ConfigCargada.theme
-    end
-
-    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
-    
-    DemoUI:SetTheme(TemaInicial)
-    
-    local TabFeatures = DemoUI:CreateTab("Features")
-    
-    TabFeatures:CreateLabel("Toggles", 14)
-    TabFeatures:CreateDivider()
-
-    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
-        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
-    end
-
-
-    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
-        print("Aimbot: " .. (state and "ON" or "OFF"))
-    end)
-
-    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
-    
+                return data.reply, data.name or
