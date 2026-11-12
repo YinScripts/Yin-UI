@@ -86,8 +86,7 @@ t cacheName or cacheName == "" then
         SpotifyState.SelectedIndex = index
         SpotifyState.CurrentTrack = track
         SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
-        SpotifyState.CurrentPause
-dPosition = 0
+        SpotifyState.CurrentPausedPosition = 0
         SpotifyState.IsPlaying = true
 
         destroyAllSpotifySounds()

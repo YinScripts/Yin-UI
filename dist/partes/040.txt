@@ -76,8 +76,7 @@ clearSongRows = function()
         for _, track in ipairs(loadUserSongs()) do
             if type(track) == "table"
                 and type(track.Name) == "string"
-      
-          and type(track.Artist) == "string"
+                and type(track.Artist) == "string"
                 and type(track.AudioURL) == "string"
                 and isDirectMp3Url(track.AudioURL) then
                 local preparedTrack = table.clone(track)
