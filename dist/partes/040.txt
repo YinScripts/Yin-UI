@@ -1,4 +1,8 @@
-ng.Name,
+t = Row,
+            Size = UDim2.new(1, -230, 0, 20),
+            Position = UDim2.new(0, 102, 0, 10),
+            BackgroundTransparency = 1,
+            Text = song.Name,
             Font = Enum.Font.GothamMedium,
             TextSize = 15,
             TextColor3 = spotifyText,
@@ -198,6 +202,7 @@ ng.Name,
             return
         end
         FavPage.open = true
+        SongsCard.Visible = false -- el catálogo no debe verse detrás de favoritos
         FavPage.layout()
         FavPage.rebuild()
         FavPage.Scroll.CanvasPosition = Vector2.new(0, 0)
@@ -213,6 +218,7 @@ ng.Name,
             return
         end
         FavPage.open = false
+        SongsCard.Visible = true
         pcall(function() FavPage.SearchInput:ReleaseFocus() end)
         local tw = TweenService:Create(FavPage.Root, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)})
         tw.Completed:Connect(function()
@@ -1056,13 +1062,4 @@ REGLAS DE RESPUESTA:
 
             if ok and reply then
                 table.insert(history, { role = "assistant", content = reply })
-                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 120, 255))
-            else
-                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
-            end
-        end)
-    end
-
-    LocalPlayer.Chatted:Connect(function(msg)
-        local text = tostring(msg):match("^[/]IA%s+(.+)$")
-        if not t
+                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 1

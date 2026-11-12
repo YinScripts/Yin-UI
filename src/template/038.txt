@@ -106,7 +106,7 @@
     FavPage.PLAY = asset(135609604299893)
     FavPage.PAUSE = asset(74873705394436)
     FavPage.SEARCH = asset(121018724060431)
-    FavPage.HERO_H = 196
+    FavPage.HERO_H = 216
     FavPage.covers = {}
     FavPage.rows = {}
     FavPage.history = {}
@@ -653,7 +653,10 @@
         FavPage.MiniTitle.Size = UDim2.new(1, -110 - inset, 1, 0)
         local cover = narrow and 104 or 136
         FavPage.Cover.Size = UDim2.fromOffset(cover, cover)
-        FavPage.Info.Position = UDim2.new(0, 20 + cover + 16, 1, -18)
+        FavPage.Cover.AnchorPoint = Vector2.new(0, 0)
+        FavPage.Cover.Position = UDim2.fromOffset(20, 64)
+        FavPage.Info.AnchorPoint = Vector2.new(0, 0)
+        FavPage.Info.Position = UDim2.fromOffset(20 + cover + 16, 64)
         FavPage.Info.Size = UDim2.new(1, -(20 + cover + 16 + 16), 0, cover)
         FavPage.Title.TextSize = narrow and 22 or (w < 760 and 30 or 38)
         FavPage.Title.Size = UDim2.new(1, 0, 0, math.max(40, cover - 64))
@@ -1002,6 +1005,7 @@
             return
         end
         FavPage.open = true
+        SongsCard.Visible = false -- el catálogo no debe verse detrás de favoritos
         FavPage.layout()
         FavPage.rebuild()
         FavPage.Scroll.CanvasPosition = Vector2.new(0, 0)
@@ -1017,6 +1021,7 @@
             return
         end
         FavPage.open = false
+        SongsCard.Visible = true
         pcall(function() FavPage.SearchInput:ReleaseFocus() end)
         local tw = TweenService:Create(FavPage.Root, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)})
         tw.Completed:Connect(function()

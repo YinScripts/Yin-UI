@@ -1,4 +1,13 @@
-ext then return end
+20, 255))
+            else
+                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
+            end
+        end)
+    end
+
+    LocalPlayer.Chatted:Connect(function(msg)
+        local text = tostring(msg):match("^[/]IA%s+(.+)$")
+        if not text then return end
         text = text:match("^%s*(.-)%s*$")
         if text == "" then return end
         chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
