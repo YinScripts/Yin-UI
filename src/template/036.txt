@@ -1033,6 +1033,7 @@
         end
         refreshSpotifyFloatingPlayer()
         if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
+        if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
         if SpotifyState.OnPlaybackChanged then
             pcall(SpotifyState.OnPlaybackChanged)
         end
@@ -1057,6 +1058,7 @@
         ProgressFill.Size = UDim2.new(clamp(current / total, 0, 1), 0, 1, 0)
         refreshSpotifyFloatingPlayer()
         if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer(current / total) end
+        if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
     end
 
     local function ensureTrackCached(track)

@@ -595,6 +595,104 @@ dPosition = 0
             playTrack(SpotifyState.SelectedIndex)
         end
     end
+    -- La cabecera comparte el sonido de Spotify y conserva el campo de IDs al detenerlo.
+    do
+        local B = {active = false, second = -1}
+        B.root = mk("Frame", {Name = "BoomboxSpotify", Parent = BoomboxPill,
+            Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Visible = false, ZIndex = 14})
+        B.cover = mk("ImageLabel", {Parent = B.root, Size = UDim2.fromOffset(32, 32),
+            Position = UDim2.new(0, 5, 0.5, -16), BackgroundColor3 = Color3.fromRGB(35, 35, 35),
+            BorderSizePixel = 0, Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 15})
+        corner(B.cover, 7)
+        B.title = mk("TextLabel", {Parent = B.root, Position = UDim2.fromOffset(42, 3),
+            Size = UDim2.new(1, -166, 0, 14), BackgroundTransparency = 1,
+            Text = "", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold,
+            TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 15})
+        B.artist = mk("TextLabel", {Parent = B.root, Position = UDim2.fromOffset(42, 16),
+            Size = UDim2.new(1, -166, 0, 12), BackgroundTransparency = 1,
+            Text = "", TextColor3 = Color3.fromRGB(220, 220, 220), Font = Enum.Font.Gotham,
+            TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 15})
+        B.time = mk("TextLabel", {Parent = B.root, Position = UDim2.fromOffset(42, 28),
+            Size = UDim2.fromOffset(28, 10), BackgroundTransparency = 1, Text = "0:00",
+            TextColor3 = Color3.fromRGB(235, 235, 235), Font = Enum.Font.Gotham,
+            TextSize = 9, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 15})
+        B.total = mk("TextLabel", {Parent = B.root, AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -123, 0, 28), Size = UDim2.fromOffset(28, 10),
+            BackgroundTransparency = 1, Text = "0:00", TextColor3 = Color3.fromRGB(235, 235, 235),
+            Font = Enum.Font.Gotham, TextSize = 9, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 15})
+        B.bar = mk("Frame", {Parent = B.root, Position = UDim2.fromOffset(73, 32),
+            Size = UDim2.new(1, -229, 0, 3), BackgroundColor3 = Color3.fromRGB(112, 108, 120),
+            BorderSizePixel = 0, ZIndex = 15})
+        corner(B.bar, 2)
+        B.fill = mk("Frame", {Parent = B.bar, Size = UDim2.fromScale(0, 1),
+            BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = 16})
+        B.fill:SetAttribute("ThemeRole", "Accent")
+        corner(B.fill, 2)
+        local function button(name, right, image, callback)
+            local b = mk("ImageButton", {Name = name, Parent = B.root,
+                AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, right, 0.5, 0),
+                Size = UDim2.fromOffset(27, 27), BackgroundTransparency = 1,
+                Image = asset(image), ImageColor3 = Color3.new(1, 1, 1),
+                ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 16})
+            b.Activated:Connect(callback)
+            return b
+        end
+        B.previous = button("Previous", -91, 124844823753990, previousTrack)
+        B.previous.Rotation = 180
+        B.play = button("PlayPause", -62, 135609604299893, togglePlayback)
+        B.next = button("Next", -33, 124844823753990, nextTrack)
+        B.close = mk("TextButton", {Parent = B.root, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.fromOffset(24, 27),
+            BackgroundTransparency = 1, Text = "×", TextColor3 = Color3.fromRGB(220, 220, 220),
+            Font = Enum.Font.Gotham, TextSize = 20, AutoButtonColor = false, ZIndex = 16})
+        B.close.Activated:Connect(function()
+            destroyCurrentSound()
+            SpotifyState.IsPlaying = false
+            SpotifyState.CurrentTrack = nil
+            SpotifyState.CurrentPausedPosition = 0
+            syncPlaybackUI()
+        end)
+        function B.layout()
+            if not B.active then return end
+            local width = math.clamp(TopBar.AbsoluteSize.X * 0.50, 240, 390)
+            BoomboxPill.Size = UDim2.fromOffset(width, 40)
+            BoomboxPill.Position = UDim2.new(0.5, -width / 2, 0.5, -20)
+        end
+        TopBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(B.layout)
+        SpotifyState.RefreshBoombox = function()
+            local sound = SpotifyState.CurrentSound
+            local active = sound ~= nil and SpotifyState.CurrentTrack ~= nil
+            if active ~= B.active then
+                B.active = active
+                B.root.Visible = active
+                Boom.Disc.Visible = not active
+                BoomboxInput.Visible = not active
+                BoomboxPlaceholder.Visible = not active and BoomboxInput.Text == ""
+                BannerFrame.Visible = not active
+                if active then
+                    B.layout()
+                else
+                    BoomboxPill.Size = UDim2.fromOffset(155, 28)
+                    BoomboxPill.Position = UDim2.new(0.5, -77, 0.5, -18)
+                end
+            end
+            if not active then return end
+            if B.title.Text ~= PlayerSongTitle.Text then B.title.Text = PlayerSongTitle.Text end
+            if B.artist.Text ~= PlayerSongArtist.Text then B.artist.Text = PlayerSongArtist.Text end
+            if B.cover.Image ~= AlbumArt.Image then B.cover.Image = AlbumArt.Image end
+            B.play.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+            local current = math.max(0, tonumber(sound.TimePosition) or 0)
+            local duration = tonumber(sound.TimeLength) or 0
+            if duration <= 0 then duration = durationToSeconds(SpotifyState.CurrentTrack.Duration) end
+            B.time.Text = secondsToClock(current)
+            B.total.Text = secondsToClock(duration)
+            B.fill.Size = UDim2.new(duration > 0 and math.clamp(current / duration, 0, 1) or 0, 0, 1, 0)
+        end
+        SpotifyState.RefreshBoombox()
+    end
+
     -- Barra compacta y navegación inspiradas en el reproductor móvil.
     -- Reutilizan el catálogo real y el mismo estado de reproducción.
     do
