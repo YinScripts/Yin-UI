@@ -662,6 +662,7 @@ dPosition = 0
             local width = math.clamp((TopBar.AbsoluteSize.X / parentScale) * 0.37, 180, 280)
             BoomboxPill.Size = UDim2.fromOffset(width, 30)
             BoomboxPill.Position = UDim2.new(0.5, -width / 2, 0, 3)
+            BannerFrame.Position = UDim2.new(0.5, -width / 2 - 6, 0, 18)
         end
         TopBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(B.layout)
         MainScale:GetPropertyChangedSignal("Scale"):Connect(B.layout)
@@ -674,12 +675,13 @@ dPosition = 0
                 Boom.Disc.Visible = not active
                 BoomboxInput.Visible = not active
                 BoomboxPlaceholder.Visible = not active and BoomboxInput.Text == ""
-                BannerFrame.Visible = not active
+                BannerFrame.Visible = true
                 if active then
                     B.layout()
                 else
                     BoomboxPill.Size = UDim2.fromOffset(155, 28)
                     BoomboxPill.Position = UDim2.new(0.5, -77, 0.5, -18)
+                    BannerFrame.Position = UDim2.new(0.5, -83, 0.5, 0)
                 end
             end
             if not active then return end

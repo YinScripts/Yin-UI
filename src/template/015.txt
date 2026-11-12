@@ -511,99 +511,54 @@ v == "Float" then
     ):Play()
 
 
-    local BannerSlideshow_Images = {
-        { name = "YYBannerCat1.png", url = "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/main/BackgroundEraser_20260924_191300955.png" },
-        { name = "YYBannerCat2.png", url = "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/main/BackgroundEraser_20260924_190941541.png" },
-    }
-    local BannerSlideshow_Interval = 3
-
+    -- Personaje animado: dos hojas de 4 x 2, reproducidas en orden.
     local BannerFrame = mk("Frame", {
-        Name            = "BannerSlideshow",
-        AnchorPoint     = Vector2.new(1, 0.5),
-        Position        = UDim2.new(0.5, -83, 0.5, 0),
-        Size            = UDim2.fromOffset(30, 30),
-        BackgroundTransparency = 1,
-        ZIndex          = 8,
+        Name = "BannerSlideshow", AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(0.5, -83, 0.5, 0), Size = UDim2.fromOffset(38, 38),
+        BackgroundTransparency = 1, ClipsDescendants = false, ZIndex = 8,
     }, TopBar)
-    corner(BannerFrame, 6)
-
-    local BannerImageA = mk("ImageLabel", {
-        Size                   = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Image                  = "",
-        ScaleType              = Enum.ScaleType.Fit,
-        Visible                = false,
-        ZIndex                 = 9,
+    local BannerSprite = mk("ImageLabel", {
+        Name = "JumpSpinSprite", Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1, Image = "rbxassetid://95331276484866",
+        ScaleType = Enum.ScaleType.Fit, ZIndex = 9,
     }, BannerFrame)
-    corner(BannerImageA, 6)
-
-    local BannerImageB = mk("ImageLabel", {
-        Size                   = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Image                  = "",
-        ScaleType              = Enum.ScaleType.Fit,
-        Visible                = false,
-        ZIndex                 = 8,
-    }, BannerFrame)
-    corner(BannerImageB, 6)
-
+    local BannerSheets = {"rbxassetid://95331276484866", "rbxassetid://98784763318607"}
+    -- Dimensiones originales de ambas imágenes PNG: 1774 x 887.
+    -- Los bordes se redondean por separado para distribuir correctamente los píxeles impares.
+    local function bannerFrame(index)
+        local localIndex = index % 8
+        local col, row = localIndex % 4, math.floor(localIndex / 4)
+        local x0, x1 = math.floor(col * 1774 / 4), math.floor((col + 1) * 1774 / 4)
+        local y0, y1 = math.floor(row * 887 / 2), math.floor((row + 1) * 887 / 2)
+        local image = BannerSheets[math.floor(index / 8) + 1]
+        if BannerSprite.Image ~= image then BannerSprite.Image = image end
+        BannerSprite.ImageRectOffset = Vector2.new(x0, y0)
+        BannerSprite.ImageRectSize = Vector2.new(x1 - x0, y1 - y0)
+    end
+    bannerFrame(0)
     task.spawn(function()
-        if type(game.HttpGet) ~= "function"
-        or type(writefile) ~= "function"
-        or type(isfile) ~= "function"
-        or type(getcustomasset) ~= "function" then return end
-
-        local assetCache = {}
-        for _, banner in ipairs(BannerSlideshow_Images) do
-            task.spawn(function()
-                pcall(function()
-                    local cachedOk, cachedExists = pcall(isfile, banner.name)
-                    if not (cachedOk and cachedExists) then
-                        local dlOk, data = pcall(game.HttpGet, game, banner.url, true)
-                        if not dlOk or type(data) ~= "string" or #data < 10 then return end
-                        pcall(writefile, banner.name, data)
-                    end
-                    local assetOk, assetId = pcall(getcustomasset, banner.name)
-                    if assetOk and type(assetId) == "string" then
-                        assetCache[banner.name] = assetId
-                    end
-                end)
-            end)
-        end
-
-        local waited = 0
-        while waited < 10 and not assetCache[BannerSlideshow_Images[1].name] do
-            task.wait(0.25)
-            waited = waited + 0.25
-        end
-        if not assetCache[BannerSlideshow_Images[1].name] then return end
-
-        local function getAsset(i)
-            local b = BannerSlideshow_Images[((i - 1) % #BannerSlideshow_Images) + 1]
-            return assetCache[b.name] or ""
-        end
-
-        BannerImageA.Image = getAsset(1)
-        BannerImageB.Image = getAsset(2)
-        task.wait(0.05)
-
-        local front = BannerImageA
-        local back  = BannerImageB
-        front.Visible = true
-        back.Visible  = false
-
-        local idx = 1
+        local ok, provider = pcall(function() return game:GetService("ContentProvider") end)
+        if ok and provider then pcall(function() provider:PreloadAsync(BannerSheets) end) end
+    end)
+    task.spawn(function()
         while BannerFrame and BannerFrame.Parent do
-            task.wait(BannerSlideshow_Interval)
-            if PerfOpt.Flags.NoDecorAnim then continue end
-
-            back.Visible  = true
-            front.Visible = false
-            front, back = back, front
-
-            idx = (idx % #BannerSlideshow_Images) + 1
-            local nextIdx = (idx % #BannerSlideshow_Images) + 1
-            back.Image = getAsset(nextIdx)
+            if PerfOpt.Flags.NoDecorAnim then
+                bannerFrame(0)
+                BannerSprite.Position = UDim2.fromOffset(0, 0)
+                task.wait(0.5)
+            else
+                task.wait(0.65)
+                for index = 0, 15 do
+                    if not BannerFrame.Parent then return end
+                    if PerfOpt.Flags.NoDecorAnim then break end
+                    bannerFrame(index)
+                    local jump = math.sin(math.pi * index / 15) * 5
+                    BannerSprite.Position = UDim2.fromOffset(0, -jump)
+                    task.wait(0.09)
+                end
+                bannerFrame(0)
+                BannerSprite.Position = UDim2.fromOffset(0, 0)
+            end
         end
     end)
 
