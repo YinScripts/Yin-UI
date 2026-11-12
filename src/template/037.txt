@@ -704,21 +704,22 @@ dPosition = 0
     do
         local N = {lastProgress = -1}
         N.openCatalog = mk("TextButton", {
-            Parent = NowPlayingCard, Size = UDim2.fromOffset(110, 30),
-            Position = UDim2.fromOffset(12, 8), BackgroundColor3 = Color3.fromRGB(30, 30, 33),
-            BackgroundTransparency = 0.16, BorderSizePixel = 0,
+            Parent = NowPlayingCard, Size = UDim2.fromOffset(102, 27),
+            Position = UDim2.fromOffset(12, 7), BackgroundColor3 = Color3.fromRGB(24, 24, 27),
+            BackgroundTransparency = 0.22, BorderSizePixel = 0,
             Text = GetText("♫  Catálogo", "♫  Catalog"), Font = Enum.Font.GothamBold,
-            TextColor3 = spotifyText, TextSize = 12, AutoButtonColor = false, ZIndex = 25,
+            TextColor3 = spotifyText, TextSize = 11, AutoButtonColor = false, ZIndex = 25,
         })
         if Window._SpotifyAmbient then
             Window._SpotifyAmbient.LayoutPlayer = function(compact)
-                N.openCatalog.Position = UDim2.fromOffset(compact and 72 or 12, 8)
+                N.openCatalog.Position = UDim2.fromOffset(compact and 72 or 12, 7)
             end
             Window._SpotifyAmbient.LayoutPlayer(Window.CompactNavigation == true)
         end
         N.openCatalog:SetAttribute("TextSpanish", "♫  Catálogo")
         N.openCatalog:SetAttribute("TextEnglish", "♫  Catalog")
         corner(N.openCatalog, 14)
+        stroke(N.openCatalog, Color3.fromRGB(130, 130, 135), 1, 0.80)
         N.openCatalog.Activated:Connect(function() SpotifyPages:JumpTo(CatalogPage) end)
 
         N.root = mk("Frame", {

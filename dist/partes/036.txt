@@ -1189,7 +1189,7 @@
 
     local NextBtn = createIconButton(Controls, 24, 124844823753990, spotifyText)
     NextBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    NextBtn.Position = UDim2.new(0.70, 0, 0.5, 0)
+    NextBtn.Position = UDim2.new(0.63, 0, 0.5, 0)
 
     local MoreBtn = createIconButton(Controls, 22, 117978708573781, spotifyText)
     MoreBtn.AnchorPoint = Vector2.new(0.5, 0.5)

@@ -1,4 +1,7 @@
-ng:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
+TemaInicial = ConfigCargada.theme
+    end
+
+    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
     
     DemoUI:SetTheme(TemaInicial)
     

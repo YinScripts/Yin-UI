@@ -606,7 +606,7 @@
         PlayPauseBtn.Position = UDim2.new(0.5, -9, 0.5, -9)
 
         NextBtn.Size = UDim2.new(0, 22, 0, 22)
-        NextBtn.Position = UDim2.new(0.70, 0, 0.5, 0)
+        NextBtn.Position = UDim2.new(0.63, 0, 0.5, 0)
         MoreBtn.Size = UDim2.new(0, 20, 0, 20)
         MoreBtn.Position = UDim2.new(0.94, 0, 0.5, 0)
 

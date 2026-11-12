@@ -1,4 +1,6 @@
-fromOffset(36, 36),
+mk("TextButton", {
+            Parent = Row,
+            Size = UDim2.fromOffset(36, 36),
             Position = UDim2.new(1, -126, 0.5, -18),
             BackgroundTransparency = 1,
             Text = "",
@@ -1069,7 +1071,4 @@ if DEMO_ACTIVO then
     local ConfigCargada = LoadConfig()
     local TemaInicial = "Dark"
     if ConfigCargada and ConfigCargada.theme then
-        TemaInicial = ConfigCargada.theme
-    end
-
-    local DemoUI = _G.YinYa
+        
