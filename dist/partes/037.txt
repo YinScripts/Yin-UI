@@ -843,6 +843,14 @@ put)
             local layoutKey = table.concat({ columns, gapX, gapY, cellW, cellH, rowCoverSize, tostring(m.compact) }, "|")
             if SpotifyState._LayoutKey ~= layoutKey then
                 SpotifyState._LayoutKey = layoutKey
+                for _, rowData in pairs(SpotifyState.RowButtons) do
+                    local background = rowData.Row.BackgroundColor3
+                    applySpotifyRowLayout(rowData)
+                    rowData.Row.BackgroundColor3 = background
+                end
+                -- Las tarjetas especiales dependen del tamaño de la ventana.
+                if SpotifyState._FavoritesTile then safeDestroy(SpotifyState._FavoritesTile) SpotifyState._FavoritesTile = nil end
+                if SpotifyState._MySongsTile then safeDestroy(SpotifyState._MySongsTile) SpotifyState._MySongsTile = nil end
                 renderSongRows()
             end
         end
@@ -961,35 +969,64 @@ put)
     end
 
     renderSongRows = function()
-        clearSongRows()
+        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
         local order = getVisibleRenderOrder()
         local displayOrder = 1
         local query = normalizeSearchText(SpotifyState.SearchQuery or "")
+        local showTiles = not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == ""
+        local visible = {}
+        for _, index in ipairs(order) do visible[index] = true end
 
-        if not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == "" then
-            local favoritesOk, favoritesErr = pcall(function()
-                createFavoritesTile(displayOrder)
-            end)
-            if not favoritesOk then
-                warn("[YinYang Spotify] No se pudo crear la tarjeta de Favoritos: " .. tostring(favoritesErr))
+        for index, rowData in pairs(SpotifyState.RowButtons) do
+            if rowData.Row and rowData.Row.Parent then
+                local shouldShow = visible[index] == true and not SpotifyState.HiddenRows[index]
+                if rowData.Row.Visible ~= shouldShow then rowData.Row.Visible = shouldShow end
             end
-            displayOrder = displayOrder + 1
+        end
 
-            local mySongsOk, mySongsErr = pcall(function()
-                createMySongsTile(displayOrder)
-            end)
-            if not mySongsOk then
-                warn("[YinYang Spotify] No se pudo crear la tarjeta Mis canciones: " .. tostring(mySongsErr))
+        local function tile(key, create, position)
+            local card = SpotifyState[key]
+            if showTiles and (not card or not card.Parent) then
+                local ok, result = pcall(create, position)
+                if ok then
+                    card = result
+                    SpotifyState[key] = card
+                else
+                    warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
+                end
             end
-            displayOrder = displayOrder + 1
+            if card and card.Parent then
+                card.Visible = showTiles
+                if showTiles then card.LayoutOrder = position end
+            end
+            return card
+        end
+
+        tile("_FavoritesTile", createFavoritesTile, 1)
+        local mySongsTile = tile("_MySongsTile", createMySongsTile, 2)
+        if showTiles then
+            displayOrder = 3
+            if mySongsTile then
+                local countLabel = mySongsTile:FindFirstChild("MySongsCount")
+                if countLabel then
+                    local count = tostring(#SpotifyState.UserSongs)
+                    countLabel.Text = GetText(count .. " canciones propias", count .. " personal songs")
+                    countLabel:SetAttribute("TextSpanish", count .. " canciones propias")
+                    countLabel:SetAttribute("TextEnglish", count .. " personal songs")
+                end
+            end
         end
 
         for _, index in ipairs(order) do
             local track = SpotifyState.Catalog[index]
-            if track then
-                pcall(function()
-                    createSongRow(track, index, displayOrder)
-                end)
+            if track and not SpotifyState.HiddenRows[index] then
+                local rowData = SpotifyState.RowButtons[index]
+                if rowData and rowData.Row and rowData.Row.Parent then
+                    rowData.Row.LayoutOrder = displayOrder
+                    if not rowData.Row.Visible then rowData.Row.Visible = true end
+                else
+                    pcall(createSongRow, track, index, displayOrder)
+                end
                 displayOrder = displayOrder + 1
             end
         end

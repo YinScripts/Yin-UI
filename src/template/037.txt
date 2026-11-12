@@ -1074,6 +1074,7 @@ dPosition = 0
         TapArea.MouseLeave:Connect(function()
             TweenService:Create(Card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(96, 38, 160)}):Play()
         end)
+        return Card
     end
 
     createMySongsTile = function(layoutOrder)
