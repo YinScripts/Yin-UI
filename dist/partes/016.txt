@@ -330,7 +330,8 @@ e })
         setMainGlowEnabled(true)
         ShadowFrame.Visible = false
         Main.Visible = true
-        MainScale.Scale = 0.82
+        -- Evita recalcular el tamaño de todos los controles durante la apertura.
+        MainScale.Scale = 1
         Main.BackgroundTransparency = 0
 
         local tw = TweenService:Create(
@@ -374,7 +375,7 @@ e })
         local tw1 = TweenService:Create(
             MainScale,
             TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { Scale = 0.85 }
+            { Scale = 1 }
         )
         local tw2 = TweenService:Create(
             Main,

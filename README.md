@@ -30,11 +30,7 @@ La versión principal de la librería se encuentra en `main`:
 local YinUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/loader.lua"))()
 ```
 
-La versión de prueba utilizada para reducir el tirón al abrir, cerrar y mover la interfaz se encuentra en una rama independiente:
-
-```lua
-local YinUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/perf-ui-prueba-20261112/loader.lua"))()
-```
+La versión principal incluye las mejoras probadas para reducir el tirón de la interfaz y descargar los fragmentos en paralelo.
 
 El cargador devuelve la librería; la interfaz y sus funciones se configuran desde el proyecto que la utiliza. La disponibilidad de `loadstring` y `game:HttpGet` depende del entorno de ejecución.
 
