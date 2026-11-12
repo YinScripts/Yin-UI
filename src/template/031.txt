@@ -638,7 +638,7 @@
     CredPage:SetAttribute("ThemeRole", "Background")
 
     local CredRoot_
-    local DISCORD_LINK = "https://discord.gg/KAtgYysjp"
+    local DISCORD_LINK = "https://discord.gg/NmV4sUQan"
     local BLURPLE = Color3.fromRGB(88, 101, 242)
     local GREEN = Color3.fromRGB(46, 204, 113)
 

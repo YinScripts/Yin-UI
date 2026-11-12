@@ -171,7 +171,7 @@
     text({
         Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0),
         Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
-        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/KAtgYysjp",
+        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/NmV4sUQan",
         TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
     })
     CopyBtn.MouseEnter:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1.02}):Play() end)
