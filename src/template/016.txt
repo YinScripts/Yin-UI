@@ -602,7 +602,7 @@
             local button = mk("TextButton", {
                 Name = name, Parent = Body, Size = UDim2.fromOffset(34, 34),
                 Position = UDim2.new(0, 12, 1, -40), BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.06, BorderSizePixel = 0, Text = "",
+                BackgroundTransparency = 0.45, BorderSizePixel = 0, Text = "",
                 AutoButtonColor = false, Visible = visible, ZIndex = 22,
             })
             button:SetAttribute("ThemeRole", "Background")
@@ -613,7 +613,7 @@
             for i = 1, 2 do
                 local arrow = mk("TextLabel", {
                     Parent = button, Name = "Chevron" .. i,
-                    Size = UDim2.fromOffset(14, 30), Position = UDim2.fromOffset(4 + (i - 1) * 10, 1),
+                    Size = UDim2.fromOffset(14, 30), Position = UDim2.fromOffset(7 + (i - 1) * 6, 1),
                     BackgroundTransparency = 1, Text = symbol, TextColor3 = Theme.Text,
                     Font = Enum.Font.GothamBold, TextSize = 22, ZIndex = 23,
                 })
