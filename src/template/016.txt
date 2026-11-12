@@ -779,6 +779,7 @@
             ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 118, 0, 0)
             ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -118, 1, 0)
             Window._RefreshCompactNavigation()
+            if self._SpotifyAmbient and self._SpotifyAmbient.Active then self._SpotifyAmbient.Layout() end
         end
 
         nav.Open.MouseButton1Click:Connect(function() Window:SetCompactNavigation(true) end)

@@ -1,4 +1,5 @@
-startPos = Main.Position
+.Position
+                startPos = Main.Position
             end
         end)
         track(UserInputService.InputChanged:Connect(function(input)
@@ -427,6 +428,7 @@ startPos = Main.Position
             ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 118, 0, 0)
             ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -118, 1, 0)
             Window._RefreshCompactNavigation()
+            if self._SpotifyAmbient and self._SpotifyAmbient.Active then self._SpotifyAmbient.Layout() end
         end
 
         nav.Open.MouseButton1Click:Connect(function() Window:SetCompactNavigation(true) end)
@@ -1021,5 +1023,4 @@ startPos = Main.Position
         if not index then return end
 
         local length = #TabIconCarousel.Items * TAB_ICON_STEP
-        local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
-        local delta = (target - TabIconCarousel.Offset + length / 2) 
+        local target = (index - 1) 

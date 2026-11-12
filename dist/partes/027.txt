@@ -1,4 +1,6 @@
- "class", className = "ColorCorrectionEffect", parent = "Lighting"},
+ting"},
+        BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
+        ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
         ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
         DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
         SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
@@ -795,6 +797,4 @@
     -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
     function ShaderReflections:_stripPartTextures(part)
         if self.TextureOriginal[part] ~= nil then return end
-        local owner = part:FindFirstAncestorOfClass("Model")
-        if owner and owner:FindFirstChildOfClass("Humanoid") then return end
-    
+        l

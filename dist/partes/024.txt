@@ -1,4 +1,7 @@
-+ (255 - 150) * t)
+mRGB(
+                        255,
+                        math.floor(100 + (255 - 100) * t),
+                        math.floor(150 + (255 - 150) * t)
                     )
                 else
                     local t = (cycle - 0.5) * 2
@@ -1019,6 +1022,3 @@
                         total .. " setting(s) copied to clipboard")
                     if CodeBox then CodeBox.Visible = false end
                 else
-                    setStatus("err",
-                        "Tu ejecutor no copia: copiá el código de abajo",
-                     

@@ -1,138 +1,4 @@
-           TextSize = 26,
-            ZIndex = 526,
-        })
-        FP.Title = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 18),
-            Position = UDim2.new(0, 100, 0, 12),
-            BackgroundTransparency = 1,
-            Text = GetText("Selecciona una canción", "Select a song"),
-            TextColor3 = Color3.fromRGB(255, 255, 255),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-        FP.Artist = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 14),
-            Position = UDim2.new(0, 100, 0, 31),
-            BackgroundTransparency = 1,
-            Text = "Spotify",
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-
-        local controls = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(170, 38),
-            Position = UDim2.new(0, 96, 0, 50),
-            BackgroundTransparency = 1,
-            ZIndex = 525,
-        })
-        FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
-        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
-        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
-        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
-        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
-        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
-        FP.PlayBtn.BackgroundTransparency = 0
-        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
-        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
-        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
-
-        FP.Time = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.75,
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(barBack, 999)
-        FP.Bar = mk("Frame", {
-            Parent = barBack,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 526,
-        })
-        corner(FP.Bar, 999)
-        local seekHit = mk("TextButton", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 18),
-            Position = UDim2.new(0, 12, 1, -19),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 527,
-        })
-
-        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        closeBtn.Position = UDim2.new(1, -32, 0, 8)
-        closeBtn.BackgroundTransparency = 0.88
-        closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 15
-        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        miniBtn.Position = UDim2.new(1, -60, 0, 8)
-        miniBtn.BackgroundTransparency = 0.88
-        miniBtn.Text = "–"
-        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        miniBtn.Font = Enum.Font.GothamBold
-        miniBtn.TextSize = 15
-
-        FP.Disc = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, -4, 1, -4),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-            BorderSizePixel = 0,
-            Image = "",
-            ScaleType = Enum.ScaleType.Crop,
-            Visible = false,
-            ZIndex = 524,
-        })
-        corner(FP.Disc, 999)
-        FP.Ring.Parent = FP.Disc
-        local hole = mk("Frame", {
-            Parent = FP.Disc,
-            Size = UDim2.fromOffset(8, 8),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(hole, 999)
-
-        bindRowTap(closeBtn, function() setFloatingVisible(false) end)
-        bindRowTap(miniBtn, function()
-            FP.mini = true
-            FP.applyMode()
-        end)
-        bindRowTap(FP.LikeBtn, function()
+ion()
             if SpotifyState.Catalog[SpotifyState.SelectedIndex] then toggleTrackLike(SpotifyState.SelectedIndex) end
         end)
         bindRowTap(prevBtn, previousTrack)
@@ -1146,4 +1012,147 @@
             ScaleType = Enum.ScaleType.Crop,
             ZIndex = 43,
         })
-        corner(Co
+        corner(Cover, 4)
+        if not FavPage.covers[index] then
+            task.spawn(function()
+                local ok, img = pcall(resolveTrackCoverImage, song)
+                if ok and type(img) == "string" and img ~= "" then
+                    FavPage.covers[index] = img
+                    if Cover.Parent then
+                        Cover.Image = img
+                    end
+                end
+            end)
+        end
+
+        local Title = mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.new(1, -230, 0, 20),
+            Position = UDim2.new(0, 102, 0, 10),
+            BackgroundTransparency = 1,
+            Text = song.Name,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 15,
+            TextColor3 = spotifyText,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.new(1, -230, 0, 16),
+            Position = UDim2.new(0, 102, 0, 31),
+            BackgroundTransparency = 1,
+            Text = song.Artist,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        local Heart = mk("TextButton", {
+            Parent = Row,
+            Size = UDim2.fromOffset(36, 36),
+            Position = UDim2.new(1, -126, 0.5, -18),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 45,
+        })
+        mk("ImageLabel", {
+            Parent = Heart,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = FavPage.HEART_ON,
+            ImageColor3 = spotifyGreen,
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 46,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.fromOffset(60, 58),
+            Position = UDim2.new(1, -78, 0, 0),
+            BackgroundTransparency = 1,
+            Text = song.Duration,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 43,
+        })
+
+        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
+        FavPage.rows[#FavPage.rows + 1] = row
+        Row.MouseEnter:Connect(function()
+            row.Hover = true
+            Row.BackgroundTransparency = 0.9
+            FavPage.paintRow(row)
+        end)
+        Row.MouseLeave:Connect(function()
+            row.Hover = false
+            Row.BackgroundTransparency = 1
+            FavPage.paintRow(row)
+        end)
+        FavPage.paintRow(row)
+
+        bindRowTap(Heart, function()
+            toggleTrackLike(index)
+        end)
+        bindRowTap(Row, function()
+            FavPage.toggleRow(index)
+        end)
+    end
+
+    FavPage.rebuild = function()
+        for _, child in ipairs(FavPage.Body:GetChildren()) do
+            if child:IsA("GuiObject") then
+                safeDestroy(child)
+            end
+        end
+        FavPage.rows = {}
+        local list = FavPage.likedList()
+        local query = normalizeSearchText(FavPage.query or "")
+        local shown = 0
+        for position, index in ipairs(list) do
+            local song = SpotifyState.Catalog[index]
+            local ok = query == ""
+            if not ok and song then
+                ok = normalizeSearchText((song.Name or "") .. " " .. (song.Artist or "")):find(query, 1, true) ~= nil
+            end
+            if ok then
+                shown = shown + 1
+                FavPage.makeRow(index, position)
+            end
+        end
+        if #list == 0 or shown == 0 then
+            local box = mk("Frame", {
+                Parent = FavPage.Body,
+                Size = UDim2.new(1, 0, 0, 170),
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                ZIndex = 42,
+            })
+            mk("ImageLabel", {
+                Parent = box,
+                Size = UDim2.fromOffset(44, 44),
+                AnchorPoint = Vector2.new(0.5, 0),
+                Position = UDim2.new(0.5, 0, 0, 24),
+                BackgroundTransparency = 1,
+                Image = #list == 0 and FavPage.HEART_OFF or FavPage.SEARCH,
+                ImageColor3 = spotifyDim,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 43,
+            })
+            local t1 = mk("TextLabel", {
+                Parent = box,
+                Size = UDim2.new(1, 0, 0, 26),
+                Position = UDim2.new(0, 0, 0, 80),
+                BackgroundTransparency = 1,
+                Text = "",
+                Font = Enum.Font.GothamBlack,
+                TextSize = 18,
+                TextColor3 = spotifyText,
+                ZI

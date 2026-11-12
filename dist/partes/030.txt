@@ -1,4 +1,5 @@
-quenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
+        bandGradient.Rotation = 90
+        bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
         bandGradient.Parent = band
         self.Band = band
         gui.Parent = playerGui
@@ -1046,10 +1047,4 @@ quenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSe
             Size = UDim2.new(1, -36, 0, 8),
             Position = UDim2.new(0, 18, 0, 44),
             BackgroundColor3 = Theme.AccentOff,
-            BorderSizePixel = 0,
-            ZIndex = 314,
-        })
-        bar:SetAttribute("ThemeRole", "AccentOff")
-        corner(bar, 99)
-
-    
+            Borde

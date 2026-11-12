@@ -1,173 +1,4 @@
-set = pcall(function()
-                return getcustomasset(audioPath)
-            end)
-            if okAsset and type(resultAsset) == "string" then
-                customAsset = resultAsset
-            end
-        end
-
-        return true, customAsset
-    end
-
-    local function ensureCoverCached(track)
-        if not track.CoverURL or track.CoverURL == "" then
-            return false, "no_cover_url"
-        end
-
-        local cacheName = track.CoverCacheName
-        if not cacheName or cacheName == "" then
-            return false, "no_cover_cache_name"
-        end
-
-        local coverPath = "YinYang_Cover_" .. cacheName
-        local coverExists = false
-
-        if isfile then
-            local okFile, resultFile = pcall(function()
-                return isfile(coverPath)
-            end)
-            coverExists = okFile and resultFile == true
-        end
-
-        if not coverExists then
-            if not writefile then
-                return false, "writefile_unavailable"
-            end
-
-            local okDownload, data = pcall(function()
-                return game:HttpGet(track.CoverURL, true)
-            end)
-
-            if not okDownload or type(data) ~= "string" or #data < 10 then
-                warn("[YinYang Spotify] Falló la descarga de portada (" .. tostring(track.CoverURL) .. "): " .. tostring(data))
-                return false, "download_failed"
-            end
-
-            local okWrite = pcall(function()
-                writefile(coverPath, data)
-            end)
-
-            if not okWrite then
-                warn("[YinYang Spotify] Falló writefile para la portada: " .. coverPath)
-                return false, "cache_write_failed"
-            end
-        end
-
-        if not getcustomasset then
-            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la portada: " .. coverPath)
-            return false, "getcustomasset_unavailable"
-        end
-
-        local okAsset, resultAsset = pcall(function()
-            return getcustomasset(coverPath)
-        end)
-
-        if not (okAsset and type(resultAsset) == "string") then
-            warn("[YinYang Spotify] getcustomasset falló para la portada (" .. coverPath .. "): " .. tostring(resultAsset))
-            return false, "getcustomasset_failed"
-        end
-
-        return true, resultAsset
-    end
-
-    local CoverAssetResolvedCache = {}
-
-    resolveTrackCoverImage = function(track)
-        if not track then
-            return ""
-        end
-
-        if track.CoverURL and track.CoverURL ~= "" then
-            local cacheKey = (track.CoverCacheName and track.CoverCacheName ~= "") and track.CoverCacheName or track.CoverURL
-            local cached = CoverAssetResolvedCache[cacheKey]
-            if cached then
-                return cached
-            end
-
-            local okCover, coverAssetOrErr = ensureCoverCached(track)
-            if okCover then
-                CoverAssetResolvedCache[cacheKey] = coverAssetOrErr
-                return coverAssetOrErr
-            end
-        end
-
-        return track.Cover or ""
-    end
-
-    local function playTrack(index)
-        local track = SpotifyState.Catalog[index]
-        if not track then
-            return
-        end
-
-        SpotifyState.SelectedIndex = index
-        SpotifyState.CurrentTrack = track
-        SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
-        SpotifyState.CurrentPausedPosition = 0
-        SpotifyState.IsPlaying = true
-
-        destroyAllSpotifySounds()
-        destroyCurrentSound()
-
-        updatePlayerFromTrack(track, index, "Descargando y reproduciendo...")
-        syncPlaybackUI()
-
-        local okCache, cachedAssetOrErr = ensureTrackCached(track)
-        local soundAsset = okCache and cachedAssetOrErr or track.AudioURL
-
-        local sound = Instance.new("Sound")
-        sound.Name = "YY_Spotify_CurrentSound"
-        sound.SoundId = soundAsset
-        sound.Volume = SpotifyState.PlaybackVolume
-        sound.PlaybackSpeed = SpotifyState.PlaybackSpeed
-        sound.Looped = SpotifyState.IsRepeat
-        sound.Parent = workspace
-
-        SpotifyState.CurrentSound = sound
-
-        SpotifyState.SoundProgressConnection = RunService.Heartbeat:Connect(function()
-            if SpotifyState.CurrentSound == sound then
-                updateProgress(track, sound)
-            end
-        end)
-
-        SpotifyState.SoundEndedConnection = sound.Ended:Connect(function()
-            if SpotifyState.CurrentSound ~= sound then
-                return
-            end
-
-            if SpotifyState.IsRepeat then
-                task.spawn(function()
-                    pcall(function()
-                        sound.TimePosition = 0
-                        sound:Play()
-                        SpotifyState.IsPlaying = true
-                        syncPlaybackUI()
-                    end)
-                end)
-                return
-            end
-
-            local nextIndex = index + 1
-            if nextIndex > #SpotifyState.Catalog then
-                nextIndex = 1
-            end
-            if SpotifyState.FavoriteNeighbor then
-                nextIndex = SpotifyState.FavoriteNeighbor(index, 1) or nextIndex
-            end
-            playTrack(nextIndex)
-        end)
-
-        pcall(function()
-            sound:Play()
-        end)
-
-        SpotifyState.IsPlaying = true
-        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
-        syncPlaybackUI()
-    end
-
-    local function selectTrack(index)
+   local function selectTrack(index)
         local track = SpotifyState.Catalog[index]
         if not track then
             return
@@ -815,6 +646,12 @@ set = pcall(function()
             Text = GetText("♫  Catálogo", "♫  Catalog"), Font = Enum.Font.GothamBold,
             TextColor3 = spotifyText, TextSize = 12, AutoButtonColor = false, ZIndex = 25,
         })
+        if Window._SpotifyAmbient then
+            Window._SpotifyAmbient.LayoutPlayer = function(compact)
+                N.openCatalog.Position = UDim2.fromOffset(compact and 72 or 12, 8)
+            end
+            Window._SpotifyAmbient.LayoutPlayer(Window.CompactNavigation == true)
+        end
         N.openCatalog:SetAttribute("TextSpanish", "♫  Catálogo")
         N.openCatalog:SetAttribute("TextEnglish", "♫  Catalog")
         corner(N.openCatalog, 14)
@@ -824,7 +661,7 @@ set = pcall(function()
             Parent = CatalogPage, Name = "SpotifyBottomNavigation",
             Size = UDim2.new(1, 0, 0, 90), AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-            BorderSizePixel = 0, ZIndex = 55,
+            BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 55,
         })
         N.mini = mk("TextButton", {
             Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
@@ -1073,4 +910,138 @@ set = pcall(function()
             Text = "♪",
             TextColor3 = spotifyGreen,
             Font = Enum.Font.GothamBlack,
- 
+            TextSize = 26,
+            ZIndex = 526,
+        })
+        FP.Title = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 18),
+            Position = UDim2.new(0, 100, 0, 12),
+            BackgroundTransparency = 1,
+            Text = GetText("Selecciona una canción", "Select a song"),
+            TextColor3 = Color3.fromRGB(255, 255, 255),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+        FP.Artist = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -164, 0, 14),
+            Position = UDim2.new(0, 100, 0, 31),
+            BackgroundTransparency = 1,
+            Text = "Spotify",
+            TextColor3 = Color3.fromRGB(200, 200, 200),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 525,
+        })
+
+        local controls = mk("Frame", {
+            Parent = FP.Full,
+            Size = UDim2.fromOffset(170, 38),
+            Position = UDim2.new(0, 96, 0, 50),
+            BackgroundTransparency = 1,
+            ZIndex = 525,
+        })
+        FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
+        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
+        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
+        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
+        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
+        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
+        FP.PlayBtn.BackgroundTransparency = 0
+        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
+        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
+        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
+
+        FP.Time = mk("TextLabel", {
+            Parent = FP.Full,
+            Size = UDim2.fromOffset(70, 14),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -12, 0, 62),
+            BackgroundTransparency = 1,
+            Text = "0:00",
+            TextColor3 = Color3.fromRGB(220, 220, 220),
+            Font = Enum.Font.GothamBold,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 525,
+        })
+        local barBack = mk("Frame", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -24, 0, 4),
+            Position = UDim2.new(0, 12, 1, -12),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.75,
+            BorderSizePixel = 0,
+            ZIndex = 525,
+        })
+        corner(barBack, 999)
+        FP.Bar = mk("Frame", {
+            Parent = barBack,
+            Size = UDim2.new(0, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BorderSizePixel = 0,
+            ZIndex = 526,
+        })
+        corner(FP.Bar, 999)
+        local seekHit = mk("TextButton", {
+            Parent = FP.Full,
+            Size = UDim2.new(1, -24, 0, 18),
+            Position = UDim2.new(0, 12, 1, -19),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 527,
+        })
+
+        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
+        closeBtn.Position = UDim2.new(1, -32, 0, 8)
+        closeBtn.BackgroundTransparency = 0.88
+        closeBtn.Text = "×"
+        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+        closeBtn.Font = Enum.Font.GothamBold
+        closeBtn.TextSize = 15
+        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
+        miniBtn.Position = UDim2.new(1, -60, 0, 8)
+        miniBtn.BackgroundTransparency = 0.88
+        miniBtn.Text = "–"
+        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
+        miniBtn.Font = Enum.Font.GothamBold
+        miniBtn.TextSize = 15
+
+        FP.Disc = mk("ImageLabel", {
+            Parent = FloatingPlayer,
+            Size = UDim2.new(1, -4, 1, -4),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
+            BorderSizePixel = 0,
+            Image = "",
+            ScaleType = Enum.ScaleType.Crop,
+            Visible = false,
+            ZIndex = 524,
+        })
+        corner(FP.Disc, 999)
+        FP.Ring.Parent = FP.Disc
+        local hole = mk("Frame", {
+            Parent = FP.Disc,
+            Size = UDim2.fromOffset(8, 8),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
+            BorderSizePixel = 0,
+            ZIndex = 525,
+        })
+        corner(hole, 999)
+
+        bindRowTap(closeBtn, function() setFloatingVisible(false) end)
+        bindRowTap(miniBtn, function()
+            FP.mini = true
+            FP.applyMode()
+        end)
+        bindRowTap(FP.LikeBtn, funct

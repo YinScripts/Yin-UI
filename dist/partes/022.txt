@@ -1,4 +1,8 @@
-("Frame", {
+sh", titleSpanish)
+                Title:SetAttribute("TextEnglish", titleEnglish)
+            end
+
+            local GridHolder = mk("Frame", {
                 Parent = contentParent,
                 Size = UDim2.new(1, 0, 0, 0),
                 AutomaticSize = Enum.AutomaticSize.Y,
@@ -864,6 +868,4 @@
                             local hPx = env.H / (2 * d * tanV) * abs.Y
                             local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
                             Grab.Size = UDim2.fromOffset(w, h)
-                            Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
-                        end
-                    
+    

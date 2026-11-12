@@ -755,7 +755,7 @@ v == "Float" then
         }
 
         local SubText = mk("TextLabel", {
-            Parent = Main,
+            Name = "RotatingSubText", Parent = Main,
             AnchorPoint = Vector2.new(0.5, 0),
             Size = UDim2.new(0.72, 0, 0, 17),
             Position = UDim2.new(0.5, 0, 0, 38),

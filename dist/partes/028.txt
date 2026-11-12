@@ -1,4 +1,6 @@
-    local record = {children = {}}
+ocal owner = part:FindFirstAncestorOfClass("Model")
+        if owner and owner:FindFirstChildOfClass("Humanoid") then return end
+        local record = {children = {}}
         local touched = false
         local okVariant, variant = pcall(function() return part.MaterialVariant end)
         if okVariant and variant ~= "" then
@@ -965,7 +967,4 @@
         end
     end
 
-    function ShaderSilhouette:_applyClothing(instance)
-        if not self.Enabled or not instance or not instance.Parent then return end
-        local property
-        if 
+    function ShaderSilhouette:_applyClo

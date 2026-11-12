@@ -1,4 +1,6 @@
-ste del tema al encender)
+pillV5 = nil
+                if usePillV5 then
+                    -- El color del texto lo maneja el diseno (blanco apagado / contraste del tema al encender)
                     FloatLabel:SetAttribute("ThemeTextRole", nil)
                     FloatLabel:SetAttribute("IgnoreTextEffect", true)
                     pillV5 = FloatingPillV5.Build(FloatingWindow, FloatingGlow, FloatLabel, floatStroke, hasLinkedSlider, hasDial)
@@ -967,6 +969,4 @@ ste del tema al encender)
             end
 
             Click.MouseEnter:Connect(function()
-                TweenService:Create(Holder,
-                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-  
+   

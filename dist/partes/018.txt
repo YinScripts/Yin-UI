@@ -1,4 +1,5 @@
-% length - length / 2
+* TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
+        local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
         TabIconCarousel.Velocity = 0
 
         if animate then
@@ -966,6 +967,4 @@
                 FloatLabel:SetAttribute("TextSpanish", textSpanish)
                 FloatLabel:SetAttribute("TextEnglish", textEnglish)
 
-                local pillV5 = nil
-                if usePillV5 then
-                    -- El color del texto lo maneja el diseno (blanco apagado / contra
+                local 

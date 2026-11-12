@@ -433,7 +433,7 @@
         }
 
         local SubText = mk("TextLabel", {
-            Parent = Main,
+            Name = "RotatingSubText", Parent = Main,
             AnchorPoint = Vector2.new(0.5, 0),
             Size = UDim2.new(0.72, 0, 0, 17),
             Position = UDim2.new(0.5, 0, 0, 38),
@@ -1153,5 +1153,4 @@
         TopBar.InputBegan:Connect(function(input)
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
                 drag = true
-                dragStart = input.Position
-                
+                dragStart = input

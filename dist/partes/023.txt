@@ -1,4 +1,6 @@
-    HomeAnim.OwnerAfterStep = updateGrab
+                        Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
+                        end
+                        HomeAnim.OwnerAfterStep = updateGrab
                         updateGrab()
                         function HomeAnim.OwnerHit(pos)
                             local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
@@ -917,7 +919,4 @@
                 local color
                 if cycle < 0.5 then
                     local t = cycle * 2
-                    color = Color3.fromRGB(
-                        255,
-                        math.floor(100 + (255 - 100) * t),
-                        math.floor(150 
+                    color = Color3.fro

@@ -1,4 +1,10 @@
-for index, info in ipairs(colorRoles) do
+olorToHex(selected)
+            pickerTarget.Swatch.BackgroundColor3 = selected
+        end
+        closeColorPicker()
+    end)
+
+    for index, info in ipairs(colorRoles) do
         local cell = mk("Frame", {
             Parent = ColorGridHolder,
             BackgroundColor3 = Theme.Secondary,
@@ -1020,6 +1026,4 @@ for index, info in ipairs(colorRoles) do
         Sky = {kind = "class", className = "Sky", parent = "Lighting"},
         Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
         Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
-        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
-        BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
-        ColorCorrectionEffect = {kind =
+        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Ligh

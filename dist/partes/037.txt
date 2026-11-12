@@ -1,196 +1,4 @@
-im,
-        TextXAlignment = Enum.TextXAlignment.Right,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local Controls = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 48),
-        Position = UDim2.new(0, 14, 0, 351),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 20,
-    })
-
-    local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
-        local btn = mk("ImageButton", {
-            Parent = parent,
-            Size = UDim2.new(0, size, 0, size),
-            BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = bgColor and 0 or 1,
-            Image = asset(imageId),
-            ImageColor3 = imageColor or Color3.new(1, 1, 1),
-            AutoButtonColor = false,
-            ZIndex = 13,
-        })
-        if rounded then
-            corner(btn, rounded)
-        end
-        return btn
-    end
-
-    local RepeatBtn = createIconButton(Controls, 22, 85927537182704, spotifyText)
-    RepeatBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    RepeatBtn.Position = UDim2.new(0.06, 0, 0.5, 0)
-
-    local LikeBtn = createIconButton(Controls, 24, 116559368303288, spotifyText)
-    LikeBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    LikeBtn.Position = UDim2.new(0.22, 0, 0.5, 0)
-
-    local PlayPauseBtnOuter = mk("Frame", {
-        Parent = Controls,
-        Size = UDim2.new(0, 44, 0, 44),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.50, 0, 0.5, 0),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        ZIndex = 13,
-    })
-    corner(PlayPauseBtnOuter, 999)
-
-    local PlayPauseBtn = mk("ImageButton", {
-        Parent = PlayPauseBtnOuter,
-        Size = UDim2.new(0, 22, 0, 22),
-        Position = UDim2.new(0.5, -11, 0.5, -11),
-        BackgroundTransparency = 1,
-        Image = asset(135609604299893),
-        ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ScaleType = Enum.ScaleType.Fit,
-        AutoButtonColor = false,
-        ZIndex = 14,
-    })
-    PlayPauseBtn.AnchorPoint = Vector2.new(0, 0)
-
-    local NextBtn = createIconButton(Controls, 24, 124844823753990, spotifyText)
-    NextBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    NextBtn.Position = UDim2.new(0.78, 0, 0.5, 0)
-
-    local MoreBtn = createIconButton(Controls, 22, 117978708573781, spotifyText)
-    MoreBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    MoreBtn.Position = UDim2.new(0.94, 0, 0.5, 0)
-
-    local SongsCard = mk("Frame", {
-        Parent = CatalogPage,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        ZIndex = 11,
-    })
-    corner(SongsCard, 0)
-
-    mk("UIPadding", {
-        Parent = SongsCard,
-        PaddingTop = UDim.new(0, 10),
-        PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 10),
-    })
-
-    local FavoritesHeader = mk("Frame", {
-        Parent = SongsCard,
-        Size = UDim2.new(1, -24, 0, 34),
-        Position = UDim2.new(0, 12, 0, 8),
-        BackgroundTransparency = 1,
-        Visible = false,
-        ZIndex = 20,
-    })
-
-    local FavoritesBackButton = mk("TextButton", {
-        Parent = FavoritesHeader,
-        Size = UDim2.fromOffset(30, 30),
-        Position = UDim2.new(0, 0, 0.5, -15),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        Text = "‹",
-        TextColor3 = Color3.fromRGB(245, 245, 245),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 24,
-        AutoButtonColor = false,
-        ZIndex = 21,
-    })
-    corner(FavoritesBackButton, 999)
-
-    local FavoritesHeaderTitle = mk("TextLabel", {
-        Parent = FavoritesHeader,
-        Size = UDim2.new(1, -104, 1, 0),
-        Position = UDim2.new(0, 42, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "Favoritos",
-        Font = Enum.Font.GothamBold,
-        TextSize = 19,
-        TextColor3 = spotifyText,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 21,
-    })
-
-    local AddUserSongButton = mk("TextButton", {
-        Parent = FavoritesHeader,
-        Size = UDim2.fromOffset(32, 30),
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, 0, 0.5, 0),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        Text = "",
-        TextColor3 = Color3.fromRGB(0, 0, 0),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 22,
-        AutoButtonColor = false,
-        Visible = false,
-        ZIndex = 22,
-    })
-    corner(AddUserSongButton, 9)
-    mk("ImageLabel", {
-        Parent = AddUserSongButton,
-        Size = UDim2.fromOffset(19, 19),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        BackgroundTransparency = 1,
-        Image = asset(113157136350384),
-        ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 23,
-    })
-
-    local SongSearchHolder = mk("Frame", {
-        Parent = SongsCard,
-        Size = UDim2.new(1, -24, 0, 30),
-        Position = UDim2.new(0, 12, 0, 50),
-        BackgroundColor3 = Color3.fromRGB(36, 36, 36),
-        BackgroundTransparency = 0.10,
-        BorderSizePixel = 0,
-        ZIndex = 20,
-    })
-    corner(SongSearchHolder, 12)
-    stroke(SongSearchHolder, Color3.fromRGB(75, 75, 82), 1, 0.55)
-
-    local SongSearchIcon = mk("ImageButton", {
-        Parent = SongSearchHolder,
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(0, 10, 0.5, -9),
-        BackgroundTransparency = 1,
-        Image = asset(121018724060431),
-        ImageColor3 = spotifyDim,
-        AutoButtonColor = false,
-        ZIndex = 21,
-    })
-
-    local SongSearchBox = mk("TextBox", {
-        Parent = SongSearchHolder,
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 32, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        ClearTextOnFocus = false,
-        PlaceholderText = GetText("Buscar por nombre o artista...", "Search by song or artist..."),
-        PlaceholderColor3 = spotifyDim,
-        TextColor3 = spotifyText,
-        TextSize = 13,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
+ent.Left,
         ZIndex = 21,
     })
 
@@ -599,7 +407,11 @@ im,
         FavoritesHeaderTitle:SetAttribute("TextSpanish", mySongs and "Mis canciones" or "Favoritos")
         FavoritesHeaderTitle:SetAttribute("TextEnglish", mySongs and "My songs" or "Favorites")
         AddUserSongButton.Visible = mySongs
-        SongSearchHolder.Position = UDim2.new(0, 12, 0, subview and 50 or 8)
+        local compactInset = Window.CompactNavigation and 60 or 0
+        SongSearchHolder.Position = UDim2.new(0, 12 + compactInset, 0, subview and 50 or 8)
+        SongSearchHolder.Size = UDim2.new(1, -24 - compactInset, 0, 30)
+        FavoritesHeader.Position = UDim2.new(0, 12 + compactInset, 0, 8)
+        FavoritesHeader.Size = UDim2.new(1, -24 - compactInset, 0, 34)
         SongList.Position = UDim2.new(0, 12, 0, subview and 86 or 50)
         -- Reservar espacio para la barra de reproducción y la navegación inferior.
         SongList.Size = UDim2.new(1, -24, 1, subview and -182 or -146)
@@ -627,6 +439,17 @@ im,
     SpotifyRootLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         updateSpotifyCanvas()
     end)
+
+    if Window._SpotifyAmbient then
+        Window._SpotifyAmbient.LayoutCatalog = function()
+            local inset = Window.CompactNavigation and 60 or 0
+            local subview = SpotifyState.FavoritesView == true or SpotifyState.MySongsView == true
+            SongSearchHolder.Position = UDim2.new(0, 12 + inset, 0, subview and 50 or 8)
+            SongSearchHolder.Size = UDim2.new(1, -24 - inset, 0, 30)
+            FavoritesHeader.Position = UDim2.new(0, 12 + inset, 0, 8)
+            FavoritesHeader.Size = UDim2.new(1, -24 - inset, 0, 34)
+        end
+    end
 
     local function applySpotifyNowPlayingLayout()
         local m = getSpotifyMetrics()
@@ -724,7 +547,7 @@ im,
 
         rowData.Row.Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH)
         rowData.Row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-        rowData.Row.BackgroundTransparency = 0
+        rowData.Row.BackgroundTransparency = 0.22
 
         if rowData.Accent then
             rowData.Accent.Size = UDim2.new(1, 0, 0, 3)
@@ -1138,4 +961,173 @@ im,
 
         local customAsset = audioPath
         if getcustomasset then
-            local okAsset, resultAs
+            local okAsset, resultAsset = pcall(function()
+                return getcustomasset(audioPath)
+            end)
+            if okAsset and type(resultAsset) == "string" then
+                customAsset = resultAsset
+            end
+        end
+
+        return true, customAsset
+    end
+
+    local function ensureCoverCached(track)
+        if not track.CoverURL or track.CoverURL == "" then
+            return false, "no_cover_url"
+        end
+
+        local cacheName = track.CoverCacheName
+        if not cacheName or cacheName == "" then
+            return false, "no_cover_cache_name"
+        end
+
+        local coverPath = "YinYang_Cover_" .. cacheName
+        local coverExists = false
+
+        if isfile then
+            local okFile, resultFile = pcall(function()
+                return isfile(coverPath)
+            end)
+            coverExists = okFile and resultFile == true
+        end
+
+        if not coverExists then
+            if not writefile then
+                return false, "writefile_unavailable"
+            end
+
+            local okDownload, data = pcall(function()
+                return game:HttpGet(track.CoverURL, true)
+            end)
+
+            if not okDownload or type(data) ~= "string" or #data < 10 then
+                warn("[YinYang Spotify] Falló la descarga de portada (" .. tostring(track.CoverURL) .. "): " .. tostring(data))
+                return false, "download_failed"
+            end
+
+            local okWrite = pcall(function()
+                writefile(coverPath, data)
+            end)
+
+            if not okWrite then
+                warn("[YinYang Spotify] Falló writefile para la portada: " .. coverPath)
+                return false, "cache_write_failed"
+            end
+        end
+
+        if not getcustomasset then
+            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la portada: " .. coverPath)
+            return false, "getcustomasset_unavailable"
+        end
+
+        local okAsset, resultAsset = pcall(function()
+            return getcustomasset(coverPath)
+        end)
+
+        if not (okAsset and type(resultAsset) == "string") then
+            warn("[YinYang Spotify] getcustomasset falló para la portada (" .. coverPath .. "): " .. tostring(resultAsset))
+            return false, "getcustomasset_failed"
+        end
+
+        return true, resultAsset
+    end
+
+    local CoverAssetResolvedCache = {}
+
+    resolveTrackCoverImage = function(track)
+        if not track then
+            return ""
+        end
+
+        if track.CoverURL and track.CoverURL ~= "" then
+            local cacheKey = (track.CoverCacheName and track.CoverCacheName ~= "") and track.CoverCacheName or track.CoverURL
+            local cached = CoverAssetResolvedCache[cacheKey]
+            if cached then
+                return cached
+            end
+
+            local okCover, coverAssetOrErr = ensureCoverCached(track)
+            if okCover then
+                CoverAssetResolvedCache[cacheKey] = coverAssetOrErr
+                return coverAssetOrErr
+            end
+        end
+
+        return track.Cover or ""
+    end
+
+    local function playTrack(index)
+        local track = SpotifyState.Catalog[index]
+        if not track then
+            return
+        end
+
+        SpotifyState.SelectedIndex = index
+        SpotifyState.CurrentTrack = track
+        SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
+        SpotifyState.CurrentPausedPosition = 0
+        SpotifyState.IsPlaying = true
+
+        destroyAllSpotifySounds()
+        destroyCurrentSound()
+
+        updatePlayerFromTrack(track, index, "Descargando y reproduciendo...")
+        syncPlaybackUI()
+
+        local okCache, cachedAssetOrErr = ensureTrackCached(track)
+        local soundAsset = okCache and cachedAssetOrErr or track.AudioURL
+
+        local sound = Instance.new("Sound")
+        sound.Name = "YY_Spotify_CurrentSound"
+        sound.SoundId = soundAsset
+        sound.Volume = SpotifyState.PlaybackVolume
+        sound.PlaybackSpeed = SpotifyState.PlaybackSpeed
+        sound.Looped = SpotifyState.IsRepeat
+        sound.Parent = workspace
+
+        SpotifyState.CurrentSound = sound
+
+        SpotifyState.SoundProgressConnection = RunService.Heartbeat:Connect(function()
+            if SpotifyState.CurrentSound == sound then
+                updateProgress(track, sound)
+            end
+        end)
+
+        SpotifyState.SoundEndedConnection = sound.Ended:Connect(function()
+            if SpotifyState.CurrentSound ~= sound then
+                return
+            end
+
+            if SpotifyState.IsRepeat then
+                task.spawn(function()
+                    pcall(function()
+                        sound.TimePosition = 0
+                        sound:Play()
+                        SpotifyState.IsPlaying = true
+                        syncPlaybackUI()
+                    end)
+                end)
+                return
+            end
+
+            local nextIndex = index + 1
+            if nextIndex > #SpotifyState.Catalog then
+                nextIndex = 1
+            end
+            if SpotifyState.FavoriteNeighbor then
+                nextIndex = SpotifyState.FavoriteNeighbor(index, 1) or nextIndex
+            end
+            playTrack(nextIndex)
+        end)
+
+        pcall(function()
+            sound:Play()
+        end)
+
+        SpotifyState.IsPlaying = true
+        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
+        syncPlaybackUI()
+    end
+
+ 

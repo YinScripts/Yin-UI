@@ -1,147 +1,4 @@
-ver, 4)
-        if not FavPage.covers[index] then
-            task.spawn(function()
-                local ok, img = pcall(resolveTrackCoverImage, song)
-                if ok and type(img) == "string" and img ~= "" then
-                    FavPage.covers[index] = img
-                    if Cover.Parent then
-                        Cover.Image = img
-                    end
-                end
-            end)
-        end
-
-        local Title = mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.new(1, -230, 0, 20),
-            Position = UDim2.new(0, 102, 0, 10),
-            BackgroundTransparency = 1,
-            Text = song.Name,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 15,
-            TextColor3 = spotifyText,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 43,
-        })
-        mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.new(1, -230, 0, 16),
-            Position = UDim2.new(0, 102, 0, 31),
-            BackgroundTransparency = 1,
-            Text = song.Artist,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 13,
-            TextColor3 = Color3.fromRGB(179, 179, 179),
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 43,
-        })
-        local Heart = mk("TextButton", {
-            Parent = Row,
-            Size = UDim2.fromOffset(36, 36),
-            Position = UDim2.new(1, -126, 0.5, -18),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 45,
-        })
-        mk("ImageLabel", {
-            Parent = Heart,
-            Size = UDim2.fromOffset(18, 18),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundTransparency = 1,
-            Image = FavPage.HEART_ON,
-            ImageColor3 = spotifyGreen,
-            ScaleType = Enum.ScaleType.Fit,
-            ZIndex = 46,
-        })
-        mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.fromOffset(60, 58),
-            Position = UDim2.new(1, -78, 0, 0),
-            BackgroundTransparency = 1,
-            Text = song.Duration,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 13,
-            TextColor3 = Color3.fromRGB(179, 179, 179),
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 43,
-        })
-
-        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
-        FavPage.rows[#FavPage.rows + 1] = row
-        Row.MouseEnter:Connect(function()
-            row.Hover = true
-            Row.BackgroundTransparency = 0.9
-            FavPage.paintRow(row)
-        end)
-        Row.MouseLeave:Connect(function()
-            row.Hover = false
-            Row.BackgroundTransparency = 1
-            FavPage.paintRow(row)
-        end)
-        FavPage.paintRow(row)
-
-        bindRowTap(Heart, function()
-            toggleTrackLike(index)
-        end)
-        bindRowTap(Row, function()
-            FavPage.toggleRow(index)
-        end)
-    end
-
-    FavPage.rebuild = function()
-        for _, child in ipairs(FavPage.Body:GetChildren()) do
-            if child:IsA("GuiObject") then
-                safeDestroy(child)
-            end
-        end
-        FavPage.rows = {}
-        local list = FavPage.likedList()
-        local query = normalizeSearchText(FavPage.query or "")
-        local shown = 0
-        for position, index in ipairs(list) do
-            local song = SpotifyState.Catalog[index]
-            local ok = query == ""
-            if not ok and song then
-                ok = normalizeSearchText((song.Name or "") .. " " .. (song.Artist or "")):find(query, 1, true) ~= nil
-            end
-            if ok then
-                shown = shown + 1
-                FavPage.makeRow(index, position)
-            end
-        end
-        if #list == 0 or shown == 0 then
-            local box = mk("Frame", {
-                Parent = FavPage.Body,
-                Size = UDim2.new(1, 0, 0, 170),
-                BackgroundTransparency = 1,
-                LayoutOrder = 1,
-                ZIndex = 42,
-            })
-            mk("ImageLabel", {
-                Parent = box,
-                Size = UDim2.fromOffset(44, 44),
-                AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 24),
-                BackgroundTransparency = 1,
-                Image = #list == 0 and FavPage.HEART_OFF or FavPage.SEARCH,
-                ImageColor3 = spotifyDim,
-                ScaleType = Enum.ScaleType.Fit,
-                ZIndex = 43,
-            })
-            local t1 = mk("TextLabel", {
-                Parent = box,
-                Size = UDim2.new(1, 0, 0, 26),
-                Position = UDim2.new(0, 0, 0, 80),
-                BackgroundTransparency = 1,
-                Text = "",
-                Font = Enum.Font.GothamBlack,
-                TextSize = 18,
-                TextColor3 = spotifyText,
-                ZIndex = 43,
+ndex = 43,
             })
             local t2 = mk("TextLabel", {
                 Parent = box,
@@ -285,7 +142,7 @@ ver, 4)
             Parent = SongList,
             Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
             BackgroundColor3 = Color3.fromRGB(24, 24, 24),
-            BackgroundTransparency = 0,
+            BackgroundTransparency = 0.22,
             BorderSizePixel = 0,
             LayoutOrder = layoutOrder or (index + 1),
             ClipsDescendants = true,
@@ -1064,4 +921,145 @@ REGLAS DE RESPUESTA:
                     error(data.error or "AI returned no response")
                 end
 
-                return data.reply, data.name or
+                return data.reply, data.name or "Yin AI"
+            end)
+
+            waiting = false
+
+            if ok and reply then
+                table.insert(history, { role = "assistant", content = reply })
+                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 120, 255))
+            else
+                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
+            end
+        end)
+    end
+
+    LocalPlayer.Chatted:Connect(function(msg)
+        local text = tostring(msg):match("^[/]IA%s+(.+)$")
+        if not text then return end
+        text = text:match("^%s*(.-)%s*$")
+        if text == "" then return end
+        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
+        ask(text)
+    end)
+
+    task.delay(1.5, function()
+        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
+    end)
+
+    print("Yin AI integrada — usa /IA mensaje en el chat")
+end)()
+
+
+local DEMO_ACTIVO = false
+
+if DEMO_ACTIVO then
+    task.wait(0.5)
+    
+    print("\n" .. string.rep("=", 60))
+    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
+    print(string.rep("=", 60))
+    
+    local ConfigCargada = LoadConfig()
+    local TemaInicial = "Dark"
+    if ConfigCargada and ConfigCargada.theme then
+        TemaInicial = ConfigCargada.theme
+    end
+
+    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
+    
+    DemoUI:SetTheme(TemaInicial)
+    
+    local TabFeatures = DemoUI:CreateTab("Features")
+    
+    TabFeatures:CreateLabel("Toggles", 14)
+    TabFeatures:CreateDivider()
+
+    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
+        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
+    end
+
+
+    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
+        print("Aimbot: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
+        print("ESP: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
+        print("GodMode: " .. (state and "ON" or "OFF"))
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Botones Flotantes 🔘", 14)
+    TabFeatures:CreateDivider()
+
+    TabFeatures:CreateFloatingButton("Teleport Here", "Teleport Here", function()
+        print("[FloatingButton] Teleport Here → ejecutado")
+    end)
+
+    TabFeatures:CreateFloatingButton("Noclip", "Noclip", 3, function()
+        print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
+    end)
+
+    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill Entity", 5, function()
+        print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
+    TabFeatures:CreateDivider()
+
+    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
+        print("🚀 Teleport Speed: " .. string.format("%.2f", val))
+    end)
+
+    local SliderJumpHeight = TabFeatures:CreateSlider("Jump Height", 10.0, 300.0, 139.24, function(val)
+        print("⬆️  Jump Height: " .. string.format("%.2f", val))
+    end)
+
+    local SliderSpeed = TabFeatures:CreateSlider("Speed Multiplier", 0.5, 3.0, 1.5, function(val)
+        print("💨 Speed: " .. string.format("%.2f", val) .. "x")
+    end)
+
+    local SliderFOV = TabFeatures:CreateSlider("FOV", 30, 120, 70, function(val)
+        print("👁️  FOV: " .. string.format("%.0f", val))
+    end)
+
+    local SliderVolume = TabFeatures:CreateSlider("Volume", 0, 1.0, 0.5, function(val)
+        print("🔊 Volume: " .. string.format("%.1f%%", val * 100))
+    end)
+
+
+    
+    DemoUI:CreateSpotifyTab()
+
+    print("\n DEMO v24 INICIADA")
+    print("TABS: Inicio (Protegida) | Temas (16 colores sin duplicados) | Features | Dropdowns | Efectos")
+    print(" MEJORAS: Sin duplicados, Pestañas permanentes, Efectos de texto mejorados")
+    print("Para desactivar la demo, cambia DEMO_ACTIVO a false\n")
+    print(string.rep("=", 60) .. "\n")
+    
+    task.wait(0.2)
+    local efectoGuardado = ConfigCargada and ConfigCargada.effect
+    if efectoGuardado and efectoGuardado ~= "" and efectoGuardado ~= "Normal" then
+        DemoUI:SetTextEffect(efectoGuardado)
+        print(" Efecto cargado desde config: " .. efectoGuardado)
+    else
+        local autoEffect = ThemeAutoEffects and ThemeAutoEffects[TemaInicial]
+        if autoEffect and autoEffect ~= "Off" then
+            DemoUI:SetTextEffect(autoEffect)
+            print(" Efecto: " .. TemaInicial .. " + " .. autoEffect)
+        else
+            DemoUI:SetTextEffect("Off")
+            print(" Sin efecto de texto (tema: " .. TemaInicial .. ")")
+        end
+    end
+else
+    print("Yin Yang v24 - DEMO DESACTIVADA (DEMO_ACTIVO = false)")
+    print("Solo la librería está cargada y lista para usar")
+end
+

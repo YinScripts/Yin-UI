@@ -1,4 +1,7 @@
-weenService:Create(
+etY = 4 + (cardHeight - targetHeight) * 0.5
+                            local isActive = distance == 0
+
+                            TweenService:Create(
                                 card,
                                 TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                                 {
@@ -1030,8 +1033,4 @@ weenService:Create(
                     ZIndex = 9,
                 })
                 Title:SetAttribute("ThemeTextRole", "Text")
-                Title:SetAttribute("TextSpanish", titleSpanish)
-                Title:SetAttribute("TextEnglish", titleEnglish)
-            end
-
-            local GridHolder = mk
+                Title:SetAttribute("TextSpani

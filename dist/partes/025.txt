@@ -1,4 +1,7 @@
-   "Your executor can't copy: copy the code below")
+
+                    setStatus("err",
+                        "Tu ejecutor no copia: copiá el código de abajo",
+                        "Your executor can't copy: copy the code below")
                     -- Respaldo: mostrar el codigo para copiarlo a mano
                     if not CodeBox then
                         CodeBox = mk("TextBox", {
@@ -1157,10 +1160,4 @@
     PickerApply.MouseButton1Click:Connect(function()
         if pickerTarget then
             local selected = pickerColor()
-            pickerTarget.Box.Text = colorToHex(selected)
-            pickerTarget.Swatch.BackgroundColor3 = selected
-        end
-        closeColorPicker()
-    end)
-
-    
+            pickerTarget.Box.Text = c

@@ -33,7 +33,7 @@
         Parent = CatalogPage,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0,
+        BackgroundTransparency = 0.50,
         BorderSizePixel = 0,
         ZIndex = 11,
     })
@@ -558,7 +558,11 @@
         FavoritesHeaderTitle:SetAttribute("TextSpanish", mySongs and "Mis canciones" or "Favoritos")
         FavoritesHeaderTitle:SetAttribute("TextEnglish", mySongs and "My songs" or "Favorites")
         AddUserSongButton.Visible = mySongs
-        SongSearchHolder.Position = UDim2.new(0, 12, 0, subview and 50 or 8)
+        local compactInset = Window.CompactNavigation and 60 or 0
+        SongSearchHolder.Position = UDim2.new(0, 12 + compactInset, 0, subview and 50 or 8)
+        SongSearchHolder.Size = UDim2.new(1, -24 - compactInset, 0, 30)
+        FavoritesHeader.Position = UDim2.new(0, 12 + compactInset, 0, 8)
+        FavoritesHeader.Size = UDim2.new(1, -24 - compactInset, 0, 34)
         SongList.Position = UDim2.new(0, 12, 0, subview and 86 or 50)
         -- Reservar espacio para la barra de reproducción y la navegación inferior.
         SongList.Size = UDim2.new(1, -24, 1, subview and -182 or -146)
@@ -586,6 +590,17 @@
     SpotifyRootLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
         updateSpotifyCanvas()
     end)
+
+    if Window._SpotifyAmbient then
+        Window._SpotifyAmbient.LayoutCatalog = function()
+            local inset = Window.CompactNavigation and 60 or 0
+            local subview = SpotifyState.FavoritesView == true or SpotifyState.MySongsView == true
+            SongSearchHolder.Position = UDim2.new(0, 12 + inset, 0, subview and 50 or 8)
+            SongSearchHolder.Size = UDim2.new(1, -24 - inset, 0, 30)
+            FavoritesHeader.Position = UDim2.new(0, 12 + inset, 0, 8)
+            FavoritesHeader.Size = UDim2.new(1, -24 - inset, 0, 34)
+        end
+    end
 
     local function applySpotifyNowPlayingLayout()
         local m = getSpotifyMetrics()
@@ -683,7 +698,7 @@
 
         rowData.Row.Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH)
         rowData.Row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-        rowData.Row.BackgroundTransparency = 0
+        rowData.Row.BackgroundTransparency = 0.22
 
         if rowData.Accent then
             rowData.Accent.Size = UDim2.new(1, 0, 0, 3)

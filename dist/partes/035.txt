@@ -1,4 +1,8 @@
-.Left,
+
+        TextSize = 10,
+        Font = Enum.Font.Code,
+        ClearTextOnFocus = false,
+        TextXAlignment = Enum.TextXAlignment.Left,
         TextTruncate = Enum.TextTruncate.AtEnd,
         LayoutOrder = 1,
         ZIndex = Z + 4,
@@ -758,6 +762,4 @@
     end
     BuildLogoTab()
 
-    function Window:CreateClassicTab()
-    local TabClassic = Window:CreateTab("Classic", "Classic", "rbxassetid://99086270459218")
-    local 
+    funct

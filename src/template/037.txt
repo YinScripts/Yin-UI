@@ -710,6 +710,12 @@ dPosition = 0
             Text = GetText("♫  Catálogo", "♫  Catalog"), Font = Enum.Font.GothamBold,
             TextColor3 = spotifyText, TextSize = 12, AutoButtonColor = false, ZIndex = 25,
         })
+        if Window._SpotifyAmbient then
+            Window._SpotifyAmbient.LayoutPlayer = function(compact)
+                N.openCatalog.Position = UDim2.fromOffset(compact and 72 or 12, 8)
+            end
+            Window._SpotifyAmbient.LayoutPlayer(Window.CompactNavigation == true)
+        end
         N.openCatalog:SetAttribute("TextSpanish", "♫  Catálogo")
         N.openCatalog:SetAttribute("TextEnglish", "♫  Catalog")
         corner(N.openCatalog, 14)
@@ -719,7 +725,7 @@ dPosition = 0
             Parent = CatalogPage, Name = "SpotifyBottomNavigation",
             Size = UDim2.new(1, 0, 0, 90), AnchorPoint = Vector2.new(0, 1),
             Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-            BorderSizePixel = 0, ZIndex = 55,
+            BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 55,
         })
         N.mini = mk("TextButton", {
             Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),

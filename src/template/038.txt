@@ -1057,7 +1057,7 @@
             Parent = SongList,
             Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
             BackgroundColor3 = Color3.fromRGB(24, 24, 24),
-            BackgroundTransparency = 0,
+            BackgroundTransparency = 0.22,
             BorderSizePixel = 0,
             LayoutOrder = layoutOrder or (index + 1),
             ClipsDescendants = true,

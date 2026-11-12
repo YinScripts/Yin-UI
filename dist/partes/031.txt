@@ -1,4 +1,10 @@
-    local fill = mk("Frame", {
+rSizePixel = 0,
+            ZIndex = 314,
+        })
+        bar:SetAttribute("ThemeRole", "AccentOff")
+        corner(bar, 99)
+
+        local fill = mk("Frame", {
             Parent = bar,
             Size = UDim2.new(0, 0, 1, 0),
             BackgroundColor3 = Theme.Accent,
@@ -761,5 +767,4 @@
         {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
         {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
         {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
-        {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
-        {"
+      

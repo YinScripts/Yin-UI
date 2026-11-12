@@ -1,4 +1,4 @@
- = Enum.TextXAlignment.Left, ZIndex = SZ + 22 })
+, BackgroundTransparency = 1, Text = "Yin Yang", TextColor3 = Theme.Text, TextSize = 10, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = SZ + 22 })
         for i = 0, 2 do
             round(sframe(bar, { Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6 - i * 9, 0.5, 0), BackgroundColor3 = Theme.TextDim, ZIndex = SZ + 22 }))
         end
@@ -791,7 +791,3 @@
         Text = "",
         PlaceholderColor3 = Theme.TextDim,
         TextColor3 = Theme.Text,
-        TextSize = 10,
-        Font = Enum.Font.Code,
-        ClearTextOnFocus = false,
-        TextXAlignment = Enum.TextXAlignment
