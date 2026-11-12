@@ -1,0 +1,1031 @@
+yping ~= Chat.typing or key ~= Chat.typingKey then
+                            Chat.typing = typing
+                            Chat.typingKey = key
+                            Chat.typingNames = names
+                            Chat.updateHeader()
+                            Chat.refreshTypingPill()
+                        end
+                    end
+                end
+            end
+            local waited = 0
+            while waited < CONFIG.FB_POLL_RATE and not Chat.pollNow do
+                task.wait(0.25)
+                waited += 0.25
+            end
+        end
+    end)
+    task.spawn(function()
+        local myGen = generation
+        local rr = 0
+        task.wait(1)
+        while generation == myGen and ScreenGui.Parent do
+            local okTick, err = pcall(Chat.watchTick, rr)
+            if not okTick then warn("[YY Chat] watchTick: " .. tostring(err)) end
+            rr += 1
+            if Chat.dirty then
+                Chat.dirty = false
+                Chat.saveSettings()
+            end
+            task.wait(CONFIG.WATCH_RATE)
+        end
+    end)
+    task.spawn(function()
+        local myGen = generation
+        while generation == myGen and ScreenGui.Parent do
+            pcall(function()
+                local res = request({
+                    Url=FIREBASE .. "presence/" .. tostring(LocalPlayer.UserId) .. ".json",
+                    Method="PUT",
+                    Headers={["Content-Type"]="application/json"},
+                    Body=HttpService:JSONEncode({n=LocalPlayer.Name,t={ [".sv"]="timestamp" }}),
+                })
+                local okD, d = pcall(HttpService.JSONDecode, HttpService, res and res.Body or "")
+                if okD and type(d) == "table" and tonumber(d.t) then
+                    Chat.clockSkew = tonumber(d.t) - os.time() * 1000
+                end
+            end)
+            pcall(Chat.refreshPresence)
+            task.spawn(function() pcall(Chat.refreshRailwayOnline) end)
+            task.spawn(function()
+                pcall(function()
+                    request({
+                        Url = Chat.RAILWAY_URL .. "/api/heartbeat", Method = "POST",
+                        Headers = {["Content-Type"] = "application/json"},
+                        Body = HttpService:JSONEncode({playerId = tostring(LocalPlayer.UserId)}),
+                    })
+                end)
+            end)
+            task.wait(20)
+        end
+    end)
+    MessageBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if #MessageBox.Text > CONFIG.MAX_CHAR then MessageBox.Text=MessageBox.Text:sub(1,CONFIG.MAX_CHAR) end
+        CharLabel.Text=tostring(#MessageBox.Text) .. "/" .. tostring(CONFIG.MAX_CHAR)
+    end)
+    SendButton.MouseButton1Click:Connect(sendText)
+    MessageBox.FocusLost:Connect(function(enterPressed) if enterPressed then sendText() end end)
+    local Reopen = mk("TextButton", {
+        Size=UDim2.fromOffset(62,62), AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-16,0.1,0),
+        BackgroundColor3=THEME.BG, BorderSizePixel=0, Text="",
+        AutoButtonColor=true, Visible=false, ZIndex=100,
+    }, ScreenGui)
+    corner(Reopen,30)
+    UI.storyRing(Reopen, 3)
+    UI.ReopenImg = mk("ImageLabel", {
+        Size=UDim2.new(1,-8,1,-8), Position=UDim2.fromOffset(4,4), BackgroundTransparency=1,
+        Image=UI.ICON.group, ScaleType=Enum.ScaleType.Crop, ZIndex=101,
+    }, Reopen)
+    corner(UI.ReopenImg,26)
+    UI.Reopen = Reopen
+    UI.ReopenBadge = mk("TextLabel", {
+        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(1,-6,0,6),
+        Size=UDim2.fromOffset(0,24), AutomaticSize=Enum.AutomaticSize.X,
+        BackgroundColor3=Color3.fromRGB(37,211,102), BorderSizePixel=0, Text="0",
+        TextColor3=Color3.fromRGB(255,255,255), Font=Enum.Font.GothamBlack, TextSize=13,
+        Visible=false, ZIndex=103,
+    }, Reopen)
+    corner(UI.ReopenBadge,12)
+    stroke(UI.ReopenBadge, THEME.BG, 2, 0)
+    mk("UIPadding", {PaddingLeft=UDim.new(0,7), PaddingRight=UDim.new(0,7)}, UI.ReopenBadge)
+    mk("UISizeConstraint", {MinSize=Vector2.new(24,24)}, UI.ReopenBadge)
+    UI.ReopenBadgeScale = mk("UIScale", {Scale=1}, UI.ReopenBadge)
+    -- v14 en la librería: "abierto" = la pestaña Chat se ve (ventana visible y pestaña elegida)
+    Chat.hostVisible = function()
+        local o = ctx.Host
+        while o and o:IsA("GuiObject") do
+            if not o.Visible then return false end
+            o = o.Parent
+        end
+        if o and o:IsA("LayerCollector") then return o.Enabled end
+        return o ~= nil
+    end
+    Chat.setOpen = function(v)
+        if v == open then return end
+        open = v
+        if v then
+            scrollBottom()
+            if Chat.view == "chat" then Chat.unread[Chat.room] = 0 end
+            if Chat.view == "home" then Chat.refreshHome(true) end
+        else
+            StickerPanel.Visible = false
+            Chat.hideOverlays()
+            hideMessageActions()
+        end
+        Chat.updateBadge()
+    end
+    -- tamaño: el diseño de v14 está pensado para un lienzo grande; se escala para que entre en la pestaña sin que
+    -- el texto quede demasiado chico
+    Chat.layoutHost = function()
+        local abs = ctx.Host.AbsoluteSize
+        if abs.X < 20 or abs.Y < 20 then return end
+        -- v15: se quita la escala de la ventana (animación de abrir/cerrar): así el chat no se re-arma en cada frame
+        -- de la animación ni se achica dos veces
+        local k, o = 1, ctx.Host.Parent
+        while o and not o:IsA("LayerCollector") do
+            local us = o:FindFirstChildOfClass("UIScale")
+            if us then k = k * us.Scale end
+            o = o.Parent
+        end
+        if k > 0.01 then abs = abs / k end
+        -- v15: lienzo de referencia más chico (antes 520x560) = textos más grandes dentro de la pestaña
+        local sc = math.clamp(math.min(abs.X / 470, abs.Y / 480), 0.55, 1)
+        if Chat.lastHostScale and math.abs(Chat.lastHostScale - sc) < 0.002 then return end
+        Chat.lastHostScale = sc
+        UI.RootScale.Scale = sc
+        Root.Size = UDim2.fromScale(1 / sc, 1 / sc)
+    end
+    ctx.Host:GetPropertyChangedSignal("AbsoluteSize"):Connect(Chat.layoutHost)
+    task.spawn(function()
+        while ScreenGui.Parent do
+            pcall(function() Chat.setOpen(Chat.hostVisible()) end)
+            task.wait(0.15)
+        end
+    end)
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if ReactionBar.Visible or ActionMenu.Visible then
+            hideMessageActions()
+        end
+    end)
+    populateStickers()
+    populateEmojis()
+    task.delay(1.5,function()
+        if ScreenGui.Parent then populateStickers() end
+    end)
+    Chat.onStickersLoaded = function()
+        if ScreenGui.Parent then populateStickers() end
+    end
+    if Chat.stickersLoaded then Chat.onStickersLoaded() end
+    Chat.tr = {
+        cache = {}, waiters = {}, queue = {}, tries = {}, msgCache = {}, msgWait = {}, msgQueue = {},
+        setByMe = setmetatable({}, {__mode = "k"}), hooked = setmetatable({}, {__mode = "k"}),
+        props = {TextLabel = {"Text"}, TextButton = {"Text"}, TextBox = {"PlaceholderText"}},
+    }
+    do
+        local Tr = Chat.tr
+        Tr.base = function(l) return string.lower(tostring(l or "")):match("^(%a+)") or "" end
+        Tr.detect = function()
+            local loc = ""
+            pcall(function() loc = tostring(game:GetService("LocalizationService").RobloxLocaleId or "") end)
+            if loc == "" then pcall(function() loc = tostring(LocalPlayer.LocaleId or "") end) end
+            if loc == "" then pcall(function() loc = tostring(game:GetService("LocalizationService").SystemLocaleId or "") end) end
+            loc = string.lower(loc ~= "" and loc or "es-es"):gsub("_", "-")
+            local lang = loc:match("^(%a+)") or "es"
+            if lang == "zh" then lang = (loc:find("tw") or loc:find("hk") or loc:find("hant")) and "zh-TW" or "zh-CN" end
+            return lang, loc
+        end
+        Tr.lang, Tr.locale = Tr.detect()
+        Tr.uiOn = Tr.base(Tr.lang) ~= "es"
+        Tr.file = "YinYang_ChatLang_" .. Tr.lang .. ".json"
+        pcall(function()
+            if Tr.uiOn and isfile(Tr.file) then
+                local d = HttpService:JSONDecode(readfile(Tr.file))
+                if type(d) == "table" then
+                    for k, v in pairs(d) do
+                        if type(k) == "string" and type(v) == "string" then Tr.cache[k] = v end
+                    end
+                end
+            end
+        end)
+        Tr.save = function()
+            if Tr.saving then return end
+            Tr.saving = true
+            task.delay(3, function()
+                Tr.saving = false
+                pcall(function() writefile(Tr.file, HttpService:JSONEncode(Tr.cache)) end)
+            end)
+        end
+        Tr.google = function(text, tl)
+            local ok, res = pcall(function()
+                return request({
+                    Url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. HttpService:UrlEncode(tl)
+                        .. "&dt=t&q=" .. HttpService:UrlEncode(text),
+                    Method = "GET",
+                })
+            end)
+            if not ok or type(res) ~= "table" or type(res.Body) ~= "string" or res.Body == "" then return nil end
+            local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body)
+            if not okD or type(data) ~= "table" or type(data[1]) ~= "table" then return nil end
+            local out = {}
+            for _, seg in ipairs(data[1]) do
+                if type(seg) == "table" and type(seg[1]) == "string" then out[#out + 1] = seg[1] end
+            end
+            if #out == 0 then return nil end
+            local from = type(data[3]) == "string" and data[3] or nil
+            if not from then
+                for i, v in pairs(data) do
+                    if i ~= 1 and type(v) == "string" then from = v break end
+                end
+            end
+            return table.concat(out), from
+        end
+        Tr.roblox = function(text, tl)
+            local ok, out = pcall(function()
+                local r = TextService:FilterAndTranslateStringAsync(text, LocalPlayer.UserId, {tl})
+                local t = r:GetTranslations()
+                if type(t) ~= "table" then return nil end
+                local v = t[tl] or t[Tr.locale]
+                if v == nil then for _, x in pairs(t) do v = x break end end
+                return type(v) == "string" and v or nil
+            end)
+            return ok and out or nil
+        end
+        Tr.probe = function()
+            if Tr.robloxOk ~= nil then return Tr.robloxOk end
+            local sample = Tr.base(Tr.lang) == "es" and "Hello, how are you today?" or "Hola, ¿cómo estás hoy?"
+            local out = Tr.roblox(sample, Tr.lang)
+            Tr.robloxOk = type(out) == "string" and out ~= "" and out ~= sample
+            return Tr.robloxOk
+        end
+        Tr.one = function(text)
+            if Tr.probe() then
+                local out = Tr.roblox(text, Tr.lang)
+                if out and out ~= "" then return out, nil end
+            end
+            return Tr.google(text, Tr.lang)
+        end
+        Tr.trim = function(s) return (tostring(s or ""):match("^%s*(.-)%s*$")) end
+        Tr.batch = function(list)
+            local res = {}
+            if not Tr.probe() and #list > 1 then
+                local joined = Tr.google(table.concat(list, "\n"), Tr.lang)
+                if not joined then return res end
+                do
+                    local parts = {}
+                    for line in (joined .. "\n"):gmatch("(.-)\n") do parts[#parts + 1] = Tr.trim(line) end
+                    if #parts == #list then
+                        for i, s in ipairs(list) do res[s] = parts[i] end
+                        return res
+                    end
+                end
+            end
+            for i, s in ipairs(list) do
+                res[s] = (Tr.one(s))
+                if i < #list then task.wait(0.1) end
+            end
+            return res
+        end
+        Tr.want = function(key, cb)
+            local c = Tr.cache[key]
+            if c then cb(c) return end
+            local w = Tr.waiters[key]
+            if w then table.insert(w, cb) return end
+            Tr.waiters[key] = {cb}
+            table.insert(Tr.queue, key)
+            Tr.kick()
+        end
+        Tr.kick = function()
+            if Tr.running then return end
+            Tr.running = true
+            task.spawn(function()
+                task.wait(0.3)
+                while #Tr.queue > 0 and ScreenGui.Parent do
+                    local list, size = {}, 0
+                    while #Tr.queue > 0 and #list < 25 and (#list == 0 or size + #Tr.queue[1] < 1200) do
+                        local k = table.remove(Tr.queue, 1)
+                        list[#list + 1] = k
+                        size += #k + 1
+                    end
+                    local res = Tr.batch(list)
+                    local anyOk = false
+                    for _, k in ipairs(list) do
+                        local v = res[k]
+                        if type(v) == "string" and v ~= "" then
+                            Tr.cache[k] = v
+                            anyOk = true
+                        end
+                        Tr.tries[k] = (Tr.tries[k] or 0) + 1
+                        if Tr.cache[k] or Tr.tries[k] >= 3 then
+                            local w = Tr.waiters[k]
+                            Tr.waiters[k] = nil
+                            for _, cb in ipairs(w or {}) do pcall(cb, Tr.cache[k]) end
+                        else
+                            table.insert(Tr.queue, k)
+                        end
+                    end
+                    if anyOk then Tr.save() else task.wait(8) end
+                    task.wait(0.2)
+                end
+                Tr.running = false
+            end)
+        end
+        Tr.convert = function(src, cb)
+            local pieces, pos = {}, 1
+            while pos <= #src do
+                local a, b = src:find("<[^<>]->", pos)
+                if not a then
+                    pieces[#pieces + 1] = {t = src:sub(pos)}
+                    break
+                end
+                if a > pos then pieces[#pieces + 1] = {t = src:sub(pos, a - 1)} end
+                pieces[#pieces + 1] = {tag = src:sub(a, b)}
+                pos = b + 1
+            end
+            local pending = 1
+            local function done()
+                pending -= 1
+                if pending > 0 then return end
+                local out = {}
+                for _, p in ipairs(pieces) do out[#out + 1] = p.tag or p.out or p.t end
+                cb(table.concat(out))
+            end
+            for _, p in ipairs(pieces) do
+                if p.t then
+                    local lead, core, trail = p.t:match("^(%s*)(.-)(%s*)$")
+                    if core:find("%a") then
+                        local nums = {}
+                        local key = core:gsub("%d+", function(n)
+                            nums[#nums + 1] = n
+                            return "0"
+                        end)
+                        pending += 1
+                        Tr.want(key, function(v)
+                            if type(v) == "string" then
+                                local i = 0
+                                local filled = v:gsub("%d+", function()
+                                    i += 1
+                                    return nums[i]
+                                end)
+                                if i == #nums then p.out = lead .. filled .. trail end
+                            end
+                            done()
+                        end)
+                    end
+                end
+            end
+            done()
+        end
+        Tr.apply = function(obj, prop)
+            if not obj.Parent or obj:GetAttribute("NoTr") then return end
+            local cur = obj[prop]
+            if type(cur) ~= "string" or cur == "" or not cur:find("%a") then return end
+            local mine = Tr.setByMe[obj]
+            if mine and mine[prop] == cur then return end
+            Tr.convert(cur, function(out)
+                if out ~= cur and obj[prop] == cur and obj.Parent and not obj:GetAttribute("NoTr") then
+                    Tr.setByMe[obj] = Tr.setByMe[obj] or {}
+                    Tr.setByMe[obj][prop] = out
+                    obj[prop] = out
+                end
+            end)
+        end
+        Tr.hook = function(obj)
+            local props = Tr.props[obj.ClassName]
+            if not props or Tr.hooked[obj] then return end
+            Tr.hooked[obj] = true
+            for _, prop in ipairs(props) do
+                obj:GetPropertyChangedSignal(prop):Connect(function() Tr.apply(obj, prop) end)
+                Tr.apply(obj, prop)
+            end
+        end
+        Tr.watch = function(root)
+            for _, d in ipairs(root:GetDescendants()) do Tr.hook(d) end
+            root.DescendantAdded:Connect(function(d)
+                task.defer(function()
+                    if d.Parent then Tr.hook(d) end
+                end)
+            end)
+        end
+        Tr.msgFor = function(src, cb)
+            local c = Tr.msgCache[src]
+            if c ~= nil then cb(c or nil) return end
+            local w = Tr.msgWait[src]
+            if w then table.insert(w, cb) return end
+            Tr.msgWait[src] = {cb}
+            table.insert(Tr.msgQueue, src)
+            if Tr.msgRunning then return end
+            Tr.msgRunning = true
+            task.spawn(function()
+                while #Tr.msgQueue > 0 and ScreenGui.Parent do
+                    local s = table.remove(Tr.msgQueue, 1)
+                    local out, from = Tr.one(s)
+                    local res = nil
+                    if out ~= nil then
+                        res = false
+                        local same = string.lower((Tr.trim(out):gsub("%s+", " "))) == string.lower((Tr.trim(s):gsub("%s+", " ")))
+                        if out ~= "" and not same and (from == nil or Tr.base(from) ~= Tr.base(Tr.lang)) then res = out end
+                        Tr.msgCache[s] = res
+                    end
+                    local list = Tr.msgWait[s]
+                    Tr.msgWait[s] = nil
+                    for _, f in ipairs(list or {}) do pcall(f, res or nil) end
+                    task.wait(out == nil and 3 or 0.15)
+                end
+                Tr.msgRunning = false
+            end)
+        end
+        Tr.message = function(meta)
+            if type(meta) ~= "table" or meta.isMe or meta.trReq or not meta.trBody or type(meta.trSrc) ~= "string" then return end
+            if not meta.trSrc:find("%a") then return end
+            meta.trReq = true
+            Tr.msgFor(meta.trSrc, function(out)
+                if not out or not meta.row or not meta.row.Parent or messageRows[meta.key] ~= meta then return end
+                local nearBottom = Chat.isNearBottom()
+                meta.trOut = out
+                meta.trShown = true
+                meta.trBody(out)
+                local btn = mk("TextButton", {
+                    Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                    Text = "Traducido · Ver original", TextColor3 = THEME.DIM, Font = Enum.Font.GothamBold, TextSize = 12,
+                    AutoButtonColor = false, LayoutOrder = 5,
+                }, meta.content)
+                mk("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, btn)
+                meta.trBtn = btn
+                btn.MouseButton1Click:Connect(function()
+                    meta.trShown = not meta.trShown
+                    meta.trBody(meta.trShown and meta.trOut or meta.trSrc)
+                    btn.Text = meta.trShown and "Traducido · Ver original" or "Ver traducción"
+                end)
+                if nearBottom then task.defer(scrollBottom) end
+            end)
+        end
+        if Tr.uiOn then
+            Tr.watch(ScreenGui)
+            Tr.watch(Surface)
+        end
+        for _, meta in pairs(messageRows) do Tr.message(meta) end
+    end
+    Chat.applyView()
+    Chat.refreshHome(true)
+    task.spawn(function() pcall(Chat.refreshPresence) end)
+    Chat.layoutHost()
+    return {
+        Chat = Chat,
+        GetSideNotifs = function() return Chat.settings.SideNotifs ~= false end,
+        SetSideNotifs = function(v)
+            Chat.settings.SideNotifs = v and true or false
+            Chat.saveSettings()
+            if not v and UI.SideHolder then
+                for _, c in ipairs(UI.SideHolder:GetChildren()) do
+                    if c:IsA("GuiObject") then c:Destroy() end
+                end
+            end
+        end,
+        Destroy = function()
+            generation += 1
+            pcall(function() ScreenGui:Destroy() end)
+            pcall(function() Surface:Destroy() end)
+        end,
+    }
+end
+
+
+function YinYang:GetLanguage()
+    return LibraryLanguage
+end
+
+function YinYang:GetLanguageMode()
+    return YLang.Mode
+end
+
+function YinYang:SetLanguageMode(mode)
+    return YLang.SetMode(mode)
+end
+
+function YinYang:OnLanguageChanged(callback)
+    if type(callback) == "function" then
+        table.insert(YLang.Listeners, callback)
+    end
+end
+
+function YinYang:CreateWindow(title_text, startTheme)
+    startTheme = startTheme or "Senju"
+    -- Halloween terminado: Dark queda bloqueado; si la config guardada lo trae se usa Senju
+    if startTheme == "Dark" and ThemePalettes["Senju"] then startTheme = "Senju" end
+
+    if IsPlayerBanned(LocalPlayer) then
+        pcall(function()
+            if LocalPlayer.PlayerGui:FindFirstChild("ZeroMobile") then
+                LocalPlayer.PlayerGui.ZeroMobile:Destroy()
+            end
+        end)
+        warn("[ZeroLib] Acceso denegado: " .. tostring(LocalPlayer.Name))
+        local dummy = {}
+        setmetatable(dummy, {
+            __index = function(_, _)
+                return function() return dummy end
+            end
+        })
+        return dummy
+    end
+
+    local ConfigCargada = LoadConfig()
+    if ConfigCargada then
+        if ConfigCargada.libMode then
+            SavedConfig.LibrarySizeMode = ConfigCargada.libMode
+        end
+        if ConfigCargada.libHeight then
+            SavedConfig.LibraryHeight = ConfigCargada.libHeight
+        end
+        if ConfigCargada.effect then
+            SavedConfig.CurrentEffect = ConfigCargada.effect
+        end
+        if ConfigCargada.volume then
+            SavedConfig.Volume = ConfigCargada.volume
+        end
+        if ConfigCargada.hideSliders ~= nil then
+            SavedConfig.HideSliders = ConfigCargada.hideSliders
+        end
+        if ConfigCargada.favorites then
+            SavedConfig.Favorites = ConfigCargada.favorites
+        end
+        if type(ConfigCargada.spotifyFavorites) == "table" then
+            SavedConfig.SpotifyFavorites = ConfigCargada.spotifyFavorites
+        end
+        if ConfigCargada.logoIcon then
+            SavedConfig.SelectedLogoIcon = ConfigCargada.logoIcon
+        end
+        if ConfigCargada.platformMode then
+            SavedConfig.PlatformMode = ConfigCargada.platformMode
+        end
+        if ConfigCargada.floatStyle then
+            SavedConfig.FloatingToggleStyle = ConfigCargada.floatStyle
+        end
+        if ConfigCargada.tabIconLayout == "Carousel" or ConfigCargada.tabIconLayout == "Original" then
+            SavedConfig.TabIconLayout = ConfigCargada.tabIconLayout
+        end
+        if ConfigCargada.chatCorner ~= nil then
+            SavedConfig.ChatCornerMessages = ConfigCargada.chatCorner
+        end
+        if ConfigCargada.keybinds then
+            SavedConfig.Keybinds = ConfigCargada.keybinds
+        end
+    end
+
+    local SlidersHidden = SavedConfig.HideSliders or false
+
+    local SavedFavoriteIds = {}
+    for id in (SavedConfig.Favorites or ""):gmatch("([^,]+)") do
+        SavedFavoriteIds[id] = true
+    end
+    local AutoTabFavoritosRef = nil
+
+    local function SyncFavoritesToConfig()
+        local ids = {}
+        for id, isFav in pairs(SavedFavoriteIds) do
+            if isFav then table.insert(ids, id) end
+        end
+        SavedConfig.Favorites = table.concat(ids, ",")
+        SaveConfig()
+    end
+
+    setActiveTheme(startTheme)
+
+    local globalConnections = {}
+    local function track(conn)
+        for i = #globalConnections, 1, -1 do
+            local existing = globalConnections[i]
+            if not existing.Connected then
+                table.remove(globalConnections, i)
+            end
+        end
+        table.insert(globalConnections, conn)
+        return conn
+    end
+
+    local guiParent = LocalPlayer:WaitForChild("PlayerGui")
+    pcall(function()
+        if typeof(gethui) == "function" then
+            local hiddenUi = gethui()
+            if hiddenUi then guiParent = hiddenUi end
+        end
+    end)
+
+    pcall(function()
+        local previous = guiParent:FindFirstChild("ZeroMobile")
+        if previous then previous:Destroy() end
+    end)
+
+    local ScreenGui = mk("ScreenGui", {
+        Name = "ZeroMobile",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 2147483647,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+    }, guiParent)
+
+    pcall(function() ScreenGui.AutoLocalize = false end)
+    pcall(function() ScreenGui.ScreenInsets = Enum.ScreenInsets.None end)
+    pcall(function() ScreenGui.ClipToDeviceSafeArea = false end)
+    pcall(function() ScreenGui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.FullscreenExtension end)
+    pcall(function()
+        if typeof(protect_gui) == "function" then protect_gui(ScreenGui) end
+    end)
+
+    local ToggleButton = mk("TextButton", {
+        Name = "ToggleButton",
+        Size = UDim2.new(0, 42, 0, 42),
+        Position = UDim2.new(0, 24, 0, 70),
+        BackgroundColor3 = Theme.Accent,
+        Text = "",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBold,
+        TextSize = 17,
+        ZIndex = 30,
+    }, ScreenGui)
+    ToggleButton:SetAttribute("ThemeRole", "Accent")
+    corner(ToggleButton, 999)
+    stroke(ToggleButton, Theme.Accent, 1.5)
+
+
+    local function lerpN(a, b, t) return a + (b - a) * t end
+
+    local logoLayers   = {}
+    local logoIdleConn = nil
+    local logoRenderConn = nil
+    local toggleEyesOnClick = nil
+
+    local resolveLogoClickSound
+    do
+        local resolved = {}
+        resolveLogoClickSound = function(iconName, clickS, allowDownload)
+            local url = clickS and clickS.Url
+            if type(url) ~= "string" or url == "" then return nil end
+
+            local cacheName = clickS.CacheName
+            if type(cacheName) ~= "string" or cacheName == "" then
+                cacheName = "YinYang_IconClick_" .. tostring(iconName) .. ".mp3"
+            end
+
+            if resolved[cacheName] then return resolved[cacheName] end
+            if not getcustomasset then return nil end
+
+            local exists = false
+            if isfile then
+                local okFile, resultFile = pcall(function() return isfile(cacheName) end)
+                exists = okFile and resultFile == true
+            end
+
+            if not exists then
+                if not allowDownload or not writefile then return nil end
+
+                local okDownload, data = pcall(function() return game:HttpGet(url, true) end)
+                if not okDownload or type(data) ~= "string" or #data < 10 then
+                    warn("[YinYang Icons] Falló la descarga del sonido (" .. url .. "): " .. tostring(data))
+                    return nil
+                end
+
+                local okWrite = pcall(function() writefile(cacheName, data) end)
+                if not okWrite then
+                    warn("[YinYang Icons] Falló writefile para el sonido: " .. cacheName)
+                    return nil
+                end
+            end
+
+            local okAsset, asset = pcall(function() return getcustomasset(cacheName) end)
+            if okAsset and type(asset) == "string" and asset ~= "" then
+                resolved[cacheName] = asset
+                return asset
+            end
+            return nil
+        end
+    end
+
+    local function ApplyLogoIcon(iconName)
+        if logoRenderConn then logoRenderConn:Disconnect(); logoRenderConn = nil end
+        if logoIdleConn   then logoIdleConn:Disconnect();   logoIdleConn   = nil end
+
+        for _, entry in ipairs(logoLayers) do
+            if entry.label and entry.label.Parent then
+                entry.label:Destroy()
+            end
+        end
+        logoLayers = {}
+
+        stopGlowTweens(tostring(ToggleButton))
+        local _cs = ToggleButton:FindFirstChildOfClass("UIStroke")
+        if _cs then
+            local _cg = _cs:FindFirstChildOfClass("UIGradient")
+            if _cg then _cg:Destroy() end
+            _cs.Transparency = 0
+            _cs.Color        = Theme.Accent
+            _cs.Thickness    = 1.5
+        end
+        ToggleButton:SetAttribute("IsCapsule", false)
+        ToggleButton.Size             = UDim2.fromOffset(42, 42)
+        ToggleButton.BackgroundColor3 = Theme.Accent
+        ToggleButton.BackgroundTransparency = 0
+        do
+            local _resetCorner = ToggleButton:FindFirstChildOfClass("UICorner")
+            if _resetCorner then _resetCorner.CornerRadius = UDim.new(0, 999) end
+        end
+
+        local iconData = IconCatalog.Icons[iconName]
+            or IconCatalog.Icons["ClassicYinYang"]
+        if not iconData then return end
+
+        if iconData.ClickSound and type(iconData.ClickSound.Url) == "string" and iconData.ClickSound.Url ~= "" then
+            task.spawn(resolveLogoClickSound, iconName, iconData.ClickSound, true)
+        end
+
+        if iconData.Type == "Capsule" then
+            ToggleButton:SetAttribute("IsCapsule", true)
+            ToggleButton.Size             = UDim2.fromOffset(185, 42)
+            ToggleButton.BackgroundColor3 = Color3.fromRGB(18, 18, 24)
+            ToggleButton.BackgroundTransparency = 0.15
+
+            do
+                local _capCorner = ToggleButton:FindFirstChildOfClass("UICorner")
+                if _capCorner then _capCorner.CornerRadius = UDim.new(0, 14) end
+            end
+
+            local arrowImg = mk("ImageLabel", {
+                Parent                 = ToggleButton,
+                Size                   = UDim2.fromOffset(26, 26),
+                Position               = UDim2.new(0, 10, 0.5, -13),
+                BackgroundTransparency = 1,
+                Image                  = "rbxassetid://89220810765334",
+                ImageColor3            = Color3.fromRGB(255, 255, 255),
+                ZIndex                 = 31,
+            })
+            table.insert(logoLayers, { label = arrowImg, def = {}, state = {} })
+
+            local divider = mk("Frame", {
+                Parent           = ToggleButton,
+                Size             = UDim2.fromOffset(1, 20),
+                Position         = UDim2.new(0, 42, 0.5, -10),
+                BackgroundColor3 = Color3.fromRGB(80, 80, 100),
+                BorderSizePixel  = 0,
+                ZIndex           = 31,
+            })
+            table.insert(logoLayers, { label = divider, def = {}, state = {} })
+
+            local textLbl = mk("TextLabel", {
+                Parent                 = ToggleButton,
+                Size                   = UDim2.new(1, -50, 1, 0),
+                Position               = UDim2.fromOffset(48, 0),
+                BackgroundTransparency = 1,
+                Text                   = "Open YinYang",
+                TextColor3             = Color3.fromRGB(255, 255, 255),
+                Font                   = Enum.Font.GothamBold,
+                TextSize               = 16,
+                TextXAlignment         = Enum.TextXAlignment.Center,
+                ZIndex                 = 31,
+            })
+            table.insert(logoLayers, { label = textLbl, def = {}, state = {} })
+
+            do
+                local _key = tostring(ToggleButton)
+                stopGlowTweens(_key)
+
+                local _capStroke = ToggleButton:FindFirstChildOfClass("UIStroke")
+                if _capStroke then
+                    local _oldGrad = _capStroke:FindFirstChildOfClass("UIGradient")
+                    if _oldGrad then _oldGrad:Destroy() end
+                    _capStroke.Thickness    = 3
+                    _capStroke.Color        = Color3.fromRGB(255, 255, 255)
+                    _capStroke.Transparency = 0
+                    _capStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    _capStroke.LineJoinMode    = Enum.LineJoinMode.Round
+
+                    local _capsulePulse = TweenService:Create(
+                        _capStroke,
+                        TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                        { Transparency = 0.15 }
+                    )
+                    _capsulePulse:Play()
+
+                    local _bandA = mk("Frame", {
+                        Parent = ToggleButton,
+                        Size = UDim2.new(1, 0, 1, 0),
+                        BackgroundTransparency = 1,
+                        ZIndex = 40,
+                    })
+                    corner(_bandA, 14)
+                    local _bandAStroke = mk("UIStroke", {
+                        Color = Color3.fromRGB(0, 0, 0),
+                        Thickness = 3,
+                        Transparency = 0,
+                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                        LineJoinMode = Enum.LineJoinMode.Round,
+                    }, _bandA)
+                    local _gradA = Instance.new("UIGradient")
+                    _gradA.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+                    _gradA.Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0.00, 1),
+                        NumberSequenceKeypoint.new(0.35, 1),
+                        NumberSequenceKeypoint.new(0.50, 0.15),
+                        NumberSequenceKeypoint.new(0.65, 1),
+                        NumberSequenceKeypoint.new(1.00, 1),
+                    })
+                    _gradA.Offset = Vector2.new(-1.5, 0)
+                    _gradA.Parent = _bandAStroke
+                    local _sweepA = TweenService:Create(
+                        _gradA,
+                        TweenInfo.new(2.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+                        { Offset = Vector2.new(1.5, 0) }
+                    )
+                    _sweepA:Play()
+                    table.insert(logoLayers, { label = _bandA, def = {}, state = {} })
+
+                    local _bandB = mk("Frame", {
+                        Parent = ToggleButton,
+                        Size = UDim2.new(1, 0, 1, 0),
+                        BackgroundTransparency = 1,
+                        ZIndex = 40,
+                    })
+                    corner(_bandB, 14)
+                    local _bandBStroke = mk("UIStroke", {
+                        Color = Color3.fromRGB(0, 0, 0),
+                        Thickness = 3,
+                        Transparency = 0,
+                        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+                        LineJoinMode = Enum.LineJoinMode.Round,
+                    }, _bandB)
+                    local _gradB = Instance.new("UIGradient")
+                    _gradB.Color = ColorSequence.new(Color3.fromRGB(0, 0, 0))
+                    _gradB.Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0.00, 1),
+                        NumberSequenceKeypoint.new(0.35, 1),
+                        NumberSequenceKeypoint.new(0.50, 0.15),
+                        NumberSequenceKeypoint.new(0.65, 1),
+                        NumberSequenceKeypoint.new(1.00, 1),
+                    })
+                    _gradB.Offset = Vector2.new(1.5, 0)
+                    _gradB.Parent = _bandBStroke
+                    local _sweepB = TweenService:Create(
+                        _gradB,
+                        TweenInfo.new(2.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+                        { Offset = Vector2.new(-1.5, 0) }
+                    )
+                    _sweepB:Play()
+                    table.insert(logoLayers, { label = _bandB, def = {}, state = {} })
+
+                    ActiveGlowTweens[_key] = { _capsulePulse, _sweepA, _sweepB }
+                end
+            end
+            return
+        end
+
+        if type(iconData.Build) == "function" then
+            local _bs = ToggleButton:FindFirstChildOfClass("UIStroke")
+            ToggleButton.Size = UDim2.fromOffset(56, 56)
+            ToggleButton.BackgroundTransparency = 1
+            if _bs then _bs.Transparency = 1 end
+
+            local _holder = mk("Frame", {
+                Parent                 = ToggleButton,
+                Size                   = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                ZIndex                 = 31,
+            })
+            local _bOk, _bRes = pcall(iconData.Build, { Parent = _holder, Button = ToggleButton })
+            if _bOk then
+                table.insert(logoLayers, {
+                    label   = _holder,
+                    def     = {},
+                    state   = {},
+                    onClick = (type(_bRes) == "table") and _bRes.OnClick or nil,
+                })
+                return
+            end
+
+            print("[YinYang Icons] ⚠️ Build falló, se usa Layers: " .. tostring(_bRes))
+            _holder:Destroy()
+            ToggleButton.Size = UDim2.fromOffset(42, 42)
+            ToggleButton.BackgroundTransparency = 0
+            if _bs then _bs.Transparency = 0 end
+        end
+
+        if not iconData.Layers then return end
+
+        -- NoBackground = true (catalogo de iconos): solo se ve la imagen, sin el circulo de color
+        -- del tema ni el borde del boton. Ambos se restauran al inicio de ApplyLogoIcon al cambiar de icono.
+        if iconData.NoBackground == true then
+            local _nbStroke = ToggleButton:FindFirstChildOfClass("UIStroke")
+            ToggleButton.BackgroundTransparency = 1
+            if _nbStroke then _nbStroke.Transparency = 1 end
+        end
+        -- BgColor / BorderColor (logos propios del Estudio de logos): colores fijos en vez del Accent del tema.
+        -- Los íconos del catálogo no los traen, así que para ellos no cambia nada.
+        if iconData.NoBackground ~= true then
+            if typeof(iconData.BgColor) == "Color3" then
+                ToggleButton.BackgroundColor3 = iconData.BgColor
+            end
+            if typeof(iconData.BorderColor) == "Color3" then
+                local _bcStroke = ToggleButton:FindFirstChildOfClass("UIStroke")
+                if _bcStroke then _bcStroke.Color = iconData.BorderColor end
+            end
+        end
+
+        for i, layerDef in ipairs(iconData.Layers) do
+            local sc = layerDef.Scale or 1.6
+            local off = -((sc - 1) / 2)
+            local label
+            local spriteState = nil
+
+            if type(layerDef.SpriteSheet) == "table" then
+                label, spriteState = createSpriteSheetLabels(
+                    ToggleButton,
+                    layerDef.SpriteSheet,
+                    UDim2.new(sc, 0, sc, 0),
+                    UDim2.new(off, 0, off, 0),
+                    30 + i
+                )
+            else
+                label = mk("ImageLabel", {
+                    Parent               = ToggleButton,
+                    Size                 = UDim2.new(sc, 0, sc, 0),
+                    Position             = UDim2.new(off, 0, off, 0),
+                    BackgroundTransparency = 1,
+                    Image                = layerDef.Image or "",
+                    ZIndex                = 30 + i,
+                })
+            end
+
+            if not label then
+                continue
+            end
+
+            -- Color / Transparency por capa (logos propios); las capas del catálogo no los traen
+            if label:IsA("ImageLabel") then
+                if typeof(layerDef.Color) == "Color3" then
+                    label.ImageColor3 = layerDef.Color
+                end
+                if tonumber(layerDef.Transparency) then
+                    label.ImageTransparency = math.clamp(tonumber(layerDef.Transparency), 0, 1)
+                end
+            end
+
+            mk("UIAspectRatioConstraint", { AspectRatio = 1 }, label)
+
+            local state = {
+                angle       = 0,
+                speed       = layerDef.Speed or 60,
+                tSpeed      = layerDef.Speed or 60,
+                time        = 0,
+                turboEndTime = 0,
+                turboSpeed   = layerDef.TurboSpeed or 350,
+                sprite      = spriteState,
+            }
+            table.insert(logoLayers, { label = label, def = layerDef, state = state })
+        end
+
+        logoRenderConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+            if PerfOpt.Flags.NoLogoAnim then return end
+            for _, entry in ipairs(logoLayers) do
+                local lbl = entry.label
+                local def = entry.def
+                local st  = entry.state
+                if not lbl or not lbl.Parent then continue end
+
+                local mv  = def.Movement  or "None"
+                local spd = def.Speed     or 60
+                local amt = def.Amount    or 0
+                local dir = def.Direction or 1
+
+                st.time = st.time + dt
+
+                if st.sprite then
+                    local sprite = st.sprite
+                    sprite.Acc = sprite.Acc + dt
+                    local step = 1 / sprite.Config.FPS
+                    if sprite.Acc > 0.25 then
+                        sprite.Acc = 0.25
+                    end
+                    local moved = false
+                    while sprite.Acc >= step do
+                        sprite.Acc = sprite.Acc - step
+                        sprite.Frame = (sprite.Frame + 1) % sprite.Config.TotalFrames
+                        moved = true
+                    end
+                    if moved then
+                        updateSpriteSheetFrame(sprite, sprite.Frame)
+                    end
+                end
+
+                if mv == "Spin" then
+                    local now    = os.clock()
+                    local inTurbo = st.turboEndTime > 0 and now < st.turboEndTime
+
+                    if inTurbo then
+                        st.speed  = st.turboSpeed
+                        st.tSpeed = st.turboSpeed
+                    else
+                        if (def.Style or "Constant") == "Organic" then
+                            st.tSpeed = spd + math.sin(st.time * 0.8) * (spd * 0.33)
+                            st.speed  = lerpN(st.speed, st.tSpeed, 0.08)
+                        else
+                            st.speed = spd
+                        end
+                    end
+                    st.angle = st.angle + st.speed * dir * dt
+                    lbl.Rotation = st.angle
+
+                elseif mv == "Pulse" then
+                    local sc    = def.Scale or 1.6
+                    local off   = -((sc - 1) / 2)
+                    local scale = 1 + math.sin(st.time * (2 * math.pi / spd)) * ((amt ~= 0 and amt or 12) / 100)
+                    lbl.Size     = UDim2.new(sc * scale, 0, sc * scale, 0)
+                    lbl.Position = UDim2.new(off * scale, 0, off * scale, 0)
+
+                elseif mv == "Orbit" then
+                    local sc     = def.Scale or 1.6
+                    local off    = -((sc - 1) / 2)
+                    local radius = amt ~= 0 and amt or 6
+                    local angle  = st.time * math.rad(spd) * dir
+                    lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
+
+                elseif m

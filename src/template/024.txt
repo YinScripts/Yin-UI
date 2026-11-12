@@ -1,0 +1,1155 @@
+ignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 504,
+                })
+                RL:SetAttribute("ThemeTextRole", "Text")
+
+                local n = tabCount[tabName] or 0
+                local CountChip = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(0, 0, 0, 22),
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -10, 0.5, 0),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.82,
+                    Text = GetText(n .. (n == 1 and " slider" or " sliders"), n .. (n == 1 and " slider" or " sliders")),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 10,
+                    ZIndex = 504,
+                })
+                CountChip:SetAttribute("ThemeRole", "Accent")
+                CountChip:SetAttribute("ThemeTextRole", "Accent")
+                CountChip:SetAttribute("IgnoreTextEffect", true)
+                corner(CountChip, 999)
+                mk("UIPadding", {Parent = CountChip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
+
+                local RowBtn = mk("TextButton", {
+                    Parent = Row,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    AutoButtonColor = false,
+                    ZIndex = 506,
+                })
+                local r = {name = tabName, row = Row, box = Box, mark = Mark, stroke = rowStroke}
+                rowsUI[#rowsUI + 1] = r
+                RowBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.4)
+                    checked[tabName] = not checked[tabName]
+                    paintRow(r, true)
+                    refreshSummary()
+                end)
+                paintRow(r, false)
+            end
+
+            local function setAll(value)
+                playSound(Sounds.Click, 0.4)
+                for _, name in ipairs(tabNames) do checked[name] = value end
+                for _, r in ipairs(rowsUI) do paintRow(r, true) end
+                refreshSummary()
+            end
+            AllBtn.MouseButton1Click:Connect(function() setAll(true) end)
+            NoneBtn.MouseButton1Click:Connect(function() setAll(false) end)
+            refreshSummary()
+
+            local CodeBox = nil
+            ExportBtn.MouseButton1Click:Connect(function()
+                local sliders, total = {}, 0
+                for _, item in ipairs(buildIdMap()) do
+                    if checked[item.tab] then
+                        local ok, val = pcall(item.entry.GetValue)
+                        if ok and type(val) == "number" then
+                            sliders[item.id] = val
+                            total = total + 1
+                        end
+                    end
+                end
+
+                if total == 0 then
+                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
+                    return
+                end
+
+                local ok, encoded = pcall(function()
+                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
+                end)
+                if not ok then
+                    setStatus("err", "Error al codificar", "Encoding error")
+                    return
+                end
+
+                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
+                playSound(Sounds.Click, 0.7)
+                if copied then
+                    setStatus("ok",
+                        total .. " ajuste(s) copiados al portapapeles",
+                        total .. " setting(s) copied to clipboard")
+                    if CodeBox then CodeBox.Visible = false end
+                else
+                    setStatus("err",
+                        "Tu ejecutor no copia: copiá el código de abajo",
+                        "Your executor can't copy: copy the code below")
+                    -- Respaldo: mostrar el codigo para copiarlo a mano
+                    if not CodeBox then
+                        CodeBox = mk("TextBox", {
+                            Parent = Panel,
+                            Size = UDim2.new(1, -32, 0, 30),
+                            Position = UDim2.new(0, 16, 1, -90),
+                            BackgroundColor3 = Theme.Secondary,
+                            BackgroundTransparency = 0.2,
+                            Text = "",
+                            TextColor3 = Theme.Text,
+                            Font = Enum.Font.Code,
+                            TextSize = 10,
+                            TextXAlignment = Enum.TextXAlignment.Left,
+                            TextTruncate = Enum.TextTruncate.AtEnd,
+                            ClearTextOnFocus = false,
+                            TextEditable = false,
+                            ZIndex = 505,
+                        })
+                        CodeBox:SetAttribute("ThemeRole", "Secondary")
+                        CodeBox:SetAttribute("ThemeTextRole", "Text")
+                        CodeBox:SetAttribute("IgnoreTextEffect", true)
+                        corner(CodeBox, 9)
+                        stroke(CodeBox, Theme.Accent, 1, 0.3)
+                        mk("UIPadding", {Parent = CodeBox, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+                        ListScroll.Size = UDim2.new(1, -32, 1, -254)
+                    end
+                    CodeBox.Text = encoded
+                    CodeBox.Visible = true
+                end
+            end)
+        end
+
+        local Section = mk("Frame", {
+            Parent = TabPage,
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ZIndex = 9,
+        })
+        mk("UIListLayout", {
+            Parent = Section,
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            Padding = UDim.new(0, 10),
+        })
+        mk("UIPadding", {
+            Parent = Section,
+            PaddingBottom = UDim.new(0, 10),
+        })
+
+        local Divider = mk("Frame", {
+            Parent = Section,
+            Size = UDim2.new(1, 0, 0, 1),
+            BackgroundColor3 = Theme.Stroke,
+            BorderSizePixel = 0,
+            LayoutOrder = 0,
+            ZIndex = 9,
+        })
+        Divider:SetAttribute("ThemeRole", "Stroke")
+
+        local Header = mk("Frame", {
+            Parent = Section,
+            Size = UDim2.new(1, 0, 0, 56),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            LayoutOrder = 1,
+            ZIndex = 9,
+        })
+        mk("ImageLabel", {
+            Parent = Header,
+            Size = UDim2.fromOffset(34, 34),
+            Position = UDim2.new(0, 4, 0.5, -17),
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://88002112319084",
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 10,
+        })
+        local HTitle = mk("TextLabel", {
+            Parent = Header,
+            Size = UDim2.new(1, -50, 0, 22),
+            Position = UDim2.new(0, 48, 0, 7),
+            BackgroundTransparency = 1,
+            Text = GetText("Estadísticas", "Statistics"),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 10,
+        })
+        HTitle:SetAttribute("ThemeTextRole", "Text")
+        setBilingual(HTitle, "Estadísticas", "Statistics")
+        local HSub = mk("TextLabel", {
+            Parent = Header,
+            Size = UDim2.new(1, -50, 0, 18),
+            Position = UDim2.new(0, 48, 0, 31),
+            BackgroundTransparency = 1,
+            Text = GetText("Selecciona una opción para continuar", "Select an option to continue"),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 10,
+        })
+        HSub:SetAttribute("ThemeTextRole", "TextDim")
+        setBilingual(HSub, "Selecciona una opción para continuar", "Select an option to continue")
+
+        local function makeOptionCard(icon, titleES, titleEN, descES, descEN, layoutOrder, onClick)
+            local Card = mk("Frame", {
+                Parent = Section,
+                Size = UDim2.new(1, 0, 0, 74),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.5,
+                BorderSizePixel = 0,
+                LayoutOrder = layoutOrder,
+                ZIndex = 9,
+            })
+            Card:SetAttribute("ThemeRole", "Secondary")
+            corner(Card, 14)
+            stroke(Card, Theme.Stroke, 1, 0.5)
+
+            mk("ImageLabel", {
+                Parent = Card,
+                Size = UDim2.fromOffset(42, 42),
+                Position = UDim2.new(0, 14, 0.5, -21),
+                BackgroundTransparency = 1,
+                Image = icon,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 10,
+            })
+            local TL = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -104, 0, 22),
+                Position = UDim2.new(0, 66, 0, 14),
+                BackgroundTransparency = 1,
+                Text = GetText(titleES, titleEN),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 10,
+            })
+            TL:SetAttribute("ThemeTextRole", "Text")
+            setBilingual(TL, titleES, titleEN)
+            local DL = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -104, 0, 18),
+                Position = UDim2.new(0, 66, 0, 38),
+                BackgroundTransparency = 1,
+                Text = GetText(descES, descEN),
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 10,
+            })
+            DL:SetAttribute("ThemeTextRole", "TextDim")
+            setBilingual(DL, descES, descEN)
+
+            local Arrow = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.fromOffset(36, 36),
+                Position = UDim2.new(1, -48, 0.5, -18),
+                BackgroundColor3 = Theme.Secondary,
+                Text = "→",
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 18,
+                ZIndex = 10,
+            })
+            Arrow:SetAttribute("ThemeRole", "Secondary")
+            Arrow:SetAttribute("ThemeTextRole", "Text")
+            corner(Arrow, 10)
+            stroke(Arrow, Theme.Stroke, 1, 0.4)
+
+            local Hit = mk("TextButton", {
+                Parent = Card,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                AutoButtonColor = false,
+                ZIndex = 11,
+            })
+            Hit.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                onClick()
+            end)
+        end
+
+        makeOptionCard(
+            "rbxassetid://98421914514000",
+            "Place Stats", "Place Stats",
+            "Aplica los ajustes de otro usuario.", "Apply another user's settings.",
+            2,
+            openPlaceStats
+        )
+        makeOptionCard(
+            "rbxassetid://116421707362805",
+            "Export Stats", "Export Stats",
+            "Copia tus ajustes al portapapeles.", "Copy your settings to the clipboard.",
+            3,
+            openExportStats
+        )
+    end
+
+    
+    local AutoTabInicio = Window:CreateTab("Inicio", "Home", "rbxassetid://99086270459218")
+    AutoTabInicio:CreateWelcomeCard()
+    AutoTabInicio:CreateDivider()
+    AutoTabInicio:CreateServerInfoCard()
+    pcall(function()
+        local okStats, errStats = pcall(Window.CreateStatsSection, Window, AutoTabInicio)
+        if not okStats then warn("[Stats] " .. tostring(errStats)) end
+    end)
+
+    AutoTabFavoritosRef = Window:CreateTab("Favo", "Favs", "rbxassetid://73478474568009")
+
+    local function BuildTemasTab()
+    local AutoTabTemas = Window:CreateTab("Temas", "Themes", "rbxassetid://101821169974833")
+    AutoTabTemas:CreateLabel("Temas Personalizados", "Custom Themes", 14)
+    AutoTabTemas:CreateDivider()
+
+    local ThemeToolbar = mk("Frame", {
+        Parent = AutoTabTemas.Page,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+
+    local ThemeSearchHolder = mk("Frame", {
+        Parent = ThemeToolbar,
+        Size = UDim2.new(0.68, -4, 1, 0),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    ThemeSearchHolder:SetAttribute("ThemeRole", "Secondary")
+    corner(ThemeSearchHolder, 6)
+    stroke(ThemeSearchHolder, Theme.Stroke, 1, 0.6)
+
+    mk("ImageLabel", {
+        Parent = ThemeSearchHolder,
+        Size = UDim2.new(0, 16, 0, 16),
+        Position = UDim2.new(0, 10, 0.5, -8),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://83456197177232",
+        ImageColor3 = Theme.TextDim,
+        ZIndex = 10,
+    })
+
+    local ThemeSearchBox = mk("TextBox", {
+        Parent = ThemeSearchHolder,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ClearTextOnFocus = false,
+        PlaceholderText = GetText("Buscar tema...", "Search themes..."),
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        TextSize = 13,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10,
+    })
+    ThemeSearchBox:SetAttribute("ThemeTextRole", "Text")
+    ThemeSearchBox:SetAttribute("PlaceholderSpanish", "Buscar tema...")
+    ThemeSearchBox:SetAttribute("PlaceholderEnglish", "Search themes...")
+
+    local CreateThemeButton = mk("TextButton", {
+        Parent = ThemeToolbar,
+        Size = UDim2.new(0.32, -4, 1, 0),
+        Position = UDim2.new(0.68, 4, 0, 0),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Crear Tema", "Create Theme"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 10,
+    })
+    CreateThemeButton:SetAttribute("ThemeRole", "Accent")
+    CreateThemeButton:SetAttribute("ThemeTextRole", "AccentText")
+    CreateThemeButton:SetAttribute("TextSpanish", "Crear Tema")
+    CreateThemeButton:SetAttribute("TextEnglish", "Create Theme")
+    corner(CreateThemeButton, 6)
+    stroke(CreateThemeButton, Theme.Stroke, 1, 0.6)
+    resetScrollTop(AutoTabTemas.Page)
+
+    local temas = ThemeOrder or {
+        "Dark", "DarkV2",
+        "Red", "RedV2",
+        "Pink", "PinkV2", "PinkV3",
+        "Blue", "BlueV2",
+        "White", "WhiteV2", "WhiteV3", "WhiteAndDark",
+        "Green", "NaranjaV1", "VioletaV1",
+        "CatV1",
+        "LightV1",
+        "ErisV1",
+        "ShylfieV1",
+        "SukunaV1", "SukunaV2",
+        "J1",
+        "V1", "V2", "V3", "V4", "V5", "V6", "V9", "V10", "V11", "V14",
+        "PibbleV1",
+    }
+
+    local hasJ1 = false
+    for _, themeId in ipairs(temas) do
+        if themeId == "J1" then
+            hasJ1 = true
+            break
+        end
+    end
+    if ThemePalettes.J1 and not hasJ1 then
+        table.insert(temas, "J1")
+    end
+
+    local ThemeGridHolder = mk("Frame", {
+        Parent = AutoTabTemas.Page,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+
+    mk("UIGridLayout", {
+        Parent = ThemeGridHolder,
+        CellSize = UDim2.new(0.485, 0, 0, 172),
+        CellPadding = UDim2.new(0.03, 0, 0, 12),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
+
+    local ThemeButtons = {}
+
+    local function highlightThemeCards()
+        local active = Window.CurrentTheme
+        for _, entry in ipairs(ThemeButtons) do
+            local isActive = (entry.Name == active)
+            entry.CheckBadge.Visible = isActive
+            entry.CardStroke.Thickness = isActive and 2 or 1
+            entry.CardStroke.Transparency = isActive and 0 or 0.7
+            entry.CardStroke.Color = isActive and Theme.Accent or Theme.Stroke
+            entry.CardStroke:SetAttribute("ThemeRole", isActive and "Accent" or "Stroke")
+            entry.CheckBadge.BackgroundColor3 = Theme.Accent
+            entry.CheckBadge.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
+        end
+    end
+
+    local function applyThemeSearch()
+        local query = ThemeSearchBox.Text:lower()
+        for _, entry in ipairs(ThemeButtons) do
+            entry.Card.Visible = (query == "" or entry.Name:lower():find(query, 1, true) ~= nil)
+        end
+        resetScrollTop(AutoTabTemas.Page)
+    end
+
+    local openThemeEditor
+    local confirmDeleteTheme
+
+    local function createThemeCard(tema, layoutOrder, isCustom)
+        local palette = ThemePalettes[tema] or Theme
+
+        local Card = mk("TextButton", {
+            Parent = ThemeGridHolder,
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0,
+            Text = "",
+            LayoutOrder = layoutOrder,
+            ZIndex = 9,
+        })
+        Card:SetAttribute("ThemeRole", "Secondary")
+        corner(Card, 14)
+        local CardStroke = stroke(Card, Theme.Stroke, 1, 0.7)
+        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
+        Card.MouseEnter:Connect(function()
+            TweenService:Create(CardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
+        end)
+        Card.MouseLeave:Connect(function()
+            TweenService:Create(CardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+
+        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[tema]
+        local previewImage = (themeData and themeData.Background) or ThemeBackgroundImages[tema] or ""
+        if previewImage == "" and themeData and type(themeData.Images) == "table" then
+            previewImage = themeData.Images[1] or ""
+        end
+        local hasImage = previewImage ~= ""
+
+        local Preview = mk("Frame", {
+            Parent = Card,
+            Size = UDim2.new(1, -12, 0, 106),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundColor3 = palette.Background,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 10,
+        })
+        corner(Preview, 10)
+        if not hasImage then
+            mk("UIGradient", {
+                Parent = Preview,
+                Rotation = 45,
+                Color = ColorSequence.new(palette.Background, palette.Secondary or palette.Background),
+            })
+        else
+            local PreviewImage = mk("ImageLabel", {
+                Parent = Preview,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Image = previewImage,
+                ScaleType = Enum.ScaleType.Crop,
+                ZIndex = 10,
+            })
+            corner(PreviewImage, 10)
+            local PreviewShade = mk("Frame", {
+                Parent = Preview,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.5,
+                BorderSizePixel = 0,
+                ZIndex = 11,
+            })
+            corner(PreviewShade, 10)
+        end
+        local MockHolder = mk("Frame", {
+            Parent = Preview,
+            Size = UDim2.new(1, -16, 1, -16),
+            Position = UDim2.new(0, 8, 0, 8),
+            BackgroundTransparency = 1,
+            ZIndex = 12,
+        })
+        RowKit.PaintMock(RowKit.ThemeMock(MockHolder, 12), palette, hasImage)
+
+        local NameLabel = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, isCustom and -46 or -20, 0, 20),
+            Position = UDim2.new(0, 10, 0, 118),
+            BackgroundTransparency = 1,
+            Text = tema,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextColor3 = Theme.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        NameLabel:SetAttribute("ThemeTextRole", "Text")
+
+        local Dots = mk("Frame", {
+            Parent = Card,
+            Size = UDim2.new(1, -20, 0, 14),
+            Position = UDim2.new(0, 10, 0, 144),
+            BackgroundTransparency = 1,
+            ZIndex = 10,
+        })
+        mk("UIListLayout", {
+            Parent = Dots,
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0, 5),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+        })
+        for i, role in ipairs({"Background", "Secondary", "Accent", "ToggleOn", "Text"}) do
+            local dot = mk("Frame", {
+                Parent = Dots,
+                Size = UDim2.fromOffset(13, 13),
+                BackgroundColor3 = palette[role] or palette.Accent or Color3.new(1, 1, 1),
+                BorderSizePixel = 0,
+                LayoutOrder = i,
+                ZIndex = 11,
+            })
+            corner(dot, 999)
+            mk("UIStroke", {Parent = dot, Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.7})
+        end
+
+        local CheckBadge = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(0, 0, 0, 20),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Position = UDim2.new(0, 12, 0, 12),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0,
+            Text = GetText("✓  EN USO", "✓  ACTIVE"),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 10,
+            TextColor3 = Theme.AccentText or Color3.new(0, 0, 0),
+            Visible = false,
+            ZIndex = 18,
+        })
+        CheckBadge:SetAttribute("TextSpanish", "✓  EN USO")
+        CheckBadge:SetAttribute("TextEnglish", "✓  ACTIVE")
+        CheckBadge:SetAttribute("IgnoreTextEffect", true)
+        corner(CheckBadge, 999)
+        mk("UIPadding", {Parent = CheckBadge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+
+        if tema == "Dark" then -- Halloween: se muestra pero no se puede usar
+            local LockShade = mk("Frame", {
+                Parent = Preview,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.45,
+                BorderSizePixel = 0,
+                ZIndex = 14,
+            })
+            corner(LockShade, 10)
+            local LockBadge = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(0, 0, 0, 20),
+                AutomaticSize = Enum.AutomaticSize.X,
+                Position = UDim2.new(0, 12, 0, 12),
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50),
+                BackgroundTransparency = 0,
+                Text = GetText("BLOQUEADO", "LOCKED"),
+                Font = Enum.Font.GothamBlack,
+                TextSize = 10,
+                TextColor3 = Color3.fromRGB(220, 220, 225),
+                ZIndex = 18,
+            })
+            LockBadge:SetAttribute("TextSpanish", "BLOQUEADO")
+            LockBadge:SetAttribute("TextEnglish", "LOCKED")
+            LockBadge:SetAttribute("IgnoreTextEffect", true)
+            corner(LockBadge, 999)
+            mk("UIPadding", {Parent = LockBadge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+        end
+
+        if isCustom then
+            local MenuButton = mk("TextButton", {
+                Parent = Card,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -36, 0, 116),
+                BackgroundTransparency = 1,
+                Text = "⋮",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 18,
+                ZIndex = 13,
+            })
+            MenuButton:SetAttribute("ThemeTextRole", "TextDim")
+
+            local Menu = mk("Frame", {
+                Parent = Card,
+                Size = UDim2.new(0, 96, 0, 60),
+                Position = UDim2.new(1, -102, 1, -66),
+                BackgroundColor3 = Theme.Background,
+                BorderSizePixel = 0,
+                Visible = false,
+                ZIndex = 20,
+            })
+            Menu:SetAttribute("ThemeRole", "Background")
+            corner(Menu, 10)
+            stroke(Menu, Theme.Stroke, 1, 0.35)
+
+            local EditButton = mk("TextButton", {
+                Parent = Menu,
+                Size = UDim2.new(1, 0, 0.5, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Editar", "Edit"),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 12,
+                ZIndex = 21,
+            })
+            EditButton:SetAttribute("ThemeTextRole", "Text")
+            EditButton:SetAttribute("TextSpanish", "Editar")
+            EditButton:SetAttribute("TextEnglish", "Edit")
+
+            local DeleteButton = mk("TextButton", {
+                Parent = Menu,
+                Size = UDim2.new(1, 0, 0.5, 0),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Eliminar", "Delete"),
+                TextColor3 = Color3.fromRGB(235, 85, 85),
+                Font = Enum.Font.GothamMedium,
+                TextSize = 12,
+                ZIndex = 21,
+            })
+            DeleteButton:SetAttribute("TextSpanish", "Eliminar")
+            DeleteButton:SetAttribute("TextEnglish", "Delete")
+
+            MenuButton.MouseButton1Click:Connect(function()
+                Menu.Visible = not Menu.Visible
+            end)
+            EditButton.MouseButton1Click:Connect(function()
+                Menu.Visible = false
+                openThemeEditor(tema)
+            end)
+            DeleteButton.MouseButton1Click:Connect(function()
+                Menu.Visible = false
+                confirmDeleteTheme(tema)
+            end)
+        end
+
+        Card.MouseButton1Click:Connect(function()
+            if tema == "Dark" then return end -- Halloween bloqueado
+            playSound(Sounds.Click, 0.6)
+            Window:SetTheme(tema)
+            highlightThemeCards()
+        end)
+
+        table.insert(ThemeButtons, {Card = Card, Name = tema, CheckBadge = CheckBadge, CardStroke = CardStroke})
+    end
+
+    local function rebuildThemeCards()
+        for _, entry in ipairs(ThemeButtons) do
+            if entry.Card then entry.Card:Destroy() end
+        end
+        ThemeButtons = {}
+
+        local order = 0
+        for _, tema in ipairs(temas) do
+            if ThemePalettes[tema] then
+                order = order + 1
+                createThemeCard(tema, order, false)
+            end
+        end
+        for _, tema in ipairs(CustomThemeOrder) do
+            if CustomThemes[tema] and ThemePalettes[tema] then
+                order = order + 1
+                createThemeCard(tema, order, true)
+            end
+        end
+
+        highlightThemeCards()
+        applyThemeSearch()
+    end
+
+    local function colorToHex(color)
+        return string.format("#%02X%02X%02X",
+            math.floor(color.R * 255 + 0.5),
+            math.floor(color.G * 255 + 0.5),
+            math.floor(color.B * 255 + 0.5)
+        )
+    end
+
+    local function hexToColor(text)
+        local hex = tostring(text or ""):gsub("#", ""):gsub("%s", "")
+        if #hex ~= 6 or not hex:match("^[%x]+$") then return nil end
+        return Color3.fromRGB(
+            tonumber(hex:sub(1, 2), 16),
+            tonumber(hex:sub(3, 4), 16),
+            tonumber(hex:sub(5, 6), 16)
+        )
+    end
+
+    local EditorOverlay = mk("Frame", {
+        Parent = Main,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 200,
+    })
+
+    local EditorPanel = mk("Frame", {
+        Parent = EditorOverlay,
+        Size = UDim2.new(0.9, 0, 0.9, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ZIndex = 201,
+    })
+    EditorPanel:SetAttribute("ThemeRole", "Background")
+    corner(EditorPanel, 16)
+    stroke(EditorPanel, Theme.Stroke, 1.5, 0.2)
+    local EditorBadge = mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(0, 14, 0, 10),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    })
+    EditorBadge:SetAttribute("ThemeRole", "Accent")
+    corner(EditorBadge, 9)
+    mk("UIGradient", {
+        Parent = EditorBadge,
+        Rotation = 45,
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 150)),
+    })
+    local EditorSub = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -120, 0, 14),
+        Position = UDim2.new(0, 54, 0, 30),
+        BackgroundTransparency = 1,
+        Text = GetText("Tocá un color para cambiarlo · vista previa en vivo", "Tap a color to change it · live preview"),
+        TextColor3 = Theme.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 202,
+    })
+    EditorSub:SetAttribute("ThemeTextRole", "TextDim")
+    EditorSub:SetAttribute("TextSpanish", "Tocá un color para cambiarlo · vista previa en vivo")
+    EditorSub:SetAttribute("TextEnglish", "Tap a color to change it · live preview")
+
+    local EditorTitle = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -120, 0, 22),
+        Position = UDim2.new(0, 54, 0, 8),
+        BackgroundTransparency = 1,
+        Text = GetText("Crear Tema Personalizado", "Create Custom Theme"),
+        TextColor3 = Theme.Text,
+        TextSize = 17,
+        Font = Enum.Font.GothamBlack,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 202,
+    })
+    EditorTitle:SetAttribute("ThemeTextRole", "Text")
+    EditorTitle:SetAttribute("TextSpanish", "Crear Tema Personalizado")
+    EditorTitle:SetAttribute("TextEnglish", "Create Custom Theme")
+
+    local CloseEditor = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -42, 0, 10),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0,
+        Text = "×",
+        TextColor3 = Theme.Text,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    CloseEditor:SetAttribute("ThemeTextRole", "Text")
+    CloseEditor:SetAttribute("ThemeRole", "Secondary")
+    corner(CloseEditor, 999)
+    RowKit.Control(CloseEditor)
+    mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -28, 0, 1),
+        Position = UDim2.new(0, 14, 0, 50),
+        BackgroundColor3 = Theme.Stroke,
+        BackgroundTransparency = 0.5,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    }):SetAttribute("ThemeRole", "Stroke")
+
+    local EditorContent = mk("ScrollingFrame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -24, 1, -112),
+        Position = UDim2.new(0, 12, 0, 58),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ZIndex = 202,
+    })
+    mk("UIListLayout", {Parent = EditorContent, Padding = UDim.new(0, 9), SortOrder = Enum.SortOrder.LayoutOrder})
+
+    local EditorPreviewBox = mk("Frame", {
+        Parent = EditorContent,
+        Size = UDim2.new(1, -4, 0, 236),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        LayoutOrder = 0,
+        ZIndex = 202,
+    })
+    EditorPreviewBox:SetAttribute("ThemeRole", "Secondary")
+    corner(EditorPreviewBox, 12)
+    local EditorPreviewLabel = mk("TextLabel", {
+        Parent = EditorPreviewBox,
+        Size = UDim2.new(0, 0, 0, 18),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 10, 0, 8),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.2,
+        Text = GetText("VISTA PREVIA", "PREVIEW"),
+        TextColor3 = Theme.TextDim,
+        TextSize = 9,
+        Font = Enum.Font.GothamBlack,
+        ZIndex = 210,
+    })
+    EditorPreviewLabel:SetAttribute("ThemeRole", "Background")
+    EditorPreviewLabel:SetAttribute("ThemeTextRole", "TextDim")
+    EditorPreviewLabel:SetAttribute("TextSpanish", "VISTA PREVIA")
+    EditorPreviewLabel:SetAttribute("TextEnglish", "PREVIEW")
+    corner(EditorPreviewLabel, 999)
+    mk("UIPadding", {Parent = EditorPreviewLabel, PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)})
+    local EditorMockHolder = mk("Frame", {
+        Parent = EditorPreviewBox,
+        Size = UDim2.new(1, -20, 1, -42),
+        Position = UDim2.new(0, 10, 0, 32),
+        BackgroundTransparency = 1,
+        ZIndex = 203,
+    })
+    local EditorMock = RowKit.ThemeStudio(EditorMockHolder, 203)
+
+    local colorFields = {}
+    local colorRoles = {
+        {"Background", "Fondo", "Background"},
+        {"Secondary", "Secundario", "Secondary"},
+        {"AccentOff", "Acento apagado", "Inactive accent"},
+        {"Text", "Texto", "Text"},
+        {"TextDim", "Texto tenue", "Dim text"},
+        {"Stroke", "Bordes", "Borders"},
+        {"Accent", "Acento", "Accent"},
+        {"ToggleOn", "Toggle activo", "Active toggle"},
+    }
+
+    local ColorGridHolder = mk("Frame", {
+        Parent = EditorContent,
+        Size = UDim2.new(1, -4, 0, 184),
+        BackgroundTransparency = 1,
+        LayoutOrder = 1,
+        ZIndex = 202,
+    })
+    mk("UIGridLayout", {
+        Parent = ColorGridHolder,
+        CellSize = UDim2.new(0.25, -6, 0, 88),
+        CellPadding = UDim2.new(0, 6, 0, 8),
+        FillDirection = Enum.FillDirection.Horizontal,
+        FillDirectionMaxCells = 4,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local openThemeColorPicker = function() end
+    EditorMock.OnPick = function(role) openThemeColorPicker(role) end
+    local ColorPickerOverlay = mk("Frame", {
+        Parent = Main,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.28,
+        BorderSizePixel = 0,
+        Visible = false,
+        Active = true,
+        ZIndex = 260,
+    })
+    local ColorPickerPanel = mk("Frame", {
+        Parent = ColorPickerOverlay,
+        Size = UDim2.new(0.86, 0, 0.72, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ZIndex = 261,
+    })
+    ColorPickerPanel:SetAttribute("ThemeRole", "Background")
+    corner(ColorPickerPanel, 12)
+    stroke(ColorPickerPanel, Theme.Stroke, 1.4, 0.2)
+
+    local PickerTitle = mk("TextLabel", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(1, -58, 0, 30),
+        Position = UDim2.new(0, 14, 0, 8),
+        BackgroundTransparency = 1,
+        Text = GetText("Selector de color", "Color picker"),
+        TextColor3 = Theme.Text,
+        TextSize = 15,
+        Font = Enum.Font.GothamBold,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 262,
+    })
+    PickerTitle:SetAttribute("ThemeTextRole", "Text")
+    PickerTitle:SetAttribute("TextSpanish", "Selector de color")
+    PickerTitle:SetAttribute("TextEnglish", "Color picker")
+
+    local PickerHint = mk("TextLabel", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(1, -58, 0, 16),
+        Position = UDim2.new(0, 14, 0, 35),
+        BackgroundTransparency = 1,
+        Text = GetText("Toca el área para elegir saturación y brillo", "Tap the area to choose saturation and brightness"),
+        TextColor3 = Theme.TextDim,
+        TextSize = 9,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 262,
+    })
+    PickerHint:SetAttribute("ThemeTextRole", "TextDim")
+    PickerHint:SetAttribute("TextSpanish", "Toca el área para elegir saturación y brillo")
+    PickerHint:SetAttribute("TextEnglish", "Tap the area to choose saturation and brightness")
+
+    local PickerClose = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -38, 0, 8),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = "×",
+        TextColor3 = Theme.Text,
+        TextSize = 21,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 263,
+    })
+    PickerClose:SetAttribute("ThemeRole", "Secondary")
+    PickerClose:SetAttribute("ThemeTextRole", "Text")
+    corner(PickerClose, 8)
+
+    local PickerArea = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.49, -8, 0.48, 0),
+        Position = UDim2.new(0, 14, 0, 60),
+        BackgroundColor3 = Color3.fromHSV(0, 1, 1),
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 262,
+    })
+    corner(PickerArea, 8)
+    stroke(PickerArea, Theme.Stroke, 1, 0.36)
+    local WhiteLayer = mk("Frame", {
+        Parent = PickerArea,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        ZIndex = 263,
+    })
+    corner(WhiteLayer, 8)
+    local WhiteGradient = Instance.new("UIGradient")
+    WhiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
+    WhiteGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    WhiteGradient.Parent = WhiteLayer
+    local BlackLayer = mk("Frame", {
+        Parent = WhiteLayer,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BorderSizePixel = 0,
+        ZIndex = 264,
+    })
+    corner(BlackLayer, 8)
+    local BlackGradient = Instance.new("UIGradient")
+    BlackGradient.Rotation = 90
+    BlackGradient.Color = ColorSequence.new(Color3.new(0, 0, 0))
+    BlackGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    BlackGradient.Parent = BlackLayer
+    local SVHandle = mk("Frame", {
+        Parent = PickerArea,
+        Size = UDim2.new(0, 17, 0, 17),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(8, 8, 8),
+        BorderSizePixel = 0,
+        ZIndex = 265,
+    })
+    corner(SVHandle, 20)
+    stroke(SVHandle, Color3.fromRGB(255, 255, 255), 2, 0)
+
+    local HueBar = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0, 16, 0.48, 0),
+        Position = UDim2.new(0.51, 0, 0, 60),
+        BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 262,
+    })
+    corner(HueBar, 8)
+    local HueGradient = Instance.new("UIGradient")
+    HueGradient.Rotation = 90
+    HueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
+    })
+    HueGradient.Parent = HueBar
+    local HueHandle = mk("Frame", {
+        Parent = HueBar,
+        Size = UDim2.new(1, 8, 0, 5),
+        Position = UDim2.new(0.5, 0, 0, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 265,
+    })
+    corner(HueHandle, 4)
+
+    local PickerPreview = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.42, -6, 0, 34),
+        Position = UDim2.new(0.57, -6, 0, 61),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 262,
+    })
+    corner(PickerPreview, 7)
+    stroke(PickerPreview, Theme.Stroke, 1, 0.34)
+
+    local function createPickerInput(labelSpanish, labelEnglish, yOffset)
+        local field = mk("TextBox", {
+            Parent = ColorPickerPanel,
+            Size = UDim2.new(0.42, -6, 0, 29),
+            Position = UDim2.new(0.57, -6, 0, yOffset),
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderText = GetText(labelSpanish, labelEnglish),
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 262,
+        })
+        field:SetAttribute("ThemeRole", "Secondary")
+        field:SetAttribute("ThemeTextRole", "Text")
+        field:SetAttribute("PlaceholderSpanish", labelSpanish)
+        field:SetAttribute("PlaceholderEnglish", labelEnglish)
+        corner(field, 7)
+        return field
+    end
+    local PickerHex = createPickerInput("#RRGGBB · Hex", "#RRGGBB · Hex", 101)
+    local PickerRed = createPickerInput("Rojo", "Red", 136)
+    local PickerGreen = createPickerInput("Verde", "Green", 171)
+    local PickerBlue = createPickerInput("Azul", "Blue", 206)
+
+    local PickerCancel = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0, 14, 1, -45),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerCancel:SetAttribute("ThemeRole", "Secondary")
+    PickerCancel:SetAttribute("ThemeTextRole", "Text")
+    PickerCancel:SetAttribute("TextSpanish", "Cancelar")
+    PickerCancel:SetAttribute("TextEnglish", "Cancel")
+    corner(PickerCancel, 8)
+    local PickerApply = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0.56, -10, 1, -45),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Aplicar", "Apply"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerApply:SetAttribute("ThemeRole", "Accent")
+    PickerApply:SetAttribute("ThemeTextRole", "AccentText")
+    PickerApply:SetAttribute("TextSpanish", "Aplicar")
+    PickerApply:SetAttribute("TextEnglish", "Apply")
+    corner(PickerApply, 8)
+
+    local pickerTarget = nil
+    local pickerHue, pickerSaturation, pickerValue = 0, 0, 1
+    

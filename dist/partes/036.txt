@@ -1,0 +1,1123 @@
+=======================================================
+    local function header(order, es, en, subEs, subEn)
+        local h = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11 })
+        local t = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(4, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
+        t:SetAttribute("ThemeTextRole", "Text")
+        L(t, es, en)
+        local d = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 13), Position = UDim2.fromOffset(4, 19), BackgroundTransparency = 1, TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12 })
+        d:SetAttribute("ThemeTextRole", "TextDim")
+        d:SetAttribute("IgnoreTextEffect", true)
+        L(d, subEs, subEn)
+        return h, d
+    end
+    local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
+    local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
+    mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
+    header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
+
+    -- tarjeta "Crear": círculo con + y aro de colores girando
+    do
+        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickness = 1.5, Transparency = 0.1 })
+        local g = mk("UIGradient", {
+            Parent = cs,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Theme.Accent),
+            }),
+        })
+        TweenService:Create(g, TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+        local circle = mk("Frame", { Parent = c, Size = UDim2.fromOffset(52, 52), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), BackgroundColor3 = Theme.Accent, ZIndex = 13 })
+        circle:SetAttribute("ThemeRole", "Accent")
+        corner(circle, 999)
+        local plus = mk("TextLabel", { Parent = circle, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font = Enum.Font.GothamBold, ZIndex = 14 })
+        plus:SetAttribute("ThemeTextRole", "AccentText")
+        plus:SetAttribute("IgnoreTextEffect", true)
+        TweenService:Create(circle, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromOffset(56, 56) }):Play()
+        local t = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 30), Position = UDim2.fromOffset(5, 76), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBlack, TextWrapped = true, ZIndex = 14 })
+        t:SetAttribute("ThemeTextRole", "Text")
+        L(t, "Crear logo", "Create logo")
+        -- candado dorado + chip PREMIUM mientras la cuenta no tenga el pase
+        local lockBadge = mk("Frame", { Parent = c, Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = 15 })
+        corner(lockBadge, 999)
+        local lbStroke = mk("UIStroke", { Parent = lockBadge, Color = WHITE, Thickness = 1.2 })
+        goldGradient(lbStroke, 45)
+        drawLock(lockBadge, 13, 16)
+        local chip = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(0, 14), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 100), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 8, Font = Enum.Font.GothamBlack, ZIndex = 15 })
+        chip:SetAttribute("IgnoreTextEffect", true)
+        corner(chip, 999)
+        pad(chip, 0, 7, 7, 0)
+        goldGradient(chip, 0)
+        local function paintLock(owned)
+            lockBadge.Visible = not owned
+            chip.Visible = not owned
+            if PR.checking then
+                L(chip, "VERIFICANDO", "CHECKING")
+            else
+                L(chip, "PREMIUM", "PREMIUM")
+            end
+            circle.BackgroundTransparency = owned and 0 or 0.45
+        end
+        table.insert(PR.listeners, paintLock)
+        paintLock(PR.owned)
+        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
+        local sc = mk("UIScale", { Parent = c, Scale = 1 })
+        hit.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            sc.Scale = 0.93
+            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            guardedOpen(nil)
+        end)
+    end
+
+    local function customCard(id, rec, order)
+        local key = CL.Key(id)
+        local icon = IconCatalog.Icons[key]
+        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 12 })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
+        local sc = mk("UIScale", { Parent = c, Scale = 1 })
+        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
+        stage:SetAttribute("ThemeRole", "Background")
+        corner(stage, 999)
+        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
+        composite(stage, icon, 54, 14)
+        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
+        name:SetAttribute("ThemeTextRole", "Text")
+        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
+        badge:SetAttribute("ThemeRole", "Accent")
+        corner(badge, 999)
+        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
+        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
+        -- acciones: editar / borrar (borrar pide un segundo toque)
+        local edit = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0, 6, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
+        edit:SetAttribute("ThemeRole", "Background")
+        edit:SetAttribute("ThemeTextRole", "Text")
+        L(edit, "Editar", "Edit")
+        corner(edit, 999)
+        local del = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0.5, 3, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
+        del:SetAttribute("ThemeRole", "Background")
+        del:SetAttribute("ThemeTextRole", "Text")
+        L(del, "Borrar", "Delete")
+        corner(del, 999)
+        local entry = { card = c, stroke = cStroke, ring = ring, badge = badge, name = name, key = key, custom = true }
+        LP.cards[#LP.cards + 1] = entry
+        LP.paint(entry, SavedConfig.SelectedLogoIcon == key, false)
+        hit.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            sc.Scale = 0.93
+            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            SavedConfig.SelectedLogoIcon = key
+            SaveConfig()
+            ApplyLogoIcon(key)
+            for _, other in ipairs(LP.cards) do
+                LP.paint(other, other.key == key, true)
+            end
+            LP.setHero(key)
+        end)
+        edit.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            guardedOpen(id)
+        end)
+        local armed = false
+        del.MouseButton1Click:Connect(function()
+            if not armed then
+                armed = true
+                L(del, "¿Seguro?", "Sure?")
+                del.BackgroundColor3 = Color3.fromRGB(200, 60, 70)
+                del.TextColor3 = WHITE
+                task.delay(3, function()
+                    if armed and del.Parent then
+                        armed = false
+                        L(del, "Borrar", "Delete")
+                        del.BackgroundColor3 = Theme.Background
+                        del.TextColor3 = Theme.Text
+                    end
+                end)
+                return
+            end
+            playSound(Sounds.Click, 0.5)
+            CL.Remove(id)
+            if SavedConfig.SelectedLogoIcon == key then
+                SavedConfig.SelectedLogoIcon = "ClassicYinYang"
+                SaveConfig()
+                ApplyLogoIcon("ClassicYinYang")
+                LP.setHero("ClassicYinYang")
+                for _, other in ipairs(LP.cards) do
+                    LP.paint(other, other.key == "ClassicYinYang", true)
+                end
+            end
+            LS.RefreshCards()
+        end)
+    end
+
+    function LS.RefreshCards()
+        for i = #LP.cards, 1, -1 do
+            if LP.cards[i].custom then
+                LP.cards[i].card:Destroy()
+                table.remove(LP.cards, i)
+            end
+        end
+        for i, id in ipairs(CL.Order) do
+            local rec = CL.Logos[id]
+            if rec and IconCatalog.Icons[CL.Key(id)] then
+                customCard(id, rec, i)
+            end
+        end
+        local n = #CL.Order
+        if n == 0 then
+            L(MineSub, "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
+        else
+            L(MineSub, n .. " de " .. CL.Max .. " · tocá uno para usarlo", n .. " of " .. CL.Max .. " · tap one to use it")
+        end
+    end
+    LS.RefreshCards()
+    LP.studio = LS
+    PR.check()
+    end
+    BuildLogoStudio()
+
+    local firstIcon = nil
+    for i, name in ipairs(IconCatalog.Order or { "ClassicYinYang" }) do
+        local data = IconCatalog.Icons[name]
+        if data then
+            firstIcon = firstIcon or name
+            CreateIconCard(name, data, i)
+        end
+    end
+    LP.setHero(IconCatalog.Icons[SavedConfig.SelectedLogoIcon or ""] and SavedConfig.SelectedLogoIcon or firstIcon)
+    end
+    BuildLogoTab()
+
+    function Window:CreateClassicTab()
+    local TabClassic = Window:CreateTab("Classic", "Classic", "rbxassetid://99086270459218")
+    local ClassicPage = TabClassic.Page
+
+    ClassicPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ClassicPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ClassicPage.ScrollBarThickness = 2
+    ClassicPage.ScrollingEnabled = true
+    ClassicPage.BackgroundTransparency = 1
+    ClassicPage:SetAttribute("ThemeRole", "Background")
+
+    local classicScripts = LoadClassicManifest()
+    local CL = {holders = {}}
+
+    CL.hero = mk("Frame", {
+        Parent = ClassicPage,
+        Size = UDim2.new(1, 0, 0, 92),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    CL.hero:SetAttribute("ThemeRole", "Secondary")
+    corner(CL.hero, 16)
+    stroke(CL.hero, Theme.Stroke, 1, 0.55)
+    CL.emblem = mk("Frame", {
+        Parent = CL.hero,
+        Size = UDim2.fromOffset(60, 60),
+        Position = UDim2.new(0, 14, 0.5, -30),
+        BackgroundColor3 = Theme.Accent,
+        BackgroundTransparency = 0.8,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    })
+    CL.emblem:SetAttribute("ThemeRole", "Accent")
+    corner(CL.emblem, 18)
+    local emblemRing = stroke(CL.emblem, Theme.Accent, 1.5, 0.3)
+    emblemRing:SetAttribute("ThemeRole", "Accent")
+    mk("ImageLabel", {
+        Parent = CL.emblem,
+        Size = UDim2.fromOffset(38, 38),
+        Position = UDim2.new(0.5, -19, 0.5, -19),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://99086270459218",
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 11,
+    })
+    CL.title = mk("TextLabel", {
+        Parent = CL.hero,
+        Size = UDim2.new(1, -100, 0, 24),
+        Position = UDim2.new(0, 88, 0, 14),
+        BackgroundTransparency = 1,
+        Text = "Classic",
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 20,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10,
+    })
+    CL.title:SetAttribute("ThemeTextRole", "Text")
+    CL.sub = mk("TextLabel", {
+        Parent = CL.hero,
+        Size = UDim2.new(1, -100, 0, 14),
+        Position = UDim2.new(0, 88, 0, 38),
+        BackgroundTransparency = 1,
+        Text = GetText("Scripts clásicos de Yin Yang · tocá uno para cargarlo", "Classic Yin Yang scripts · tap one to load it"),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 10,
+    })
+    CL.sub:SetAttribute("ThemeTextRole", "TextDim")
+    CL.sub:SetAttribute("TextSpanish", "Scripts clásicos de Yin Yang · tocá uno para cargarlo")
+    CL.sub:SetAttribute("TextEnglish", "Classic Yin Yang scripts · tap one to load it")
+    CL.chips = mk("Frame", {
+        Parent = CL.hero,
+        Size = UDim2.new(1, -100, 0, 20),
+        Position = UDim2.new(0, 88, 0, 58),
+        BackgroundTransparency = 1,
+        ZIndex = 10,
+    })
+    mk("UIListLayout", {Parent = CL.chips, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    function CL.chip(order, role)
+        local c = mk("TextLabel", {
+            Parent = CL.chips,
+            Size = UDim2.new(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundColor3 = Theme[role],
+            BackgroundTransparency = 0.8,
+            Text = "",
+            TextColor3 = Theme[role],
+            Font = Enum.Font.GothamBlack,
+            TextSize = 10,
+            LayoutOrder = order,
+            ZIndex = 11,
+        })
+        c:SetAttribute("ThemeRole", role)
+        c:SetAttribute("ThemeTextRole", role)
+        c:SetAttribute("IgnoreTextEffect", true)
+        corner(c, 999)
+        mk("UIPadding", {Parent = c, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
+        return c
+    end
+    CL.countChip = CL.chip(1, "Accent")
+    CL.activeChip = CL.chip(2, "ToggleOn")
+
+    CL.searchHolder = mk("Frame", {
+        Parent = ClassicPage,
+        Size = UDim2.new(1, 0, 0, 34),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    CL.searchHolder:SetAttribute("ThemeRole", "Secondary")
+    corner(CL.searchHolder, 12)
+    local searchStroke = stroke(CL.searchHolder, Theme.Stroke, 1, 0.6)
+    RowKit.IconAt(CL.searchHolder, 100388562921803, 16, UDim2.new(0, 10, 0.5, -8), 10, "TextDim")
+    CL.search = mk("TextBox", {
+        Parent = CL.searchHolder,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = GetText("Buscar script...", "Search script..."),
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 10,
+    })
+    CL.search:SetAttribute("ThemeTextRole", "Text")
+    CL.search:SetAttribute("PlaceholderSpanish", "Buscar script...")
+    CL.search:SetAttribute("PlaceholderEnglish", "Search script...")
+    CL.search.Focused:Connect(function()
+        searchStroke.Color = Theme.Accent
+        searchStroke.Transparency = 0.1
+    end)
+    CL.search.FocusLost:Connect(function()
+        searchStroke.Color = Theme.Stroke
+        searchStroke.Transparency = 0.6
+    end)
+
+    CL.empty = mk("TextLabel", {
+        Parent = ClassicPage,
+        Size = UDim2.new(1, 0, 0, 60),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextWrapped = true,
+        Visible = false,
+        ZIndex = 9,
+    })
+    CL.empty:SetAttribute("ThemeTextRole", "TextDim")
+
+    function CL.refresh()
+        local active = 0
+        for _, h in ipairs(CL.holders) do
+            local st = h.holder:GetAttribute("ScriptState")
+            if st == "active" or st == "loading" then active = active + 1 end
+        end
+        CL.countChip.Text = GetText(#CL.holders .. " scripts", #CL.holders .. " scripts")
+        CL.activeChip.Text = GetText(active .. " activos", active .. " active")
+    end
+
+    function CL.filter()
+        local q = string.lower(CL.search.Text or "")
+        local shown = 0
+        for _, h in ipairs(CL.holders) do
+            local match = q == "" or string.find(h.es, q, 1, true) ~= nil or string.find(h.en, q, 1, true) ~= nil
+            h.holder.Visible = match
+            if match then shown = shown + 1 end
+        end
+        if #CL.holders == 0 then
+            CL.empty.Text = GetText("No se pudo cargar la lista de scripts.", "Could not load the script list.")
+            CL.empty.Visible = true
+        elseif shown == 0 then
+            CL.empty.Text = GetText("Ningún script coincide con la búsqueda.", "No script matches your search.")
+            CL.empty.Visible = true
+        else
+            CL.empty.Visible = false
+        end
+    end
+    CL.search:GetPropertyChangedSignal("Text"):Connect(CL.filter)
+
+    for _, entry in ipairs(classicScripts) do
+        if type(entry) == "table" and entry.es and entry.en and entry.file and entry.key then
+            local holder = TabClassic:CreateScriptToggle(
+                tostring(entry.es),
+                tostring(entry.en),
+                entry.url and tostring(entry.url) or CLASSIC_SCRIPT_URL,
+                tostring(entry.key)
+            )
+            if holder then
+                table.insert(CL.holders, {holder = holder, es = string.lower(tostring(entry.es)), en = string.lower(tostring(entry.en))})
+                holder:GetAttributeChangedSignal("ScriptState"):Connect(CL.refresh)
+            end
+        else
+            warn("[YinYang Classic] Entrada de manifest inválida; se omite")
+        end
+    end
+    CL.refresh()
+    CL.filter()
+    end
+    Window:CreateClassicTab()
+
+    function Window:CreateSpotifyTab()
+    local STab = Window:CreateTab("Spotify", "Spotify", "rbxassetid://97213700655604")
+    local SPage = STab.Page
+
+    SPage.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    SPage.BackgroundTransparency = 1
+    SPage.AutomaticCanvasSize = Enum.AutomaticSize.None
+    SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    SPage.ScrollBarThickness = 0
+    SPage.ScrollingEnabled = false
+
+    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/nbritez672-tech/Yin-music/refs/heads/main/YinYang_Spotify_Catalog.lua"
+
+    local function asset(id)
+        return "rbxassetid://" .. tostring(id)
+    end
+
+    local function trim(s)
+        return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    end
+
+    local function clamp(v, minV, maxV)
+        if v < minV then return minV end
+        if v > maxV then return maxV end
+        return v
+    end
+
+    local function durationToSeconds(duration)
+        if type(duration) == "number" then
+            return math.max(0, math.floor(duration))
+        end
+
+        local text = trim(duration)
+        if text == "" then
+            return 0
+        end
+
+        local mm, ss = text:match("^(%d+):(%d+)$")
+        if mm and ss then
+            return tonumber(mm) * 60 + tonumber(ss)
+        end
+
+        local numeric = tonumber(text)
+        return numeric and math.max(0, math.floor(numeric)) or 0
+    end
+
+    local function secondsToClock(seconds)
+        seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+        local mm = math.floor(seconds / 60)
+        local ss = seconds % 60
+        return string.format("%d:%02d", mm, ss)
+    end
+
+    local function safeDestroy(instance)
+        if instance then
+            pcall(function()
+                instance:Destroy()
+            end)
+        end
+    end
+
+    local function destroyAllSpotifySounds()
+        local function clean(parent)
+            if not parent then
+                return
+            end
+            for _, inst in ipairs(parent:GetDescendants()) do
+                if inst:IsA("Sound") and inst.Name == "YY_Spotify_CurrentSound" then
+                    pcall(function()
+                        inst:Stop()
+                    end)
+                    safeDestroy(inst)
+                end
+            end
+        end
+
+        clean(workspace)
+        if game:GetService("SoundService") then
+            clean(game:GetService("SoundService"))
+        end
+    end
+
+    local function normalizeTrack(track, index)
+        if type(track) ~= "table" then
+            return nil
+        end
+
+        local name = track.Name or track.name or track.Title or track.title or ("Track " .. tostring(index))
+        local artist = track.Artist or track.artist or ""
+        local duration = track.Duration or track.duration or "0:00"
+        if type(duration) == "number" then
+            duration = secondsToClock(duration)
+        else
+            duration = trim(duration)
+            if duration == "" then
+                duration = "0:00"
+            end
+        end
+
+        local cover = track.Cover or track.cover or track.CoverId or track.coverId or track.coverUrl or ""
+        local coverDownloadUrl = track.CoverURL or track.coverURL or track.CoverUrl or ""
+        local audioUrl = track.AudioURL or track.audioUrl or track.AudioUrl or track.audioURL or ""
+
+        local safeName = tostring(name):lower():gsub("[^%w]+", "_"):gsub("_+", "_"):gsub("^_", ""):gsub("_$", "")
+        if safeName == "" then
+            safeName = "track_" .. tostring(index)
+        end
+
+        local cacheName = track.CacheName or track.cacheName or track.audioFile or track.AudioFile
+        if not cacheName or trim(cacheName) == "" then
+            cacheName = safeName .. ".mp3"
+        end
+
+        local coverCacheName = track.CoverCacheName or track.coverCacheName or ""
+        if trim(coverDownloadUrl) ~= "" and trim(coverCacheName) == "" then
+            local urlWithoutQuery = tostring(coverDownloadUrl):match("^[^%?#]+") or tostring(coverDownloadUrl)
+            local urlExt = urlWithoutQuery:match("%.([%w]+)$")
+            urlExt = (urlExt and urlExt ~= "" and #urlExt <= 5) and urlExt:lower() or "png"
+            coverCacheName = safeName .. "_cover." .. urlExt
+        end
+
+        local id = track.Id or track.id or track.ID or tostring(index)
+
+        return {
+            Id = id,
+            Name = tostring(name),
+            Artist = tostring(artist),
+            Duration = duration,
+            Cover = tostring(cover),
+            CoverURL = tostring(coverDownloadUrl),
+            CoverCacheName = tostring(coverCacheName),
+            AudioURL = tostring(audioUrl),
+            CacheName = tostring(cacheName),
+            IsUserSong = track.IsUserSong == true,
+            Raw = track,
+        }
+    end
+
+    local SpotifyState = {
+        Catalog = {},
+        SelectedIndex = 1,
+        IsPlaying = false,
+        IsRepeat = false,
+        CurrentLiked = {},
+        RowButtons = {},
+        HiddenRows = {},
+        CurrentSound = nil,
+        SoundProgressConnection = nil,
+        SoundEndedConnection = nil,
+        CurrentTrack = nil,
+        CurrentTrackSeconds = 0,
+        CurrentPausedPosition = 0,
+        CatalogLoaded = false,
+        SearchQuery = "",
+        PlaybackVolume = 0.75,
+        PlaybackSpeed = 1,
+        SettingsMenuVisible = false,
+        FloatingPlayerVisible = false,
+        FavoritesView = false,
+        MySongsView = false,
+        UserSongs = {},
+    }
+
+    local refreshSpotifyFloatingPlayer = function() end
+    local refreshSpotifyPlaybackMenu = function() end
+
+    local function getRenderOrder()
+        local order = {}
+        for i = 1, #SpotifyState.Catalog do
+            order[#order + 1] = i
+        end
+
+        table.sort(order, function(a, b)
+            local likedA = SpotifyState.CurrentLiked[a] == true
+            local likedB = SpotifyState.CurrentLiked[b] == true
+            if likedA ~= likedB then
+                return likedA and not likedB
+            end
+            return a < b
+        end)
+
+        return order
+    end
+
+
+    local function normalizeSearchText(value)
+        local s = tostring(value or "")
+        local replacements = {
+            ["á"] = "a", ["à"] = "a", ["ä"] = "a", ["â"] = "a", ["ã"] = "a", ["å"] = "a",
+            ["Á"] = "a", ["À"] = "a", ["Ä"] = "a", ["Â"] = "a", ["Ã"] = "a", ["Å"] = "a",
+            ["é"] = "e", ["è"] = "e", ["ë"] = "e", ["ê"] = "e",
+            ["É"] = "e", ["È"] = "e", ["Ë"] = "e", ["Ê"] = "e",
+            ["í"] = "i", ["ì"] = "i", ["ï"] = "i", ["î"] = "i",
+            ["Í"] = "i", ["Ì"] = "i", ["Ï"] = "i", ["Î"] = "i",
+            ["ó"] = "o", ["ò"] = "o", ["ö"] = "o", ["ô"] = "o", ["õ"] = "o",
+            ["Ó"] = "o", ["Ò"] = "o", ["Ö"] = "o", ["Ô"] = "o", ["Õ"] = "o",
+            ["ú"] = "u", ["ù"] = "u", ["ü"] = "u", ["û"] = "u",
+            ["Ú"] = "u", ["Ù"] = "u", ["Ü"] = "u", ["Û"] = "u",
+            ["ñ"] = "n", ["Ñ"] = "n",
+            ["ç"] = "c", ["Ç"] = "c",
+        }
+        for from, to in pairs(replacements) do
+            s = s:gsub(from, to)
+        end
+        s = s:lower()
+        s = trim(s)
+        return s
+    end
+
+    local function getVisibleRenderOrder()
+        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
+        local order = getRenderOrder()
+        local filtered = {}
+
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            local matchesView = true
+            if SpotifyState.MySongsView then
+                matchesView = track ~= nil and track.IsUserSong == true
+            elseif SpotifyState.FavoritesView then
+                matchesView = SpotifyState.CurrentLiked[index] == true
+            end
+            if matchesView then
+                filtered[#filtered + 1] = index
+            end
+        end
+
+        if query == "" then
+            return filtered
+        end
+
+        local tokens = {}
+        for token in query:gmatch("%S+") do
+            tokens[#tokens + 1] = token
+        end
+
+        table.clear(filtered)
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            if SpotifyState.MySongsView and (not track or track.IsUserSong ~= true) then
+                continue
+            end
+            if not SpotifyState.MySongsView and SpotifyState.FavoritesView and SpotifyState.CurrentLiked[index] ~= true then
+                continue
+            end
+            if track then
+                local haystack = normalizeSearchText((track.Name or "") .. " " .. (track.Artist or "") .. " " .. (track.Duration or ""))
+                local matched = true
+
+                for _, token in ipairs(tokens) do
+                    if not haystack:find(token, 1, true) then
+                        matched = false
+                        break
+                    end
+                end
+
+                if matched then
+                    filtered[#filtered + 1] = index
+                end
+            end
+        end
+        return filtered
+    end
+
+    local spotifyGreen = Color3.fromRGB(29, 185, 84)
+    local spotifyText = Color3.fromRGB(245, 245, 245)
+    local spotifyDim = Color3.fromRGB(170, 170, 170)
+
+    local spotifyPanel = Color3.fromRGB(0, 0, 0)
+
+    local function getSpotifyMetrics()
+        local width = 0
+        pcall(function()
+            width = (SPage and SPage.AbsoluteSize and SPage.AbsoluteSize.X) or 0
+        end)
+
+        local compact = width > 0 and width < 640
+        local gridColumns = 3
+        local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
+        local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
+        local cardHeight = width > 0 and (width < 420 and 228 or 242) or 228
+
+        return {
+            compact = compact,
+            playerHeight = compact and 200 or 220,
+            albumSize = compact and 130 or 150,
+            albumTop = compact and 32 or 36,
+            infoLeft = compact and 154 or 174,
+            infoWidth = compact and -172 or -192,
+            titleSize = compact and 20 or 22,
+            artistSize = compact and 13 or 14,
+            metaSize = compact and 10 or 11,
+            progressBottom = compact and -30 or -34,
+            controlsBottom = compact and -46 or -52,
+            controlsHeight = compact and 40 or 44,
+            repeatX = compact and 0.06 or 0.05,
+            likeX = compact and 0.15 or 0.14,
+            playX = compact and 0.59 or 0.58,
+            nextX = compact and 0.85 or 0.87,
+            moreX = compact and 0.95 or 0.96,
+            playSize = compact and 30 or 34,
+            rowHeight = compact and 64 or 70,
+            rowCover = compact and 44 or 50,
+            rowTitleSize = compact and 14 or 15,
+            rowArtistSize = compact and 10 or 11,
+            rowDurationSize = compact and 10 or 11,
+            rowTitleRight = compact and -154 or -184,
+            rowDurationX = compact and -128 or -150,
+            rowPlusX = compact and -76 or -92,
+            rowPlayX = compact and -34 or -42,
+            gridColumns = gridColumns,
+            cardHeight = cardHeight,
+            gridGapY = gridGapY,
+            gridGapX = gridGapX,
+        }
+    end
+
+
+    local SpotifyRoot = mk("Frame", {
+        Parent = SPage,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = false,
+        LayoutOrder = 1,
+        AutomaticSize = Enum.AutomaticSize.None,
+        ZIndex = 10,
+    })
+
+    mk("UIPadding", {
+        Parent = SpotifyRoot,
+        PaddingTop = UDim.new(0, 0),
+        PaddingLeft = UDim.new(0, 0),
+        PaddingRight = UDim.new(0, 0),
+        PaddingBottom = UDim.new(0, 0),
+    })
+
+    local SpotifyRootLayout = mk("UIListLayout", {
+        Parent = SpotifyRoot,
+        Padding = UDim.new(0, 0),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local SongList, SongListLayout
+
+    local function updateSpotifyCanvas()
+        SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    end
+
+    local function updateSongListCanvas()
+        local contentY = 0
+        pcall(function()
+            contentY = SongListLayout.AbsoluteContentSize.Y
+        end)
+
+        local rowCount = #SpotifyState.RowButtons
+        if contentY <= 0 and rowCount > 0 then
+            local m = getSpotifyMetrics()
+            local columns = m.gridColumns
+            local rows = math.ceil(rowCount / columns)
+            contentY = (rows * m.cardHeight) + math.max(0, (rows - 1) * m.gridGapY)
+        end
+
+        SongList.CanvasSize = UDim2.new(0, 0, 0, math.max(0, math.floor(contentY + 16)))
+    end
+
+
+    local SpotifyShell = mk("Frame", {
+        Parent = SpotifyRoot,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = spotifyPanel,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ClipsDescendants = true,
+        ZIndex = 10,
+    })
+    corner(SpotifyShell, 18)
+    stroke(SpotifyShell, Color3.fromRGB(90, 90, 96), 1, 0.35)
+
+    local SpotifyPages = mk("UIPageLayout", {
+        Parent = SpotifyShell,
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Animated = true,
+        TweenTime = 0.28,
+        EasingStyle = Enum.EasingStyle.Quart,
+        EasingDirection = Enum.EasingDirection.Out,
+        TouchInputEnabled = false,
+        GamepadInputEnabled = false,
+        ScrollWheelInputEnabled = false,
+        Circular = false,
+    })
+
+    local PlayerPage = mk("Frame", {
+        Parent = SpotifyShell,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ClipsDescendants = true,
+        ZIndex = 10,
+    })
+
+    local CatalogPage = mk("Frame", {
+        Parent = SpotifyShell,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 2,
+        ClipsDescendants = true,
+        ZIndex = 10,
+    })
+
+    local NowPlayingCard = mk("Frame", {
+        Parent = PlayerPage,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = spotifyPanel,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ZIndex = 11,
+    })
+    corner(NowPlayingCard, 16)
+    stroke(NowPlayingCard, Color3.fromRGB(90, 90, 96), 1, 0.45)
+
+    local NowPlayingBackdrop = mk("ImageLabel", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.05,
+        BorderSizePixel = 0,
+        Image = "",
+        ImageTransparency = 1,
+        ScaleType = Enum.ScaleType.Crop,
+        ZIndex = 11,
+    })
+    corner(NowPlayingBackdrop, 16)
+
+    local NowPlayingShade = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.45,
+        BorderSizePixel = 0,
+        ZIndex = 12,
+    })
+    corner(NowPlayingShade, 16)
+
+    local MoreTopBtn = mk("ImageButton", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(0, 18, 0, 18),
+        Position = UDim2.new(1, -26, 0, 10),
+        AnchorPoint = Vector2.new(0, 0),
+        BackgroundTransparency = 1,
+        Image = asset(117978708573781),
+        ImageColor3 = spotifyText,
+        AutoButtonColor = false,
+        ZIndex = 13,
+    })
+
+    local AlbumArt = mk("ImageLabel", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(0, 176, 0, 176),
+        Position = UDim2.new(0.5, -88, 0, 14),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.82,
+        BorderSizePixel = 0,
+        Image = "",
+        ScaleType = Enum.ScaleType.Crop,
+        ZIndex = 12,
+    })
+    corner(AlbumArt, 16)
+    stroke(AlbumArt, spotifyGreen, 2.5, 0.10)
+    buildAnimatedBorder(AlbumArt, spotifyGreen, UDim.new(0, 16), true)
+
+    local AlbumFallback = mk("Frame", {
+        Parent = AlbumArt,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        ZIndex = 13,
+    })
+
+    local AlbumFallbackText = mk("TextLabel", {
+        Parent = AlbumFallback,
+        Size = UDim2.new(1, -12, 1, -12),
+        Position = UDim2.new(0, 6, 0, 6),
+        BackgroundTransparency = 1,
+        Text = "♪",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 56,
+        TextColor3 = spotifyGreen,
+        ZIndex = 13,
+    })
+
+    local InfoFrame = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 80),
+        Position = UDim2.new(0, 14, 0, 212),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 20,
+    })
+
+    local PlayerSongTitle = mk("TextLabel", {
+        Parent = InfoFrame,
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = GetText("Selecciona una canción", "Select a song"),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 22,
+        TextColor3 = spotifyText,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local PlayerSongArtist = mk("TextLabel", {
+        Parent = InfoFrame,
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 32),
+        BackgroundTransparency = 1,
+        Text = GetText("El catálogo se carga desde GitHub", "The catalog loads from GitHub"),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local PlayerMeta = mk("TextLabel", {
+        Parent = InfoFrame,
+        Size = UDim2.new(1, 0, 0, 16),
+        Position = UDim2.new(0, 0, 0, 56),
+        BackgroundTransparency = 1,
+        Text = GetText("Esperando canción", "Waiting for a song"),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local ProgressTrack = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 5),
+        Position = UDim2.new(0, 14, 0, 306),
+        BackgroundColor3 = Color3.fromRGB(58, 58, 58),
+        BorderSizePixel = 0,
+        ZIndex = 12,
+    })
+    corner(ProgressTrack, 999)
+
+    local SeekThumb = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.fromOffset(13, 13),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 15,
+        Visible = false,
+    })
+    corner(SeekThumb, 999)
+
+    local SeekTooltip = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.fromOffset(52, 26),
+        AnchorPoint = Vector2.new(0.5, 1),
+        Position = UDim2.new(0, 0, 0, -8),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 16,
+        Visible = false,
+    })
+    corner(SeekTooltip, 6)
+    local SeekTooltipLabel = mk("TextLabel", {
+        Parent = SeekTooltip,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "0:00",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 17,
+    })
+
+    local ProgressFill = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        ZIndex = 13,
+    })
+    corner(ProgressFill, 999)
+
+    SeekHitbox = mk("TextButton", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 28),
+        Position = UDim2.new(0, 14, 0, 295),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 22,
+    })
+
+    isSeeking = false
+    local seekInput = nil
+
+    local spotifySwipe = {
+        input = nil,
+        start = nil,
+        moved = false,
+        threshold = 24,
+    }
+
+    track(UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+        local pos = SpotifyShell.AbsolutePosition
+        local size = SpotifyShell.AbsoluteSize
+        if input.Position.X < pos.X or input.Position.X > pos.X + size.X
+            or input.Position.Y < pos.Y or input.Position.Y > pos.Y + size.Y then
+            return
+        end
+        local seekPos = SeekHitbox.AbsolutePosition
+        local seekSize = SeekHitbox.AbsoluteSize
+        if input.Position.X >= seekPos.X and input.Position.X <= seekPos.X + seekSize.X
+            and input.Position.Y >= seekPos.Y and input.Position.Y <= seekPos.Y + seekSize.Y then
+            return
+        end
+        spotifySwipe.input = input
+        spotifySwipe.start = input.Position
+        spotifySwipe.moved = false
+    end))
+
+    track(UserInputService.InputChanged:Connect(function(input)
+        if not spotifySwipe.input or not spotifySwipe.start then
+            return
+        end
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseMovement then
+            return
+        end
+        local delta = input.Position - spotifySwipe.start
+        if math.abs(delta.X) >= spotifySwipe.threshold and math.abs(delta.X) > math.abs(delta.Y) * 1.15 then
+            spotifySwipe.moved = true
+        end
+    end))
+
+    track(UserInputService.InputEnded:Connect(function(input)
+        if not spotifySwipe.input or not spotifySwipe.start then
+            return
+        end
+        if input ~= spotifySwipe.input and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+
+        local delta = input.Position - spotifySwipe.start
+        local horizontal = math.abs(delta.X)
+        local vertical = math.abs(delta.Y)
+        if not isSeeking and not SpotifyState.BlockSwipe and (spotifySwipe.moved or (horizontal >= spotifySwipe.threshold and horizontal > vertical * 1.15)) then
+            if delta.X < 0 then
+                SpotifyPages:Next()
+            else
+                SpotifyPages:Previous()
+            end
+        end
+
+        spotifySwipe.input = nil
+        spotifySwipe.start = nil
+        spotifySwipe.moved = false
+    end))
+
+    local function getSeekPercent(inputX)
+        local trackPos = ProgressTrack.AbsolutePosition.X
+        local trackWidth = ProgressTrack.AbsoluteSize.X
+        if trackWidth <= 0 then return 0 end
+        return math.clamp((inputX - trackPos) / trackWidth, 0, 1)
+    end
+
+    local function applySeekVisuals(pct)
+        SeekThumb.Position = UDim2.new(pct, 0, 0.5, 0)
+        SeekTooltip.Position = UDim2.new(pct, 0, 0, -8)
+        local total = 0
+        if SpotifyState.CurrentSound and SpotifyState.CurrentSound.TimeLength > 0 then
+            total = SpotifyState.CurrentSound.TimeLength
+        elseif SpotifyState.CurrentTrack then
+            total = durationToSeconds(SpotifyState.CurrentTrack.Duration)
+        end
+        local seekSec = math.floor(pct * math.max(total, 1))
+        SeekTooltipLabel.Text = secondsToClock(seekSec)
+    end
+
+    SeekHitbox.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        isSeeking = true
+        seekInput = input
+        SeekThumb.Visible = true
+        SeekTooltip.Visible = true
+        local pct = getSeekPercent(input.Position.X)
+        applySeekVisuals(pct)
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not isSeeking then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local pct = getSeekPercent(input.Position.X)
+        applySeekVisuals(pct)
+        ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
+    end)
+
+    UserInputService.InputEnded:Connect(function(in

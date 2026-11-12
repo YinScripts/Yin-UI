@@ -1,0 +1,1050 @@
+nt = ColorPickerPanel,
+        Size = UDim2.new(0.42, -6, 0, 34),
+        Position = UDim2.new(0.57, -6, 0, 61),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 262,
+    })
+    corner(PickerPreview, 7)
+    stroke(PickerPreview, Theme.Stroke, 1, 0.34)
+
+    local function createPickerInput(labelSpanish, labelEnglish, yOffset)
+        local field = mk("TextBox", {
+            Parent = ColorPickerPanel,
+            Size = UDim2.new(0.42, -6, 0, 29),
+            Position = UDim2.new(0.57, -6, 0, yOffset),
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderText = GetText(labelSpanish, labelEnglish),
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 262,
+        })
+        field:SetAttribute("ThemeRole", "Secondary")
+        field:SetAttribute("ThemeTextRole", "Text")
+        field:SetAttribute("PlaceholderSpanish", labelSpanish)
+        field:SetAttribute("PlaceholderEnglish", labelEnglish)
+        corner(field, 7)
+        return field
+    end
+    local PickerHex = createPickerInput("#RRGGBB · Hex", "#RRGGBB · Hex", 101)
+    local PickerRed = createPickerInput("Rojo", "Red", 136)
+    local PickerGreen = createPickerInput("Verde", "Green", 171)
+    local PickerBlue = createPickerInput("Azul", "Blue", 206)
+
+    local PickerCancel = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0, 14, 1, -45),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerCancel:SetAttribute("ThemeRole", "Secondary")
+    PickerCancel:SetAttribute("ThemeTextRole", "Text")
+    PickerCancel:SetAttribute("TextSpanish", "Cancelar")
+    PickerCancel:SetAttribute("TextEnglish", "Cancel")
+    corner(PickerCancel, 8)
+    local PickerApply = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0.56, -10, 1, -45),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Aplicar", "Apply"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerApply:SetAttribute("ThemeRole", "Accent")
+    PickerApply:SetAttribute("ThemeTextRole", "AccentText")
+    PickerApply:SetAttribute("TextSpanish", "Aplicar")
+    PickerApply:SetAttribute("TextEnglish", "Apply")
+    corner(PickerApply, 8)
+
+    local pickerTarget = nil
+    local pickerHue, pickerSaturation, pickerValue = 0, 0, 1
+    local draggingPicker, draggingHue = false, false
+    local function pickerColor()
+        return Color3.fromHSV(pickerHue, pickerSaturation, pickerValue)
+    end
+    local function refreshPicker()
+        local selected = pickerColor()
+        PickerArea.BackgroundColor3 = Color3.fromHSV(pickerHue, 1, 1)
+        PickerPreview.BackgroundColor3 = selected
+        SVHandle.Position = UDim2.new(pickerSaturation, 0, 1 - pickerValue, 0)
+        HueHandle.Position = UDim2.new(0.5, 0, pickerHue, 0)
+        PickerHex.Text = colorToHex(selected)
+        PickerRed.Text = tostring(math.floor(selected.R * 255 + 0.5))
+        PickerGreen.Text = tostring(math.floor(selected.G * 255 + 0.5))
+        PickerBlue.Text = tostring(math.floor(selected.B * 255 + 0.5))
+    end
+    local function setPickerColor(color)
+        pickerHue, pickerSaturation, pickerValue = color:ToHSV()
+        refreshPicker()
+    end
+    local function updateSVAt(position)
+        local size = PickerArea.AbsoluteSize
+        if size.X <= 0 or size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        local localPosition = pointer - PickerArea.AbsolutePosition
+        pickerSaturation = math.clamp(localPosition.X / size.X, 0, 1)
+        pickerValue = math.clamp(1 - localPosition.Y / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function updateHueAt(position)
+        local size = HueBar.AbsoluteSize
+        if size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        pickerHue = math.clamp((pointer.Y - HueBar.AbsolutePosition.Y) / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function closeColorPicker()
+        draggingPicker, draggingHue = false, false
+        ColorPickerOverlay.Visible = false
+        pickerTarget = nil
+    end
+    openThemeColorPicker = function(role)
+        local field = colorFields[role]
+        if not field then return end
+        local current = hexToColor(field.Box.Text) or field.Swatch.BackgroundColor3
+        pickerTarget = field
+        ColorPickerOverlay.Visible = true
+        task.defer(function()
+            if pickerTarget then setPickerColor(current) end
+        end)
+    end
+    PickerArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingPicker = true
+            updateSVAt(input.Position)
+        end
+    end)
+    HueBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHue = true
+            updateHueAt(input.Position)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingPicker and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSVAt(input.Position) end
+        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateHueAt(input.Position) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
+    end)
+    PickerHex.FocusLost:Connect(function()
+        local color = hexToColor(PickerHex.Text)
+        if color then setPickerColor(color) else refreshPicker() end
+    end)
+    local function applyRGBFields()
+        local color = Color3.fromRGB(
+            math.clamp(tonumber(PickerRed.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerGreen.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerBlue.Text) or 0, 0, 255)
+        )
+        setPickerColor(color)
+    end
+    PickerRed.FocusLost:Connect(applyRGBFields)
+    PickerGreen.FocusLost:Connect(applyRGBFields)
+    PickerBlue.FocusLost:Connect(applyRGBFields)
+    PickerClose.MouseButton1Click:Connect(closeColorPicker)
+    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
+    PickerApply.MouseButton1Click:Connect(function()
+        if pickerTarget then
+            local selected = pickerColor()
+            pickerTarget.Box.Text = colorToHex(selected)
+            pickerTarget.Swatch.BackgroundColor3 = selected
+        end
+        closeColorPicker()
+    end)
+
+    for index, info in ipairs(colorRoles) do
+        local cell = mk("Frame", {
+            Parent = ColorGridHolder,
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            LayoutOrder = index,
+            ZIndex = 202,
+        })
+        cell:SetAttribute("ThemeRole", "Secondary")
+        corner(cell, 12)
+        stroke(cell, Theme.Stroke, 1, 0.7)
+
+        local label = mk("TextLabel", {
+            Parent = cell,
+            Size = UDim2.new(1, -12, 0, 14),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundTransparency = 1,
+            Text = GetText(info[2], info[3]),
+            TextColor3 = Theme.Text,
+            TextSize = 10,
+            Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 203,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", info[2])
+        label:SetAttribute("TextEnglish", info[3])
+
+        local roleName = info[1]
+        local swatch = mk("Frame", {
+            Parent = cell,
+            Size = UDim2.new(1, -12, 0, 32),
+            Position = UDim2.new(0, 6, 0, 24),
+            BackgroundColor3 = Theme[info[1]],
+            BorderSizePixel = 0,
+            ZIndex = 203,
+        })
+        corner(swatch, 8)
+        stroke(swatch, Theme.Stroke, 1, 0.4)
+        local swatchTrigger = mk("TextButton", {
+            Parent = swatch,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 204,
+        })
+        swatchTrigger.MouseButton1Click:Connect(function()
+            openThemeColorPicker(roleName)
+        end)
+
+        local box = mk("TextBox", {
+            Parent = cell,
+            Size = UDim2.new(1, -12, 0, 22),
+            Position = UDim2.new(0, 6, 0, 60),
+            BackgroundColor3 = Theme.Background,
+            BorderSizePixel = 0,
+            Text = colorToHex(Theme[info[1]]),
+            ClearTextOnFocus = false,
+            TextColor3 = Theme.Text,
+            TextSize = 10,
+            Font = Enum.Font.Code,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 203,
+        })
+        box:SetAttribute("ThemeRole", "Background")
+        box:SetAttribute("ThemeTextRole", "Text")
+        corner(box, 6)
+
+        colorFields[info[1]] = {Box = box, Swatch = swatch}
+        box:GetPropertyChangedSignal("Text"):Connect(function()
+            local parsed = hexToColor(box.Text)
+            if parsed then swatch.BackgroundColor3 = parsed end
+            local live = {}
+            for _, role in ipairs(colorRoles) do
+                local fld = colorFields[role[1]]
+                live[role[1]] = fld and (hexToColor(fld.Box.Text) or fld.Swatch.BackgroundColor3) or nil
+            end
+            EditorMock.Paint(live)
+        end)
+    end
+
+    local function createEditorInput(labelSpanish, labelEnglish, placeholderSpanish, placeholderEnglish, order)
+        local holder = mk("Frame", {
+            Parent = EditorContent,
+            Size = UDim2.new(1, -4, 0, 48),
+            BackgroundTransparency = 1,
+            LayoutOrder = order,
+            ZIndex = 202,
+        })
+        local label = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 0, 18),
+            BackgroundTransparency = 1,
+            Text = GetText(labelSpanish, labelEnglish),
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 203,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", labelSpanish)
+        label:SetAttribute("TextEnglish", labelEnglish)
+        local box = mk("TextBox", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 0, 30),
+            Position = UDim2.new(0, 0, 0, 20),
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderText = GetText(placeholderSpanish, placeholderEnglish),
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            ClearTextOnFocus = false,
+            TextSize = 11,
+            Font = Enum.Font.GothamMedium,
+            ZIndex = 203,
+        })
+        box:SetAttribute("ThemeRole", "Secondary")
+        box:SetAttribute("ThemeTextRole", "Text")
+        box:SetAttribute("PlaceholderSpanish", placeholderSpanish)
+        box:SetAttribute("PlaceholderEnglish", placeholderEnglish)
+        corner(box, 9)
+        stroke(box, Theme.Stroke, 1, 0.65)
+        box.TextXAlignment = Enum.TextXAlignment.Left
+        mk("UIPadding", {Parent = box, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)})
+        local focusStroke = box:FindFirstChildOfClass("UIStroke")
+        box.Focused:Connect(function()
+            if focusStroke then focusStroke.Color = Theme.Accent focusStroke.Transparency = 0.1 end
+        end)
+        box.FocusLost:Connect(function()
+            if focusStroke then focusStroke.Color = Theme.Stroke focusStroke.Transparency = 0.65 end
+        end)
+        return box
+    end
+
+    local ThemeNameInput = createEditorInput("Nombre del tema", "Theme name", "Mi Tema Personalizado", "My Custom Theme", 20)
+    local ThemeImageInput = createEditorInput("ID de imagen (opcional)", "Image ID (optional)", "123456789", "123456789", 21)
+    local ThemeSoundInput = createEditorInput("ID de sonido (opcional)", "Sound ID (optional)", "123456789", "123456789", 22)
+
+    local EditorStatus = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -290, 0, 34),
+        Position = UDim2.new(0, 12, 1, -42),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Color3.fromRGB(235, 85, 85),
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 203,
+    })
+
+    local SaveThemeButton = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 132, 0, 36),
+        Position = UDim2.new(1, -144, 1, -46),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Crear Tema", "Create Theme"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    SaveThemeButton:SetAttribute("ThemeRole", "Accent")
+    SaveThemeButton:SetAttribute("ThemeTextRole", "AccentText")
+    SaveThemeButton:SetAttribute("TextSpanish", "Crear Tema")
+    SaveThemeButton:SetAttribute("TextEnglish", "Create Theme")
+    corner(SaveThemeButton, 12)
+    SaveThemeButton.Font = Enum.Font.GothamBlack
+    SaveThemeButton.TextSize = 13
+    RowKit.Control(SaveThemeButton, true)
+    SaveThemeButton.TextSize = 13
+    local CancelThemeButton = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 118, 0, 36),
+        Position = UDim2.new(1, -270, 1, -46),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    CancelThemeButton:SetAttribute("ThemeRole", "Secondary")
+    CancelThemeButton:SetAttribute("ThemeTextRole", "Text")
+    CancelThemeButton:SetAttribute("TextSpanish", "Cancelar")
+    CancelThemeButton:SetAttribute("TextEnglish", "Cancel")
+    corner(CancelThemeButton, 12)
+    RowKit.Control(CancelThemeButton)
+    CancelThemeButton.BackgroundTransparency = 0
+    mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -28, 0, 1),
+        Position = UDim2.new(0, 14, 1, -54),
+        BackgroundColor3 = Theme.Stroke,
+        BackgroundTransparency = 0.5,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    }):SetAttribute("ThemeRole", "Stroke")
+
+    local editingThemeName = nil
+
+    openThemeEditor = function(themeName)
+        editingThemeName = themeName
+        EditorStatus:SetAttribute("TextSpanish", "")
+        EditorStatus:SetAttribute("TextEnglish", "")
+        EditorStatus.Text = ""
+        EditorContent.CanvasPosition = Vector2.new(0, 0)
+
+        local data = themeName and CustomThemes[themeName] or nil
+        local palette = themeName and ThemePalettes[themeName] or ThemePalettes.Dark
+        local titleSpanish = themeName and "Editar Tema Personalizado" or "Crear Tema Personalizado"
+        local titleEnglish = themeName and "Edit Custom Theme" or "Create Custom Theme"
+        EditorTitle:SetAttribute("TextSpanish", titleSpanish)
+        EditorTitle:SetAttribute("TextEnglish", titleEnglish)
+        EditorTitle.Text = GetText(titleSpanish, titleEnglish)
+        local saveSpanish = themeName and "Guardar Cambios" or "Crear Tema"
+        local saveEnglish = themeName and "Save Changes" or "Create Theme"
+        SaveThemeButton:SetAttribute("TextSpanish", saveSpanish)
+        SaveThemeButton:SetAttribute("TextEnglish", saveEnglish)
+        SaveThemeButton.Text = GetText(saveSpanish, saveEnglish)
+        ThemeNameInput.Text = themeName or ""
+        ThemeNameInput.TextEditable = not themeName
+        ThemeImageInput.Text = data and (data.Background or "") or ""
+        ThemeSoundInput.Text = data and (data.Sound or "") or ""
+
+        for _, info in ipairs(colorRoles) do
+            local color = palette[info[1]]
+            colorFields[info[1]].Box.Text = colorToHex(color)
+            colorFields[info[1]].Swatch.BackgroundColor3 = color
+        end
+
+        EditorMock.Paint(palette)
+        EditorMock.Play()
+        EditorOverlay.Visible = true
+    end
+
+    local function closeThemeEditor()
+        EditorOverlay.Visible = false
+        EditorMock.Stop()
+        editingThemeName = nil
+    end
+
+    CloseEditor.MouseButton1Click:Connect(closeThemeEditor)
+    CancelThemeButton.MouseButton1Click:Connect(closeThemeEditor)
+    CreateThemeButton.MouseButton1Click:Connect(function() openThemeEditor(nil) end)
+
+    SaveThemeButton.MouseButton1Click:Connect(function()
+        local name = ThemeNameInput.Text:match("^%s*(.-)%s*$")
+        if name == "" then
+            EditorStatus:SetAttribute("TextSpanish", "Escribe un nombre para el tema.")
+            EditorStatus:SetAttribute("TextEnglish", "Enter a name for the theme.")
+            EditorStatus.Text = GetText("Escribe un nombre para el tema.", "Enter a name for the theme.")
+            return
+        end
+        if not editingThemeName and (OfficialThemeNames[name] or CustomThemes[name]) then
+            EditorStatus:SetAttribute("TextSpanish", "Ya existe un tema con ese nombre.")
+            EditorStatus:SetAttribute("TextEnglish", "A theme with that name already exists.")
+            EditorStatus.Text = GetText("Ya existe un tema con ese nombre.", "A theme with that name already exists.")
+            return
+        end
+
+        local paletteData = {}
+        for _, info in ipairs(colorRoles) do
+            local color = hexToColor(colorFields[info[1]].Box.Text)
+            if not color then
+                local colorErrorSpanish = info[2] .. " debe usar formato #RRGGBB."
+                local colorErrorEnglish = info[3] .. " must use the #RRGGBB format."
+                EditorStatus:SetAttribute("TextSpanish", colorErrorSpanish)
+                EditorStatus:SetAttribute("TextEnglish", colorErrorEnglish)
+                EditorStatus.Text = GetText(colorErrorSpanish, colorErrorEnglish)
+                return
+            end
+            paletteData[info[1]] = colorToArray(color)
+        end
+
+        local image = normalizeAssetId(ThemeImageInput.Text)
+        if ThemeImageInput.Text:match("%S") and not image then
+            EditorStatus:SetAttribute("TextSpanish", "El ID de imagen no es válido.")
+            EditorStatus:SetAttribute("TextEnglish", "The image ID is invalid.")
+            EditorStatus.Text = GetText("El ID de imagen no es válido.", "The image ID is invalid.")
+            return
+        end
+        local sound = normalizeAssetId(ThemeSoundInput.Text)
+        if ThemeSoundInput.Text:match("%S") and not sound then
+            EditorStatus:SetAttribute("TextSpanish", "El ID de sonido no es válido.")
+            EditorStatus:SetAttribute("TextEnglish", "The sound ID is invalid.")
+            EditorStatus.Text = GetText("El ID de sonido no es válido.", "The sound ID is invalid.")
+            return
+        end
+
+        local finalName = editingThemeName or name
+        CustomThemes[finalName] = {
+            Palette = paletteData,
+            Background = image or "",
+            Sound = sound or "",
+        }
+        if not editingThemeName then
+            table.insert(CustomThemeOrder, finalName)
+        end
+
+        applyCustomThemeToRuntime(finalName, CustomThemes[finalName])
+        SaveCustomThemes()
+        if Window.CurrentTheme == finalName then
+            Window:SetTheme(finalName)
+        end
+        rebuildThemeCards()
+        closeThemeEditor()
+    end)
+
+    local DeleteOverlay = mk("Frame", {
+        Parent = Main,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 220,
+    })
+    local DeletePanel = mk("Frame", {
+        Parent = DeleteOverlay,
+        Size = UDim2.new(0.72, 0, 0.46, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ZIndex = 221,
+    })
+    DeletePanel:SetAttribute("ThemeRole", "Background")
+    corner(DeletePanel, 10)
+    stroke(DeletePanel, Theme.Stroke, 1.5, 0.25)
+
+    local DeleteLabel = mk("TextLabel", {
+        Parent = DeletePanel,
+        Size = UDim2.new(1, -24, 0, 70),
+        Position = UDim2.new(0, 12, 0, 12),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Theme.Text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        TextWrapped = true,
+        ZIndex = 222,
+    })
+    DeleteLabel:SetAttribute("ThemeTextRole", "Text")
+
+    local CancelDelete = mk("TextButton", {
+        Parent = DeletePanel,
+        Size = UDim2.new(0.45, 0, 0, 34),
+        Position = UDim2.new(0.04, 0, 1, -46),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 222,
+    })
+    CancelDelete:SetAttribute("ThemeRole", "Secondary")
+    CancelDelete:SetAttribute("ThemeTextRole", "Text")
+    CancelDelete:SetAttribute("TextSpanish", "Cancelar")
+    CancelDelete:SetAttribute("TextEnglish", "Cancel")
+    corner(CancelDelete, 6)
+
+    local ConfirmDelete = mk("TextButton", {
+        Parent = DeletePanel,
+        Size = UDim2.new(0.45, 0, 0, 34),
+        Position = UDim2.new(0.51, 0, 1, -46),
+        BackgroundColor3 = Color3.fromRGB(190, 55, 55),
+        BorderSizePixel = 0,
+        Text = GetText("Eliminar", "Delete"),
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 222,
+    })
+    ConfirmDelete:SetAttribute("TextSpanish", "Eliminar")
+    ConfirmDelete:SetAttribute("TextEnglish", "Delete")
+    corner(ConfirmDelete, 6)
+
+    local pendingDeleteTheme = nil
+    confirmDeleteTheme = function(themeName)
+        pendingDeleteTheme = themeName
+        local deleteSpanish = "¿Eliminar el tema personalizado '" .. themeName .. "'?"
+        local deleteEnglish = "Delete the custom theme '" .. themeName .. "'?"
+        DeleteLabel:SetAttribute("TextSpanish", deleteSpanish)
+        DeleteLabel:SetAttribute("TextEnglish", deleteEnglish)
+        DeleteLabel.Text = GetText(deleteSpanish, deleteEnglish)
+        DeleteOverlay.Visible = true
+    end
+    CancelDelete.MouseButton1Click:Connect(function()
+        DeleteOverlay.Visible = false
+        pendingDeleteTheme = nil
+    end)
+    ConfirmDelete.MouseButton1Click:Connect(function()
+        local themeName = pendingDeleteTheme
+        if not themeName or not CustomThemes[themeName] then return end
+
+        if Window.CurrentTheme == themeName then
+            Window:SetTheme("Senju")
+        end
+
+        CustomThemes[themeName] = nil
+        ThemePalettes[themeName] = nil
+        ThemeBackgroundImages[themeName] = nil
+        ThemeClickSounds[themeName] = nil
+        for i = #CustomThemeOrder, 1, -1 do
+            if CustomThemeOrder[i] == themeName then
+                table.remove(CustomThemeOrder, i)
+            end
+        end
+
+        SaveCustomThemes()
+        DeleteOverlay.Visible = false
+        pendingDeleteTheme = nil
+        rebuildThemeCards()
+    end)
+
+    local lastThemeEditorLanguage = LibraryLanguage
+    RunService.Heartbeat:Connect(function()
+        local currentLanguage = LibraryLanguage
+        if currentLanguage == lastThemeEditorLanguage then return end
+        lastThemeEditorLanguage = currentLanguage
+
+        for _, root in ipairs({AutoTabTemas.Page, EditorOverlay, DeleteOverlay}) do
+            for _, element in ipairs(root:GetDescendants()) do
+                if element:IsA("TextLabel") or element:IsA("TextButton") then
+                    local spanish = element:GetAttribute("TextSpanish")
+                    local english = element:GetAttribute("TextEnglish")
+                    if spanish and english then
+                        element.Text = GetText(spanish, english)
+                    end
+                elseif element:IsA("TextBox") then
+                    local spanish = element:GetAttribute("PlaceholderSpanish")
+                    local english = element:GetAttribute("PlaceholderEnglish")
+                    if spanish and english then
+                        element.PlaceholderText = GetText(spanish, english)
+                    end
+                end
+            end
+        end
+    end)
+
+    ThemeSearchBox:GetPropertyChangedSignal("Text"):Connect(applyThemeSearch)
+    rebuildThemeCards()
+    end
+    BuildTemasTab()
+
+    local AutoTabEfectos = Window:CreateTab("Efectos", "Effects", "rbxassetid://72741468127071")
+
+    local EffectsPage = AutoTabEfectos.Page
+    EffectsPage.ScrollBarThickness = 2
+
+    local EffectsRoot = mk("Frame", {
+        Parent = EffectsPage,
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 9,
+        LayoutOrder = 1,
+    })
+
+    mk("UIPadding", {
+        Parent = EffectsRoot,
+        PaddingTop = UDim.new(0, 8),
+        PaddingLeft = UDim.new(0, 8),
+        PaddingRight = UDim.new(0, 8),
+        PaddingBottom = UDim.new(0, 10),
+    })
+
+    mk("UIListLayout", {
+        Parent = EffectsRoot,
+        Padding = UDim.new(0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    -- Cabecera con el efecto actual en vivo + grilla de 2 columnas
+    local EffectsUI = {}
+    EffectsUI.Hero = mk("Frame", {
+        Parent = EffectsRoot,
+        Size = UDim2.new(1, 0, 0, 96),
+        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        LayoutOrder = 0,
+        ZIndex = 10,
+    })
+    corner(EffectsUI.Hero, 16)
+    EffectsUI.HeroStroke = mk("UIStroke", {Parent = EffectsUI.Hero, Thickness = 1.5, Transparency = 0.35, Color = Theme.Accent})
+    EffectsUI.HeroGlow = mk("Frame", {
+        Parent = EffectsUI.Hero,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 0.82,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    })
+    EffectsUI.HeroGrad = mk("UIGradient", {
+        Parent = EffectsUI.HeroGlow,
+        Rotation = 20,
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0),
+            NumberSequenceKeypoint.new(0.55, 0.6),
+            NumberSequenceKeypoint.new(1, 1),
+        }),
+    })
+    EffectsUI.HeroCaption = mk("TextLabel", {
+        Parent = EffectsUI.Hero,
+        Size = UDim2.new(0.6, 0, 0, 12),
+        Position = UDim2.new(0, 16, 0, 12),
+        BackgroundTransparency = 1,
+        Text = GetText("EFECTO DE TEXTO ACTUAL", "CURRENT TEXT EFFECT"),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 9,
+        TextColor3 = Color3.fromRGB(170, 170, 180),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 12,
+    })
+    EffectsUI.HeroCaption:SetAttribute("TextSpanish", "EFECTO DE TEXTO ACTUAL")
+    EffectsUI.HeroCaption:SetAttribute("TextEnglish", "CURRENT TEXT EFFECT")
+    EffectsUI.HeroCaption:SetAttribute("IgnoreTextEffect", true)
+    EffectsUI.HeroText = mk("TextLabel", {
+        Parent = EffectsUI.Hero,
+        Size = UDim2.new(1, -32, 0, 36),
+        Position = UDim2.new(0, 16, 0, 26),
+        BackgroundTransparency = 1,
+        Text = "Yin Yang",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 32,
+        TextColor3 = Color3.new(1, 1, 1),
+        TextStrokeColor3 = Color3.new(0, 0, 0),
+        TextStrokeTransparency = 0.6,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 12,
+    })
+    EffectsUI.HeroText:SetAttribute("IgnoreTextEffect", true)
+    EffectsUI.HeroSub = mk("TextLabel", {
+        Parent = EffectsUI.Hero,
+        Size = UDim2.new(1, -140, 0, 14),
+        Position = UDim2.new(0, 16, 0, 68),
+        BackgroundTransparency = 1,
+        Text = GetText("Tocá una tarjeta para cambiar cómo brillan los textos", "Tap a card to change how texts glow"),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 10,
+        TextColor3 = Color3.fromRGB(170, 170, 180),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+    EffectsUI.HeroSub:SetAttribute("TextSpanish", "Tocá una tarjeta para cambiar cómo brillan los textos")
+    EffectsUI.HeroSub:SetAttribute("TextEnglish", "Tap a card to change how texts glow")
+    EffectsUI.HeroSub:SetAttribute("IgnoreTextEffect", true)
+    EffectsUI.HeroChip = mk("TextLabel", {
+        Parent = EffectsUI.Hero,
+        Size = UDim2.new(0, 0, 0, 22),
+        AutomaticSize = Enum.AutomaticSize.X,
+        AnchorPoint = Vector2.new(1, 1),
+        Position = UDim2.new(1, -14, 1, -12),
+        BackgroundColor3 = Theme.Accent,
+        Text = "",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 10,
+        TextColor3 = Theme.AccentText,
+        ZIndex = 13,
+    })
+    EffectsUI.HeroChip:SetAttribute("ThemeRole", "Accent")
+    EffectsUI.HeroChip:SetAttribute("ThemeTextRole", "AccentText")
+    EffectsUI.HeroChip:SetAttribute("IgnoreTextEffect", true)
+    corner(EffectsUI.HeroChip, 999)
+    mk("UIPadding", {Parent = EffectsUI.HeroChip, PaddingLeft = UDim.new(0, 26), PaddingRight = UDim.new(0, 10)})
+    RowKit.IconAt(EffectsUI.HeroChip, 103456899356871, 12, UDim2.new(0, -18, 0.5, -6), 14, "AccentText")
+
+    EffectsUI.Grid = mk("Frame", {
+        Parent = EffectsRoot,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        LayoutOrder = 1,
+        ZIndex = 9,
+    })
+    mk("UIGridLayout", {
+        Parent = EffectsUI.Grid,
+        CellSize = UDim2.new(0.5, -5, 0, 136),
+        CellPadding = UDim2.new(0, 10, 0, 10),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local effectRows = {}
+
+    local function isEffectActive(mode)
+        return Window.CurrentTextEffect == mode or (mode == "Off" and Window.CurrentTextEffect == "Off")
+    end
+
+    local function refreshEffectRows()
+        for _, row in ipairs(effectRows) do
+            local active = isEffectActive(row.mode)
+            if row.badge then
+                row.badge.Visible = active
+                row.badge.BackgroundColor3 = Theme.Accent
+            end
+            if row.card then
+                row.card.BackgroundTransparency = active and 0.06 or 0.20
+            end
+            if row.stroke then
+                row.stroke.Transparency = active and 0.05 or 0.75
+                row.stroke.Thickness = active and 2 or 1.5
+                row.stroke:SetAttribute("ThemeRole", active and "Accent" or "Stroke")
+                row.stroke.Color = active and Theme.Accent or Theme.Stroke
+            end
+            if row.title then
+                row.title.TextColor3 = active and Theme.Accent or Theme.Text
+            end
+            if row.desc then
+                row.desc.TextColor3 = active and Theme.Text or Theme.TextDim
+            end
+            if active then
+                EffectsUI.HeroChip.Text = GetText(row.titleES or row.mode, row.titleEN or row.mode)
+            end
+        end
+        EffectsUI.HeroChip.BackgroundColor3 = Theme.Accent
+        EffectsUI.HeroChip.TextColor3 = Theme.AccentText
+        EffectsUI.HeroStroke.Color = Theme.Accent
+    end
+
+    Window._refreshEffectRows = refreshEffectRows
+
+    -- Aplica los 3 colores de una muestra: texto, brillo de fondo y barra inferior
+    local function setPreviewStripColors(entry, c1, c2, c3)
+        if not entry then return end
+        if entry.text then entry.text.TextColor3 = c1 end
+        local seq = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, c1),
+            ColorSequenceKeypoint.new(0.5, c2),
+            ColorSequenceKeypoint.new(1, c3),
+        })
+        if entry.glowGrad then entry.glowGrad.Color = seq end
+        if entry.barGrad then entry.barGrad.Color = seq end
+    end
+
+    local effectPreviews = {}
+    local effectPreviewElapsed = 0
+
+    local function getEffectPreviewColor(mode, elapsed)
+        if mode == "WhiteCyan" then
+            local alpha = (math.sin(elapsed * 1.6) + 1) / 2
+            return Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(120, 225, 255), alpha)
+        elseif mode == "WhitePink" then
+            local alpha = (math.sin(elapsed * 0.6) + 1) / 2
+            return Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(255, 130, 205), alpha)
+        elseif mode == "Rainbow" then
+            return Color3.fromHSV((elapsed * 0.12) % 1, 0.85, 1)
+        elseif mode == "RainbowFast" then
+            return Color3.fromHSV((elapsed * 0.45) % 1, 1, 1)
+        elseif mode == "RainbowDarkWhite" then
+            local value = (elapsed * 0.25) % 1
+            return Color3.new(value, value, value)
+        elseif mode == "ErisRainbow" then
+            local cycle = (elapsed * 0.167) % 1
+            if cycle < 0.333 then
+                return Color3.fromRGB(math.floor(255 * (1 - (cycle / 0.333))), 0, 0)
+            elseif cycle < 0.667 then
+                local value = math.floor(255 * ((cycle - 0.333) / 0.334))
+                return Color3.fromRGB(value, value, value)
+            end
+            local t = (cycle - 0.667) / 0.333
+            return Color3.fromRGB(255, math.floor(255 * (1 - t)), math.floor(255 * (1 - t)))
+        elseif mode == "FireEffect" then
+            local cycle = (elapsed * 2.2) % 1
+            if cycle < 0.33 then
+                return Color3.fromRGB(255, math.floor(60 * (cycle / 0.33)), 0)
+            elseif cycle < 0.66 then
+                return Color3.fromRGB(255, math.floor(60 + 120 * ((cycle - 0.33) / 0.33)), 0)
+            end
+            local t = (cycle - 0.66) / 0.34
+            return Color3.fromRGB(255, math.floor(180 + 75 * t), math.floor(100 * t))
+        elseif mode == "NeonPulse" then
+            local pulse = (math.sin(elapsed * 3.5) + 1) / 2
+            return Color3.fromRGB(math.floor(100 * (1 - pulse)), math.floor(200 + 55 * pulse), math.floor(180 + 75 * pulse))
+        elseif mode == "GoldenShine" then
+            local shine = (math.sin(elapsed * 1.2) + 1) / 2
+            return Color3.fromRGB(255, math.floor(180 + 75 * shine), math.floor(120 * shine))
+        elseif mode == "IceBlue" then
+            local pulse = (math.sin(elapsed * 0.9) + 1) / 2
+            return Color3.fromRGB(math.floor(140 + 115 * pulse), math.floor(200 + 55 * pulse), 255)
+        elseif mode == "PurpleGlow" then
+            local pulse = (math.sin(elapsed * 0.7) + 1) / 2
+            return Color3.fromRGB(math.floor(140 + 80 * pulse), math.floor(40 + 40 * pulse), math.floor(220 + 35 * pulse))
+        elseif mode == "MatrixGreen" then
+            local flicker = (math.sin(elapsed * 6.0) + 1) / 2
+            local bright = (math.sin(elapsed * 1.4) + 1) / 2
+            return Color3.fromRGB(math.floor(30 * flicker), math.floor(180 + 75 * bright), math.floor(30 + 50 * flicker))
+        elseif mode == "Sunset" then
+            local cycle = (elapsed * 0.28) % 1
+            if cycle < 0.5 then
+                local t = cycle * 2
+                return Color3.fromRGB(255, math.floor(80 + 80 * t), math.floor(50 * (1 - t)))
+            end
+            local t = (cycle - 0.5) * 2
+            return Color3.fromRGB(255, math.floor(160 - 80 * t), math.floor(50 * t))
+        end
+        return nil
+    end
+
+    local function createPreview(parent, mode, accentColor)
+        local preview = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -12, 0, 64),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 11,
+        })
+        corner(preview, 11)
+
+        local glow = mk("Frame", {
+            Parent = preview,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BackgroundTransparency = 0.78,
+            BorderSizePixel = 0,
+            ZIndex = 11,
+        })
+        corner(glow, 11)
+        local glowGrad = mk("UIGradient", {
+            Parent = glow,
+            Rotation = 0,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.1),
+                NumberSequenceKeypoint.new(0.5, 0.55),
+                NumberSequenceKeypoint.new(1, 0.1),
+            }),
+        })
+
+        local PreviewLabel = mk("TextLabel", {
+            Parent = preview,
+            Size = UDim2.new(1, -12, 1, -8),
+            Position = UDim2.new(0, 6, 0, 0),
+            BackgroundTransparency = 1,
+            Text = "Yin Yang",
+            Font = Enum.Font.GothamBlack,
+            TextSize = 22,
+            TextScaled = false,
+            TextColor3 = accentColor,
+            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
+            TextStrokeTransparency = 0.55,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 13,
+        })
+        PreviewLabel:SetAttribute("IgnoreTextEffect", true)
+
+        local bar = mk("Frame", {
+            Parent = preview,
+            Size = UDim2.new(1, 0, 0, 3),
+            Position = UDim2.new(0, 0, 1, -3),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ZIndex = 13,
+        })
+        local barGrad = mk("UIGradient", {Parent = bar})
+
+        local previewData = {
+            Off = {Color3.fromRGB(230, 230, 230), Color3.fromRGB(180, 180, 180), Color3.fromRGB(120, 120, 120)},
+            WhiteCyan = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(130, 225, 255), Color3.fromRGB(90, 180, 255)},
+            WhitePink = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 145, 205), Color3.fromRGB(220, 90, 170)},
+            Rainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 210, 0), Color3.fromRGB(80, 120, 255)},
+            RainbowFast = {Color3.fromRGB(255, 0, 180), Color3.fromRGB(0, 220, 255), Color3.fromRGB(255, 170, 0)},
+            RainbowDarkWhite = {Color3.fromRGB(10, 10, 10), Color3.fromRGB(120, 120, 120), Color3.fromRGB(255, 255, 255)},
+            ErisRainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(40, 10, 15), Color3.fromRGB(255, 255, 255)},
+            FireEffect = {Color3.fromRGB(255, 70, 20), Color3.fromRGB(255, 140, 50), Color3.fromRGB(255, 220, 120)},
+            NeonPulse = {Color3.fromRGB(0, 255, 170), Color3.fromRGB(120, 255, 220), Color3.fromRGB(210, 255, 240)},
+            GoldenShine = {Color3.fromRGB(255, 210, 60), Color3.fromRGB(255, 240, 170), Color3.fromRGB(255, 255, 255)},
+            IceBlue = {Color3.fromRGB(120, 220, 255), Color3.fromRGB(200, 240, 255), Color3.fromRGB(245, 250, 255)},
+            PurpleGlow = {Color3.fromRGB(170, 90, 255), Color3.fromRGB(220, 180, 255), Color3.fromRGB(255, 245, 255)},
+            MatrixGreen = {Color3.fromRGB(0, 200, 60), Color3.fromRGB(80, 255, 120), Color3.fromRGB(190, 255, 200)},
+            Sunset = {Color3.fromRGB(255, 140, 80), Color3.fromRGB(255, 80, 150), Color3.fromRGB(180, 80, 255)},
+        }
+
+        local entry = {
+            frame = preview,
+            mode = mode,
+            text = PreviewLabel,
+            glowGrad = glowGrad,
+            barGrad = barGrad,
+        }
+        local sample = previewData[mode] or previewData.Off
+        setPreviewStripColors(entry, sample[1], sample[2], sample[3])
+        table.insert(effectPreviews, entry)
+
+        return preview
+    end
+
+    local function createEffectRow(mode, titleES, titleEN, descES, descEN, accentColor, layoutOrder)
+        local Card = mk("Frame", {
+            Parent = EffectsUI.Grid,
+            Size = UDim2.new(0.5, -5, 0, 136),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.20,
+            BorderSizePixel = 0,
+            ZIndex = 10,
+            LayoutOrder = layoutOrder,
+        })
+        Card:SetAttribute("ThemeRole", "Secondary")
+        corner(Card, 14)
+        local CardStroke = stroke(Card, Theme.Stroke, 1.5, 0.75)
+        CardStroke:SetAttribute("ThemeRole", "Stroke")
+        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
+
+        local preview = createPreview(Card, mode, accentColor)
+
+        local TitleLabel = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, -20, 0, 18),
+            Position = UDim2.new(0, 10, 0, 76),
+            BackgroundTransparency = 1,
+            Text = GetText(titleES, titleEN),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 13,
+            TextColor3 = Theme.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 11,
+        })
+        TitleLabel:SetAttribute("ThemeTextRole", "Text")
+        TitleLabel:SetAttribute("TextSpanish", titleES)
+        TitleLabel:SetAttribute("TextEnglish", titleEN)
+
+        local DescLabel = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, -20, 0, 30),
+            Position = UDim2.new(0, 10, 0, 96),
+            BackgroundTransparency = 1,
+            Text = GetText(descES, descEN),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextColor3 = Theme.TextDim,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 11,
+        })
+        DescLabel:SetAttribute("ThemeTextRole", "TextDim")
+        DescLabel:SetAttribute("TextSpanish", descES)
+        DescLabel:SetAttribute("TextEnglish", descEN)
+
+        local Badge = mk("Frame", {
+            Parent = preview,
+            Size = UDim2.fromOffset(0, 18),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -6, 0, 6),
+            BackgroundColor3 = accentColor,
+            BackgroundTransparency = 0.0,
+            BorderSizePixel = 0,
+            ZIndex = 14,
+            Visible = isEffectActive(mode),
+        })
+        Badge:SetAttribute("ThemeRole", "Accent")
+        corner(Badge, 999)
+        mk("UIPadding", {Parent = Badge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+        mk("UIListLayout", {Parent = Badge, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
+        local BadgeCheck = mk("Frame", {Parent = Badge, Size = UDim2.fromOffset(10, 10), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 15})
+        RowKit.Icon(BadgeCheck, 103456899356871, 10, 15, "AccentText")
+        local BadgeLabel = mk("TextLabel", {
+            Parent = Badge,
+            Size = UDim2.new(0, 0, 1, 0),
+            AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundTransparency = 1,
+            Layout

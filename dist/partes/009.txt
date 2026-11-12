@@ -1,0 +1,711 @@
+(props) do o[k] = v end
+        if parent then o.Parent = parent end
+        return o
+    end
+
+    local function lang(obj, es, en, placeholder)
+        if es == nil or en == nil then return end
+        obj:SetAttribute(placeholder and "PlaceholderSpanish" or "TextSpanish", es)
+        obj:SetAttribute(placeholder and "PlaceholderEnglish" or "TextEnglish", en)
+    end
+    -- borde fino con el color "Stroke" del tema
+    function Page.Stroke(parent, transparency)
+        local s = new("UIStroke", {Color = Kit.Palette().Stroke, Thickness = 1, Transparency = transparency or 0.55}, nil)
+        pcall(function() s.ZIndex = 12 end)
+        s.Parent = parent
+        s:SetAttribute("ThemeRole", "Stroke")
+        return s
+    end
+    -- color de estado que se lee en temas claros (lo oscurece a la mitad si el fondo es claro)
+    function Page.AdaptStatus(color)
+        local bg = Kit.Palette().Background
+        if 0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B > 0.55 then
+            return Color3.new(color.R * 0.5, color.G * 0.5, color.B * 0.5)
+        end
+        return color
+    end
+
+    -- tarjeta: o = {Name, Height, Transparency, LayoutOrder, StrokeTransparency}; devuelve tarjeta y borde
+    function Page.Card(parent, o)
+        o = o or {}
+        local card = new("Frame", {Name = o.Name or "Card", Size = UDim2.new(1, 0, 0, o.Height or 50), BackgroundColor3 = Kit.Palette().Secondary,
+            BackgroundTransparency = o.Transparency or 0.78, BorderSizePixel = 0, ZIndex = 10}, nil)
+        if o.LayoutOrder then card.LayoutOrder = o.LayoutOrder end
+        card.Parent = parent
+        card:SetAttribute("ThemeRole", "Secondary")
+        Kit.Corner(card, 10)
+        local stroke = Page.Stroke(card, o.StrokeTransparency or 0.55)
+        return card, stroke
+    end
+
+    -- texto: o = {Text, Es, En, TextSize, Font, Role, Position, Size}
+    function Page.Label(parent, o)
+        local role = o.Role or "Text"
+        local label = new("TextLabel", {BackgroundTransparency = 1, Position = o.Position or UDim2.new(), Size = o.Size or UDim2.new(1, 0, 0, 16),
+            Text = o.Text or "", TextColor3 = Kit.Palette()[role], TextSize = o.TextSize or 12, Font = o.Font or Enum.Font.GothamMedium,
+            TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 12}, parent)
+        label:SetAttribute("ThemeTextRole", role)
+        label:SetAttribute("IgnoreTextEffect", true)
+        lang(label, o.Es, o.En)
+        return label
+    end
+
+    -- encabezado de pestaña: tarjeta de 78 con barrita de acento, caja con ícono, título, ✦ y descripción
+    -- o = {Name, BarName, DescName, LayoutOrder, Icon, IconFn (ícono que cambia con el tema), Title, TitleEs, TitleEn,
+    --      Desc, DescEs, DescEn, PlainTitle (título que sí toma los efectos de texto de la librería)}
+    -- devuelve la tarjeta y sus piezas {Bar, IconBox, Icon, Title, Spark, Desc}
+    function Page.Header(parent, o)
+        o = o or {}
+        local p = Kit.Palette()
+        local header = Page.Card(parent, {Name = o.Name or "PageHeader", Height = 78, Transparency = 0.78, LayoutOrder = o.LayoutOrder})
+        local bar = new("Frame", {Name = o.BarName or "PageAccentBar", Size = UDim2.new(0, 3, 0, 44), Position = UDim2.new(0, 10, 0.5, -22),
+            BackgroundColor3 = p.Accent, BorderSizePixel = 0, ZIndex = 11}, header)
+        bar:SetAttribute("ThemeRole", "Accent")
+        Kit.Corner(bar, 999)
+        local iconBox = new("Frame", {Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(22, 17), BackgroundColor3 = p.AccentOff,
+            BorderSizePixel = 0, ZIndex = 11}, header)
+        iconBox:SetAttribute("ThemeRole", "AccentOff")
+        Kit.Corner(iconBox, 12)
+        Page.Stroke(iconBox, 0.45)
+        local icon = new("ImageLabel", {Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(8, 8), BackgroundTransparency = 1,
+            Image = (o.IconFn and o.IconFn()) or o.Icon or "", ImageColor3 = p.Text, ZIndex = 12}, iconBox)
+        icon:SetAttribute("ThemeImageRole", "Text")
+        local title
+        if o.PlainTitle then
+            title = new("TextLabel", {Size = UDim2.new(1, -112, 0, 20), Position = UDim2.fromOffset(74, 12), BackgroundTransparency = 1,
+                Text = o.Title or "", TextColor3 = p.Text, TextSize = 15, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11}, header)
+            title:SetAttribute("ThemeTextRole", "Text")
+            lang(title, o.TitleEs, o.TitleEn)
+        else
+            title = Page.Label(header, {Text = o.Title, Es = o.TitleEs, En = o.TitleEn, TextSize = 15, Font = Enum.Font.GothamBlack, Role = "Text",
+                Position = UDim2.fromOffset(74, 12), Size = UDim2.new(1, -112, 0, 20)})
+            title.TextWrapped = false
+            title.TextTruncate = Enum.TextTruncate.AtEnd
+            title.ZIndex = 11
+        end
+        local spark = new("TextLabel", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -30, 0, 10), BackgroundTransparency = 1, Text = "✦",
+            TextColor3 = p.Accent, TextSize = 16, Font = Enum.Font.GothamBold, ZIndex = 12}, header)
+        spark:SetAttribute("ThemeTextRole", "Accent")
+        spark:SetAttribute("IgnoreTextEffect", true)
+        local desc = Page.Label(header, {Text = o.Desc, Es = o.DescEs, En = o.DescEn, TextSize = 11, Font = Enum.Font.GothamMedium, Role = "TextDim",
+            Position = UDim2.fromOffset(74, 34), Size = UDim2.new(1, -88, 0, 36)})
+        desc.ZIndex = 11
+        if o.DescName then desc.Name = o.DescName end
+        if o.IconFn then
+            -- al cambiar de tema se repintan estos colores: se relee el ícono del tema ya aplicado
+            local function refreshIcon()
+                task.defer(function()
+                    if icon and icon.Parent then icon.Image = o.IconFn() end
+                end)
+            end
+            header:GetPropertyChangedSignal("BackgroundColor3"):Connect(refreshIcon)
+            bar:GetPropertyChangedSignal("BackgroundColor3"):Connect(refreshIcon)
+            desc:GetPropertyChangedSignal("TextColor3"):Connect(refreshIcon)
+        end
+        return header, {Bar = bar, IconBox = iconBox, Icon = icon, Title = title, Spark = spark, Desc = desc}
+    end
+
+    -- campo con número: o = {Name, Number (nil = siguiente según los campos que ya hay), Caption, CaptionEs, CaptionEn,
+    --                        Placeholder, PlaceholderEs, PlaceholderEn}; devuelve el TextBox
+    function Page.Field(parent, o)
+        o = o or {}
+        local p = Kit.Palette()
+        local name = o.Name or "PageField"
+        local number = o.Number
+        if not number then
+            number = 1
+            for _, child in ipairs(parent:GetChildren()) do
+                if child.Name == name then number = number + 1 end
+            end
+        end
+        local card, stroke = Page.Card(parent, {Name = name, Height = 58, Transparency = 0.7})
+        stroke.Transparency = 0.45
+        local badge = new("Frame", {Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(12, 15), BackgroundColor3 = p.AccentOff,
+            BorderSizePixel = 0, ZIndex = 11}, card)
+        badge:SetAttribute("ThemeRole", "AccentOff")
+        Kit.Corner(badge, 8)
+        local num = new("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = tostring(number), TextColor3 = p.Text,
+            TextSize = 13, Font = Enum.Font.GothamBlack, ZIndex = 12}, badge)
+        num:SetAttribute("ThemeTextRole", "Text")
+        num:SetAttribute("IgnoreTextEffect", true)
+        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum.Font.GothamBold,
+            Role = "TextDim", Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -64, 0, 14)})
+        caption.TextWrapped = false
+        caption.TextTruncate = Enum.TextTruncate.AtEnd
+        local input = new("TextBox", {Size = UDim2.new(1, -64, 0, 28), Position = UDim2.fromOffset(52, 24), BackgroundTransparency = 1,
+            BorderSizePixel = 0, ClearTextOnFocus = false, Font = Enum.Font.GothamBold, PlaceholderText = o.Placeholder or "",
+            PlaceholderColor3 = caption.TextColor3, Text = "", TextColor3 = p.Text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12}, card)
+        input:SetAttribute("ThemeTextRole", "Text")
+        lang(input, o.PlaceholderEs, o.PlaceholderEn, true)
+        input.Focused:Connect(function()
+            local active = Kit.Palette()
+            stroke.Color = active.Accent
+            stroke.Thickness = 1.5
+            stroke.Transparency = 0.05
+            badge.BackgroundColor3 = active.Accent
+            num.TextColor3 = getContrastColor(active.Accent)
+        end)
+        input.FocusLost:Connect(function()
+            local active = Kit.Palette()
+            stroke.Color = active.Stroke
+            stroke.Thickness = 1
+            stroke.Transparency = 0.45
+            badge.BackgroundColor3 = active.AccentOff
+            num.TextColor3 = active.Text
+        end)
+        caption:GetPropertyChangedSignal("TextColor3"):Connect(function()
+            input.PlaceholderColor3 = caption.TextColor3
+        end)
+        return input
+    end
+
+    -- campo con ícono a la izquierda (sin número): o = {Name, InputName, LayoutOrder, Icon, Placeholder, PlaceholderEs, PlaceholderEn}
+    -- devuelve el TextBox, la tarjeta, el borde y el ícono (el borde se ilumina con el acento mientras escribís)
+    function Page.Input(parent, o)
+        o = o or {}
+        local p = Kit.Palette()
+        local holder, stroke = Page.Card(parent, {Name = o.Name or "PageInput", Height = 50, Transparency = 0.7, LayoutOrder = o.LayoutOrder,
+            StrokeTransparency = 0.45})
+        local icon = new("ImageLabel", {Size = UDim2.fromOffset(22, 22), Position = UDim2.fromOffset(14, 14), BackgroundTransparency = 1,
+            Image = o.Icon or "", ImageColor3 = p.Text, ZIndex = 12}, holder)
+        icon:SetAttribute("ThemeImageRole", "Text")
+        local input = new("TextBox", {Name = o.InputName or "Input", Size = UDim2.new(1, -60, 1, 0), Position = UDim2.fromOffset(46, 0),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 12, ClearTextOnFocus = false, PlaceholderText = o.Placeholder or "",
+            PlaceholderColor3 = p.TextDim, Text = "", TextColor3 = p.Text, TextSize = 14, Font = Enum.Font.GothamBold,
+            TextXAlignment = Enum.TextXAlignment.Left}, holder)
+        input:SetAttribute("ThemeTextRole", "Text")
+        lang(input, o.PlaceholderEs, o.PlaceholderEn, true)
+        input.Focused:Connect(function()
+            stroke.Color = Kit.Palette().Accent
+            stroke.Thickness = 1.5
+            stroke.Transparency = 0.05
+        end)
+        input.FocusLost:Connect(function()
+            stroke.Color = Kit.Palette().Stroke
+            stroke.Thickness = 1
+            stroke.Transparency = 0.45
+        end)
+        return input, holder, stroke, icon
+    end
+
+    -- botón grande: o = {Text, Es, En, Primary (acento, con flecha ›), OnClick, Name, ButtonName, LayoutOrder,
+    --                     StrokeTransparency, Hover (false = sin efecto al pasar el mouse), Height, Rest / Press (transparencia
+    --                     quieta / al tocar), TextSize, Font, Mark (símbolo a la derecha en un botón no principal, ej. "↺"), MarkSize}
+    -- devuelve la tarjeta del botón y sus piezas {Button, Label, Arrow}
+    function Page.Button(parent, o)
+        o = o or {}
+        local primary = o.Primary == true
+        local restT = o.Rest or (primary and 0.12 or 0.7)
+        local hoverT = primary and 0.04 or 0.55
+        local pressT = o.Press or 0.4
+        local holder = Page.Card(parent, {Name = o.Name or (primary and "PagePrimaryButton" or "PageSecondaryButton"), Height = o.Height or (primary and 44 or 38),
+            Transparency = restT, LayoutOrder = o.LayoutOrder, StrokeTransparency = o.StrokeTransparency})
+        if primary then
+            holder.BackgroundColor3 = Kit.Palette().Accent
+            holder:SetAttribute("ThemeRole", "Accent")
+        end
+        local button = new("TextButton", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, BorderSizePixel = 0, AutoButtonColor = false,
+            Text = "", ZIndex = 11}, holder)
+        if o.ButtonName then button.Name = o.ButtonName end
+        local label = Page.Label(holder, {Text = o.Text, Es = o.Es, En = o.En, TextSize = o.TextSize or (primary and 14 or 12),
+            Font = o.Font or (primary and Enum.Font.GothamBlack or Enum.Font.GothamBold), Role = "Text", Position = UDim2.fromOffset(31, 0), Size = UDim2.new(1, -62, 1, 0)})
+        label.TextWrapped = false
+        label.TextTruncate = Enum.TextTruncate.AtEnd
+        label.TextXAlignment = Enum.TextXAlignment.Center
+        label.TextYAlignment = Enum.TextYAlignment.Center
+        local arrow = nil
+        if primary then
+            label:SetAttribute("ThemeTextRole", nil)
+            arrow = new("TextLabel", {Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -40, 0.5, -14), BackgroundTransparency = 1,
+                Text = "›", TextSize = 28, Font = Enum.Font.GothamBold, ZIndex = 12}, holder)
+            arrow:SetAttribute("IgnoreTextEffect", true)
+            local function repaintOnAccent()
+                local onAccent = getContrastColor(Kit.Palette().Accent)
+                label.TextColor3 = onAccent
+                arrow.TextColor3 = onAccent
+            end
+            repaintOnAccent()
+            holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(repaintOnAccent)
+        elseif o.Mark then
+            arrow = new("TextLabel", {Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -40, 0.5, -14), BackgroundTransparency = 1,
+                Text = o.Mark, TextColor3 = Kit.Palette().Text, TextSize = o.MarkSize or 22, Font = Enum.Font.GothamBold, ZIndex = 12}, holder)
+            arrow:SetAttribute("ThemeTextRole", "Text")
+            arrow:SetAttribute("IgnoreTextEffect", true)
+        end
+        local function fade(t, goal) RealTweenService:Create(holder, TweenInfo.new(t), {BackgroundTransparency = goal}):Play() end
+        if o.Hover ~= false then
+            button.MouseEnter:Connect(function() fade(0.12, hoverT) end)
+            button.MouseLeave:Connect(function() fade(0.12, restT) end)
+        end
+        button.MouseButton1Down:Connect(function()
+            fade(0.08, pressT)
+            task.delay(0.16, function() fade(0.18, restT) end)
+        end)
+        if o.OnClick then
+            button.MouseButton1Click:Connect(function() o.OnClick() end)
+        end
+        return holder, {Button = button, Label = label, Arrow = arrow}
+    end
+
+    -- línea de estado con ícono: o = {Text, Es, En, Name, TextName, Neutral (color), Height, IconY, LayoutOrder, Visible,
+    --                               TextColor / IconColor (colores iniciales), Manual (el script repinta el color él mismo)}
+    -- devuelve el texto (cambialo con Page.SetStatus), la tarjeta y el ícono
+    function Page.Status(parent, o)
+        o = o or {}
+        local holder = Page.Card(parent, {Name = o.Name or "PageStatus", Height = o.Height or 50, Transparency = 0.78, LayoutOrder = o.LayoutOrder})
+        if o.Visible == false then holder.Visible = false end
+        local neutral = o.Neutral or Color3.fromRGB(175, 185, 205)
+        local icon = new("ImageLabel", {Name = "StatusIcon", Size = UDim2.fromOffset(24, 24), Position = UDim2.fromOffset(14, o.IconY or 13), BackgroundTransparency = 1,
+            Image = "rbxassetid://88658875299906", ImageColor3 = o.IconColor or Page.AdaptStatus(neutral), ZIndex = 12}, holder)
+        local label = new("TextLabel", {Name = o.TextName or "PageStatusText", Size = UDim2.new(1, -62, 1, -12), Position = UDim2.fromOffset(48, 6),
+            BackgroundTransparency = 1, Text = o.Text or "", TextColor3 = o.TextColor or Page.AdaptStatus(neutral), TextSize = 11, Font = Enum.Font.GothamMedium,
+            TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Center, ZIndex = 12}, holder)
+        label:SetAttribute("IgnoreTextEffect", true)
+        lang(label, o.Es, o.En)
+        if not o.Manual then
+            label:SetAttribute("StatusColor", neutral)
+            holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(function()
+                local stored = label:GetAttribute("StatusColor")
+                if typeof(stored) == "Color3" then
+                    label.TextColor3 = Page.AdaptStatus(stored)
+                    icon.ImageColor3 = Page.AdaptStatus(stored)
+                end
+            end)
+        end
+        return label, holder, icon
+    end
+    -- cambia el texto y el color de una línea de estado (deja de traducirse sola: es un mensaje del momento)
+    function Page.SetStatus(label, text, color)
+        if not (label and label.Parent) then return end
+        local adapted = Page.AdaptStatus(color)
+        label:SetAttribute("TextSpanish", nil)
+        label:SetAttribute("TextEnglish", nil)
+        label:SetAttribute("StatusColor", color)
+        label.Text = text
+        label.TextColor3 = adapted
+        local icon = label.Parent:FindFirstChild("StatusIcon")
+        if icon then icon.ImageColor3 = adapted end
+    end
+    -- tarjeta de perfil que se despliega: foto de cuerpo entero (aro de acento girando, brillo de "cargando" y flotado
+    -- suave), nombre, @usuario, id y chip de estado. o = {Name, LayoutOrder, OpenHeight}
+    -- devuelve V con Card, :Show(abrir), :SetChip(texto, color), :Loading(nombre, sub), :Found(userId, nombre, sub, id, chip),
+    -- :Missing(nombre, sub, chip)
+    function Page.Profile(parent, o)
+        o = o or {}
+        local openHeight = o.OpenHeight or 132
+        local p = Kit.Palette()
+        local card = new("Frame", {Name = o.Name or "PageProfile", Size = UDim2.new(1, 0, 0, 0), BackgroundColor3 = p.Secondary, BackgroundTransparency = 0.7,
+            BorderSizePixel = 0, ClipsDescendants = true, Visible = false, ZIndex = 10}, nil)
+        if o.LayoutOrder then card.LayoutOrder = o.LayoutOrder end
+        card.Parent = parent
+        card:SetAttribute("ThemeRole", "Secondary")
+        Kit.Corner(card, 12)
+        Page.Stroke(card, 0.5)
+        -- marco de la foto: fondo con degradado suave + aro de acento girando
+        local photo = new("Frame", {Size = UDim2.fromOffset(108, 108), Position = UDim2.fromOffset(12, 12), BackgroundColor3 = p.Background,
+            BorderSizePixel = 0, ZIndex = 11}, card)
+        photo:SetAttribute("ThemeRole", "Background")
+        Kit.Corner(photo, 14)
+        new("UIGradient", {Rotation = 90, Transparency = NumberSequence.new(0, 0.35)}, photo)
+        local ring = new("UIStroke", {Thickness = 2, Color = Color3.new(1, 1, 1)}, photo)
+        local ringGrad = new("UIGradient", {}, ring)
+        local function paintRing()
+            local a = Kit.Palette().Accent
+            local h, sat = a:ToHSV()
+            ringGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, a),
+                ColorSequenceKeypoint.new(0.5, Color3.fromHSV(h, sat * 0.25, 1)),
+                ColorSequenceKeypoint.new(1, a),
+            })
+        end
+        paintRing()
+        RealTweenService:Create(ringGrad, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360}):Play()
+        local shimmer = new("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = p.Text, BackgroundTransparency = 0.9, BorderSizePixel = 0,
+            ZIndex = 12}, photo)
+        Kit.Corner(shimmer, 14)
+        local shimmerGrad = new("UIGradient", {Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1),
+        }), Rotation = 20, Offset = Vector2.new(-1, 0)}, shimmer)
+        RealTweenService:Create(shimmerGrad, TweenInfo.new(1.1, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Offset = Vector2.new(1, 0)}):Play()
+        local body = new("ImageLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Fit, ZIndex = 13}, photo)
+        local bodyScale = new("UIScale", {}, body)
+        RealTweenService:Create(body, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.fromOffset(0, -3)}):Play()
+        local function label(size, font, role, y, h)
+            local l = new("TextLabel", {Size = UDim2.new(1, -144, 0, h), Position = UDim2.fromOffset(132, y), BackgroundTransparency = 1, Text = "",
+                TextSize = size, Font = font, TextColor3 = Kit.Palette()[role], TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12}, card)
+            l:SetAttribute("ThemeTextRole", role)
+            l:SetAttribute("IgnoreTextEffect", true)
+            return l
+        end
+        local displayLabel = label(16, Enum.Font.GothamBlack, "Text", 18, 22)
+        local userLabel = label(12, Enum.Font.GothamMedium, "TextDim", 40, 16)
+        local idLabel = label(10, Enum.Font.GothamMedium, "TextDim", 58, 14)
+        local chip = new("TextLabel", {Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(132, 86),
+            BackgroundColor3 = p.Accent, BorderSizePixel = 0, Text = "", TextSize = 11, Font = Enum.Font.GothamBold,
+            TextColor3 = getContrastColor(p.Accent), ZIndex = 12}, card)
+        chip:SetAttribute("IgnoreTextEffect", true)
+        Kit.Corner(chip, 999)
+        new("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)}, chip)
+
+        local V = {Card = card}
+        function V:Show(open)
+            if open then
+                if not card.Visible then
+                    card.Size = UDim2.new(1, 0, 0, 0)
+                    card.Visible = true
+                end
+                RealTweenService:Create(card, TweenInfo.new(0.28, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.new(1, 0, 0, openHeight)}):Play()
+            elseif card.Visible then
+                local t = RealTweenService:Create(card, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Size = UDim2.new(1, 0, 0, 0)})
+                t:Play()
+                t.Completed:Connect(function(state)
+                    if state == Enum.PlaybackState.Completed and card.Size.Y.Offset == 0 then card.Visible = false end
+                end)
+            end
+        end
+        function V:SetChip(text, color)
+            local c = color or Kit.Palette().Accent
+            chip.Text = text
+            chip.BackgroundColor3 = c
+            chip.TextColor3 = getContrastColor(c)
+        end
+        function V:Loading(name, sub)
+            paintRing()
+            shimmer.Visible = true
+            body.Image = ""
+            displayLabel.TextColor3 = Kit.Palette().Text
+            displayLabel.Text = name
+            userLabel.Text = sub
+            idLabel.Text = ""
+            V:SetChip("···", Kit.Palette().AccentOff)
+            V:Show(true)
+        end
+        function V:Found(userId, name, sub, idText, chipText)
+            shimmer.Visible = false
+            body.Image = "rbxthumb://type=Avatar&id=" .. tostring(userId) .. "&w=420&h=420"
+            bodyScale.Scale = 0.85
+            RealTweenService:Create(bodyScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            displayLabel.TextColor3 = Kit.Palette().Text
+            displayLabel.Text = name
+            userLabel.Text = sub
+            idLabel.Text = idText
+            V:SetChip(chipText)
+            V:Show(true)
+        end
+        function V:Missing(name, sub, chipText)
+            shimmer.Visible = false
+            body.Image = ""
+            displayLabel.Text = name
+            displayLabel.TextColor3 = Page.AdaptStatus(Color3.fromRGB(255, 135, 135))
+            userLabel.Text = sub
+            idLabel.Text = ""
+            V:SetChip(chipText, Color3.fromRGB(255, 120, 120))
+            V:Show(true)
+        end
+        return V
+    end
+end
+
+-- ===== GUÍA (tutorial navegable dentro de una pestaña) =====
+-- Tarjeta de inicio con buscador, chips por pestaña y tarjetas que se abren al tocarlas. El script pasa solo el
+-- contenido (Data) y los textos; la librería arma todo con el tema activo. Los textos se aclaran u oscurecen solos si
+-- con algún tema quedan con poco contraste, y se repintan al volver a la pestaña.
+-- Kit.Page.Guide(page, o): o = {
+--   Data = { {Key, Es, En, Icon, Sum = {es, en}, Sections = { {tituloEs, tituloEn, { item, ... }}, ... }}, ... }
+--        item = {n = {es, en}, s = {es, en}, h = {es, en} (opcional), sl = { {clave, es, en}, ... } (opcional), t = {etiqueta, ...}}
+--   Tags = {CLAVE = {es, en}}, TagColors = {CLAVE = Color3} (las demás usan el acento),
+--   T = function(es, en) (texto en el idioma actual), Badge = "?", Title = {es, en}, Subtitle = {es, en},
+--   Placeholder = {es, en}, NotFound = function(busqueda) return es, en end, Start = clave de la pestaña inicial }
+do
+    local Kit = YinYang.Kit
+    local Page = Kit.Page
+    local function new(class, props, parent)
+        local o = Instance.new(class)
+        for k, v in pairs(props) do o[k] = v end
+        if parent then o.Parent = parent end
+        return o
+    end
+    local function round(inst, r) return new("UICorner", {CornerRadius = UDim.new(0, r)}, inst) end
+    local function lum(c)
+        local function ch(v) return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+        return 0.2126 * ch(c.R) + 0.7152 * ch(c.G) + 0.0722 * ch(c.B)
+    end
+    local function contrast(a, b)
+        local la, lb = lum(a), lum(b)
+        if la < lb then la, lb = lb, la end
+        return (la + 0.05) / (lb + 0.05)
+    end
+    -- acerca el color al blanco o al negro hasta que se lea bien sobre el fondo
+    local function readable(color, bg, need)
+        local target = getContrastColor(bg)
+        local c = color
+        for i = 1, 10 do
+            if contrast(c, bg) >= need then break end
+            c = color:Lerp(target, i / 10)
+        end
+        return c
+    end
+
+    function Page.Guide(page, o)
+        o = o or {}
+        local pal = Kit.Palette
+        local T = o.T or GetText
+        local GUIDE, TAGS, TAG_COLORS = o.Data or {}, o.Tags or {}, o.TagColors or {}
+        local painted = {}
+        local function paintText(l)
+            local role, bgRole = l:GetAttribute("YYGuideRole"), l:GetAttribute("YYGuideBg")
+            local p = pal()
+            local bg = p[bgRole] or p.Secondary
+            local need = role == "TextDim" and 4.5 or 7
+            l.TextColor3 = readable(p[role] or p.Text, bg, need)
+            l.TextStrokeColor3 = bg
+            l.TextStrokeTransparency = 0.75
+        end
+        local function txt(parent, es, en, size, font, role, props, bgRole)
+            local l = new("TextLabel", {
+                BackgroundTransparency = 1, Text = T(es, en), TextSize = size, Font = font,
+                TextColor3 = pal()[role], TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true,
+                Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, ZIndex = 12,
+            }, parent)
+            l:SetAttribute("TextSpanish", es)
+            l:SetAttribute("TextEnglish", en)
+            l:SetAttribute("YYGuideRole", role)
+            l:SetAttribute("YYGuideBg", bgRole or "Secondary")
+            l:SetAttribute("IgnoreTextEffect", true)
+            for k, v in pairs(props or {}) do l[k] = v end
+            paintText(l)
+            painted[#painted + 1] = l
+            return l
+        end
+        local function repaintAll()
+            local keep = {}
+            for _, l in ipairs(painted) do
+                if l.Parent then
+                    pcall(paintText, l)
+                    keep[#keep + 1] = l
+                end
+            end
+            painted = keep
+        end
+
+        -- ---------- estructura ----------
+        local p0 = pal()
+        local root = new("Frame", {Name = "GuideRoot", Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = -100, ZIndex = 10}, page)
+        new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, root)
+
+        -- tarjeta de inicio
+        local hero = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = p0.Secondary, BackgroundTransparency = 0.3, BorderSizePixel = 0, LayoutOrder = 1, ZIndex = 10}, root)
+        hero:SetAttribute("ThemeRole", "Secondary")
+        round(hero, 14)
+        Page.Stroke(hero, 0.5)
+        new("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, hero)
+        new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, hero)
+        local heroTop = new("Frame", {Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 11}, hero)
+        local badge = new("Frame", {Size = UDim2.fromOffset(46, 46), BackgroundColor3 = p0.Accent, BorderSizePixel = 0, ZIndex = 11}, heroTop)
+        badge:SetAttribute("ThemeRole", "Accent")
+        round(badge, 14)
+        local badgeGrad = new("UIGradient", {Rotation = 45, Transparency = NumberSequence.new(0, 0.35)}, badge)
+        local badgeText = new("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = o.Badge or "?", TextSize = 26, Font = Enum.Font.GothamBlack, TextColor3 = getContrastColor(p0.Accent), ZIndex = 12}, badge)
+        badgeText:SetAttribute("IgnoreTextEffect", true)
+        RealTweenService:Create(badgeGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 405}):Play()
+        local title, sub = o.Title or {"GUÍA", "GUIDE"}, o.Subtitle or {"", ""}
+        txt(heroTop, title[1], title[2], 17, Enum.Font.GothamBlack, "Text", {Position = UDim2.fromOffset(58, 3), Size = UDim2.new(1, -58, 0, 20), AutomaticSize = Enum.AutomaticSize.None, TextWrapped = false})
+        txt(heroTop, sub[1], sub[2], 11, Enum.Font.GothamMedium, "TextDim", {Position = UDim2.fromOffset(58, 25), Size = UDim2.new(1, -58, 0, 16), AutomaticSize = Enum.AutomaticSize.None})
+
+        -- buscador
+        local ph = o.Placeholder or {"Buscar…", "Search…"}
+        local searchBox = new("Frame", {Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = p0.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, LayoutOrder = 2, ZIndex = 11}, hero)
+        searchBox:SetAttribute("ThemeRole", "Background")
+        round(searchBox, 10)
+        local searchStroke = Page.Stroke(searchBox, 0.55)
+        local searchIcon = new("TextLabel", {Size = UDim2.fromOffset(34, 38), BackgroundTransparency = 1, Text = "🔍", TextSize = 15, Font = Enum.Font.GothamBold, TextColor3 = p0.TextDim, ZIndex = 12}, searchBox)
+        searchIcon:SetAttribute("ThemeTextRole", "TextDim")
+        searchIcon:SetAttribute("IgnoreTextEffect", true)
+        local search = new("TextBox", {Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(34, 0), BackgroundTransparency = 1, Text = "", ClearTextOnFocus = false,
+            PlaceholderText = T(ph[1], ph[2]), PlaceholderColor3 = p0.TextDim,
+            TextColor3 = p0.Text, TextSize = 13, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12}, searchBox)
+        search:SetAttribute("ThemeTextRole", "Text")
+        search:SetAttribute("PlaceholderSpanish", ph[1])
+        search:SetAttribute("PlaceholderEnglish", ph[2])
+        search.Focused:Connect(function() searchStroke.Color = pal().Accent searchStroke.Transparency = 0.05 end)
+        search.FocusLost:Connect(function() searchStroke.Color = pal().Stroke searchStroke.Transparency = 0.55 end)
+
+        -- chips de pestañas (desliza de costado)
+        local chipScroll = new("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X,
+            AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new(), LayoutOrder = 2, ZIndex = 10}, root)
+        new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center}, chipScroll)
+
+        local content = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 3, ZIndex = 10}, root)
+        new("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, content)
+
+        -- ---------- piezas ----------
+        local function tagPill(parent, key, order)
+            local def = TAGS[key]
+            if not def then return end
+            local p = pal()
+            local c = TAG_COLORS[key] or p.Accent
+            local pill = new("TextLabel", {Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = c, BackgroundTransparency = 0.82,
+                Text = T(def[1], def[2]), TextSize = 9, Font = Enum.Font.GothamBold, TextColor3 = Page.AdaptStatus(c), LayoutOrder = order, ZIndex = 13}, parent)
+            pill:SetAttribute("TextSpanish", def[1])
+            pill:SetAttribute("TextEnglish", def[2])
+            pill:SetAttribute("IgnoreTextEffect", true)
+            round(pill, 999)
+            new("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}, pill)
+            new("UIStroke", {Color = c, Transparency = 0.5, Thickness = 1}, pill)
+        end
+
+        local function optionCard(parent, item, order, tabName)
+            local p = pal()
+            -- outer: fondo + toque; cardF (adentro): el contenido en lista (el botón no puede estar dentro de la lista)
+            local outer = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = p.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 11}, parent)
+            outer:SetAttribute("ThemeRole", "Secondary")
+            round(outer, 12)
+            local stroke = Page.Stroke(outer, 0.6)
+            local cardF = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, ZIndex = 11}, outer)
+            new("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)}, cardF)
+            new("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder}, cardF)
+
+            local head = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 12}, cardF)
+            txt(head, item.n[1], item.n[2], 14, Enum.Font.GothamBlack, "Text", {Size = UDim2.new(1, -30, 0, 0)})
+            local chev = new("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -2), Size = UDim2.fromOffset(22, 22), BackgroundTransparency = 1, Text = "›", TextSize = 22, Font = Enum.Font.GothamBold, TextColor3 = p.TextDim, ZIndex = 12}, head)
+            chev:SetAttribute("ThemeTextRole", "TextDim")
+            chev:SetAttribute("IgnoreTextEffect", true)
+
+            local tags = item.t or {}
+            if tabName or #tags > 0 then
+                local row = new("Frame", {Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 12}, cardF)
+                new("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder}, row)
+                if tabName then
+                    local tp = new("TextLabel", {Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = p.Text, BackgroundTransparency = 0.88, Text = tabName, TextSize = 9, Font = Enum.Font.GothamBlack, TextColor3 = p.Text, LayoutOrder = 0, ZIndex = 13}, row)
+                    tp:SetAttribute("IgnoreTextEffect", true)
+                    round(tp, 999)
+                    new("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}, tp)
+                end
+                for i, key in ipairs(tags) do tagPill(row, key, i) end
+            end
+            txt(cardF, item.s[1], item.s[2], 13, Enum.Font.GothamMedium, "TextDim", {LayoutOrder = 3})
+
+            -- detalle (se abre al tocar)
+            local detail = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 4, ZIndex = 12}, cardF)
+            new("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder}, detail)
+            local hasDetail = false
+            new("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = p.Stroke, BackgroundTransparency = 0.6, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12}, detail)
+            if item.h then
+                hasDetail = true
+                txt(detail, item.h[1], item.h[2], 13, Enum.Font.GothamMedium, "Text", {LayoutOrder = 1})
+            end
+            for i, s in ipairs(item.sl or {}) do
+                hasDetail = true
+                local line = new("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1 + i, ZIndex = 12}, detail)
+                local key = new("TextLabel", {Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = p.Accent, BackgroundTransparency = 0, Text = s[1], TextSize = 11, Font = Enum.Font.GothamBold, TextColor3 = getContrastColor(p.Accent), ZIndex = 13}, line)
+                key:SetAttribute("IgnoreTextEffect", true)
+                round(key, 6)
+                new("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, key)
+                local desc = txt(line, s[2], s[3], 12, Enum.Font.GothamMedium, "TextDim", {Position = UDim2.fromOffset(0, 23)})
+                desc.Size = UDim2.new(1, 0, 0, 0)
+            end
+
+            local open = false
+            local hit = new("TextButton", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 20}, outer)
+            hit.Activated:Connect(function()
+                if not hasDetail then return end
+                open = not open
+                detail.Visible = open
+                RealTweenService:Create(chev, TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Rotation = open and 90 or 0}):Play()
+                stroke.Color = open and pal().Accent or pal().Stroke
+                stroke.Transparency = open and 0.2 or 0.6
+                outer.BackgroundTransparency = open and 0.2 or 0.35
+            end)
+            if not hasDetail then chev.Visible = false end
+            return outer
+        end
+
+        local function sectionTitle(parent, es, en, order)
+            local f = new("Frame", {Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11}, parent)
+            local bar = new("Frame", {Size = UDim2.fromOffset(3, 14), Position = UDim2.fromOffset(2, 5), BackgroundColor3 = pal().Accent, BorderSizePixel = 0, ZIndex = 12}, f)
+            bar:SetAttribute("ThemeRole", "Accent")
+            round(bar, 999)
+            txt(f, es, en, 12, Enum.Font.GothamBlack, "Text", {Position = UDim2.fromOffset(12, 3), Size = UDim2.new(1, -12, 0, 18), AutomaticSize = Enum.AutomaticSize.None, TextWrapped = false})
+        end
+
+        local function tabHeader(parent, g, order)
+            local p = pal()
+            local f = new("Frame", {Size = UDim2.new(1, 0, 0, 58), BackgroundColor3 = p.Secondary, BackgroundTransparency = 0.3, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 11}, parent)
+            f:SetAttribute("ThemeRole", "Secondary")
+            round(f, 12)
+            new("UIStroke", {Color = p.Accent, Transparency = 0.35, Thickness = 1.5}, f)
+            local ic = new("ImageLabel", {Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = g.Icon, ImageColor3 = p.Text, ScaleType = Enum.ScaleType.Fit, ZIndex = 12}, f)
+            ic:SetAttribute("ThemeImageRole", "Text")
+            txt(f, string.upper(g.Es), string.upper(g.En), 15, Enum.Font.GothamBlack, "Text", {Position = UDim2.fromOffset(54, 9), Size = UDim2.new(1, -64, 0, 18), AutomaticSize = Enum.AutomaticSize.None, TextWrapped = false})
+            txt(f, g.Sum[1], g.Sum[2], 11, Enum.Font.GothamMedium, "TextDim", {Position = UDim2.fromOffset(54, 29), Size = UDim2.new(1, -64, 0, 22), AutomaticSize = Enum.AutomaticSize.None})
+        end
+
+        -- ---------- render ----------
+        local Current = o.Start or (GUIDE[1] and GUIDE[1].Key)
+        local chips = {}
+        local function clear()
+            for _, c in ipairs(content:GetChildren()) do
+                if c:IsA("GuiObject") then c:Destroy() end
+            end
+        end
+        local function renderTab(key)
+            clear()
+            local order = 0
+            local function nextOrder() order = order + 1 return order end
+            for _, g in ipairs(GUIDE) do
+                if g.Key == key then
+                    tabHeader(content, g, nextOrder())
+                    for _, sec in ipairs(g.Sections) do
+                        sectionTitle(content, sec[1], sec[2], nextOrder())
+                        for _, item in ipairs(sec[3]) do
+                            optionCard(content, item, nextOrder())
+                        end
+                    end
+                end
+            end
+        end
+        local function norm(s)
+            s = string.lower(s or "")
+            return (s:gsub("á", "a"):gsub("é", "e"):gsub("í", "i"):gsub("ó", "o"):gsub("ú", "u"):gsub("ñ", "n"))
+        end
+        local function renderSearch(q)
+            clear()
+            local nq = norm(q)
+            local order, found = 0, 0
+            for _, g in ipairs(GUIDE) do
+                for _, sec in ipairs(g.Sections) do
+                    for _, item in ipairs(sec[3]) do
+                        local hay = norm(item.n[1] .. " " .. item.n[2] .. " " .. item.s[1] .. " " .. item.s[2])
+                        if string.find(hay, nq, 1, true) then
+                            order = order + 1
+                            found = found + 1
+                            optionCard(content, item, order, T(g.Es, g.En))
+                        end
+                    end
+                end
+            end
+            if found == 0 then
+                local es, en = "Sin resultados para \"" .. q .. "\".", "No results for \"" .. q .. "\"."
+                if o.NotFound then es, en = o.NotFound(q) end
+                txt(content, es, en, 12, Enum.Font.GothamMedium, "TextDim", {LayoutOrder = 1, TextXAlignment = Enum.TextXAlignment.Center})
+            end
+        end
+
+        local function paintChips()
+            local p = pal()
+            for key, c in pairs(chips) do
+                local on = key == Current and search.Text == ""
+                c.BackgroundColor3 = on and p.Accent or p.Secondary
+                c.BackgroundTransparency = on and 0 or 0.55
+                c.TextColor3 = on and getContrastColor(p.Accent) or p.Text
+            end
+        end
+        for i, g in ipairs(GUIDE) do
+            local c = new("TextButton", {Size = UDim2.fromOffset(0, 28), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = p0.Secondary, Text = T(g.Es, g.En), TextSize = 12, Font = Enum.Font.GothamBold,
+                TextColor3 = p0.Text, AutoButtonColor = false, LayoutOrder = i, ZIndex = 11}, chipScroll)
+            c:SetAttribute("TextSpanish", g.Es)
+            c:SetAttribute("TextEnglish", g.En)
+            c:SetAttribute("Ign

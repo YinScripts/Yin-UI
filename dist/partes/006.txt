@@ -1,0 +1,690 @@
+K.Hue.AbsoluteSize
+                if s.Y <= 0 then return end
+                PK.H = math.clamp((pos.Y - a.Y) / s.Y, 0, 0.999)
+            end
+            PK.refresh()
+        end
+        PK.Area.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "SV" K.pickAt(input.Position) end end)
+        PK.Hue.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "H" K.pickAt(input.Position) end end)
+        PK.Hex.FocusLost:Connect(function()
+            local c = fromHex(PK.Hex.Text)
+            if c then PK.set(c) else PK.refresh() end
+        end)
+        local function close(ok)
+            ov.Visible = false
+            PK.drag = nil
+            if ok and PK.onApply then PK.onApply(PK.color()) elseif not ok and PK.onCancel then PK.onCancel() end
+            PK.onApply, PK.onCancel, PK.onLive = nil, nil, nil
+        end
+        K.closePicker = close
+        cancel.MouseButton1Click:Connect(function() close(false) end)
+        apply.MouseButton1Click:Connect(function() close(true) end)
+        -- onLive pinta en vivo; Cancelar vuelve al valor de antes
+        function K.openPicker(es, en, current, onLive, onApply, onCancel)
+            K.L(PK.Title, es, en)
+            PK.onLive, PK.onApply, PK.onCancel = nil, onApply, onCancel
+            ov.Visible = true
+            PK.set(current or WHITE)
+            PK.onLive = onLive
+        end
+    end
+
+    -- ---------- hoja "Elegí un toggle" (excepciones) ----------
+    function FS.UIScopeSheet(K)
+        local Z = K.Z
+        local ov = mk("Frame", { Parent = K.Panel, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Visible = false, Active = true, ZIndex = Z + 50 })
+        corner(ov, 16)
+        local sh = mk("Frame", { Parent = ov, Size = UDim2.new(0.92, 0, 0.86, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 51 })
+        sh:SetAttribute("ThemeRole", "Background")
+        corner(sh, 14)
+        stroke(sh, Theme.Stroke, 1.4, 0.2)
+        local zs = Z + 49 -- los textos del kit van en Z+3/Z+4: así quedan por encima de la hoja (Z+52/53)
+        K.label(sh, "Elegí un toggle", "Pick a toggle", 14, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -60, 0, 20), Position = UDim2.fromOffset(14, 10), ZIndex = zs + 3 })
+        K.label(sh, "Su diseño propio pisa al global solo en ese toggle", "Its own design overrides the global one only on that toggle", 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -60, 0, 12), Position = UDim2.fromOffset(14, 30), ZIndex = zs + 3 })
+        local x = K.button(sh, "×", "×", "Secondary", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), TextSize = 18, ZIndex = zs + 4 })
+        local search = K.box(sh, { Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 48), Font = Enum.Font.GothamBold, ZIndex = zs + 4 })
+        K.placeholder(search, "Buscar toggle...", "Search toggle...")
+        local listF = mk("ScrollingFrame", {
+            Parent = sh, Size = UDim2.new(1, -28, 1, -92), Position = UDim2.fromOffset(14, 84), BackgroundTransparency = 1,
+            BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = zs + 3,
+        })
+        K.list(listF, 6)
+        local function rebuild()
+            for _, ch in ipairs(listF:GetChildren()) do
+                if ch:IsA("GuiObject") then ch:Destroy() end
+            end
+            local q = string.lower(search.Text or "")
+            local rows = {}
+            for _, e in ipairs(FS.Registry) do rows[#rows + 1] = e end
+            table.sort(rows, function(a, b)
+                if a.Tab ~= b.Tab then return a.Tab < b.Tab end
+                return a.ES < b.ES
+            end)
+            local shown = 0
+            for i, e in ipairs(rows) do
+                local name = GetText(e.ES, e.EN)
+                if q == "" or string.find(string.lower(name), q, 1, true) or string.find(string.lower(e.Tab), q, 1, true) then
+                    shown += 1
+                    local has = K.ED.O[e.Id] ~= nil
+                    local r = mk("TextButton", {
+                        Parent = listF, Size = UDim2.new(1, -4, 0, 40), BackgroundColor3 = K.ED.scope == e.Id and Theme.Accent or Theme.Secondary,
+                        BackgroundTransparency = K.ED.scope == e.Id and 0.55 or 0.3, BorderSizePixel = 0, Text = "", LayoutOrder = i, ZIndex = zs + 4,
+                    })
+                    r:SetAttribute("ThemeRole", K.ED.scope == e.Id and "Accent" or "Secondary")
+                    corner(r, 10)
+                    local t = mk("TextLabel", {
+                        Parent = r, Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(12, 5), BackgroundTransparency = 1,
+                        Text = name, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack,
+                        TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = zs + 5,
+                    })
+                    t:SetAttribute("ThemeTextRole", "Text")
+                    local kindEs = e.Kind == "Combo" and "Combinado" or "Toggle"
+                    local kindEn = e.Kind == "Combo" and "Combined" or "Toggle"
+                    local d = mk("TextLabel", {
+                        Parent = r, Size = UDim2.new(1, -110, 0, 12), Position = UDim2.fromOffset(12, 22), BackgroundTransparency = 1,
+                        Text = e.Tab .. " · " .. GetText(kindEs, kindEn), TextColor3 = Theme.TextDim, TextSize = 9, Font = Enum.Font.GothamMedium,
+                        TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = zs + 5,
+                    })
+                    d:SetAttribute("ThemeTextRole", "TextDim")
+                    d:SetAttribute("IgnoreTextEffect", true)
+                    if has then
+                        local b = mk("TextLabel", {
+                            Parent = r, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
+                            Position = UDim2.new(1, -10, 0.5, 0), BackgroundColor3 = Theme.Accent, TextColor3 = Theme.AccentText,
+                            TextSize = 9, Font = Enum.Font.GothamBlack, ZIndex = zs + 5,
+                        })
+                        b:SetAttribute("IgnoreTextEffect", true)
+                        K.L(b, "EXCEPCIÓN", "EXCEPTION")
+                        corner(b, 999)
+                        K.pad(b, 0, 8, 8, 0)
+                    end
+                    r.MouseButton1Click:Connect(function()
+                        playSound(Sounds.Click, 0.4)
+                        ov.Visible = false
+                        K.SetScope(e.Id)
+                    end)
+                end
+            end
+            if shown == 0 then
+                local empty = K.label(listF, "Todavía no hay toggles flotantes con ese nombre", "No floating toggles with that name yet", 11, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -4, 0, 40), TextWrapped = true, ZIndex = zs + 4 })
+                empty.TextTruncate = Enum.TextTruncate.None
+            end
+        end
+        search:GetPropertyChangedSignal("Text"):Connect(function()
+            if ov.Visible then rebuild() end
+        end)
+        x.MouseButton1Click:Connect(function() ov.Visible = false end)
+        function K.closeScopeSheet() ov.Visible = false end
+        function K.openScopeSheet()
+            search.Text = ""
+            rebuild()
+            ov.Visible = true
+        end
+    end
+
+    -- ---------- secciones del editor ----------
+    FS.Presets = {
+        { "Neón", "Neon", { BorderStyle = "Neon", BorderColor = { 0, 255, 200 }, Glow = "Always", GlowColor = { 0, 255, 200 }, GlowPower = 0.7, OffColor = { 10, 14, 20 }, OnColor = { 0, 200, 160 }, TextOffColor = { 180, 255, 240 }, BorderThick = 2 } },
+        { "Cristal", "Glass", { OffColor = { 205, 220, 240 }, OnColor = { 150, 205, 255 }, BgAlpha = 0.55, Gloss = true, Shimmer = true, BorderStyle = "Solid", BorderColor = { 255, 255, 255 }, BorderAlpha = 0.35, BorderThick = 1.5, TextOffColor = { 255, 255, 255 }, TextStroke = true } },
+        { "Arcoíris", "Rainbow", { BorderStyle = "Rainbow", BorderThick = 3, BorderSpeed = 2.5, Glow = "OnOnly", Sparkles = true } },
+        { "Fuego", "Fire", { OnColor = { 255, 110, 20 }, OffColor = { 40, 12, 4 }, BorderStyle = "Gradient", BorderColor = { 255, 80, 0 }, BorderColor2 = { 255, 220, 90 }, BorderSpeed = 1.8, Glow = "OnOnly", GlowColor = { 255, 120, 30 }, GlowPower = 0.8, Motion = "Beat", TextOffColor = { 255, 200, 140 } } },
+        { "Minimal", "Minimal", { BorderStyle = "None", Shape = "Soft", Gloss = false, Glow = "Off", OffColor = { 28, 28, 32 }, OnColor = { 245, 245, 245 }, Font = "GothamBold", BgAlpha = 0.1 } },
+        { "Dulce", "Sweet", { OnColor = { 255, 170, 210 }, OffColor = { 255, 235, 245 }, TextOffColor = { 150, 70, 110 }, BorderStyle = "Solid", BorderColor = { 255, 150, 200 }, Motion = "Float", MotionAmount = 3, Sparkles = true, Font = "FredokaOne", BgAlpha = 0.1 } },
+        { "Retro", "Retro", { Font = "Arcade", TextCase = "Upper", Shape = "Square", BorderStyle = "Solid", BorderThick = 3, BorderColor = { 255, 255, 255 }, OffColor = { 20, 20, 60 }, OnColor = { 255, 60, 140 }, Shimmer = true, BgAlpha = 0.1 } },
+    }
+
+    function FS.UISections(K)
+        local Z = K.Z
+        local G = Enum.Font.GothamBold
+
+        -- 1) plantillas
+        local pc = K.section(1, "PLANTILLAS", "PRESETS", "Un punto de partida: después cambiá lo que quieras", "A starting point: then change anything")
+        do
+            local row = mk("ScrollingFrame", {
+                Parent = pc, Size = UDim2.new(1, 0, 0, 58), BackgroundTransparency = 1, BorderSizePixel = 0,
+                ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X,
+                CanvasSize = UDim2.new(), ScrollBarThickness = 0, LayoutOrder = 1, ZIndex = Z + 3,
+            })
+            K.list(row, 8, true)
+            local all = { { "Original", "Original", {} } }
+            for _, p in ipairs(FS.Presets) do all[#all + 1] = p end
+            for i, p in ipairs(all) do
+                local d = p[3]
+                local t = mk("TextButton", { Parent = row, Size = UDim2.fromOffset(78, 54), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, Text = "", LayoutOrder = i, ZIndex = Z + 4 })
+                t:SetAttribute("ThemeRole", "Background")
+                corner(t, 12)
+                stroke(t, Theme.Stroke, 1, 0.7)
+                -- mini cápsula con los colores de la plantilla
+                local cap = mk("Frame", {
+                    Parent = t, Size = UDim2.fromOffset(46, 18), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8),
+                    BackgroundColor3 = arrayToColor(d.OnColor, nil) or Theme.ToggleOn, BorderSizePixel = 0, ZIndex = Z + 5,
+                })
+                corner(cap, d.Shape == "Square" and 4 or (d.Shape == "Soft" and 7 or 999))
+                local capStroke = mk("UIStroke", { Parent = cap, Thickness = 1.5, Color = arrayToColor(d.BorderColor, nil) or WHITE, Transparency = d.BorderStyle == "None" and 1 or 0 })
+                if d.BorderStyle == "Rainbow" then mk("UIGradient", { Parent = capStroke, Color = FS.RAINBOW }) end
+                local capKnob = mk("Frame", { Parent = cap, Size = UDim2.fromOffset(12, 12), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -3, 0.5, 0), BackgroundColor3 = arrayToColor(d.OffColor, nil) or WHITE, BorderSizePixel = 0, ZIndex = Z + 6 })
+                corner(capKnob, 999)
+                K.label(t, p[1], p[2], 9, G, "Text", { Size = UDim2.new(1, -6, 0, 14), Position = UDim2.new(0, 3, 1, -19), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 5 })
+                local needsPass = false
+                for key in pairs(d) do
+                    if FS.PremiumKeys[key] then needsPass = true end
+                end
+                if needsPass then
+                    local lock = mk("TextLabel", {
+                        Parent = t, Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -3, 0, 3),
+                        BackgroundColor3 = Color3.fromRGB(255, 200, 80), Text = "🔒", TextSize = 10, Font = Enum.Font.GothamBold, ZIndex = Z + 7,
+                    })
+                    lock:SetAttribute("IgnoreTextEffect", true)
+                    corner(lock, 999)
+                    table.insert(K.refreshers, function() lock.Visible = not FS.HasPremium() end)
+                    lock.Visible = not FS.HasPremium()
+                end
+                RowKit.Control(t)
+                t.MouseButton1Click:Connect(function()
+                    if needsPass and not FS.HasPremium() then K.showPremium() return end
+                    playSound(Sounds.Click, 0.4)
+                    local copy = FS.Sanitize(d, false)
+                    if K.ED.scope then
+                        if next(copy) then K.ED.O[K.ED.scope] = copy else K.ED.O[K.ED.scope] = nil end
+                    else
+                        K.ED.G = copy
+                    end
+                    K.RefreshAll()
+                    K.changed()
+                    K.setStatus("Plantilla \"" .. p[1] .. "\" cargada", "Preset \"" .. p[2] .. "\" loaded", Theme.Accent)
+                end)
+            end
+        end
+
+        -- 2) colores
+        local cc = K.section(2, "COLORES", "COLORS", "Fondo y texto en cada estado · AUTO = el del tema", "Background and text per state · AUTO = theme's",
+            { "OnColor", "OffColor", "TextOnColor", "TextOffColor" })
+        K.swatch(cc, 1, "Fondo encendido", "Background on", "OnColor", "Del tema", "Theme")
+        K.swatch(cc, 2, "Fondo apagado", "Background off", "OffColor", "Del tema", "Theme")
+        K.swatch(cc, 3, "Texto encendido", "Text on", "TextOnColor", "Auto", "Auto")
+        K.swatch(cc, 4, "Texto apagado", "Text off", "TextOffColor", "Auto", "Auto")
+
+        -- 3) transparencias
+        local tc = K.section(3, "TRANSPARENCIAS", "TRANSPARENCY", "0 = sólido · más alto = más transparente", "0 = solid · higher = more see-through",
+            { "BgAlpha", "TextAlpha", "BorderAlpha" })
+        K.slider(tc, 1, "Fondo", "Background", { 0, 0.95, 0.05, 0.3, "" }, "BgAlpha")
+        K.slider(tc, 2, "Texto", "Text", { 0, 0.9, 0.05, 0, "" }, "TextAlpha")
+        K.slider(tc, 4, "Borde (estilos propios)", "Border (custom styles)", { 0, 0.95, 0.05, 0, "" }, "BorderAlpha")
+
+        -- 4) imágenes por ID
+        local ic = K.section(4, "IMÁGENES POR ID", "IMAGES BY ID", "Una imagen de fondo y un ícono · pegá el ID o el link", "A background image and an icon · paste the ID or link",
+            { "BgImage", "ImageFit", "ImageTint", "ImageAlpha", "Icon", "IconSize", "IconSpin", "IconTint" }, true)
+        K.asset(ic, 1, "Imagen de fondo", "Background image", "BgImage")
+        K.caption(ic, 2, "Cómo se acomoda", "How it fits")
+        K.fieldChips(ic, 3, "ImageFit", { { "_nil", "Recortar", "Crop" }, { "Fit", "Encajar", "Fit" } }, 26)
+        K.swatch(ic, 4, "Teñir la imagen", "Tint the image", "ImageTint", "Original", "Original")
+        K.slider(ic, 5, "Transparencia de la imagen", "Image transparency", { 0, 0.95, 0.05, 0.25, "" }, "ImageAlpha")
+        K.asset(ic, 6, "Ícono", "Icon", "Icon")
+        K.slider(ic, 7, "Tamaño del ícono", "Icon size", { 10, 40, 1, 18, "px" }, "IconSize")
+        K.caption(ic, 8, "Ícono girando", "Spinning icon")
+        K.fieldChips(ic, 9, "IconSpin", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+        K.swatch(ic, 10, "Teñir el ícono", "Tint the icon", "IconTint", "Original", "Original")
+
+        -- 5) bordes
+        local bc = K.section(5, "BORDES Y FORMA", "BORDERS & SHAPE", "Original = el borde animado del tema", "Original = the theme's animated border",
+            { "BorderStyle", "BorderThick", "BorderSpeed", "BorderColor", "BorderColor2", "Shape" })
+        K.fieldChips(bc, 1, "BorderStyle", {
+            { "_nil", "Original", "Original" }, { "Solid", "Sólido", "Solid" }, { "Gradient", "Degradado", "Gradient" },
+            { "Rainbow", "Arcoíris", "Rainbow" }, { "Neon", "Neón", "Neon" }, { "None", "Sin borde", "No border" },
+        })
+        K.slider(bc, 2, "Grosor", "Thickness", { 0, 6, 0.5, 2, "px" }, "BorderThick")
+        K.slider(bc, 3, "Velocidad del giro / brillo", "Spin / glow speed", { 0.5, 12, 0.1, 3, "s" }, "BorderSpeed")
+        K.swatch(bc, 4, "Color del borde", "Border color", "BorderColor", "Del tema", "Theme")
+        K.swatch(bc, 5, "Segundo color (degradado)", "Second color (gradient)", "BorderColor2", "Blanco", "White")
+        K.caption(bc, 6, "Forma", "Shape")
+        K.fieldChips(bc, 7, "Shape", { { "_nil", "Redonda", "Round" }, { "Soft", "Suave", "Soft" }, { "Square", "Cuadrada", "Square" } }, 26)
+
+        -- 6) brillos
+        local gc = K.section(6, "BRILLOS", "GLOWS", "Aura alrededor, brillo de cristal y destello que pasa", "Aura around it, glass shine and a passing glint",
+            { "Glow", "GlowPower", "GlowSize", "GlowColor", "Gloss", "Shimmer" })
+        K.caption(gc, 1, "Aura", "Aura")
+        K.fieldChips(gc, 2, "Glow", { { "_nil", "Original", "Original" }, { "OnOnly", "Al encender", "When on" }, { "Always", "Siempre", "Always" }, { "Off", "Apagada", "Off" } }, 26)
+        K.slider(gc, 3, "Intensidad del aura", "Aura strength", { 0.1, 1, 0.05, 0.5, "" }, "GlowPower")
+        K.slider(gc, 4, "Tamaño del aura", "Aura size", { 4, 30, 1, 8, "px" }, "GlowSize")
+        K.swatch(gc, 5, "Color del aura", "Aura color", "GlowColor", "Auto", "Auto")
+        K.caption(gc, 6, "Brillo de cristal (arriba)", "Glass shine (top)")
+        K.fieldChips(gc, 7, "Gloss", { { "_nil", "Original", "Original" }, { true, "Sí", "Yes" }, { false, "No", "No" } }, 26)
+        K.caption(gc, 8, "Destello que recorre", "Passing glint")
+        K.fieldChips(gc, 9, "Shimmer", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+
+        -- 7) movimientos
+        local mc = K.section(7, "MOVIMIENTOS", "MOTION", "No cambia dónde lo dejaste ni el candado", "Doesn't change where you left it or the lock",
+            { "Motion", "MotionSpeed", "MotionAmount" }, true)
+        K.fieldChips(mc, 1, "Motion", {
+            { "_nil", "Quieto", "Still" }, { "Float", "Flotar", "Float" }, { "Sway", "Balanceo", "Sway" },
+            { "Wiggle", "Vaivén", "Wiggle" }, { "Beat", "Latido de luz", "Light beat" },
+        })
+        K.slider(mc, 2, "Duración", "Duration", { 0.3, 6, 0.1, 1.6, "s" }, "MotionSpeed")
+        K.slider(mc, 3, "Intensidad", "Amount", { 1, 12, 1, 4, "" }, "MotionAmount")
+
+        -- 8) efectos
+        local ec = K.section(8, "EFECTOS", "EFFECTS", "Detalles extra al tocar y mientras flota", "Extra details on tap and while floating",
+            { "Sparkles", "Ripple" }, true)
+        K.caption(ec, 1, "Destellos alrededor", "Sparkles around")
+        K.fieldChips(ec, 2, "Sparkles", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+        K.caption(ec, 3, "Onda al encender (la píldora ya trae la suya)", "Ripple when on (the pill already has its own)")
+        K.fieldChips(ec, 4, "Ripple", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+
+        -- 9) textos
+        local xc = K.section(9, "TEXTOS", "TEXT", "Texto propio, mayúsculas, fuente y tamaño", "Own text, case, font and size",
+            { "Text", "TextCase", "Font", "TextSize", "TextStroke", "HideText" })
+        do
+            local row = mk("Frame", { Parent = xc, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = Z + 4 })
+            K.label(row, "Texto propio", "Own text", 11, G, "Text", { Size = UDim2.new(1, 0, 0, 16), ZIndex = Z + 5 })
+            local box = K.box(row, { Size = UDim2.new(1, -84, 0, 30), Position = UDim2.fromOffset(0, 20), Font = Enum.Font.GothamBold, TextSize = 12 })
+            local clr = K.button(row, "Quitar", "Remove", "Background", { Size = UDim2.fromOffset(76, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 20), TextSize = 10 })
+            box.FocusLost:Connect(function()
+                if not K.ED.scope then box.Text = "" return end
+                local s = tostring(box.Text):gsub("[%c]", ""):sub(1, 32)
+                s = s:match("^%s*(.-)%s*$")
+                K.set("Text", s ~= "" and s or nil)
+                box.Text = s
+                K.changed()
+            end)
+            clr.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                if not K.ED.scope then return end
+                K.set("Text", nil)
+                box.Text = ""
+                K.changed()
+            end)
+            table.insert(K.refreshers, function()
+                local scoped = K.ED.scope ~= nil
+                box.TextEditable = scoped
+                clr.Visible = scoped
+                if scoped then
+                    K.placeholder(box, "Vacío = su nombre de siempre", "Empty = its usual name")
+                    if not box:IsFocused() then box.Text = K.get("Text") or "" end
+                else
+                    K.placeholder(box, "Elegí un toggle arriba para ponerle texto propio", "Pick a toggle above to give it its own text")
+                    box.Text = ""
+                end
+            end)
+        end
+        K.caption(xc, 2, "Mayúsculas", "Case")
+        K.fieldChips(xc, 3, "TextCase", { { "_nil", "Normal", "Normal" }, { "Upper", "MAYÚSCULAS", "UPPERCASE" }, { "Lower", "minúsculas", "lowercase" } }, 26)
+        K.caption(xc, 4, "Fuente", "Font")
+        K.fieldChips(xc, 5, "Font", {
+            { "_nil", "Original", "Original", "GothamBlack" }, { "GothamBold", "Gotham Bold", "Gotham Bold", "GothamBold" },
+            { "Gotham", "Gotham", "Gotham", "Gotham" }, { "FredokaOne", "Fredoka", "Fredoka", "FredokaOne" },
+            { "Arcade", "Arcade", "Arcade", "Arcade" }, { "Bangers", "Bangers", "Bangers", "Bangers" },
+            { "Cartoon", "Cartoon", "Cartoon", "Cartoon" }, { "SciFi", "Sci-Fi", "Sci-Fi", "SciFi" },
+            { "Code", "Code", "Code", "Code" }, { "Fantasy", "Fantasy", "Fantasy", "Fantasy" },
+            { "PermanentMarker", "Marker", "Marker", "PermanentMarker" }, { "LuckiestGuy", "Luckiest", "Luckiest", "LuckiestGuy" },
+        }, 26)
+        K.slider(xc, 6, "Tamaño del texto", "Text size", { 8, 28, 1, 17, "" }, "TextSize")
+        K.caption(xc, 7, "Contorno del texto", "Text outline")
+        K.fieldChips(xc, 8, "TextStroke", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+        K.caption(xc, 9, "Ocultar texto (ideal con ícono)", "Hide text (great with an icon)")
+        K.fieldChips(xc, 10, "HideText", { { "_nil", "No", "No" }, { true, "Sí", "Yes" } }, 26)
+
+        -- 10) compartir
+        local sc = K.section(10, "COMPARTIR", "SHARE", "Copiá el diseño de lo que estás editando y pasáselo a un amigo", "Copy the design you're editing and send it to a friend", nil, true)
+        do
+            local code = K.box(sc, { Size = UDim2.new(1, 0, 0, 32), LayoutOrder = 1, TextSize = 10 })
+            K.placeholder(code, "Pegá acá un código YYFLOAT1:...", "Paste a YYFLOAT1:... code here")
+            local row = mk("Frame", { Parent = sc, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
+            local copy = K.button(row, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
+            local load = K.button(row, "Cargar código", "Load code", "Secondary", { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new(0.5, 4, 0, 0), TextSize = 11 })
+            copy.MouseButton1Click:Connect(function()
+                local src = K.ED.scope and (K.ED.O[K.ED.scope] or {}) or K.ED.G
+                local clean = FS.Sanitize(src, false)
+                if next(clean) == nil then
+                    K.setStatus("No hay nada para copiar: el diseño está en original", "Nothing to copy: the design is original", Color3.fromRGB(235, 90, 90))
+                    return
+                end
+                local text = FS.Prefix .. HttpService:JSONEncode(clean)
+                code.Text = text
+                if type(setclipboard) == "function" then
+                    pcall(setclipboard, text)
+                    K.setStatus("Código copiado: pegalo en un chat para compartirlo", "Code copied: paste it in a chat to share it", Color3.fromRGB(80, 200, 120))
+                else
+                    K.setStatus("Tu ejecutor no copia al portapapeles: el código quedó en el cuadro", "Your executor can't copy: the code is in the box", Theme.Accent)
+                end
+            end)
+            load.MouseButton1Click:Connect(function()
+                local body = tostring(code.Text or ""):match(FS.Prefix .. "(.+)$")
+                local ok, dec = false, nil
+                if body then ok, dec = pcall(function() return HttpService:JSONDecode(body) end) end
+                if not ok or type(dec) ~= "table" then
+                    K.setStatus("Ese código no es válido (tiene que empezar con YYFLOAT1:)", "That code isn't valid (it must start with YYFLOAT1:)", Color3.fromRGB(235, 90, 90))
+                    return
+                end
+                local clean = FS.Sanitize(dec, false)
+                if K.ED.scope then
+                    if next(clean) then K.ED.O[K.ED.scope] = clean else K.ED.O[K.ED.scope] = nil end
+                else
+                    K.ED.G = clean
+                end
+                K.RefreshAll()
+                K.changed()
+                K.setStatus("Diseño cargado: tocá Guardar para quedártelo", "Design loaded: tap Save to keep it", Color3.fromRGB(80, 200, 120))
+            end)
+        end
+
+        -- 11) volver todo atrás
+        local rc = K.section(11, "VOLVER A EMPEZAR", "START OVER", "Borra el diseño global y todas las excepciones", "Clears the global design and every exception")
+        do
+            local armed = false
+            local b = K.button(rc, "Volver todo al diseño original", "Reset everything to the original design", "Secondary", { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 1, TextSize = 11 })
+            b.MouseButton1Click:Connect(function()
+                if not armed then
+                    armed = true
+                    K.L(b, "Tocá de nuevo para confirmar", "Tap again to confirm")
+                    task.delay(3, function()
+                        if armed then
+                            armed = false
+                            K.L(b, "Volver todo al diseño original", "Reset everything to the original design")
+                        end
+                    end)
+                    return
+                end
+                armed = false
+                K.L(b, "Volver todo al diseño original", "Reset everything to the original design")
+                K.ED.G, K.ED.O = {}, {}
+                K.SetScope(nil)
+                K.setStatus("Todo en original: tocá Guardar para aplicarlo", "Everything original: tap Save to apply it", Theme.Accent)
+            end)
+        end
+    end
+
+    -- ---------- ventana del estudio ----------
+    function FS.BuildUI(Window, Main)
+        local Z = 230 -- por debajo de la hoja premium del Estudio de Logos (280+), así se puede abrir encima
+        local K = { Z = Z, refreshers = {}, ED = { G = {}, O = {}, scope = nil }, conns = {}, samples = {} }
+        FS.UIKit(K)
+
+        function K.isPress(input)
+            return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+        end
+        function K.getRaw(key)
+            local ED = K.ED
+            if ED.scope then
+                local o = ED.O[ED.scope]
+                return o and o[key]
+            end
+            return ED.G[key]
+        end
+        function K.setRaw(key, raw)
+            local ED = K.ED
+            if ED.scope then
+                local o = ED.O[ED.scope] or {}
+                o[key] = raw
+                if next(o) == nil then ED.O[ED.scope] = nil else ED.O[ED.scope] = o end
+            else
+                ED.G[key] = raw
+            end
+        end
+        function K.get(key)
+            local ED = K.ED
+            local v = ED.G[key]
+            if ED.scope then
+                local o = ED.O[ED.scope]
+                if o and o[key] ~= nil then v = o[key] end
+            end
+            if v == "_orig" then return nil end
+            return v
+        end
+        function K.set(key, v)
+            if K.ED.scope then
+                K.setRaw(key, v == nil and "_orig" or v)
+            else
+                K.setRaw(key, v)
+            end
+        end
+        function K.resetKeys(keys)
+            for _, key in ipairs(keys) do K.setRaw(key, nil) end
+            K.RefreshAll()
+            K.changed()
+        end
+        function K.design()
+            return FS.ResolveFor(K.ED.G, K.ED.O, K.ED.scope)
+        end
+        -- sin pase: se cierra lo que esté abierto y aparece la hoja premium del Estudio de Logos encima
+        function K.showPremium()
+            playSound(Sounds.Click, 0.5)
+            if K.closePicker then pcall(K.closePicker, false) end
+            if K.closeScopeSheet then pcall(K.closeScopeSheet) end
+            local P = FS.Premium
+            if P and type(P.Show) == "function" then
+                pcall(P.Show)
+            else
+                K.setStatus("La verificación del pase todavía no cargó: probá en unos segundos", "The pass check hasn't loaded yet: try again in a few seconds", Color3.fromRGB(235, 90, 90))
+            end
+        end
+
+        local Overlay = mk("Frame", {
+            Parent = Main, Name = "FloatStudioOverlay", Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.3, BorderSizePixel = 0, Visible = false, Active = true, ZIndex = Z,
+        })
+        local Panel = mk("Frame", {
+            Parent = Overlay, Size = UDim2.new(0.95, 0, 0.95, 0), Position = UDim2.fromScale(0.5, 0.5), AnchorPoint = Vector2.new(0.5, 0.5),
+            BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 1,
+        })
+        Panel:SetAttribute("ThemeRole", "Background")
+        corner(Panel, 16)
+        stroke(Panel, Theme.Stroke, 1.5, 0.2)
+        local PanelScale = mk("UIScale", { Parent = Panel, Scale = 1 })
+        K.Panel = Panel
+
+        -- cabecera
+        local badge = mk("Frame", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 2 })
+        badge:SetAttribute("ThemeRole", "Accent")
+        corner(badge, 9)
+        local badgeStroke = mk("UIStroke", { Parent = badge, Thickness = 1.5, Color = WHITE })
+        local badgeGrad = mk("UIGradient", { Parent = badgeStroke, Color = FS.RAINBOW })
+        TweenService:Create(badgeGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+        RowKit.Icon(badge, 91328661401828, 18, Z + 3, "AccentText")
+        K.Title = K.label(Panel, "Estudio de Toggles Flotantes", "Floating Toggle Studio", 17, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(54, 8), ZIndex = Z + 2 })
+        K.label(Panel, "Diseño global + excepciones · píldora, círculo y combinado", "Global design + exceptions · pill, circle and combined", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -110, 0, 14), Position = UDim2.fromOffset(54, 30), ZIndex = Z + 2 })
+        local closeBtn = mk("TextButton", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -42, 0, 10), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 20, Font = Enum.Font.GothamBold, ZIndex = Z + 3 })
+        closeBtn:SetAttribute("ThemeRole", "Secondary")
+        closeBtn:SetAttribute("ThemeTextRole", "Text")
+        corner(closeBtn, 999)
+        RowKit.Control(closeBtn)
+        mk("Frame", { Parent = Panel, Size = UDim2.new(1, -28, 0, 1), Position = UDim2.fromOffset(14, 50), BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = Z + 2 }):SetAttribute("ThemeRole", "Stroke")
+
+        -- barra de alcance: global o un toggle
+        local scopeBar = mk("Frame", { Parent = Panel, Size = UDim2.new(1, -24, 0, 30), Position = UDim2.fromOffset(12, 56), BackgroundTransparency = 1, ZIndex = Z + 2 })
+        K.globalBtn = K.button(scopeBar, "Todos (global)", "All (global)", "Accent", { Size = UDim2.new(0.36, -4, 1, 0), TextSize = 11 })
+        K.scopeBtn = K.button(scopeBar, "Excepción: elegir toggle...", "Exception: pick toggle...", "Secondary", { Size = UDim2.new(0.64, -40, 1, 0), Position = UDim2.new(0.36, 4, 0, 0), TextSize = 11 })
+        K.scopeBtn.TextTruncate = Enum.TextTruncate.AtEnd
+        K.dropBtn = K.button(scopeBar, "Quitar", "Drop", "Background", { Size = UDim2.fromOffset(32, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), TextSize = 9 })
+        K.L(K.dropBtn, "×", "×")
+        K.dropBtn.TextSize = 16
+
+        -- vista previa fija (no se mueve al bajar por las opciones)
+        local dock = mk("Frame", { Parent = Panel, Size = UDim2.new(1, -24, 0, 98), Position = UDim2.fromOffset(12, 92), BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = Z + 2 })
+        dock:SetAttribute("ThemeRole", "Secondary")
+        corner(dock, 14)
+        stroke(dock, Theme.Stroke, 1, 0.6)
+        local stage = mk("Frame", { Parent = dock, Size = UDim2.new(1, -12, 0, 62), Position = UDim2.fromOffset(6, 6), BackgroundColor3 = WHITE, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 3 })
+        corner(stage, 10)
+        local stageGrad = mk("UIGradient", { Parent = stage, Rotation = 90 })
+        local backdrops = {
+            dark = { Color3.fromRGB(18, 20, 28), Color3.fromRGB(38, 42, 58) },
+            light = { Color3.fromRGB(242, 244, 250), Color3.fromRGB(212, 217, 230) },
+            sky = { Color3.fromRGB(78, 150, 232), Color3.fromRGB(150, 205, 120) },
+        }
+        local function setBackdrop(k)
+            K.backdrop = k
+            local b = backdrops[k] or backdrops.dark
+            stageGrad.Color = ColorSequence.new(b[1], b[2])
+        end
+        setBackdrop("dark")
+        local scaleS = 0.74
+        local row = mk("Frame", { Parent = stage, Size = UDim2.new(1 / scaleS, 0, 1 / scaleS, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, ZIndex = Z + 4 })
+        mk("UIScale", { Parent = row, Scale = scaleS })
+        mk("UIListLayout", { Parent = row, FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 16), SortOrder = Enum.SortOrder.LayoutOrder })
+        local slotDefs = { { "Pill5", 196 }, { "Circle", 72 }, { "Pill", 210 } }
+        for i, sd in ipairs(slotDefs) do
+            local slot = mk("Frame", { Parent = row, Size = UDim2.fromOffset(sd[2], 76), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = Z + 4 })
+            local text = sd[1] == "Pill" and GetText("Vuelo + Noclip", "Fly + Noclip") or GetText("Vuelo", "Fly")
+            local S = FS.MakeSample(slot, sd[1], text, K.design, Z + 4)
+            K.samples[i] = S
+            local tap = mk("TextButton", { Parent = slot, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = Z + 30 })
+            tap.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                K.flip = false
+                if K.stateChips then K.stateChips.Set("_mix") end
+                S.State = not S.State
+                S.Refresh(false)
+            end)
+        end
+        -- herramientas: estado, fondo y "en vivo en mis toggles reales"
+        local tools = mk("ScrollingFrame", {
+            Parent = dock, Size = UDim2.new(1, -12, 0, 22), Position = UDim2.fromOffset(6, 72), BackgroundTransparency = 1, BorderSizePixel = 0,
+            ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X, CanvasSize = UDim2.new(),
+            ScrollBarThickness = 0, ZIndex = Z + 3,
+        })
+        K.list(tools, 10, true)
+        local function setAll(on)
+            for _, S in ipairs(K.samples) do
+                if S.State ~= on then
+                    S.State = on
+                    S.Refresh(false)
+                end
+            end
+        end
+        K.stateChips = K.chips(tools, 1, { { "off", "Apagado", "Off" }, { "on", "Encendido", "On" }, { "flip", "Alternar", "Toggle" } }, nil, function(k)
+            K.flip = k == "flip"
+            if k == "flip" then
+                K.flipToken = (K.flipToken or 0) + 1
+                local my = K.flipToken
+                task.spawn(function()
+                    while K.flip and K.open and K.flipToken == my do
+                        setAll(not (K.samples[1] and K.samples[1].State))
+                        task.wait(1.4)
+                    end
+                end)
+            else
+                setAll(k == "on")
+            end
+        end, 22, true)
+        K.backChips = K.chips(tools, 2, { { "dark", "Oscuro", "Dark" }, { "light", "Claro", "Light" }, { "sky", "Cielo", "Sky" } }, nil, setBackdrop, 22, true)
+        K.liveBtn = mk("TextButton", {
+            Parent = tools, Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.3, BorderSizePixel = 0, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold,
+            LayoutOrder = 3, ZIndex = Z + 4,
+        })
+        K.liveBtn:SetAttribute("IgnoreTextEffect", true)
+        corner(K.liveBtn, 999)
+        K.pad(K.liveBtn, 0, 11, 11, 0)
+        function K.setLive(on)
+            K.liveReal = on
+            K.liveBtn.BackgroundColor3 = on and Theme.ToggleOn or Theme.Background
+            K.liveBtn.BackgroundTransparency = on and 0 or 0.3
+            K.liveBtn.TextColor3 = on and getContrastColor(Theme.ToggleOn) or Theme.Text
+            K.L(K.liveBtn, on and "● En vivo en mis toggles reales" or "Ver en mis toggles reales", on and "● Live on my real toggles" or "Show on my real toggles")
+            if on then
+                FS.LiveResolver = function(id) return FS.ResolveFor(K.ED.G, K.ED.O, id) end
+            else
+                FS.LiveResolver = nil
+            end
+            FS.ApplyAll()
+        end
+        K.liveBtn.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.4)
+            K.setLive(not K.liveReal)
+        end)
+
+        -- opciones (lo único que se desplaza)
+        local Content = mk("ScrollingFrame", {
+            Parent = Panel, Size = UDim2.new(1, -24, 1, -256), Position = UDim2.fromOffset(12, 196), BackgroundTransparency = 1,
+            BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = Z + 2,
+        })
+        K.list(Content, 8)
+        K.pad(Content, 0, 0, 4, 10)
+        K.Content = Content
+
+        -- pie: estado + cancelar + guardar
+        mk("Frame", { Parent = Panel, Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -54), BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = Z + 2 }):SetAttribute("ThemeRole", "Stroke")
+        local Status = K.label(Panel, "", "", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -290, 0, 34), Position = UDim2.new(0, 14, 1, -44), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, ZIndex = Z + 3 })
+        local saveBtn = K.button(Panel, "Guardar", "Save", "Accent", { Size = UDim2.fromOffset(132, 36), Position = UDim2.new(1, -144, 1, -46) })
+        local cancelBtn = K.button(Panel, "Cancelar", "Cancel", "Secondary", { Size = UDim2.fromOffset(118, 36), Position = UDim2.new(1, -270, 1, -46) })
+        local statusToken = 0
+        function K.setStatus(es, en, color)
+            statusToken += 1
+            K.L(Status, es, en)
+            Status.TextColor3 = color or Theme.TextDim
+            local my = statusToken
+            task.delay(5, function()
+                if statusToken == my then K.L(Status, "", "") end
+            end)
+        end
+
+        FS.UIPicker(K)
+        FS.UIScopeSheet(K)
+        FS.UISections(K)
+
+        -- un solo listener de arrastre para todos los deslizadores y el selector
+        table.insert(K.conns, UserInputService.InputChanged:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            if K.activeSlider then K.activeSlider.At(input.Position.X) end
+            if K.PK and K.PK.drag then K.pickAt(input.Position) end
+        end))
+        table.insert(K.conns, UserInputService.InputEnded:Connect(function(input)
+            if not K.isPress(input) then return end
+            if K.activeSlider then
+                TweenService:Create(K.activeSlider.Knob, TweenInfo.new(0.15), { Size = UDim2.fromOffset(16, 16) }):Play()
+                K.activeSlider = nil
+                Content.ScrollingEnabled = true
+            end
+            if K.PK then K.PK.drag = nil end
+        end))
+        Overlay.Destroying:Connect(function()
+            for _, c in ipairs(K.conns) do pcall(function() c:Disconnect() end) end
+            FS.LiveResolver = nil
+            FS.UI = nil
+        end)
+
+        -- refresco de la vista previa: uno solo por cuadro aunque se arrastre un deslizador
+        function K.UpdatePreview()
+            for _, S in ipairs(K.samples) do
+                if S.Live then FS.Reapply(S.Live) end
+            end
+        end
+        function K.changed()
+            if K.pending then return end
+            K.pending = true
+            task.defer(function()
+                K.pending = false
+                K.UpdatePreview()
+                if K.liveReal then FS.ApplyAll() end
+                K.refreshScopeBar()
+            end)
+        end
+        function K.RefreshAll()
+            for _, fn in ipairs(K.refreshers) do pcall(fn) end
+            K.refreshScopeBar()
+        end
+        function K.refreshScopeBar()
+            local n = 0
+            for _ in pairs(K.ED.O) do n += 1 end
+            local scoped = K.ED.scope ~= nil
+            K.globalBtn.BackgroundColor3 = scoped and Theme.Secondary or Theme.Accent
+            K.globalBtn.TextColor3 = scoped and Theme.Text or Theme.AccentText
+            K.globalBtn:SetAttribute("ThemeRole", scoped and "Secondary" or "Accent")
+            K.globalBtn:SetAttribute("ThemeTextRole", scoped and "Text" or "AccentText")
+            K.scopeBtn.BackgroundColor3 = scoped and Theme.Accent or Theme.Secondary
+            K.scopeBtn.TextColor3 = scoped and Theme.AccentText or Theme.Text
+            K.scopeBtn:SetAttribute("ThemeRole", scoped and "Accent" or "Secondary")
+            K.scopeBtn:SetAttribute("ThemeTextRole", scoped and "AccentText" or "Text")
+            K.scopeBtn.Font = scoped and Enum.Font.GothamBlack or Enum.Font.GothamBold
+            K.dropBtn.Visible = scoped
+            K.scopeBtn.Size = scoped and UDim2.new(0.64, -40, 1, 0) or UDim2.new(0.64, -4, 1, 0)
+            if scoped then
+                local e = FS.RegById[K.ED.scope]
+                local es = e and e.ES or K.ED.scope
+                local en = e and e.EN or K.ED.scope
+                K.L(K.scopeBtn, "Excepción: " .. es, "Exception: " .. en)
+            else
+                if FS.HasPremium() then
+                    K.L(K.scopeBtn, "Excepción: elegir toggle (" .. n .. ")", "Exception: pick toggle (" .. n .. ")")
+                else
+                    K.L(K.scopeBtn, "🔒 Excepciones por toggle · Premium", "🔒 Per-tog

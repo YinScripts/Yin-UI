@@ -1,0 +1,1036 @@
+ = state and UDim2.fromOffset(10, 10) or UDim2.fromOffset(9, 9) },
+            track = { BackgroundColor3 = state and txt or Color3.fromRGB(70, 70, 76), BackgroundTransparency = state and 0.15 or 0.2 },
+            knob = { Position = state and UDim2.new(1, -14, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = state and onBg or Color3.fromRGB(235, 235, 235) },
+        }
+        local targets = { win = win, label = label, stroke = winStroke, orb = orb, track = track, knob = knob }
+        if instant then
+            for key, goal in pairs(goals) do
+                for prop, value in pairs(goal) do targets[key][prop] = value end
+            end
+        else
+            local info = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            for key, goal in pairs(goals) do
+                TweenService:Create(targets[key], info, goal):Play()
+            end
+            pressScale.Scale = 0.92
+            TweenService:Create(pressScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        end
+
+        if glowPulse then
+            glowPulse:Cancel()
+            glowPulse = nil
+        end
+        if glow and glow.Parent then
+            local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            if state then
+                local glowIn = TweenService:Create(glow, fade, { BackgroundTransparency = 0.78 })
+                glowIn.Completed:Connect(function(playbackState)
+                    if playbackState == Enum.PlaybackState.Completed and wasOn and glow.Parent then
+                        glowPulse = TweenService:Create(glow,
+                            TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                            { BackgroundTransparency = 0.92 })
+                        glowPulse:Play()
+                    end
+                end)
+                glowIn:Play()
+            else
+                TweenService:Create(glow, fade, { BackgroundTransparency = 1 }):Play()
+            end
+        end
+        if state and ready and not wasOn then
+            playActivateRipple(onLight)
+        end
+        wasOn = state
+        ready = true
+    end
+
+    return { Apply = apply }
+end
+
+-- ============================================================================
+-- TAMBOR DE VALORES (DIAL) PARA LA PILDORA V6
+-- Va en el borde derecho de la pildora, en lugar del mini interruptor.
+-- Deslizar hacia ABAJO sube el valor, hacia ARRIBA lo baja. Un toque cambia de slider
+-- (si el toggle tiene varios). entries = { { Slider = <objeto de CreateSlider>, Tag = "VEL" }, ... }
+-- Al cambiar: Slider.Set(v) + Slider._callback(v) (Set solo mueve la barra, no aplica el valor).
+-- Si el slider del menu se mueve, el tambor lo lee cada 0.25 s mientras la pildora existe.
+-- Va dentro de FloatingPillV5: no suma locales al chunk principal.
+-- ============================================================================
+function FloatingPillV5.BuildDial(win, label, entries)
+    if not (win and label and type(entries) == "table" and #entries > 0) then return end
+    local STEP_PX, CELL = 14, 13
+    local idx = 1
+    local conns = {}
+    local multi = #entries > 1
+
+    local function niceStep(min, max)
+        local raw = (max - min) / 60
+        if raw <= 0 then return 1 end
+        local p = 10 ^ math.floor(math.log10(raw))
+        local n = raw / p
+        return (n < 1.5 and 1 or n < 3.5 and 2 or n < 7.5 and 5 or 10) * p
+    end
+    for _, e in ipairs(entries) do
+        local s = e.Slider
+        e.Min = tonumber(s and s._min) or 0
+        e.Max = tonumber(s and s._max) or 100
+        if e.Max < e.Min then e.Min, e.Max = e.Max, e.Min end
+        e.Step = niceStep(e.Min, e.Max)
+        e.Fmt = "%." .. math.max(0, -math.floor(math.log10(e.Step) + 1e-9)) .. "f"
+    end
+    local function snap(e, v)
+        v = math.floor(v / e.Step + 0.5) * e.Step
+        v = tonumber(string.format("%.6f", v)) or v
+        return math.clamp(v, e.Min, e.Max)
+    end
+    local function getVal(e)
+        local v = nil
+        if e.Slider and type(e.Slider.Get) == "function" then
+            local ok, got = pcall(e.Slider.Get)
+            if ok then v = tonumber(got) end
+        end
+        return v or tonumber(e.Slider and e.Slider._value) or e.Min
+    end
+    local function setVal(e, v)
+        if type(e.Slider.Set) == "function" then pcall(e.Slider.Set, v) end
+        e.Slider._value = v
+        local cb = e.Slider._callback
+        if type(cb) == "function" then
+            task.spawn(pcall, cb, v)
+        end
+    end
+
+    local drum = mk("TextButton", {
+        Parent = win,
+        Name = "YYDial",
+        Text = "",
+        AutoButtonColor = false,
+        Active = true,
+        Selectable = false,
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -3, 0.5, 0),
+        Size = UDim2.new(0, 44, 1, -4),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.72,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        ZIndex = 9,
+    })
+    corner(drum, 999)
+    local drumStroke = Instance.new("UIStroke")
+    drumStroke.Thickness = 1
+    drumStroke.Transparency = 0.82
+    drumStroke.Color = Color3.new(1, 1, 1)
+    drumStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    drumStroke.Parent = drum
+
+    local tape = mk("Frame", {
+        Parent = drum,
+        Name = "Tape",
+        BackgroundTransparency = 1,
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        Size = UDim2.new(1, 0, 0, CELL * 5),
+        Active = false,
+        ZIndex = 10,
+    })
+    -- 5 celdas: arriba los valores mas altos, abajo los mas bajos (la cinta "baja" al subir el valor)
+    local cells = {}
+    for i = 1, 5 do
+        local c = mk("TextLabel", {
+            Parent = tape,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, CELL),
+            Position = UDim2.new(0, 0, 0, (i - 1) * CELL),
+            Font = Enum.Font.GothamBlack,
+            Text = "",
+            TextSize = (i == 3) and 13 or 9,
+            TextTransparency = (i == 3) and 0 or 0.62,
+            TextColor3 = Color3.new(1, 1, 1),
+            Active = false,
+            ZIndex = 10,
+        })
+        c:SetAttribute("IgnoreTextEffect", true)
+        cells[i] = c
+    end
+    if multi then cells[2].TextTransparency = 0.85 end
+
+    local tag, dots = nil, {}
+    if multi then
+        tag = mk("TextLabel", {
+            Parent = drum,
+            BackgroundTransparency = 1,
+            Size = UDim2.new(1, 0, 0, 8),
+            Position = UDim2.new(0, 0, 0, 2),
+            Font = Enum.Font.GothamBlack,
+            Text = "",
+            TextSize = 7,
+            TextTransparency = 0.2,
+            TextColor3 = Color3.new(1, 1, 1),
+            Active = false,
+            ZIndex = 11,
+        })
+        tag:SetAttribute("IgnoreTextEffect", true)
+        local dotRow = mk("Frame", {
+            Parent = drum,
+            BackgroundTransparency = 1,
+            AnchorPoint = Vector2.new(0.5, 1),
+            Position = UDim2.new(0.5, 0, 1, -2),
+            Size = UDim2.new(1, -8, 0, 3),
+            Active = false,
+            ZIndex = 11,
+        })
+        local lay = Instance.new("UIListLayout")
+        lay.FillDirection = Enum.FillDirection.Horizontal
+        lay.HorizontalAlignment = Enum.HorizontalAlignment.Center
+        lay.Padding = UDim.new(0, 2)
+        lay.Parent = dotRow
+        for i = 1, #entries do
+            local d = mk("Frame", {
+                Parent = dotRow,
+                Size = UDim2.fromOffset(3, 3),
+                BackgroundColor3 = Color3.new(1, 1, 1),
+                BorderSizePixel = 0,
+                LayoutOrder = i,
+                Active = false,
+                ZIndex = 11,
+            })
+            corner(d, 999)
+            dots[i] = d
+        end
+    end
+
+    -- colores: siguen al texto de la pildora (blanco apagada, contraste del tema encendida, o lo del Estudio)
+    local function paint()
+        local c = label.TextColor3
+        for _, cell in ipairs(cells) do cell.TextColor3 = c end
+        if tag then tag.TextColor3 = c end
+        for i, d in ipairs(dots) do
+            d.BackgroundColor3 = c
+            d.BackgroundTransparency = (i == idx) and 0 or 0.65
+        end
+        drumStroke.Color = c
+        local dark = (c.R + c.G + c.B) / 3 < 0.5
+        drum.BackgroundTransparency = dark and 0.9 or 0.72
+    end
+
+    local shown = nil
+    local function render(offset)
+        local e = entries[idx]
+        local v = getVal(e)
+        shown = v
+        for i = 1, 5 do
+            local k = 3 - i -- i=1 -> +2 pasos, i=5 -> -2 pasos
+            local cv = v + k * e.Step
+            if k == 0 then
+                cells[i].Text = string.format(e.Fmt, v)
+            elseif cv <= e.Max + 1e-9 and cv >= e.Min - 1e-9 then
+                cells[i].Text = string.format(e.Fmt, snap(e, cv))
+            else
+                cells[i].Text = ""
+            end
+        end
+        if tag then tag.Text = tostring(e.Tag or "") end
+        tape.Position = UDim2.new(0, 0, 0.5, offset or 0)
+    end
+    local function bump()
+        local c = cells[3]
+        c.TextSize = 15
+        TweenService:Create(c, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { TextSize = 13 }):Play()
+    end
+
+    -- arrastre propio: el tambor es un boton encima de FloatClick, asi que no mueve ni prende la pildora
+    local dragInput, lastY, acc, moved = nil, 0, 0, 0
+    drum.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or input.UserInputType == Enum.UserInputType.MouseButton1 then
+            dragInput = input
+            lastY = input.Position.Y
+            acc, moved = 0, 0
+            drum.BackgroundTransparency = math.max(0, drum.BackgroundTransparency - 0.12)
+        end
+    end)
+    local function isOurs(input)
+        if not dragInput then return false end
+        if dragInput.UserInputType == Enum.UserInputType.MouseButton1 then
+            return input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.MouseButton1
+        end
+        return input == dragInput -- el mismo dedo (el joystick u otro dedo no lo mueven)
+    end
+    table.insert(conns, UserInputService.InputChanged:Connect(function(input)
+        if not isOurs(input) or not drum.Parent then return end
+        local y = input.Position.Y
+        local dy = y - lastY
+        lastY = y
+        acc = acc + dy
+        moved = moved + math.abs(dy)
+        local e = entries[idx]
+        while acc >= STEP_PX or acc <= -STEP_PX do
+            local dir = (acc > 0) and 1 or -1 -- abajo = sube
+            acc = acc - dir * STEP_PX
+            local cur = getVal(e)
+            local nv = snap(e, cur + dir * e.Step)
+            if nv ~= cur then
+                setVal(e, nv)
+                bump()
+                playSound(Sounds.Click, 0.25)
+            else
+                acc = 0
+            end
+        end
+        render(math.clamp(acc / STEP_PX * CELL, -6, 6))
+    end))
+    table.insert(conns, UserInputService.InputEnded:Connect(function(input)
+        if not isOurs(input) then return end
+        if input.UserInputType == Enum.UserInputType.MouseMovement then return end
+        dragInput = nil
+        if moved < 5 and multi then
+            idx = (idx % #entries) + 1
+            playSound(Sounds.Click, 0.4)
+        end
+        paint()
+        render(0)
+    end))
+
+    -- sincronizado con el slider del menu (liviano: 4 veces por segundo y solo mientras existe)
+    task.spawn(function()
+        while drum.Parent do
+            if not dragInput then
+                local v = getVal(entries[idx])
+                if v ~= shown then render(0) end
+            end
+            task.wait(0.25)
+        end
+    end)
+
+    table.insert(conns, label:GetPropertyChangedSignal("TextColor3"):Connect(paint))
+    drum.Destroying:Connect(function()
+        for _, cn in ipairs(conns) do pcall(function() cn:Disconnect() end) end
+        conns = {}
+    end)
+    paint()
+    render(0)
+    task.defer(paint)
+end
+
+-- ============================================================================
+-- ESTUDIO DE TOGGLES FLOTANTES (Ajustes > Estudio de Toggles Flotantes)
+-- Diseño global + excepciones por toggle para TODOS los flotantes: píldora V5, círculo y combinado.
+-- Regla de oro: un campo vacío (nil) = el diseño original sin tocar. Solo se pinta lo que el usuario cambió.
+-- Todo lo agregado vive en un Frame "YYStudioFX" dentro del flotante y se rehace entero en cada cambio,
+-- así nunca se pelea con los tweens originales (lo que se reemplaza, se apaga; no se pisa a medias).
+-- Va todo dentro de FloatingPillV5.Studio: no suma locales al chunk principal.
+-- ============================================================================
+FloatingPillV5.Studio = {
+    File = "yin_yang_float_studio.json",
+    Prefix = "YYFLOAT1:",
+    Registry = {},
+    RegById = {},
+    Live = {},
+    Data = { Global = {}, Overrides = {} },
+    LiveResolver = nil,
+}
+do
+    local FS = FloatingPillV5.Studio
+    local WHITE = Color3.new(1, 1, 1)
+
+    -- tipo de cada campo: "color" | "bool" | "asset" | "text" | {min, max} (número) | {Opcion = true} (lista)
+    FS.Fields = {
+        OnColor = "color", OffColor = "color", TextOnColor = "color", TextOffColor = "color",
+        BorderColor = "color", BorderColor2 = "color", GlowColor = "color", ImageTint = "color", IconTint = "color",
+        BgAlpha = { 0, 0.95 }, TextAlpha = { 0, 0.9 }, ImageAlpha = { 0, 0.95 }, BorderAlpha = { 0, 0.95 },
+        BorderThick = { 0, 6 }, BorderSpeed = { 0.5, 12 }, GlowPower = { 0.1, 1 }, GlowSize = { 4, 30 },
+        IconSize = { 10, 40 }, TextSize = { 8, 28 }, MotionSpeed = { 0.3, 6 }, MotionAmount = { 1, 12 },
+        BorderStyle = { Solid = true, Gradient = true, Rainbow = true, Neon = true, None = true },
+        Shape = { Round = true, Soft = true, Square = true },
+        Glow = { OnOnly = true, Always = true, Off = true },
+        Motion = { None = true, Float = true, Sway = true, Wiggle = true, Beat = true },
+        ImageFit = { Crop = true, Fit = true },
+        TextCase = { Upper = true, Lower = true },
+        Font = {
+            GothamBold = true, Gotham = true, FredokaOne = true, Arcade = true, Bangers = true, Cartoon = true,
+            SciFi = true, Code = true, Fantasy = true, PermanentMarker = true, LuckiestGuy = true,
+        },
+        Gloss = "bool", Shimmer = "bool", Sparkles = "bool", Ripple = "bool", IconSpin = "bool", TextStroke = "bool", HideText = "bool",
+        BgImage = "asset", Icon = "asset",
+        Text = "text",
+    }
+    FS.RAINBOW = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 80, 80)),
+        ColorSequenceKeypoint.new(0.2, Color3.fromRGB(255, 200, 70)),
+        ColorSequenceKeypoint.new(0.4, Color3.fromRGB(110, 255, 140)),
+        ColorSequenceKeypoint.new(0.6, Color3.fromRGB(70, 200, 255)),
+        ColorSequenceKeypoint.new(0.8, Color3.fromRGB(190, 110, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 80, 80)),
+    })
+
+    -- Acepta un número, rbxassetid://N, un link de Roblox o rbxthumb:// (miniatura)
+    function FS.CleanAsset(v)
+        v = tostring(v or ""):match("^%s*(.-)%s*$")
+        if v == "" then return "" end
+        if v:sub(1, 11) == "rbxthumb://" then return v end
+        local id = v:match("(%d+)")
+        return id and ("rbxassetid://" .. id) or ""
+    end
+
+    function FS.Copy(t)
+        if type(t) ~= "table" then return t end
+        local out = {}
+        for k, v in pairs(t) do out[k] = FS.Copy(v) end
+        return out
+    end
+
+    -- Deja solo campos conocidos y valores dentro de rango. allowOrig: "_orig" = "original en este toggle" (excepciones)
+    function FS.Sanitize(t, allowOrig)
+        local out = {}
+        if type(t) ~= "table" then return out end
+        for key, spec in pairs(FS.Fields) do
+            local v = t[key]
+            if v == nil then
+                -- nada
+            elseif allowOrig and v == "_orig" then
+                out[key] = v
+            elseif spec == "color" then
+                local c = arrayToColor(v, nil)
+                if c then out[key] = colorToArray(c) end
+            elseif spec == "bool" then
+                if type(v) == "boolean" then out[key] = v end
+            elseif spec == "asset" then
+                local a = FS.CleanAsset(v)
+                if a ~= "" then out[key] = a end
+            elseif spec == "text" then
+                local s = tostring(v):gsub("[%c]", ""):sub(1, 32)
+                if s ~= "" then out[key] = s end
+            elseif type(spec) == "table" and spec[1] ~= nil then
+                local n = tonumber(v)
+                if n and n == n then out[key] = math.clamp(n, spec[1], spec[2]) end
+            elseif type(spec) == "table" then
+                if type(v) == "string" and spec[v] then out[key] = v end
+            end
+        end
+        return out
+    end
+
+    -- Global + excepción del toggle -> diseño final (colores ya como Color3)
+    function FS.ResolveFrom(G, O, id)
+        local o = id and O and O[id]
+        local d = {}
+        for key, spec in pairs(FS.Fields) do
+            local v = G and G[key]
+            if o and o[key] ~= nil then v = o[key] end
+            if v == "_orig" then v = nil end
+            if spec == "color" and v ~= nil then v = arrayToColor(v, nil) end
+            d[key] = v
+        end
+        return d
+    end
+    -- PREMIUM (mismo gamepass que el Estudio de Logos). Libre: plantillas, colores, transparencias, bordes,
+    -- brillos y textos del diseño global. Premium: excepciones por toggle, imágenes/íconos, movimientos,
+    -- efectos y códigos para compartir. El chequeo (PR) lo hace el Estudio de Logos y lo pasa con SetPremium.
+    FS.PremiumKeys = {
+        BgImage = true, ImageFit = true, ImageTint = true, ImageAlpha = true,
+        Icon = true, IconSize = true, IconSpin = true, IconTint = true,
+        Motion = true, MotionSpeed = true, MotionAmount = true, Sparkles = true, Ripple = true,
+    }
+    -- para editar: solo si la cuenta ya figura con el pase
+    function FS.HasPremium()
+        local P = FS.Premium
+        return P ~= nil and P.PR ~= nil and P.PR.owned == true
+    end
+    -- para dibujar: mientras se verifica la cuenta no se recorta nada (así no parpadea al cargar)
+    function FS.CanRenderPremium()
+        local P = FS.Premium
+        return P ~= nil and P.PR ~= nil and (P.PR.owned == true or P.PR.checking == true)
+    end
+    function FS.SetPremium(PR, show)
+        FS.Premium = { PR = PR, Show = show }
+        if type(PR) == "table" and type(PR.listeners) == "table" then
+            table.insert(PR.listeners, function()
+                FS.ApplyAll()
+                if FS.RefreshEntry then pcall(FS.RefreshEntry) end
+                if FS.UI and FS.UI.K and FS.UI.K.RefreshAll then pcall(FS.UI.K.RefreshAll) end
+            end)
+        end
+    end
+    -- igual que ResolveFrom, pero sin pase: sin excepciones y sin los campos premium
+    function FS.ResolveFor(G, O, id)
+        if FS.CanRenderPremium() then return FS.ResolveFrom(G, O, id) end
+        local free = {}
+        for k, v in pairs(G or {}) do
+            if not FS.PremiumKeys[k] then free[k] = v end
+        end
+        return FS.ResolveFrom(free, nil, id)
+    end
+    function FS.Resolve(id)
+        return FS.ResolveFor(FS.Data.Global, FS.Data.Overrides, id)
+    end
+
+    function FS.Save()
+        local ok = false
+        pcall(function()
+            if writefile then
+                writefile(FS.File, HttpService:JSONEncode({ Version = 1, Global = FS.Data.Global, Overrides = FS.Data.Overrides }))
+                ok = true
+            end
+        end)
+        return ok
+    end
+    function FS.Load()
+        pcall(function()
+            if not (readfile and isfile and isfile(FS.File)) then return end
+            local dec = HttpService:JSONDecode(readfile(FS.File))
+            if type(dec) ~= "table" then return end
+            FS.Data.Global = FS.Sanitize(dec.Global, false)
+            local ov = {}
+            if type(dec.Overrides) == "table" then
+                for id, t in pairs(dec.Overrides) do
+                    if type(id) == "string" and #id <= 200 then
+                        local s = FS.Sanitize(t, true)
+                        if next(s) then ov[id] = s end
+                    end
+                end
+            end
+            FS.Data.Overrides = ov
+        end)
+    end
+
+    -- Cada toggle flotante se anota al crearse (esté flotando o no) para poder elegirlo en "Excepciones"
+    function FS.Register(id, es, en, tabEs, kind)
+        if type(id) ~= "string" or FS.RegById[id] then return end
+        local e = { Id = id, ES = tostring(es or id), EN = tostring(en or es or id), Tab = tostring(tabEs or ""), Kind = kind or "Toggle" }
+        FS.RegById[id] = e
+        table.insert(FS.Registry, e)
+    end
+
+    -- "Pill5" = píldora V5 · "Circle" = círculo · "Pill" = píldora clásica (combinado o círculo pasado a píldora)
+    function FS.KindOf(live)
+        if live.ForceKind then return live.ForceKind end
+        local win = live.Win
+        if win:GetAttribute("YYPillV5") then return "Pill5" end
+        if (SavedConfig.FloatingToggleStyle or "Pill") == "Circle" and not win:GetAttribute("HasLinkedSlider") then return "Circle" end
+        return "Pill"
+    end
+
+    -- Los loops cancelados quedan anotados en PerfOpt.Loops: se sacan los del flotante y los de piezas ya borradas
+    function FS.PruneLoops(inst)
+        for i = #PerfOpt.Loops, 1, -1 do
+            local e = PerfOpt.Loops[i]
+            if not e.wanted and (e.instance == inst or not (e.instance and e.instance.Parent)) then
+                table.remove(PerfOpt.Loops, i)
+            end
+        end
+    end
+
+    function FS.Clear(live)
+        for _, tw in ipairs(live.Tweens or {}) do pcall(function() tw:Cancel() end) end
+        live.Tweens = {}
+        if live.AuraPulse then pcall(function() live.AuraPulse:Cancel() end) live.AuraPulse = nil end
+        live.AuraToken = (live.AuraToken or 0) + 1
+        if live.FX then pcall(function() live.FX:Destroy() end) end
+        live.FX, live.Aura, live.BStroke, live.NeonStroke, live.IconImg, live.BGrad = nil, nil, nil, nil, nil, nil
+        live.BorderAuto, live.GradAuto = false, false
+        pcall(function()
+            live.Win.AnchorPoint = Vector2.new(0, 0)
+            live.Win.Rotation = 0
+        end)
+        FS.PruneLoops(live.Win)
+    end
+
+    -- Ancho de la píldora V5 según el texto real (fuente/tamaño pueden ser los del estudio)
+    function FS.FitWidth(live)
+        if live.Kind ~= "Pill5" or live.Win:GetAttribute("HasLinkedSlider") then return end
+        task.defer(function()
+            local win, lbl = live.Win, live.Label
+            if not (win and win.Parent and lbl and lbl.Parent) then return end
+            local ok, b = pcall(function()
+                return game:GetService("TextService"):GetTextSize(lbl.Text, lbl.TextSize, lbl.Font, Vector2.new(1000, 100))
+            end)
+            local w = math.ceil((ok and b.X) or 120) + 78 + (tonumber(win:GetAttribute("YYDialExtraPad")) or 0) -- LEFT_PAD + RIGHT_PAD de FloatingPillV5.Build (+ tambor)
+            local oldW = win.Size.X.Offset
+            if w ~= oldW then
+                local pos = win.Position
+                win.Size = UDim2.fromOffset(w, win.Size.Y.Offset)
+                win.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (oldW - w) / 2, pos.Y.Scale, pos.Y.Offset)
+            end
+            local g = live.Glow
+            if g and g.Parent then
+                g.Size = UDim2.fromOffset(win.Size.X.Offset + 16, win.Size.Y.Offset + 12)
+                g.Position = UDim2.new(win.Position.X.Scale, win.Position.X.Offset - 8, win.Position.Y.Scale, win.Position.Y.Offset - 6)
+            end
+        end)
+    end
+
+    function FS.DesiredText(live, src)
+        local D = live.D or {}
+        local t = (D.Text and D.Text ~= "") and D.Text or src or ""
+        if D.TextCase == "Upper" then
+            t = string.upper(t)
+        elseif D.TextCase == "Lower" then
+            t = string.lower(t)
+        end
+        if D.HideText and live.Kind == "Pill5" then t = "" end
+        return t
+    end
+    function FS.SetText(live)
+        local lbl = live.Label
+        if not (lbl and lbl.Parent) then return end
+        local want = FS.DesiredText(live, live.Src)
+        live.Desired = want
+        if lbl.Text ~= want then
+            live.Guard = true
+            lbl.Text = want
+            live.Guard = false
+        end
+    end
+
+    -- Arma las piezas fijas del diseño (forma, borde, imagen, ícono, brillos, movimiento, texto)
+    function FS.Decorate(live)
+        local win = live.Win
+        if not (win and win.Parent) then return end
+        FS.Clear(live)
+        local D = live.GetDesign() or {}
+        live.D = D
+        local kind = FS.KindOf(live)
+        live.Kind = kind
+        local pill5 = kind == "Pill5"
+        local zb = win.ZIndex
+        local radius = (D.Shape == "Soft" and UDim.new(0, 12)) or (D.Shape == "Square" and UDim.new(0, 5)) or UDim.new(0, 999)
+        live.Radius = radius
+        local function rc(o, r)
+            local c = Instance.new("UICorner")
+            c.CornerRadius = r or radius
+            c.Parent = o
+        end
+        local function loop(inst, info, goal)
+            local tw = TweenService:Create(inst, info, goal)
+            tw:Play()
+            table.insert(live.Tweens, tw)
+            return tw
+        end
+
+        -- forma
+        local wc = win:FindFirstChildOfClass("UICorner")
+        if wc then wc.CornerRadius = radius end
+        local gloss = win:FindFirstChild("FloatGloss")
+        if gloss then
+            local gc = gloss:FindFirstChildOfClass("UICorner")
+            if gc then gc.CornerRadius = radius end
+            gloss.Visible = D.Gloss ~= false
+        end
+        if live.Glow then
+            local gc = live.Glow:FindFirstChildOfClass("UICorner")
+            if gc then gc.CornerRadius = radius end
+        end
+
+        -- fondo
+        win.BackgroundTransparency = D.BgAlpha or (kind == "Circle" and 0.55 or 0.3)
+
+        -- borde original: se apaga si hay un estilo propio; el grosor se respeta en ambos
+        local st = live.Stroke or win:FindFirstChildOfClass("UIStroke")
+        live.Stroke = st
+        local baseThick = pill5 and 2 or (kind == "Circle" and 3 or 2.5)
+        local style = D.BorderStyle
+        if st then
+            st.Enabled = style == nil
+            st.Thickness = D.BorderThick or baseThick
+        end
+
+        local FX = mk("Frame", {
+            Name = "YYStudioFX",
+            Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Active = false,
+            ZIndex = zb,
+        })
+        FX.Parent = win
+        live.FX = FX
+
+        -- imagen de fondo por ID
+        if D.BgImage then
+            local img = mk("ImageLabel", {
+                Name = "YYStudioImage",
+                Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                Image = D.BgImage,
+                ImageTransparency = D.ImageAlpha or 0.25,
+                ImageColor3 = D.ImageTint or WHITE,
+                ScaleType = D.ImageFit == "Fit" and Enum.ScaleType.Fit or Enum.ScaleType.Crop,
+                Active = false,
+                ZIndex = zb,
+            })
+            rc(img)
+            img.Parent = FX
+        end
+
+        -- brillo de cristal (la píldora V5 ya trae el suyo: FloatGloss)
+        if D.Gloss == true and not gloss then
+            local g = mk("Frame", {
+                Size = UDim2.new(1, -10, 0.42, 0),
+                Position = UDim2.new(0, 5, 0, 2),
+                BackgroundColor3 = WHITE,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = zb,
+            })
+            rc(g)
+            local gg = Instance.new("UIGradient")
+            gg.Rotation = 90
+            gg.Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0.82), NumberSequenceKeypoint.new(1, 1) })
+            gg.Parent = g
+            g.Parent = FX
+        end
+
+        -- destello que recorre el toggle
+        if D.Shimmer then
+            local sh = mk("Frame", {
+                Size = UDim2.fromScale(1, 1),
+                BackgroundColor3 = WHITE,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = zb,
+            })
+            rc(sh)
+            local g = Instance.new("UIGradient")
+            g.Rotation = 18
+            g.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 1),
+                NumberSequenceKeypoint.new(0.4, 1),
+                NumberSequenceKeypoint.new(0.5, 0.5),
+                NumberSequenceKeypoint.new(0.6, 1),
+                NumberSequenceKeypoint.new(1, 1),
+            })
+            g.Offset = Vector2.new(-1, 0)
+            g.Parent = sh
+            sh.Parent = FX
+            loop(g, TweenInfo.new(2.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false, 1.4), { Offset = Vector2.new(1, 0) })
+        end
+
+        -- destellos (estrellitas que titilan)
+        if D.Sparkles then
+            for i, p in ipairs({ { 0.1, 0.2 }, { 0.88, 0.28 }, { 0.55, 0.88 }, { 0.3, 0.78 } }) do
+                local s = mk("Frame", {
+                    Size = UDim2.fromOffset(5, 5),
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.fromScale(p[1], p[2]),
+                    Rotation = 45,
+                    BackgroundColor3 = D.GlowColor or WHITE,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    Active = false,
+                    ZIndex = zb + 3,
+                })
+                s.Parent = FX
+                loop(s, TweenInfo.new(0.7 + i * 0.23, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, i * 0.3), { BackgroundTransparency = 0.05 })
+            end
+        end
+
+        -- borde propio
+        if style and style ~= "None" then
+            local bf = mk("Frame", {
+                Name = "YYStudioBorder",
+                Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = zb + 1,
+            })
+            rc(bf)
+            local bs = Instance.new("UIStroke")
+            bs.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+            bs.LineJoinMode = Enum.LineJoinMode.Round
+            bs.Thickness = D.BorderThick or baseThick
+            bs.Transparency = D.BorderAlpha or 0
+            bs.Color = WHITE
+            bs.Parent = bf
+            bf.Parent = FX
+            live.BStroke = bs
+            local c1 = D.BorderColor or Theme.Accent
+            live.BorderAuto = D.BorderColor == nil and (style == "Solid" or style == "Neon")
+            if style == "Gradient" or style == "Rainbow" then
+                local g = Instance.new("UIGradient")
+                if style == "Rainbow" then
+                    g.Color = FS.RAINBOW
+                else
+                    g.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, c1),
+                        ColorSequenceKeypoint.new(0.5, D.BorderColor2 or WHITE),
+                        ColorSequenceKeypoint.new(1, c1),
+                    })
+                end
+                g.Parent = bs
+                live.BGrad = g
+                live.GradAuto = style == "Gradient" and D.BorderColor == nil
+                loop(g, TweenInfo.new(D.BorderSpeed or 3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Rotation = 360 })
+            else
+                bs.Color = c1
+                if style == "Neon" then
+                    local of = mk("Frame", {
+                        Size = UDim2.new(1, 6, 1, 6),
+                        Position = UDim2.fromOffset(-3, -3),
+                        BackgroundTransparency = 1,
+                        BorderSizePixel = 0,
+                        Active = false,
+                        ZIndex = zb + 1,
+                    })
+                    rc(of, radius.Offset >= 999 and radius or UDim.new(0, radius.Offset + 3))
+                    local os = Instance.new("UIStroke")
+                    os.Thickness = bs.Thickness + 3
+                    os.Color = c1
+                    os.Transparency = 0.6
+                    os.Parent = of
+                    of.Parent = FX
+                    live.NeonStroke = os
+                    loop(os, TweenInfo.new((D.BorderSpeed or 2.4) / 2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Transparency = 0.9 })
+                end
+            end
+        end
+
+        -- ícono por ID (en la píldora V5 reemplaza al LED de estado)
+        if D.Icon then
+            local px = D.IconSize or (kind == "Circle" and 26 or 18)
+            local pos
+            if kind == "Circle" then
+                pos = UDim2.fromScale(0.5, 0.5)
+            elseif pill5 then
+                pos = UDim2.new(0, 17, 0, 17)
+            else
+                pos = UDim2.new(0, 8 + px / 2, 0.5, 0)
+            end
+            local ic = mk("ImageLabel", {
+                Name = "YYStudioIcon",
+                Size = UDim2.fromOffset(px, px),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = pos,
+                BackgroundTransparency = 1,
+                Image = D.Icon,
+                ImageColor3 = D.IconTint or WHITE,
+                ScaleType = Enum.ScaleType.Fit,
+                Active = false,
+                ZIndex = zb + 2,
+            })
+            ic.Parent = FX
+            live.IconImg = ic
+            if D.IconSpin then
+                loop(ic, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Rotation = 360 })
+            end
+        end
+        local orb = win:FindFirstChild("FloatOrb")
+        if orb then orb.Visible = D.Icon == nil end
+
+        -- aura propia: hija del flotante, así sigue al movimiento y al giro
+        local glowMode = D.Glow
+        if glowMode == nil and pill5 and D.Motion and D.Motion ~= "None" then glowMode = "OnOnly" end
+        live.GlowMode = glowMode
+        if live.Glow then live.Glow.Visible = glowMode == nil end
+        if glowMode and glowMode ~= "Off" then
+            local gs = D.GlowSize or 8
+            local au = mk("Frame", {
+                Name = "YYStudioAura",
+                Size = UDim2.new(1, gs * 2, 1, gs * 1.5),
+                Position = UDim2.fromOffset(-gs, -gs * 0.75),
+                BackgroundColor3 = Theme.ToggleOn,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = math.max(1, zb - 1),
+            })
+            rc(au, radius.Offset >= 999 and radius or UDim.new(0, radius.Offset + gs))
+            au.Parent = FX
+            live.Aura = au
+        end
+
+        -- movimiento (AnchorPoint/Rotation: no toca Position, así el arrastre y el candado siguen igual)
+        local m = D.Motion
+        local spd = D.MotionSpeed or 1.6
+        local amt = D.MotionAmount or 4
+        if m == "Float" then
+            local h = math.max(win.Size.Y.Offset, 1)
+            win.AnchorPoint = Vector2.new(0, amt / h)
+            loop(win, TweenInfo.new(spd, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { AnchorPoint = Vector2.new(0, -amt / h) })
+        elseif m == "Wiggle" then
+            local w = math.max(win.Size.X.Offset, 1)
+            win.AnchorPoint = Vector2.new(amt / w, 0)
+            loop(win, TweenInfo.new(math.max(0.08, spd * 0.25), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { AnchorPoint = Vector2.new(-amt / w, 0) })
+        elseif m == "Sway" then
+            win.Rotation = -amt
+            loop(win, TweenInfo.new(spd, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = amt })
+        elseif m == "Beat" then
+            local target = live.BStroke or (st and st.Enabled and st) or nil
+            if target then
+                loop(target, TweenInfo.new(math.max(0.15, spd * 0.5), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Thickness = target.Thickness + amt * 0.5 })
+            end
+        end
+
+        -- texto
+        local lbl = live.Label
+        if lbl and lbl.Parent then
+            local font = nil
+            if D.Font then
+                local okF, f = pcall(function() return Enum.Font[D.Font] end)
+                if okF then font = f end
+            end
+            lbl.Font = font or Enum.Font.GothamBlack
+            lbl.TextSize = D.TextSize or (pill5 and (win:GetAttribute("HasLinkedSlider") and 16 or 17)) or (kind == "Circle" and 11) or 21
+            lbl.TextTransparency = (D.HideText and not pill5) and 1 or (D.TextAlpha or 0)
+            lbl.TextStrokeTransparency = D.TextStroke and 0.35 or 1
+            lbl.TextStrokeColor3 = Color3.new(0, 0, 0)
+            FS.SetText(live)
+            FS.FitWidth(live)
+        end
+    end
+
+    -- Colores según el estado (se llama justo después del pintado original del toggle)
+    function FS.Paint(win, state, instant)
+        local live = win and FS.Live[win]
+        if not (live and live.D and win.Parent) then return end
+        local D, kind = live.D, live.Kind
+        local pill5 = kind == "Pill5"
+        state = state == true
+        local info = (not instant) and TweenInfo.new(pill5 and 0.22 or 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) or nil
+        local function go(obj, goal)
+            if not (obj and obj.Parent) then return end
+            if info then
+                TweenService:Create(obj, info, goal):Play()
+            else
+                for k, v in pairs(goal) do obj[k] = v end
+            end
+        end
+
+        local bg, txt
+        if state then bg, txt = D.OnColor, D.TextOnColor else bg, txt = D.OffColor, D.TextOffColor end
+        if not txt and bg then txt = getContrastColor(bg) end
+        if bg then
+            go(win, { BackgroundColor3 = bg })
+            if pill5 then
+                local fill = win:FindFirstChildOfClass("UIGradient")
+                if fill then fill.Color = ColorSequence.new(WHITE, Color3.fromRGB(215, 215, 215)) end
+            end
+        end
+        if txt and live.Label then go(live.Label, { TextColor3 = txt }) end
+        if pill5 and (bg or txt) then
+            local eff = txt or (state and getContrastColor(Theme.ToggleOn) or WHITE)
+            local orb, sw = win:FindFirstChild("FloatOrb"), win:FindFirstChild("FloatSwitch")
+            local knob = sw and sw:FindFirstChild("FloatKnob")
+            if state then
+                go(orb, { BackgroundColor3 = eff })
+                go(sw, { BackgroundColor3 = eff })
+                go(knob, { BackgroundColor3 = bg or Theme.ToggleOn })
+            elseif bg then
+                go(orb, { BackgroundColor3 = bg })
+            end
+        end
+        if live.BorderAuto then
+            local bc = state and Theme.ToggleOn or Theme.Accent
+            go(live.BStroke, { Color = bc })
+            go(live.NeonStroke, { Color = bc })
+        end
+        if live.GradAuto and live.BGrad then -- degradado sin color propio: sigue al tema activo
+            live.BGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent),
+                ColorSequenceKeypoint.new(0.5, D.BorderColor2 or WHITE),
+                ColorSequenceKeypoint.new(1, Theme.Accent),
+            })
+        end
+
+        -- aura
+        local au = live.Aura
+        if au and au.Parent then
+            if live.AuraPulse then
+                pcall(function() live.AuraPulse:Cancel() end)
+                live.AuraPulse = nil
+                FS.PruneLoops(au)
+            end
+            live.AuraToken = (live.AuraToken or 0) + 1
+            local my = live.AuraToken
+            local show = live.GlowMode == "Always" or (live.GlowMode == "OnOnly" and state)
+            au.BackgroundColor3 = D.GlowColor or (state and (D.OnColor or Theme.ToggleOn)) or D.BorderColor or Theme.Accent
+            local hi = 1 - (D.GlowPower or 0.5) * 0.44 -- 0.5 = igual que el aura original (0.78)
+            if show then
+                go(au, { BackgroundTransparency = hi })
+                local beat = D.Motion == "Beat"
+                task.delay(instant and 0 or 0.36, function()
+                    if live.AuraToken ~= my or not au.Parent then return end
+                    au.BackgroundTransparency = hi
+                    live.AuraPulse = TweenService:Create(au,
+                        TweenInfo.new(beat and math.max(0.15, (D.MotionSpeed or 1.6) * 0.5) or 1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                        { BackgroundTransparency = math.min(1, hi + (beat and 0.2 or 0.14)) })
+                    live.AuraPulse:Play()
+                end)
+            else
+                go(au, { BackgroundTransparency = 1 })
+            end
+        end
+
+        -- onda al encender (la píldora V5 ya trae la suya)
+        if D.Ripple and state and live.LastState == false and not instant and not pill5 and live.FX then
+            local r = mk("Frame", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = win.ZIndex,
+            })
+            local rcn = Instance.new("UICorner")
+            rcn.CornerRadius = live.Radius or UDim.new(0, 999)
+            rcn.Parent = r
+            local rs = Instance.new("UIStroke")
+            rs.Color = bg or Theme.ToggleOn
+            rs.Thickness = 2
+            rs.Transparency = 0.1
+            rs.Parent = r
+            r.Parent = live.FX
+            local ri = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(r, ri, { Size = UDim2.new(1, 28, 1, 20) }):Play()
+            TweenService:Create(rs, ri, { Transparency = 1 }):Play()
+            task.delay(0.8, function() pcall(function() r:Destroy() end) end)
+        end
+        live.LastState = state
+    end
+
+    -- win: el flotante · glow: su aura hermana (píldora V5) · label: su texto · id: el mismo que usa el candado
+    -- opts.Refresh: repinta con el código original (y ese llama a FS.Paint) · opts.Kind / opts.GetDesign: vista previa
+    function FS.Attach(win, glow, label, id, getState, opts)
+        if not win then return nil end
+        opts = opts or {}
+        local live = {
+            Win = win, Glow = glow, Label = label, Id = id, GetState = getState,
+            Refresh = opts.Refresh, ForceKind = opts.Kind,
+            Tweens = {}, Src = label and label.Text or "", Desired = label and label.Text or "",
+        }
+        live.GetDesign = opts.GetDesign or function()
+            return (FS.LiveResolver or FS.Resolve)(id)
+        end
+        FS.Live[win] = live
+        if label then
+            label:GetPropertyChangedSignal("Text"):Connect(function()
+                if live.Guard or label.Text == live.Desired then return end
+                live.Src = label.Text
+                FS.SetText(live)
+                FS.FitWidth(live)
+            end)
+        end
+        win.Destroying:Connect(function()
+            FS.Clear(live)
+            FS.Live[win] = nil
+        end)
+        FS.Decorate(live)
+        if live.Refresh then
+            pcall(live.Refresh)
+        else
+            FS.Paint(win, getState and getState(), true)
+        end
+        return live
+    end
+
+    function FS.Reapply(live)
+        if not (live and live.Win and live.Win.Parent) then return end
+        pcall(FS.Decorate, live)
+        if live.Refresh then
+            pcall(live.Refresh)
+        else
+            pcall(FS.Paint, live.Win, live.GetState and live.GetState(), true)
+        end
+    end
+    f

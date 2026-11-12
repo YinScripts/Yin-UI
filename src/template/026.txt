@@ -1,0 +1,734 @@
+", accent = Color3.fromRGB(255, 200, 0)},
+        {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
+        {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
+        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
+        {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
+        {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
+        {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
+        {mode = "IceBlue", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
+        {mode = "PurpleGlow", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
+        {mode = "MatrixGreen", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
+        {mode = "Sunset", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
+    }
+
+    for i, spec in ipairs(effectSpecs) do
+        createEffectRow(spec.mode, spec.titleES, spec.titleEN, spec.descES, spec.descEN, spec.accent, i)
+    end
+
+    -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
+    EffectsUI.Acc = 0
+    track(RunService.Heartbeat:Connect(function(dt)
+        effectPreviewElapsed = effectPreviewElapsed + dt
+        EffectsUI.Acc = EffectsUI.Acc + dt
+        if EffectsUI.Acc < 1 / 30 or not EffectsPage.Visible or PerfOpt.Flags.NoDecorAnim then return end
+        EffectsUI.Acc = 0
+        for index = #effectPreviews, 1, -1 do
+            local previewData = effectPreviews[index]
+            if not previewData.frame or not previewData.frame.Parent then
+                table.remove(effectPreviews, index)
+            else
+                local first = getEffectPreviewColor(previewData.mode, effectPreviewElapsed)
+                if first then
+                    local second = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.33)
+                    local third = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.66)
+                    setPreviewStripColors(previewData, first, second, third)
+                end
+            end
+        end
+        local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
+        local heroColor = current or Theme.Text
+        EffectsUI.HeroText.TextColor3 = heroColor
+        EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
+    end))
+
+    refreshEffectRows()
+
+    function Window:InitializeShaderSystem()
+    local ShaderLightingService = game:GetService("Lighting")
+    local ShaderTerrain = workspace:FindFirstChildOfClass("Terrain") or workspace.Terrain
+    local ShaderCore = {}
+    ShaderCore.__index = ShaderCore
+
+    local function shaderCopy(value, seen)
+        if type(value) ~= "table" then return value end
+        seen = seen or {}
+        if seen[value] then return seen[value] end
+        local result = {}
+        seen[value] = result
+        for key, item in pairs(value) do
+            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
+        end
+        return result
+    end
+
+    local function shaderSafe(callback)
+        local ok, result = pcall(callback)
+        return ok, result
+    end
+
+    local function shaderParent(spec)
+        if spec.parent == "Lighting" then
+            return ShaderLightingService
+        elseif spec.parent == "Terrain" then
+            return ShaderTerrain
+        elseif spec.parent == "CurrentCamera" then
+            return workspace.CurrentCamera
+        end
+        return spec.parent
+    end
+
+    local ShaderTargets = {
+        Lighting = {kind = "service", serviceName = "Lighting"},
+        Terrain = {kind = "direct", instance = ShaderTerrain},
+        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
+        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
+        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
+        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
+        BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
+        ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
+        ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
+        DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
+        SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
+        CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
+        CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
+        CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
+        CameraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
+        CameraSunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "CurrentCamera"},
+    }
+
+    local ShaderPropertyCatalog = {
+        Lighting = {
+            "Ambient", "Brightness", "ClockTime", "ColorShift_Bottom", "ColorShift_Top",
+            "EnvironmentDiffuseScale", "EnvironmentSpecularScale", "ExposureCompensation",
+            "FogColor", "FogEnd", "FogStart", "GeographicLatitude", "GlobalShadows",
+            "OutdoorAmbient", "ShadowSoftness", "TimeOfDay",
+        },
+        Terrain = {"WaterColor", "WaterReflectance", "WaterTransparency", "WaterWaveSize", "WaterWaveSpeed"},
+        Sky = {
+            "CelestialBodiesShown", "MoonAngularSize", "MoonTextureId", "SkyboxBk", "SkyboxDn",
+            "SkyboxFt", "SkyboxLf", "SkyboxOrientation", "SkyboxRt", "SkyboxUp", "StarCount",
+            "SunAngularSize", "SunTextureId",
+        },
+        Atmosphere = {"Color", "Decay", "Density", "Glare", "Haze", "Offset"},
+        Clouds = {"Color", "Cover", "Density"},
+        BloomEffect = {"Enabled", "Intensity", "Size", "Threshold"},
+        BlurEffect = {"Enabled", "Size"},
+        ColorCorrectionEffect = {"Enabled", "Brightness", "Contrast", "Saturation", "TintColor"},
+        ColorGradingEffect = {"Enabled", "TonemapperPreset"},
+        DepthOfFieldEffect = {"Enabled", "FarIntensity", "FocusDistance", "InFocusRadius", "NearIntensity"},
+        SunRaysEffect = {"Enabled", "Intensity", "Spread"},
+    }
+
+    local ShaderPresets = {
+        Morning = {
+            Lighting = {
+                ClockTime = 6.9, GeographicLatitude = 41, Brightness = 2.6,
+                Ambient = Color3.fromRGB(78, 82, 96), OutdoorAmbient = Color3.fromRGB(128, 124, 132),
+                ColorShift_Top = Color3.fromRGB(255, 214, 170), ColorShift_Bottom = Color3.fromRGB(170, 190, 228),
+                EnvironmentDiffuseScale = 0.90, EnvironmentSpecularScale = 0.85,
+                ExposureCompensation = 0.12, GlobalShadows = true, ShadowSoftness = 0.28,
+            },
+            Atmosphere = {
+                Density = 0.32, Offset = 0.18, Color = Color3.fromRGB(214, 214, 236),
+                Decay = Color3.fromRGB(126, 128, 168), Glare = 0.55, Haze = 1.60,
+            },
+            Clouds = {Cover = 0.34, Density = 0.22, Color = Color3.fromRGB(255, 236, 222)},
+            ColorCorrectionEffect = {
+                Enabled = true, Brightness = 0.03, Contrast = 0.18, Saturation = 0.16,
+                TintColor = Color3.fromRGB(255, 246, 232),
+            },
+            BloomEffect = {Enabled = true, Intensity = 0.32, Size = 26, Threshold = 0.95},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.08, FocusDistance = 90, InFocusRadius = 60, NearIntensity = 0},
+            SunRaysEffect = {Enabled = true, Intensity = 0.20, Spread = 0.72},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Midday = {
+            Lighting = {
+                ClockTime = 12.4, GeographicLatitude = 30, Brightness = 3.4,
+                Ambient = Color3.fromRGB(104, 106, 112), OutdoorAmbient = Color3.fromRGB(166, 166, 172),
+                ColorShift_Top = Color3.fromRGB(255, 250, 240), ColorShift_Bottom = Color3.fromRGB(206, 222, 255),
+                EnvironmentDiffuseScale = 1.0, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.06, GlobalShadows = true, ShadowSoftness = 0.12,
+            },
+            Atmosphere = {
+                Density = 0.18, Offset = 0.06, Color = Color3.fromRGB(200, 224, 255),
+                Decay = Color3.fromRGB(96, 128, 190), Glare = 0.25, Haze = 0.80,
+            },
+            Clouds = {Cover = 0.28, Density = 0.20, Color = Color3.fromRGB(255, 255, 255)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.02, Contrast = 0.20, Saturation = 0.22, TintColor = Color3.fromRGB(255, 253, 248)},
+            BloomEffect = {Enabled = true, Intensity = 0.20, Size = 18, Threshold = 1.4},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = true, Intensity = 0.10, Spread = 0.85},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Sunset = {
+            Lighting = {
+                ClockTime = 18.1, GeographicLatitude = 26, Brightness = 2.3,
+                Ambient = Color3.fromRGB(90, 54, 62), OutdoorAmbient = Color3.fromRGB(160, 84, 60),
+                ColorShift_Top = Color3.fromRGB(255, 128, 60), ColorShift_Bottom = Color3.fromRGB(90, 60, 120),
+                EnvironmentDiffuseScale = 0.75, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.08, GlobalShadows = true, ShadowSoftness = 0.38,
+            },
+            Atmosphere = {
+                Density = 0.34, Offset = 0.16, Color = Color3.fromRGB(255, 150, 96),
+                Decay = Color3.fromRGB(140, 52, 72), Glare = 1.20, Haze = 1.90,
+            },
+            Clouds = {Cover = 0.46, Density = 0.34, Color = Color3.fromRGB(255, 160, 110)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.02, Contrast = 0.26, Saturation = 0.28, TintColor = Color3.fromRGB(255, 212, 180)},
+            BloomEffect = {Enabled = true, Intensity = 0.50, Size = 32, Threshold = 0.85},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.10, FocusDistance = 100, InFocusRadius = 50, NearIntensity = 0},
+            SunRaysEffect = {Enabled = true, Intensity = 0.32, Spread = 0.80},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Night = {
+            Lighting = {
+                ClockTime = 0.6, GeographicLatitude = 45, Brightness = 1.30,
+                Ambient = Color3.fromRGB(24, 30, 56), OutdoorAmbient = Color3.fromRGB(40, 50, 92),
+                ColorShift_Top = Color3.fromRGB(70, 96, 170), ColorShift_Bottom = Color3.fromRGB(12, 18, 44),
+                EnvironmentDiffuseScale = 0.40, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.05, GlobalShadows = true, ShadowSoftness = 0.60,
+            },
+            Atmosphere = {
+                Density = 0.34, Offset = 0.20, Color = Color3.fromRGB(36, 52, 110),
+                Decay = Color3.fromRGB(10, 16, 48), Glare = 0.12, Haze = 1.60,
+            },
+            Clouds = {Cover = 0.32, Density = 0.20, Color = Color3.fromRGB(48, 62, 108)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.0, Contrast = 0.24, Saturation = 0.10, TintColor = Color3.fromRGB(190, 208, 255)},
+            BloomEffect = {Enabled = true, Intensity = 0.45, Size = 30, Threshold = 0.62},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Rain = {
+            Lighting = {
+                ClockTime = 15.2, GeographicLatitude = 40, Brightness = 1.05,
+                Ambient = Color3.fromRGB(40, 45, 58), OutdoorAmbient = Color3.fromRGB(68, 74, 88),
+                ColorShift_Top = Color3.fromRGB(120, 138, 172), ColorShift_Bottom = Color3.fromRGB(44, 52, 72),
+                EnvironmentDiffuseScale = 0.50, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = -0.12, GlobalShadows = true, ShadowSoftness = 0.92,
+                FogColor = Color3.fromRGB(86, 96, 116), FogStart = 12, FogEnd = 480,
+            },
+            Atmosphere = {
+                Density = 0.42, Offset = 0.22, Color = Color3.fromRGB(104, 118, 142),
+                Decay = Color3.fromRGB(44, 52, 72), Glare = 0, Haze = 3.0,
+            },
+            Clouds = {Cover = 0.90, Density = 0.78, Color = Color3.fromRGB(72, 80, 96)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = -0.05, Contrast = 0.18, Saturation = -0.18, TintColor = Color3.fromRGB(200, 216, 244)},
+            BloomEffect = {Enabled = true, Intensity = 0.16, Size = 14, Threshold = 1.6},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.12, FocusDistance = 60, InFocusRadius = 40, NearIntensity = 0},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+            Terrain = {
+                WaterColor = Color3.fromRGB(31, 56, 77), WaterReflectance = 0.60,
+                WaterTransparency = 0.25, WaterWaveSize = 0.22, WaterWaveSpeed = 12,
+            },
+        },
+        Stormfront = {
+            Lighting = {
+                ClockTime = 16.0, GeographicLatitude = 42, Brightness = 0.85,
+                Ambient = Color3.fromRGB(30, 34, 48), OutdoorAmbient = Color3.fromRGB(52, 58, 74),
+                ColorShift_Top = Color3.fromRGB(100, 118, 156), ColorShift_Bottom = Color3.fromRGB(32, 40, 60),
+                EnvironmentDiffuseScale = 0.42, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = -0.22, GlobalShadows = true, ShadowSoftness = 0.96,
+                FogColor = Color3.fromRGB(62, 72, 92), FogStart = 10, FogEnd = 360,
+            },
+            Atmosphere = {
+                Density = 0.52, Offset = 0.24, Color = Color3.fromRGB(84, 96, 120),
+                Decay = Color3.fromRGB(28, 34, 50), Glare = 0, Haze = 3.8,
+            },
+            Clouds = {Cover = 0.98, Density = 0.92, Color = Color3.fromRGB(52, 58, 72)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = -0.08, Contrast = 0.26, Saturation = -0.24, TintColor = Color3.fromRGB(190, 208, 246)},
+            BloomEffect = {Enabled = true, Intensity = 0.20, Size = 14, Threshold = 1.5},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.14, FocusDistance = 46, InFocusRadius = 22, NearIntensity = 0.03},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+            Terrain = {
+                WaterColor = Color3.fromRGB(21, 42, 64), WaterReflectance = 0.75,
+                WaterTransparency = 0.20, WaterWaveSize = 0.32, WaterWaveSpeed = 16,
+            },
+        },
+        Cinematic = {
+            Lighting = {
+                ClockTime = 17.2, GeographicLatitude = 30, Brightness = 1.90,
+                Ambient = Color3.fromRGB(56, 48, 60), OutdoorAmbient = Color3.fromRGB(110, 82, 86),
+                ColorShift_Top = Color3.fromRGB(230, 140, 100), ColorShift_Bottom = Color3.fromRGB(40, 44, 80),
+                EnvironmentDiffuseScale = 0.70, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.02, GlobalShadows = true, ShadowSoftness = 0.45,
+            },
+            Atmosphere = {
+                Density = 0.30, Offset = 0.12, Color = Color3.fromRGB(214, 146, 120),
+                Decay = Color3.fromRGB(70, 36, 56), Glare = 0.60, Haze = 1.40,
+            },
+            Clouds = {Cover = 0.36, Density = 0.26, Color = Color3.fromRGB(240, 180, 160)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = -0.01, Contrast = 0.34, Saturation = 0.04, TintColor = Color3.fromRGB(255, 226, 206)},
+            BloomEffect = {Enabled = true, Intensity = 0.38, Size = 28, Threshold = 0.90},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.22, FocusDistance = 55, InFocusRadius = 16, NearIntensity = 0.10},
+            SunRaysEffect = {Enabled = true, Intensity = 0.20, Spread = 0.74},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        GoldenSpecular = {
+            Lighting = {
+                ClockTime = 17.38, GeographicLatitude = 28, Brightness = 2.50,
+                Ambient = Color3.fromRGB(70, 60, 67), OutdoorAmbient = Color3.fromRGB(150, 112, 90),
+                ColorShift_Top = Color3.fromRGB(255, 176, 100), ColorShift_Bottom = Color3.fromRGB(70, 83, 126),
+                EnvironmentDiffuseScale = 0.75, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.15, GlobalShadows = true, ShadowSoftness = 0.40,
+            },
+            Atmosphere = {
+                Density = 0.24, Offset = 0.06, Color = Color3.fromRGB(240, 175, 129),
+                Decay = Color3.fromRGB(97, 52, 69), Glare = 0.90, Haze = 1.10,
+            },
+            Clouds = {Cover = 0.22, Density = 0.18, Color = Color3.fromRGB(255, 204, 165)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.02, Contrast = 0.30, Saturation = 0.14, TintColor = Color3.fromRGB(255, 231, 207)},
+            BloomEffect = {Enabled = true, Intensity = 0.36, Size = 28, Threshold = 0.95},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.13, FocusDistance = 74, InFocusRadius = 25, NearIntensity = 0.035},
+            SunRaysEffect = {Enabled = true, Intensity = 0.26, Spread = 0.80},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        OilWet = {
+            Lighting = {
+                ClockTime = 18.6, GeographicLatitude = 40, Brightness = 2.6,
+                Ambient = Color3.fromRGB(70, 62, 92), OutdoorAmbient = Color3.fromRGB(96, 86, 130),
+                ColorShift_Top = Color3.fromRGB(90, 60, 110), ColorShift_Bottom = Color3.fromRGB(20, 16, 36),
+                EnvironmentDiffuseScale = 0.55, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.40, GlobalShadows = true, ShadowSoftness = 0.50,
+            },
+            Atmosphere = {
+                Density = 0.24, Offset = 0.10, Color = Color3.fromRGB(110, 90, 150),
+                Decay = Color3.fromRGB(70, 40, 110), Glare = 0.40, Haze = 1.30,
+            },
+            Clouds = {Cover = 0.20, Density = 0.15, Color = Color3.fromRGB(90, 76, 120)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.03, Contrast = 0.36, Saturation = 0.34, TintColor = Color3.fromRGB(255, 240, 245)},
+            BloomEffect = {Enabled = true, Intensity = 0.80, Size = 38, Threshold = 0.68},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        VibrantGlow = {
+            Lighting = {
+                ClockTime = 16.75, GeographicLatitude = 34, Brightness = 4.2,
+                Ambient = Color3.fromRGB(150, 130, 160), OutdoorAmbient = Color3.fromRGB(180, 155, 178),
+                ColorShift_Top = Color3.fromRGB(255, 240, 230), ColorShift_Bottom = Color3.fromRGB(184, 205, 255),
+                EnvironmentDiffuseScale = 1.0, EnvironmentSpecularScale = 0.50,
+                ExposureCompensation = 0.16, GlobalShadows = true, ShadowSoftness = 0.42,
+            },
+            Atmosphere = {
+                Density = 0.35, Offset = 0.12, Color = Color3.fromRGB(255, 200, 220),
+                Decay = Color3.fromRGB(190, 145, 210), Glare = 0.38, Haze = 2.0,
+            },
+            Clouds = {Cover = 0.38, Density = 0.30, Color = Color3.fromRGB(255, 220, 236)},
+            ColorCorrectionEffect = {
+                Enabled = true, Brightness = 0.10, Contrast = 0.20, Saturation = 0.36,
+                TintColor = Color3.fromRGB(255, 245, 250),
+            },
+            BloomEffect = {Enabled = true, Intensity = 1.35, Size = 28, Threshold = 1.80},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.22, FocusDistance = 22, InFocusRadius = 30, NearIntensity = 0.04},
+            SunRaysEffect = {Enabled = true, Intensity = 0.10, Spread = 0.60},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        depthstyle = {
+            Lighting = {
+                Brightness = 1.55, Ambient = Color3.fromRGB(0, 0, 0), OutdoorAmbient = Color3.fromRGB(0, 0, 0),
+                ColorShift_Top = Color3.fromRGB(0, 0, 0), ColorShift_Bottom = Color3.fromRGB(0, 0, 0),
+                EnvironmentDiffuseScale = 0, EnvironmentSpecularScale = 0,
+                ExposureCompensation = 0.10, GlobalShadows = true, ShadowSoftness = 0.35,
+                FogColor = Color3.fromRGB(255, 255, 255), FogStart = 0, FogEnd = 180,
+            },
+            Atmosphere = {
+                Density = 0.78, Offset = 0.12, Color = Color3.fromRGB(255, 255, 255),
+                Decay = Color3.fromRGB(255, 255, 255), Glare = 0.05, Haze = 4.20,
+            },
+            Clouds = {Cover = 0.55, Density = 0.50, Color = Color3.fromRGB(255, 255, 255)},
+            ColorCorrectionEffect = {
+                Enabled = true, Brightness = 0.10, Contrast = 0.42, Saturation = -1,
+                TintColor = Color3.fromRGB(255, 255, 255),
+            },
+            BloomEffect = {Enabled = true, Intensity = 0.28, Size = 22, Threshold = 1.35},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Retro = {
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.0, Contrast = 0.05, Saturation = -0.10, TintColor = Color3.fromRGB(255, 245, 224)},
+            ColorGradingEffect = {Enabled = true, TonemapperPreset = Enum.TonemapperPreset.Retro},
+            BloomEffect = {Enabled = false}, BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false}, SunRaysEffect = {Enabled = false},
+        },
+        -- ---------- presets nuevos (v2-24) ----------
+        Photoreal = {
+            Lighting = {
+                ClockTime = 14.2, GeographicLatitude = 38, Brightness = 3.0,
+                Ambient = Color3.fromRGB(70, 72, 80), OutdoorAmbient = Color3.fromRGB(130, 132, 140),
+                ColorShift_Top = Color3.fromRGB(255, 244, 226), ColorShift_Bottom = Color3.fromRGB(190, 206, 236),
+                EnvironmentDiffuseScale = 1.0, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.0, GlobalShadows = true, ShadowSoftness = 0.15,
+            },
+            Atmosphere = {
+                Density = 0.24, Offset = 0.08, Color = Color3.fromRGB(196, 214, 240),
+                Decay = Color3.fromRGB(110, 130, 170), Glare = 0.30, Haze = 1.0,
+            },
+            Clouds = {Cover = 0.40, Density = 0.30, Color = Color3.fromRGB(250, 250, 255)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.0, Contrast = 0.22, Saturation = 0.06, TintColor = Color3.fromRGB(255, 252, 246)},
+            BloomEffect = {Enabled = true, Intensity = 0.18, Size = 20, Threshold = 1.6},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.06, FocusDistance = 120, InFocusRadius = 80, NearIntensity = 0},
+            SunRaysEffect = {Enabled = true, Intensity = 0.12, Spread = 0.80},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        BlueHour = {
+            Lighting = {
+                ClockTime = 19.1, GeographicLatitude = 35, Brightness = 1.6,
+                Ambient = Color3.fromRGB(50, 60, 96), OutdoorAmbient = Color3.fromRGB(80, 96, 150),
+                ColorShift_Top = Color3.fromRGB(140, 160, 255), ColorShift_Bottom = Color3.fromRGB(40, 40, 90),
+                EnvironmentDiffuseScale = 0.60, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.10, GlobalShadows = true, ShadowSoftness = 0.50,
+            },
+            Atmosphere = {
+                Density = 0.36, Offset = 0.18, Color = Color3.fromRGB(100, 120, 200),
+                Decay = Color3.fromRGB(40, 30, 90), Glare = 0.40, Haze = 1.80,
+            },
+            Clouds = {Cover = 0.30, Density = 0.20, Color = Color3.fromRGB(150, 140, 210)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.02, Contrast = 0.24, Saturation = 0.10, TintColor = Color3.fromRGB(210, 220, 255)},
+            BloomEffect = {Enabled = true, Intensity = 0.50, Size = 30, Threshold = 0.80},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = true, Intensity = 0.08, Spread = 0.60},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Foggy = {
+            Lighting = {
+                ClockTime = 8.2, GeographicLatitude = 40, Brightness = 1.7,
+                Ambient = Color3.fromRGB(100, 104, 112), OutdoorAmbient = Color3.fromRGB(150, 154, 162),
+                ColorShift_Top = Color3.fromRGB(230, 232, 240), ColorShift_Bottom = Color3.fromRGB(180, 186, 198),
+                EnvironmentDiffuseScale = 0.90, EnvironmentSpecularScale = 0.60,
+                ExposureCompensation = 0.10, GlobalShadows = true, ShadowSoftness = 0.90,
+                FogColor = Color3.fromRGB(196, 202, 212), FogStart = 0, FogEnd = 260,
+            },
+            Atmosphere = {
+                Density = 0.62, Offset = 0.0, Color = Color3.fromRGB(205, 210, 220),
+                Decay = Color3.fromRGB(150, 158, 170), Glare = 0, Haze = 6.0,
+            },
+            Clouds = {Cover = 0.70, Density = 0.50, Color = Color3.fromRGB(220, 224, 232)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.04, Contrast = 0.08, Saturation = -0.22, TintColor = Color3.fromRGB(240, 244, 250)},
+            BloomEffect = {Enabled = true, Intensity = 0.20, Size = 24, Threshold = 1.2},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.18, FocusDistance = 30, InFocusRadius = 20, NearIntensity = 0},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Desert = {
+            Lighting = {
+                ClockTime = 13.6, GeographicLatitude = 22, Brightness = 3.8,
+                Ambient = Color3.fromRGB(120, 100, 80), OutdoorAmbient = Color3.fromRGB(190, 160, 120),
+                ColorShift_Top = Color3.fromRGB(255, 226, 170), ColorShift_Bottom = Color3.fromRGB(220, 190, 150),
+                EnvironmentDiffuseScale = 1.0, EnvironmentSpecularScale = 0.70,
+                ExposureCompensation = 0.12, GlobalShadows = true, ShadowSoftness = 0.10,
+            },
+            Atmosphere = {
+                Density = 0.30, Offset = 0.05, Color = Color3.fromRGB(240, 206, 160),
+                Decay = Color3.fromRGB(180, 130, 90), Glare = 0.50, Haze = 2.20,
+            },
+            Clouds = {Cover = 0.06, Density = 0.05, Color = Color3.fromRGB(255, 255, 255)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.04, Contrast = 0.24, Saturation = 0.12, TintColor = Color3.fromRGB(255, 236, 210)},
+            BloomEffect = {Enabled = true, Intensity = 0.30, Size = 24, Threshold = 1.2},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = true, Intensity = 0.18, Spread = 0.90},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        NeonNight = {
+            Lighting = {
+                ClockTime = 22.5, GeographicLatitude = 40, Brightness = 1.4,
+                Ambient = Color3.fromRGB(40, 24, 70), OutdoorAmbient = Color3.fromRGB(60, 40, 110),
+                ColorShift_Top = Color3.fromRGB(255, 60, 200), ColorShift_Bottom = Color3.fromRGB(20, 200, 255),
+                EnvironmentDiffuseScale = 0.50, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.20, GlobalShadows = true, ShadowSoftness = 0.50,
+                FogColor = Color3.fromRGB(40, 20, 70), FogStart = 20, FogEnd = 600,
+            },
+            Atmosphere = {
+                Density = 0.40, Offset = 0.20, Color = Color3.fromRGB(110, 50, 170),
+                Decay = Color3.fromRGB(20, 140, 200), Glare = 0.60, Haze = 2.40,
+            },
+            Clouds = {Cover = 0.50, Density = 0.35, Color = Color3.fromRGB(90, 50, 140)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.02, Contrast = 0.30, Saturation = 0.38, TintColor = Color3.fromRGB(230, 214, 255)},
+            BloomEffect = {Enabled = true, Intensity = 0.90, Size = 36, Threshold = 0.70},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = false},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+        Monsoon = {
+            Lighting = {
+                ClockTime = 14.8, GeographicLatitude = 18, Brightness = 0.75,
+                Ambient = Color3.fromRGB(28, 32, 42), OutdoorAmbient = Color3.fromRGB(48, 54, 66),
+                ColorShift_Top = Color3.fromRGB(96, 110, 140), ColorShift_Bottom = Color3.fromRGB(28, 34, 48),
+                EnvironmentDiffuseScale = 0.40, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = -0.25, GlobalShadows = true, ShadowSoftness = 1.0,
+                FogColor = Color3.fromRGB(58, 66, 82), FogStart = 6, FogEnd = 260,
+            },
+            Atmosphere = {
+                Density = 0.58, Offset = 0.26, Color = Color3.fromRGB(78, 88, 108),
+                Decay = Color3.fromRGB(26, 30, 42), Glare = 0, Haze = 4.5,
+            },
+            Clouds = {Cover = 1.0, Density = 1.0, Color = Color3.fromRGB(46, 52, 64)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = -0.09, Contrast = 0.28, Saturation = -0.28, TintColor = Color3.fromRGB(186, 204, 240)},
+            BloomEffect = {Enabled = true, Intensity = 0.22, Size = 14, Threshold = 1.5},
+            BlurEffect = {Enabled = false, Size = 0},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.18, FocusDistance = 38, InFocusRadius = 18, NearIntensity = 0.03},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+            Terrain = {
+                WaterColor = Color3.fromRGB(18, 36, 54), WaterReflectance = 0.80,
+                WaterTransparency = 0.18, WaterWaveSize = 0.38, WaterWaveSpeed = 18,
+            },
+        },
+        -- "Nivel 0": luz fluorescente amarilla y pareja, colores lavados de cinta, luces quemadas
+        Level0 = {
+            Lighting = {
+                ClockTime = 12.0, GeographicLatitude = 40, Brightness = 1.6,
+                Ambient = Color3.fromRGB(122, 112, 62), OutdoorAmbient = Color3.fromRGB(150, 140, 82),
+                ColorShift_Top = Color3.fromRGB(255, 240, 170), ColorShift_Bottom = Color3.fromRGB(120, 110, 60),
+                EnvironmentDiffuseScale = 0.60, EnvironmentSpecularScale = 0.30,
+                ExposureCompensation = 0.25, GlobalShadows = true, ShadowSoftness = 1.0,
+                FogColor = Color3.fromRGB(178, 168, 96), FogStart = 20, FogEnd = 260,
+            },
+            Atmosphere = {
+                Density = 0.42, Offset = 0.0, Color = Color3.fromRGB(200, 190, 120),
+                Decay = Color3.fromRGB(110, 100, 50), Glare = 0, Haze = 2.6,
+            },
+            Clouds = {Cover = 0.6, Density = 0.4, Color = Color3.fromRGB(200, 190, 140)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = 0.06, Contrast = -0.08, Saturation = -0.18, TintColor = Color3.fromRGB(255, 246, 190)},
+            BloomEffect = {Enabled = true, Intensity = 0.90, Size = 40, Threshold = 0.82},
+            BlurEffect = {Enabled = true, Size = 2},
+            DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.25, FocusDistance = 25, InFocusRadius = 30, NearIntensity = 0},
+            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
+        },
+    }
+
+    function ShaderCore.new()
+        local self = setmetatable({}, ShaderCore)
+        self.Namespace = "YinYangShader"
+        self.Targets = shaderCopy(ShaderTargets)
+        self.Presets = shaderCopy(ShaderPresets)
+        self.Instances = {}
+        self.Created = {}
+        self.Original = {}
+        self.Tweens = {}
+        self.ActivePreset = nil
+        self.Destroyed = false
+        return self
+    end
+
+    function ShaderCore:_assertAlive()
+        assert(not self.Destroyed, "El sistema de shaders ya fue destruido")
+    end
+
+    function ShaderCore:_resolve(id, allowCreate)
+        local spec = self.Targets[id]
+        if not spec then return nil, "target no registrado: " .. tostring(id) end
+        if spec.instance then
+            if spec.instance and spec.instance.Parent then return spec.instance, false end
+            return nil, "target destruido: " .. tostring(id)
+        end
+        if spec.kind == "service" then
+            local ok, service = shaderSafe(function() return game:GetService(spec.serviceName) end)
+            if ok then return service, false end
+            return nil, service
+        end
+        local parent = shaderParent(spec)
+        if not parent then return nil, "parent no disponible para " .. tostring(id) end
+        local cached = self.Instances[id]
+        if cached and cached.Parent == parent and cached.ClassName == spec.className then
+            return cached, self.Created[id] == true
+        end
+        local managedName = self.Namespace .. "_" .. id
+        local named = parent:FindFirstChild(managedName)
+        if named and named.ClassName == spec.className then
+            self.Instances[id] = named
+            return named, self.Created[id] == true
+        end
+        local existing = parent:FindFirstChildOfClass(spec.className)
+        if existing then
+            self.Instances[id] = existing
+            return existing, false
+        end
+        if allowCreate == false then
+            return nil, "no existe " .. spec.className
+        end
+        local ok, created = shaderSafe(function()
+            local instance = Instance.new(spec.className)
+            instance.Name = managedName
+            instance.Parent = parent
+            pcall(function()
+                instance:SetAttribute("YinYangShaderManaged", true)
+                instance:SetAttribute("YinYangShaderTarget", id)
+            end)
+            return instance
+        end)
+        if not ok then return nil, "no se pudo crear " .. spec.className .. ": " .. tostring(created) end
+        self.Instances[id] = created
+        self.Created[id] = true
+        return created, true
+    end
+
+    function ShaderCore:_remember(instance, property)
+        self.Original[instance] = self.Original[instance] or {}
+        if self.Original[instance][property] ~= nil then return true end
+        local ok, value = shaderSafe(function() return instance[property] end)
+        if not ok then return false, value end
+        self.Original[instance][property] = value
+        return true
+    end
+
+    function ShaderCore:_cancel(instance, property)
+        local byProperty = self.Tweens[instance]
+        local tween = byProperty and byProperty[property]
+        if tween then
+            pcall(function() tween:Cancel() end)
+            byProperty[property] = nil
+        end
+    end
+
+    function ShaderCore:_set(instance, property, value, options)
+        local readable, current = shaderSafe(function() return instance[property] end)
+        if not readable then return false, "propiedad no disponible: " .. tostring(property) end
+        local remembered, rememberError = self:_remember(instance, property)
+        if not remembered then return false, rememberError end
+        self:_cancel(instance, property)
+
+        if options and options.tween then
+            local tweenOk, tween = shaderSafe(function()
+                return TweenService:Create(instance, TweenInfo.new(
+                    options.duration or 1,
+                    options.easingStyle or Enum.EasingStyle.Exponential,
+                    options.easingDirection or Enum.EasingDirection.Out
+                ), {[property] = value})
+            end)
+            if tweenOk and tween then
+                self.Tweens[instance] = self.Tweens[instance] or {}
+                self.Tweens[instance][property] = tween
+                local played = pcall(function() tween:Play() end)
+                if played then return true, true end
+            end
+        end
+
+        local assigned, errorMessage = shaderSafe(function() instance[property] = value end)
+        if not assigned then return false, errorMessage end
+        return true, false
+    end
+
+    function ShaderCore:Apply(patch, options)
+        self:_assertAlive()
+        options = options or {}
+        local report = {ok = true, applied = {}, failed = {}, created = {}}
+        for targetId, properties in pairs(patch or {}) do
+            local instance, targetError = self:_resolve(targetId, true)
+            if not instance then
+                report.ok = false
+                table.insert(report.failed, {target = targetId, error = targetError})
+            else
+                if self.Created[targetId] then table.insert(report.created, targetId) end
+                for property, value in pairs(properties) do
+                    local ok, tweenedOrError = self:_set(instance, property, value, options)
+                    if ok then
+                        table.insert(report.applied, {target = targetId, property = property, tweened = tweenedOrError})
+                    else
+                        report.ok = false
+                        table.insert(report.failed, {target = targetId, property = property, error = tweenedOrError})
+                    end
+                end
+            end
+        end
+        return report
+    end
+
+    function ShaderCore:ApplyPreset(name, options)
+        self:_assertAlive()
+        local preset = self.Presets[name]
+        if not preset then
+            return {ok = false, applied = {}, created = {}, failed = {{target = name, error = "preset no registrado"}}}
+        end
+        local report = self:Apply(shaderCopy(preset), options)
+        if report.ok then self.ActivePreset = name end
+        return report
+    end
+
+    function ShaderCore:RegisterPreset(name, preset)
+        self:_assertAlive()
+        assert(type(name) == "string" and type(preset) == "table", "preset inválido")
+        self.Presets[name] = shaderCopy(preset)
+    end
+
+    function ShaderCore:RegisterTarget(id, spec)
+        self:_assertAlive()
+        assert(type(id) == "string" and type(spec) == "table", "target inválido")
+        self.Targets[id] = shaderCopy(spec)
+        self.Instances[id] = nil
+        return self
+    end
+
+    function ShaderCore:GetTarget(id, createIfMissing)
+        self:_assertAlive()
+        return self:_resolve(id, createIfMissing ~= false)
+    end
+
+    function ShaderCore:Read(targetId, properties)
+        self:_assertAlive()
+        local instance, errorMessage = self:_resolve(targetId, false)
+        if not instance then return nil, errorMessage end
+        local result = {}
+        for property in pairs(properties or {}) do
+            local ok, value = shaderSafe(function() return instance[property] end)
+            if ok then result[property] = value end
+        end
+        return result
+    end
+
+    function ShaderCore:ApplyTo(instance, properties, options)
+        self:_assertAlive()
+        assert(instance and instance.Parent, "instancia Roblox inválida")
+        local report = {ok = true, applied = {}, failed = {}, created = {}}
+        for property, value in pairs(properties or {}) do
+            local ok, tweenedOrError = self:_set(instance, property, value, options or {})
+            if ok then
+                table.insert(report.applied, {target = instance.Name, property = property, tweened = tweenedOrError})
+            else
+                report.ok = false
+                table.insert(report.failed, {target = instance.Name, property = property, error = tweenedOrError})
+            end
+        end
+        return report
+    end
+
+    function ShaderCore:Restore(options)
+        self:_assertAlive()
+        options = options or {}
+        local report = {ok = true, restored = {}, failed = {}}
+        for instance, properties in pairs(self.Original) do
+            if instance and instance.Parent then
+                for property, value in pairs(properties) do
+                    self:_cancel(instance, property)
+                    local ok, errorMessage = shaderSafe(function() instance[property] = value end)
+                    if ok then
+                        table.insert(report.restored, {target = instance.Name, property = property})
+                    else
+                        report.ok = false
+                        table.insert(report.failed, {target = instance.Name, property = property, error = errorMessage})
+                    end
+                end
+            end
+        end
+        if options.destroyCreated then
+            for id, cre

@@ -1,0 +1,671 @@
+hipStroke, value
+    end
+    -- mosaicos (3 columnas): defs = {{Key, Label, Icon, Color}} ; T:Set(key, texto, delta)
+    function Widgets:Tiles(defs)
+        local grid = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1}, self.Frame)
+        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / 3, -6, 0, 50), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder}, grid)
+        local T = {Items = {}}
+        for i, d in ipairs(defs) do
+            local t = Kit.New("Frame", {LayoutOrder = i, BackgroundTransparency = 0.25, BorderSizePixel = 0}, grid, {bg = "Secondary"})
+            Kit.Corner(t, 12)
+            Kit.New("ImageLabel", {Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1,
+                Image = d.Icon or "", ImageColor3 = d.Color or Color3.new(1, 1, 1)}, t, d.Color == nil and {image = "Accent"} or nil)
+            local value = Kit.New("TextLabel", {Position = UDim2.fromOffset(28, 6), Size = UDim2.new(1, -32, 0, 20), BackgroundTransparency = 1,
+                Font = Enum.Font.GothamBlack, TextSize = 14, TextColor3 = d.Color or Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, Text = "0"}, t, d.Color == nil and {text = "Accent"} or nil)
+            Label(t, {Position = UDim2.fromOffset(8, 30), Size = UDim2.new(1, -12, 0, 14), Font = Enum.Font.GothamMedium, TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Left, Text = d.Label or ""}, "TextDim")
+            local pop = Kit.New("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 30), Size = UDim2.fromOffset(50, 14),
+                BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(110, 255, 140),
+                TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 1, Text = ""}, t)
+            T.Items[d.Key] = {Value = value, Pop = pop}
+        end
+        function T:Set(key, text, delta)
+            local it = T.Items[key]
+            if not it then return end
+            it.Value.Text = text
+            if delta and delta ~= "" then
+                it.Pop.Text = delta
+                it.Pop.TextTransparency = 0
+                Kit.Tween(it.Pop, 1.6, {TextTransparency = 1}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+            end
+        end
+        return T
+    end
+    -- caja de búsqueda
+    function Widgets:Search(placeholder)
+        local box = Kit.New("TextBox", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 32), BorderSizePixel = 0, Text = "",
+            PlaceholderText = placeholder or "", PlaceholderColor3 = Kit.Palette().TextDim, Font = Enum.Font.GothamMedium, TextSize = 13,
+            ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left}, self.Frame, {bg = "Secondary", text = "Text"})
+        Kit.Corner(box, 10)
+        Kit.Pad(box, 0, 0, 0, 12)
+        return box
+    end
+    -- grilla de opciones elegibles: G:Set({{Key, Text}}, elegido, alElegir)
+    function Widgets:Grid(o)
+        o = o or {}
+        local list = Kit.New("ScrollingFrame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Height or 120), BackgroundTransparency = 0.4,
+            BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y}, self.Frame, {bg = "Secondary"})
+        Kit.Corner(list, 10)
+        Kit.Pad(list, 6, 6, 6, 6)
+        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / (o.Columns or 2), -4, 0, 26), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder}, list)
+        local G = {Frame = list, Chips = {}}
+        function G:Set(items, selected, onPick)
+            for _, c in ipairs(G.Chips) do c:Destroy() end
+            table.clear(G.Chips)
+            for i, it in ipairs(items) do
+                local on = it.Key == selected
+                local b = Btn(list, {LayoutOrder = i, Font = Enum.Font.GothamMedium, TextSize = 11, Text = it.Text, TextTruncate = Enum.TextTruncate.AtEnd},
+                    on and "Accent" or "Background", on and "AccentText" or "Text")
+                Kit.Corner(b, 8)
+                b.Activated:Connect(function() if onPick then onPick(it.Key) end end)
+                G.Chips[#G.Chips + 1] = b
+            end
+        end
+        return G
+    end
+    -- fila de botones: defs = {{Text, Width (0..1), Accent, OnClick}} ; devuelve los botones (con :SetOn / :SetText)
+    function Widgets:Buttons(defs, o)
+        o = o or {}
+        local r = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Height or 32), BackgroundTransparency = 1}, self.Frame)
+        Kit.List(r, 6, true)
+        local out = {}
+        for i, d in ipairs(defs) do
+            local b = Btn(r, {LayoutOrder = i, Size = UDim2.new(d.Width or (1 / #defs), -4, 1, 0), TextSize = d.TextSize or 12, Text = d.Text or ""},
+                d.Accent and "Accent" or "Secondary", d.Accent and "AccentText" or (d.Dim and "TextDim" or "Text"))
+            -- color de texto propio (no sigue al tema)
+            if d.TextColor then b:SetAttribute("ThemeTextRole", nil) b.TextColor3 = d.TextColor end
+            Kit.Corner(b, o.Radius or 10)
+            if d.OnClick then b.Activated:Connect(d.OnClick) end
+            local obj = {Button = b}
+            function obj:SetOn(on) onOff(b, on, d.Dim and "TextDim" or "Text") end
+            function obj:SetText(t) b.Text = t end
+            out[i] = obj
+        end
+        return out, r
+    end
+    -- texto + [-] valor [+]
+    function Widgets:Stepper(name, onMinus, onPlus)
+        local r = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1}, self.Frame)
+        Kit.List(r, 6, true)
+        Label(r, {LayoutOrder = 1, Size = UDim2.new(0.38, -6, 1, 0), Font = Enum.Font.GothamMedium, TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left, Text = name}, "Text")
+        local minus = Btn(r, {LayoutOrder = 2, Size = UDim2.new(0.15, -4, 1, 0), Text = "-"})
+        Kit.Corner(minus, 10)
+        local value = Kit.New("TextLabel", {LayoutOrder = 3, Size = UDim2.new(0.3, -4, 1, 0), BackgroundTransparency = 0.4, BorderSizePixel = 0,
+            Font = Enum.Font.GothamBold, TextSize = 13, Text = ""}, r, {bg = "Secondary", text = "Text"})
+        Kit.Corner(value, 8)
+        local plus = Btn(r, {LayoutOrder = 4, Size = UDim2.new(0.15, -4, 1, 0), Text = "+"})
+        Kit.Corner(plus, 10)
+        if onMinus then minus.Activated:Connect(onMinus) end
+        if onPlus then plus.Activated:Connect(onPlus) end
+        return {SetValue = function(_, text) value.Text = text end, Value = value}
+    end
+    -- lista de renglones con botones chicos: L:Clear(); L:Add(texto, {{Text, Width, OnClick}}) -> botones
+    function Widgets:List()
+        local holder = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1}, self.Frame)
+        Kit.List(holder, 6)
+        local L = {Frame = holder}
+        function L:Clear()
+            for _, c in ipairs(holder:GetChildren()) do if c:IsA("Frame") then c:Destroy() end end
+        end
+        function L:Add(text, buttons, order)
+            local r = Kit.New("Frame", {LayoutOrder = order or 0, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 0.3, BorderSizePixel = 0},
+                holder, {bg = "Secondary"})
+            Kit.Corner(r, 10)
+            Label(r, {Position = UDim2.fromOffset(10, 0), Size = UDim2.new(1, -150, 1, 0), Font = Enum.Font.GothamMedium, TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = text}, "Text")
+            local out, x = {}, -6
+            for i, d in ipairs(buttons or {}) do
+                local b = Btn(r, {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, x, 0.5, 0), Size = UDim2.fromOffset(d.Width or 26, 24),
+                    TextSize = 11, Text = d.Text or ""}, "Background", "Text")
+                Kit.Corner(b, 8)
+                if d.OnClick then b.Activated:Connect(d.OnClick) end
+                x = x - (d.Width or 26) - 6
+                local obj = {Button = b}
+                function obj:SetOn(on) Kit.Role(b, {bg = on and "Accent" or "Background", text = on and "AccentText" or "Text"}) end
+                function obj:SetText(t) b.Text = t end
+                out[i] = obj
+            end
+            return out, r
+        end
+        return L
+    end
+    -- campo de formulario: texto a la izquierda, caja a la derecha
+    function Widgets:Field(name, placeholder)
+        local r = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1}, self.Frame)
+        Label(r, {Size = UDim2.new(0.42, -4, 1, 0), Font = Enum.Font.Gotham, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Text = name}, "TextDim")
+        local tb = Kit.New("TextBox", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0.58, 0, 1, 0),
+            BackgroundTransparency = 0.45, BorderSizePixel = 0, Text = "", PlaceholderText = placeholder or "", ClearTextOnFocus = false,
+            PlaceholderColor3 = Kit.Palette().TextDim, TextSize = 12, Font = Enum.Font.Gotham}, r, {bg = "Secondary", text = "Text"})
+        Kit.Corner(tb, 5)
+        Kit.Stroke(tb, "Stroke", 1, 0.6)
+        return tb
+    end
+    -- tarjeta de producto: icono, nombre, descripción y botón a la derecha
+    function Widgets:Item(o)
+        o = o or {}
+        local row = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 72), BorderSizePixel = 0}, self.Frame, {bg = "Secondary"})
+        Kit.Corner(row, 14)
+        local icon = Kit.New("ImageLabel", {Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(52, 52), BorderSizePixel = 0, Image = o.Icon or "",
+            ScaleType = Enum.ScaleType.Crop}, row, {bg = "Background"})
+        Kit.Corner(icon, 12)
+        local name = Label(row, {Position = UDim2.fromOffset(72, 13), Size = UDim2.new(1, -168, 0, 18), TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = o.Title or ""}, "Text")
+        Label(row, {Position = UDim2.fromOffset(72, 32), Size = UDim2.new(1, -168, 0, 28), Font = Enum.Font.Gotham, TextSize = 11, TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, Text = o.Desc or ""}, "TextDim")
+        local buy = Btn(row, {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), Size = UDim2.fromOffset(84, 32), TextSize = 13,
+            Text = o.Button or "···"}, "Accent", "AccentText")
+        Kit.Corner(buy, 16)
+        buy.MouseEnter:Connect(function() Kit.Tween(buy, 0.12, {Size = UDim2.fromOffset(88, 34)}) end)
+        buy.MouseLeave:Connect(function() Kit.Tween(buy, 0.12, {Size = UDim2.fromOffset(84, 32)}) end)
+        local I = {Row = row, Icon = icon, Name = name, Button = buy}
+        -- estilo del botón: "accent" (comprar) o "muted" (ya está)
+        function I:SetButton(text, style)
+            buy.Text = text
+            if style == "muted" then Kit.Role(buy, {bg = "Background", text = "TextDim"}) else Kit.Role(buy, {bg = "Accent", text = "AccentText"}) end
+        end
+        return I
+    end
+    -- resumen con foto: título chico, texto grande, 2 pastillas con icono y barra con texto abajo
+    function Widgets:Summary(o)
+        o = o or {}
+        local acc = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 92), BackgroundTransparency = 0.2, BorderSizePixel = 0},
+            self.Frame, {bg = "Secondary"})
+        Kit.Corner(acc, 16)
+        local grad = Kit.New("UIGradient", {Rotation = 0}, acc)
+        local function paintGrad(p) grad.Color = ColorSequence.new(p.Accent:Lerp(p.Secondary, 0.7), p.Secondary) end
+        paintGrad(Kit.Palette())
+        acc.Destroying:Connect(Kit.OnTheme(paintGrad))
+        local av = Kit.New("ImageLabel", {Position = UDim2.fromOffset(12, 12), Size = UDim2.fromOffset(42, 42), BorderSizePixel = 0,
+            Image = o.UserId and ("rbxthumb://type=AvatarHeadShot&id=" .. o.UserId .. "&w=150&h=150") or ""}, acc, {bg = "Background"})
+        Kit.Corner(av, 21)
+        Kit.Stroke(av, "Accent", 2, 0)
+        Label(acc, {Position = UDim2.fromOffset(62, 10), Size = UDim2.new(1, -150, 0, 14), TextSize = 10, Text = o.Caption or "",
+            TextXAlignment = Enum.TextXAlignment.Left}, "TextDim")
+        local title = Label(acc, {Position = UDim2.fromOffset(62, 24), Size = UDim2.new(1, -150, 0, 26), TextSize = 22, Font = Enum.Font.GothamBlack,
+            TextXAlignment = Enum.TextXAlignment.Left, Text = ""}, "Text")
+        local pills = {}
+        for i, pd in ipairs(o.Pills or {}) do
+            local f = Kit.New("Frame", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10 + (i - 1) * 26), Size = UDim2.fromOffset(84, 22),
+                BackgroundTransparency = 0.2, BorderSizePixel = 0}, acc, {bg = "Background"})
+            Kit.Corner(f, 11)
+            Kit.New("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+                HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 4)}, f)
+            Kit.New("ImageLabel", {Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = pd.Icon or "", ImageColor3 = pd.Color or Color3.new(1, 1, 1), LayoutOrder = 1}, f)
+            pills[i] = Kit.New("TextLabel", {LayoutOrder = 2, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                TextSize = 13, Font = Enum.Font.GothamBlack, TextColor3 = pd.Color or Color3.new(1, 1, 1), Text = "-"}, f)
+        end
+        local _, fill = Kit.Bar(acc, {Position = UDim2.fromOffset(12, 64), Size = UDim2.new(1, -24, 0, 8)}, "Accent", "Background")
+        local fg = Kit.New("UIGradient", {}, fill)
+        local function paintFill(p) fg.Color = ColorSequence.new(p.Accent, p.Accent:Lerp(Color3.new(1, 1, 1), 0.45)) end
+        paintFill(Kit.Palette())
+        acc.Destroying:Connect(Kit.OnTheme(paintFill))
+        local text = Label(acc, {Position = UDim2.fromOffset(12, 74), Size = UDim2.new(1, -24, 0, 14), TextSize = 10, Text = "",
+            TextXAlignment = Enum.TextXAlignment.Left}, "TextDim")
+        local S = {}
+        function S:SetTitle(t) title.Text = t end
+        function S:SetPill(i, t) if pills[i] then pills[i].Text = t end end
+        function S:SetProgress(f, t)
+            if t then text.Text = t end
+            Kit.Tween(fill, 0.35, {Size = UDim2.fromScale(math.clamp(tonumber(f) or 0, 0, 1), 1)}, Enum.EasingStyle.Quad)
+        end
+        return S
+    end
+    -- lista de personas: filas con foto (aro de color), nivel, nombre, @usuario, línea en vivo (RichText),
+    -- pastilla con icono a la derecha y detalle en celdas al tocar. o = {Cells = {{Key, Label}}, Pill = {Icon, Color, Bg}}
+    function Widgets:People(o)
+        o = o or {}
+        local list = Kit.New("ScrollingFrame", {LayoutOrder = self:_next(), Size = o.Size or UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+            BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y}, self.Frame)
+        if o.Position then list.Position = o.Position end
+        Kit.Pad(list, 0, o.PadX or 0, o.PadBottom or 0, o.PadX or 0)
+        Kit.List(list, 8)
+        local P = {Frame = list, Rows = {}}
+        function P:Row(key, d)
+            if P.Rows[key] then return P.Rows[key] end
+            local r = {Expanded = false}
+            r.Frame = Btn(list, {Size = UDim2.new(1, 0, 0, 66), BackgroundTransparency = 0.2, Text = "", ClipsDescendants = true}, "Secondary", "Text")
+            Kit.Corner(r.Frame, 16)
+            local st = Kit.Stroke(r.Frame, "Accent", 1.5, d.Highlight and 0.15 or 1)
+            st.Transparency = d.Highlight and 0.15 or 1
+            local avatar = Kit.New("ImageLabel", {Position = UDim2.fromOffset(10, 10), Size = UDim2.fromOffset(46, 46), BorderSizePixel = 0,
+                Image = d.UserId and ("rbxthumb://type=AvatarHeadShot&id=" .. d.UserId .. "&w=150&h=150") or ""}, r.Frame, {bg = "Background"})
+            Kit.Corner(avatar, 23)
+            r.Ring = Kit.New("UIStroke", {Thickness = 2.5}, avatar)
+            r.Badge = Kit.New("TextLabel", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 1, 0), Size = UDim2.fromOffset(40, 18),
+                BorderSizePixel = 0, Font = Enum.Font.GothamBlack, TextSize = 12, Text = "-", ZIndex = 3}, avatar, {bg = "Accent", text = "AccentText"})
+            Kit.Corner(r.Badge, 9)
+            Kit.New("UIStroke", {Thickness = 2, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, r.Badge, {bg = "Background"})
+            Label(r.Frame, {Position = UDim2.fromOffset(66, 9), Size = UDim2.new(1, -150, 0, 18), TextSize = 15, TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, Text = d.Name or ""}, "Text")
+            Label(r.Frame, {Position = UDim2.fromOffset(66, 27), Size = UDim2.new(1, -150, 0, 13), TextSize = 10, Font = Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = d.Sub or ""}, "TextDim")
+            r.Live = Label(r.Frame, {Position = UDim2.fromOffset(66, 43), Size = UDim2.new(1, -76, 0, 14), TextSize = 11, Font = Enum.Font.GothamMedium,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, RichText = true, Text = ""}, "TextDim")
+            if o.Pill then
+                local f = Kit.New("Frame", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), Size = UDim2.fromOffset(72, 26),
+                    BackgroundColor3 = o.Pill.Bg or Color3.fromRGB(58, 46, 12), BorderSizePixel = 0}, r.Frame)
+                Kit.Corner(f, 11)
+                Kit.New("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 4)}, f)
+                Kit.New("ImageLabel", {Size = UDim2.fromOffset(14, 14), BackgroundTransparency = 1, Image = o.Pill.Icon or "", ImageColor3 = o.Pill.Color, LayoutOrder = 1}, f)
+                r.Pill = Kit.New("TextLabel", {LayoutOrder = 2, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                    TextSize = 13, Font = Enum.Font.GothamBlack, TextColor3 = o.Pill.Color, Text = "-"}, f)
+            end
+            local detail = Kit.New("Frame", {Position = UDim2.fromOffset(10, 70), Size = UDim2.new(1, -20, 0, 64), BackgroundTransparency = 1}, r.Frame)
+            Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / 3, -6, 0, 29), CellPadding = UDim2.fromOffset(8, 6)}, detail)
+            r.Cells = {}
+            for _, c in ipairs(o.Cells or {}) do
+                local cell = Kit.New("Frame", {BackgroundTransparency = 0.25, BorderSizePixel = 0}, detail, {bg = "Background"})
+                Kit.Corner(cell, 9)
+                Label(cell, {Position = UDim2.fromOffset(7, 2), Size = UDim2.new(1, -10, 0, 11), Font = Enum.Font.GothamMedium, TextSize = 9,
+                    TextXAlignment = Enum.TextXAlignment.Left, Text = c.Label or ""}, "TextDim")
+                r.Cells[c.Key] = Label(cell, {Position = UDim2.fromOffset(7, 13), Size = UDim2.new(1, -10, 0, 14), TextSize = 12,
+                    TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = "-"}, "Text")
+            end
+            r.Frame.Activated:Connect(function()
+                r.Expanded = not r.Expanded
+                Kit.Tween(r.Frame, 0.2, {Size = UDim2.new(1, 0, 0, r.Expanded and 140 or 66)}, Enum.EasingStyle.Quad)
+            end)
+            function r:Remove() r.Frame:Destroy() P.Rows[key] = nil end
+            P.Rows[key] = r
+            return r
+        end
+        return P
+    end
+
+    -- ============ ventana ============
+    -- o = {Name, DisplayOrder, IgnoreGuiInset, Width, Height (nil = alto automático), Position, AnchorPoint, MinSize, MaxSize,
+    --      Title, Subtitle, Info (línea extra), Avatar (UserId), Badge (true = chip de nivel), Count (true = chip contador),
+    --      Minimize, Close, Lock (Locked = empieza fijada), Modal (fondo oscuro y centrada), Scroll, HeaderHeight, OnClose, Flash, Gap, Pad}
+    function Kit.Window(o)
+        o = o or {}
+        local W = {Closed = false}
+        local gui = Kit.Screen(o.Name or "YYWindow", o.DisplayOrder or 50, o.Parent)
+        gui.IgnoreGuiInset = o.IgnoreGuiInset == true
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        W.Gui = gui
+        if o.Flash then
+            W.Flash = Kit.New("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(200, 0, 0), BackgroundTransparency = 1,
+                BorderSizePixel = 0, Active = false, ZIndex = 0}, gui)
+        end
+        local parent = gui
+        if o.Modal then
+            W.Shade = Kit.New("TextButton", {Name = "Shade", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+                BackgroundTransparency = 1, Text = "", AutoButtonColor = false}, gui)
+            W.Shade.Activated:Connect(function() W:Close() end)
+            parent = W.Shade
+        end
+        local auto = o.Height == nil
+        local frame = Kit.New(o.Modal and "TextButton" or "Frame", {Name = "Window", AnchorPoint = o.AnchorPoint or (o.Modal and Vector2.new(0.5, 0.5) or Vector2.new(0, 0)),
+            Position = o.Position or (o.Modal and UDim2.fromScale(0.5, 0.5) or UDim2.fromOffset(16, 110)),
+            Size = typeof(o.Width) == "UDim2" and o.Width or UDim2.new(0, o.Width or 300, typeof(o.Height) == "UDim" and o.Height.Scale or 0,
+                typeof(o.Height) == "UDim" and o.Height.Offset or (o.Height or 0)),
+            AutomaticSize = auto and Enum.AutomaticSize.Y or Enum.AutomaticSize.None, BackgroundTransparency = o.Transparency or 0.04,
+            BorderSizePixel = 0, Active = true, ClipsDescendants = not auto}, parent, {bg = "Background"})
+        if o.Modal then frame.Text = "" frame.AutoButtonColor = false end
+        Kit.Corner(frame, o.Radius or 18)
+        Kit.Stroke(frame, o.Modal and "Stroke" or "Accent", 1.5, o.Modal and 0.55 or 0.4)
+        if o.MinSize or o.MaxSize then
+            Kit.New("UISizeConstraint", {MinSize = o.MinSize or Vector2.new(0, 0), MaxSize = o.MaxSize or Vector2.new(math.huge, math.huge)}, frame)
+        end
+        W.Frame = frame
+        W.Scale = Kit.New("UIScale", {Scale = 0.9}, frame)
+
+        -- cabecera
+        local headH = o.HeaderHeight or ((o.Avatar or o.Subtitle) and 52 or 40)
+        local head = Btn(frame, {Name = "Header", Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = o.HeaderTransparency or 0.15, Text = ""},
+            o.FlatHeader and "Background" or "Secondary", "Text")
+        if o.FlatHeader then head.BackgroundTransparency = 1 end
+        Kit.Corner(head, o.Radius or 18)
+        if not o.FlatHeader then
+            -- tapa las esquinas de abajo de la cabecera
+            Kit.New("Frame", {Size = UDim2.new(1, 0, 0, 16), Position = UDim2.new(0, 0, 1, -16), BorderSizePixel = 0,
+                BackgroundTransparency = o.HeaderTransparency or 0.15}, head, {bg = "Secondary"})
+        end
+        W.Header = head
+        local x = 14
+        if o.Avatar then
+            local av = Kit.New("ImageLabel", {Position = UDim2.new(0, 12, 0.5, -20), Size = UDim2.fromOffset(40, 40), BorderSizePixel = 0,
+                Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(o.Avatar) .. "&w=150&h=150"}, head, {bg = "Secondary"})
+            Kit.Corner(av, 20)
+            Kit.Stroke(av, "Accent", 2, 0.2)
+            x = 60
+        end
+        local right = 12
+        local function headButton(text)
+            local b = Btn(head, {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -right, 0.5, 0), Size = UDim2.fromOffset(28, 28),
+                TextSize = 14, Text = text}, "Background", "Text")
+            Kit.Corner(b, 14)
+            right = right + 34
+            return b
+        end
+        if o.Close ~= false then
+            W.CloseButton = headButton("X")
+            W.CloseButton.Activated:Connect(function() W:Close() end)
+        end
+        if o.Minimize then
+            W.MinButton = headButton("-")
+            W.MinButton.Activated:Connect(function() W:SetMinimized(not W.Minimized) end)
+        end
+        if o.Lock then
+            W.LockButton = headButton("📌")
+            W.Locked = o.Locked == true
+            W.LockButton.BackgroundTransparency = W.Locked and 0 or 0.6
+            W.LockButton.Activated:Connect(function()
+                W.Locked = not W.Locked
+                W.LockButton.BackgroundTransparency = W.Locked and 0 or 0.6
+                if o.OnLock then o.OnLock(W.Locked) end
+            end)
+        end
+        if o.Count then
+            W.CountChip = Kit.New("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -right, 0.5, 0), Size = UDim2.fromOffset(44, 22),
+                BorderSizePixel = 0, Font = Enum.Font.GothamBold, TextSize = 12, Text = "0"}, head, {bg = "Accent", text = "AccentText"})
+            Kit.Corner(W.CountChip, 11)
+            right = right + 50
+        end
+        if o.Badge then
+            W.BadgeChip = Kit.New("TextLabel", {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -right, 0.5, 0), Size = UDim2.fromOffset(62, 24),
+                BorderSizePixel = 0, Font = Enum.Font.GothamBlack, TextSize = 12, Text = ""}, head, {bg = "Accent", text = "AccentText"})
+            Kit.Corner(W.BadgeChip, 12)
+            right = right + 68
+        end
+        local titleH = (o.Subtitle or o.Info) and 20 or headH
+        W.TitleLabel = Label(head, {Position = UDim2.fromOffset(x, (o.Subtitle or o.Info) and 6 or 0), Size = UDim2.new(1, -x - right, 0, titleH),
+            Font = Enum.Font.GothamBlack, TextSize = o.TitleSize or 15, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+            Text = o.Title or ""}, "Text")
+        if o.Subtitle then
+            W.SubtitleLabel = Label(head, {Position = UDim2.fromOffset(x, 26), Size = UDim2.new(1, -x - right, 0, 14), Font = Enum.Font.GothamMedium,
+                TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = o.Subtitle}, "TextDim")
+        end
+        if o.Info then
+            W.InfoLabel = Label(head, {Position = UDim2.fromOffset(x, o.Subtitle and 40 or 26), Size = UDim2.new(1, -x - 16, 0, 14), TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left, RichText = true, Text = ""}, "Text")
+        end
+        if o.Drag ~= false and not o.Modal then dragFrom(head, frame, function() return W.Locked end) end
+
+        -- cuerpo
+        local body
+        local pad = o.Pad or 12
+        if o.Scroll then
+            body = Kit.New("ScrollingFrame", {Position = UDim2.fromOffset(0, headH), Size = UDim2.new(1, 0, 1, -headH), BackgroundTransparency = 1,
+                BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
+                AutomaticCanvasSize = Enum.AutomaticSize.Y}, frame)
+        else
+            body = Kit.New("Frame", {Position = UDim2.fromOffset(0, headH), Size = UDim2.new(1, 0, auto and 0 or 1, auto and 0 or -headH),
+                AutomaticSize = auto and Enum.AutomaticSize.Y or Enum.AutomaticSize.None, BackgroundTransparency = 1, ClipsDescendants = o.Clip == true}, frame)
+        end
+        if not o.Raw then
+            Kit.Pad(body, o.PadTop or 10, pad, pad, pad)
+            Kit.List(body, o.Gap or 8)
+        end
+        if auto then
+            -- alto automático: cabecera + cuerpo
+            local filler = Kit.New("Frame", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1}, frame)
+            filler.Name = "HeaderSpace"
+            frame.AutomaticSize = Enum.AutomaticSize.Y
+            body.Position = UDim2.fromOffset(0, headH)
+            -- un layout para apilar el espacio de la cabecera y el cuerpo
+            Kit.New("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}, frame)
+            head.Parent = filler
+            head.Position = UDim2.new()
+            filler.LayoutOrder, body.LayoutOrder = 1, 2
+        end
+        W.Body = body
+        setmetatable(W, {__index = function(t, k)
+            local f = Widgets[k]
+            if f then return function(self, ...) return f(t._widgets, ...) end end
+            return nil
+        end})
+        W._widgets = container(body, o.Gap or 8)
+        function W:SetTitle(t) W.TitleLabel.Text = t end
+        function W:SetSubtitle(t) if W.SubtitleLabel then W.SubtitleLabel.Text = t end end
+        function W:SetInfo(t) if W.InfoLabel then W.InfoLabel.Text = t end end
+        function W:SetBadge(t) if W.BadgeChip then W.BadgeChip.Text = t end end
+        function W:SetCount(t) if W.CountChip then W.CountChip.Text = t end end
+        -- piezas que no se esconden al minimizar (van arriba del cuerpo)
+        function W:Pinned()
+            if not W._pinned then
+                local top = Kit.New("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 0},
+                    auto and frame or body)
+                if auto then
+                    top.LayoutOrder = 2
+                    body.LayoutOrder = 3
+                    Kit.Pad(top, 8, pad, 0, pad)
+                end
+                Kit.List(top, o.Gap or 8)
+                W._pinned = container(top, o.Gap or 8)
+            end
+            return W._pinned
+        end
+        function W:SetMinimized(m)
+            W.Minimized = m
+            body.Visible = not m
+            if W.MinButton then W.MinButton.Text = m and "+" or "-" end
+            if not auto then
+                frame.Size = m and UDim2.new(frame.Size.X.Scale, frame.Size.X.Offset, 0, headH) or W._fullSize
+            end
+        end
+        W._fullSize = frame.Size
+        function W:Show()
+            gui.Enabled = true
+            W.Scale.Scale = 0.9
+            Kit.Tween(W.Scale, 0.3, {Scale = 1}, Enum.EasingStyle.Back)
+            if W.Shade then Kit.Tween(W.Shade, 0.25, {BackgroundTransparency = 0.45}) end
+        end
+        function W:Hide() gui.Enabled = false end
+        function W:Close()
+            if W.Closed then return end
+            if o.OnClose then
+                local keep = o.OnClose()
+                if keep == true then return end
+            end
+            W:Destroy()
+        end
+        function W:Destroy()
+            if W.Closed then return end
+            W.Closed = true
+            if W.Shade then
+                Kit.Tween(W.Shade, 0.2, {BackgroundTransparency = 1})
+                local tw = Kit.Tween(W.Scale, 0.2, {Scale = 0.88}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+                tw.Completed:Wait()
+            end
+            if gui.Parent then gui:Destroy() end
+        end
+        W:Show()
+        return W
+    end
+
+    -- ============ tarjeta medidor (número grande, chip, info y gráfico) ============
+    function Kit.Meter(o)
+        o = o or {}
+        local gui = Kit.Screen(o.Name or "YYMeter", o.DisplayOrder or 40)
+        local card = Kit.Card(gui, {AnchorPoint = Vector2.new(0.5, 0), Position = o.Position or UDim2.new(0.5, 0, 0, 58), Size = UDim2.fromOffset(o.Width or 230, 74),
+            BackgroundTransparency = 0.2})
+        local M = {Gui = gui}
+        M.Value = Label(card, {Position = UDim2.fromOffset(14, 8), Size = UDim2.fromOffset(80, 30), Font = Enum.Font.GothamBlack, TextSize = 28,
+            TextXAlignment = Enum.TextXAlignment.Left, Text = "0"}, "Text")
+        M.Unit = Label(card, {Position = UDim2.fromOffset(14, 38), Size = UDim2.fromOffset(90, 14), TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+            Text = o.Unit or ""}, "TextDim")
+        M.Chip, M.ChipScale = Kit.Chip(card, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 10), Text = o.Chip or ""}, "AccentOff", "Text")
+        M.Info = Label(card, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 35), Size = UDim2.fromOffset(120, 14), TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Right, Text = ""}, "TextDim")
+        local graph = Kit.New("Frame", {BackgroundTransparency = 1, Position = UDim2.new(0, 12, 1, -18), Size = UDim2.new(1, -24, 0, 12)}, card)
+        M.Bars = Kit.Bars(graph, o.Bars or 36, "Accent")
+        function M:SetChip(text, color)
+            M.Chip.Text = text
+            if color then M.Chip.BackgroundColor3 = color end
+            Kit.Pop(M.ChipScale, 1.25)
+        end
+        function M:SetBars(samples, top) Kit.SetBars(M.Bars, samples, top) end
+        function M:Destroy() if gui.Parent then gui:Destroy() end end
+        return M
+    end
+
+    -- ============ HUD chico (punto de estado, título, subtítulo y botones) ============
+    -- o = {Name, Buttons = {{Key, Text, Width}}}; H:SetTitle / SetSubtitle / SetDot(color) / Button(key)
+    function Kit.Hud(o)
+        o = o or {}
+        local gui = Kit.Screen(o.Name or "YYHud", o.DisplayOrder or 80)
+        local card = Btn(gui, {AnchorPoint = Vector2.new(0.5, 0), Position = o.Position or UDim2.new(0.5, 0, 0, 58), Size = UDim2.fromOffset(o.Width or 270, 54),
+            BackgroundTransparency = 0.08, Text = ""}, "Background", "Text")
+        Kit.Corner(card, 14)
+        local stroke = Kit.New("UIStroke", {Thickness = 1.5, Transparency = 0.2}, card)
+        local dot = Kit.New("Frame", {Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(14, 13), BorderSizePixel = 0}, card)
+        Kit.Corner(dot, 99)
+        local H = {Gui = gui, Card = card, Buttons = {}}
+        H.Title = Label(card, {Position = UDim2.fromOffset(32, 6), Size = UDim2.new(1, -150, 0, 22), Font = Enum.Font.GothamBlack, TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = o.Title or ""}, "Text")
+        H.Subtitle = Label(card, {Position = UDim2.fromOffset(14, 28), Size = UDim2.new(1, -28, 0, 18), Font = Enum.Font.GothamMedium, TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Text = ""}, "TextDim")
+        local x = -10
+        for _, b in ipairs(o.Buttons or {}) do
+            local btn = Btn(card, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, x, 0, 8), Size = UDim2.fromOffset(b.Width or 56, 22), TextSize = 11,
+                Text = b.Text or ""}, "Secondary", "Text")
+            Kit.Corner(btn, 11)
+            H.Buttons[b.Key] = btn
+            x = x - (b.Width or 56) - 6
+        end
+        dragFrom(card, card)
+        function H:SetDot(color)
+            Kit.Tween(dot, 0.25, {BackgroundColor3 = color})
+            Kit.Tween(stroke, 0.25, {Color = color})
+        end
+        function H:Destroy() if gui.Parent then gui:Destroy() end end
+        return H
+    end
+
+    -- ============ ventana anfitriona (marco + barra con título, fijar y cerrar; el contenido lo pone el script) ============
+    function Kit.HostWindow(o)
+        o = o or {}
+        local W = Kit.Window({Name = o.Name or "YYHost", DisplayOrder = o.DisplayOrder or 90, IgnoreGuiInset = true, Width = UDim2.fromScale(0.74, 0.74),
+            Height = 0, AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.53), Title = o.Title, TitleSize = 14, HeaderHeight = 34,
+            Lock = true, Locked = o.Locked, OnLock = o.OnLock, Close = true, OnClose = o.OnClose, Raw = true, Radius = 16, Transparency = 0.05, Clip = true})
+        -- el tamaño lo da el marco (0.74 x 0.74 de la pantalla)
+        W.Frame.Size = UDim2.fromScale(0.74, 0.74)
+        W.Frame.AutomaticSize = Enum.AutomaticSize.None
+        W.Frame.ClipsDescendants = false
+        W.Body.Size = UDim2.new(1, 0, 1, -34)
+        W.Body.ClipsDescendants = true
+        return W
+    end
+
+    -- ============ botón redondo de la barra de arriba (con bolsa dibujada) ============
+    -- o = {Name, LayoutOrder, OnClick}; devuelve el Frame (mismos nombres internos que los botones de la barra)
+    function Kit.TopbarButton(parent, o)
+        o = o or {}
+        local b = Kit.Make("Frame", {Name = o.Name or "YYButton", BackgroundTransparency = 1, ClipsDescendants = true, LayoutOrder = o.LayoutOrder or 996,
+            Size = UDim2.fromOffset(44, 44), ZIndex = 20}, parent)
+        b:SetAttribute("YYTopbar", true)
+        local iconButton = Kit.Make("Frame", {Name = "IconButton", BackgroundColor3 = Color3.fromRGB(0, 0, 0), BackgroundTransparency = 0.3,
+            BorderSizePixel = 0, ClipsDescendants = true, Size = UDim2.fromScale(1, 1), ZIndex = 2}, b)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(1, 0)}, iconButton)
+        local iconImage = Kit.Make("ImageLabel", {Name = "IconImage", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromScale(0.62, 0.62), BackgroundTransparency = 1, Image = "", ImageColor3 = Color3.new(1, 1, 1), ZIndex = 15}, iconButton)
+        Kit.Make("UIAspectRatioConstraint", {DominantAxis = Enum.DominantAxis.Height}, iconImage)
+        local bag = Kit.Make("Frame", {AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 0.96), Size = UDim2.fromScale(0.8, 0.6),
+            BackgroundTransparency = 1, ZIndex = 15}, iconImage)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(0.2, 0)}, bag)
+        local bodyStroke = Kit.Make("UIStroke", {Thickness = 2, Color = iconImage.ImageColor3}, bag)
+        local clip = Kit.Make("Frame", {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02), Size = UDim2.fromScale(0.46, 0.36),
+            BackgroundTransparency = 1, ClipsDescendants = true, ZIndex = 15}, iconImage)
+        local handle = Kit.Make("Frame", {AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), Size = UDim2.new(0.86, 0, 0.86 * 0.46 / 0.36, 0),
+            BackgroundTransparency = 1, ZIndex = 15}, clip)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(1, 0)}, handle)
+        local handleStroke = Kit.Make("UIStroke", {Thickness = 2, Color = iconImage.ImageColor3}, handle)
+        local dot = Kit.Make("Frame", {AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.62), Size = UDim2.fromScale(0.14, 0.14),
+            BackgroundColor3 = iconImage.ImageColor3, ZIndex = 15}, bag)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(1, 0)}, dot)
+        iconImage:GetPropertyChangedSignal("ImageColor3"):Connect(function()
+            local c = iconImage.ImageColor3
+            bodyStroke.Color, handleStroke.Color, dot.BackgroundColor3 = c, c, c
+        end)
+        local ring = Kit.Make("Frame", {Name = "YYRing", AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.new(1, -4, 1, -4), BackgroundTransparency = 1, ZIndex = 16}, iconButton)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(1, 0)}, ring)
+        Kit.Make("UIStroke", {Color = Color3.fromRGB(150, 150, 150), Thickness = 2, Transparency = 1}, ring)
+        local overlay = Kit.Make("Frame", {BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.925, Size = UDim2.fromScale(1, 1),
+            Visible = false, ZIndex = 6}, iconButton)
+        Kit.Make("UICorner", {CornerRadius = UDim.new(1, 0)}, overlay)
+        local click = Kit.Make("TextButton", {BackgroundTransparency = 1, Size = UDim2.fromScale(1, 1), ZIndex = 20, Text = ""}, iconButton)
+        click.MouseButton1Down:Connect(function() overlay.Visible = true end)
+        click.MouseButton1Up:Connect(function() overlay.Visible = false end)
+        click.MouseLeave:Connect(function() overlay.Visible = false end)
+        if o.OnClick then click.Activated:Connect(o.OnClick) end
+        return b
+    end
+end
+
+-- ===== PIEZAS DE PÁGINA (contenido dentro de las pestañas) =====
+-- Encabezado con ícono, tarjeta, texto, campo numerado, botón grande y línea de estado: las arma la librería con el
+-- tema activo (atributos de rol) y el script solo pasa los textos. Idioma: si se pasan Es/En quedan guardados en los
+-- atributos TextSpanish/TextEnglish (y PlaceholderSpanish/PlaceholderEnglish) para que el script los traduzca.
+do
+    local Kit = YinYang.Kit
+    local Page = {}
+    Kit.Page = Page
+    -- instancia simple (sin tocar AutoLocalize / Selectable, igual que las piezas que antes armaba el script)
+    local function new(class, props, parent)
+        local o = Instance.new(class)
+        for k, v in pairs(props) do o[k] = v end
+        if parent then o.Parent = parent end
+        return o
+    end
+
+    local function lang(obj, es, en, placeholder)
+        if es == nil or en == nil then return end
+        obj:SetAttribute(placeholder and "PlaceholderSpanish" or "TextSpanish", es)
+        obj:SetAttribute(placeholder and "PlaceholderEnglish" or "TextEnglish", en)
+    end
+    -- borde fino con el color "Stroke" del tema
+    function Page.Stroke(parent, transparency)
+        local s = new("UIStroke", {Color = Kit.Palette().Stroke, Thickness = 1, Transparency = transparency or 0.55}, nil)
+        pcall(function() s.ZIndex = 12 end)
+        s.Parent = parent
+        s:SetAttribute("ThemeRole", "Stroke")
+        return s
+    end
+    -- color de estado que se lee en temas claros (lo oscurece a la mitad si el fondo es claro)
+    function Page.AdaptStatus(color)
+        local bg = Kit.Palette().Background
+        if 0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B > 0.55 then
+            return Color3.new(color.R * 0.5, color.G * 0.5, color.B * 0.5)
+        end
+        return color
+    end
+
+    -- tarjeta: o = {Name, Height, Transparency, LayoutOrder, StrokeTransparency}; devuelve tarjeta y borde
+    function Page.Card(parent, o)
+        o = o or {}
+        local card = new("Frame", {Name = o.Name or "Card", Size = UDim2.new(1, 0, 0, o.Height or 50), BackgroundColor3 = Kit.Palette().Secondary,
+            BackgroundTransparency = o.Transparency or 0.78, BorderSizePixel = 0, ZIndex = 10}, nil)
+        if o.LayoutOrder then card.LayoutOrder = o.LayoutOrder end
+        card.Parent = parent
+        card:SetAttribute("ThemeRole", "Secondary")
+        Kit.Corner(card, 10)
+        local stroke = Page.Stroke(card, o.StrokeTransparency or 0.55)
+        return card, stroke
+    end
+
+    -- texto: o = {Text, Es, En, TextSize, Font, Role, Position, Size}
+    function Page.Label(parent, o)
+        local role = o.Role or "Text"
+        local label = new("TextLabel", {BackgroundTransparency = 1, Position = o.Position or UDim2.new(), Size = o.Size or UDim2.new(1, 0, 0, 16),
+            Text = o.Text or "", TextColor3 = Kit.Palette()[role], TextSize = o.TextSize or 12, Font = o.Font or Enum.Font.GothamMedium,
+            TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 12}, parent)
+        label:SetAttribute("ThemeTextRole", role)
+        label:SetAttribute("IgnoreTextEffect", true)
+        lang(label, o.Es, o.En)
+        return label
+    end
+
+    -- encabezado de pestaña: tarjeta de 78 con barrita de acento, caja con ícono, título, ✦ y descripción
+    -- o = {Name, BarName, DescName, LayoutOrder, Icon, IconFn (ícono que cambia con el tema), Title, TitleEs, TitleEn,
+    --      Desc, DescEs, DescEn, PlainTitle (título que sí toma los efectos de texto de la librería)}
+    -- devuelve la tarjeta y sus piezas {Bar, IconBox, Icon, Title, Spark, Desc}
+    function Page.Header(paren

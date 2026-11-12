@@ -1,0 +1,972 @@
+ror()
+        elseif self.Enabled then
+            self.MirrorScanElapsed = 0
+            self:_refreshMirror()
+        end
+    end
+
+    function ShaderReflections:SetContactStrength(value)
+        self.ContactStrength = math.clamp(tonumber(value) or self.ContactStrength, 0.05, 0.60)
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetContactEnabled(enabled)
+        self.ContactEnabled = enabled == true
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetModelDetailEnabled(enabled)
+        self.ModelDetailEnabled = enabled == true
+        if not self.ModelDetailEnabled then
+            for part in pairs(self.ModelApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+            end
+            self.ModelApplied = {}
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetCharacterSpecularEnabled(enabled)
+        self.CharacterSpecularEnabled = enabled == true
+        if not self.CharacterSpecularEnabled then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetExcludeLocalAvatar(enabled)
+        self.ExcludeLocalAvatar = enabled == true
+        if self.ExcludeLocalAvatar then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        self:_refreshContact()
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetShadowEnabled(enabled)
+        enabled = enabled == true
+        if self.ShadowEnabled == enabled then
+            if enabled then self:_refreshSceneShadows() else self:_clearSceneShadows() end
+            return
+        end
+        self.ShadowEnabled = enabled
+        if not enabled then
+            self:_clearSceneShadows()
+            return
+        end
+        self.ShadowElapsed = 0
+        self.ShadowConnection = RunService.Heartbeat:Connect(function(delta)
+            self.ShadowElapsed = self.ShadowElapsed + delta
+            if self.ShadowElapsed >= 0.34 then
+                self.ShadowElapsed = 0
+                self:_refreshSceneShadows()
+            end
+        end)
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:SetShadowStrength(value)
+        self.ShadowStrength = math.clamp(tonumber(value) or self.ShadowStrength, 0.05, 0.70)
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:SetEnabled(enabled)
+        enabled = enabled == true
+        if self.Enabled == enabled then
+            if enabled then self:Refresh() end
+            return
+        end
+        self.Enabled = enabled
+        if not enabled then
+            if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
+            if self.CharacterConn then self.CharacterConn:Disconnect(); self.CharacterConn = nil end
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            return
+        end
+        self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+        self:Refresh()
+        self:QueueSceneCoverage()
+        self.Elapsed = 0
+        self.Connection = RunService.Heartbeat:Connect(function(delta)
+            self.Elapsed = self.Elapsed + delta
+            self.ContactElapsed = self.ContactElapsed + delta
+            self.SceneElapsed = self.SceneElapsed + delta
+            if self.SceneElapsed >= 0.08 then
+                self.SceneElapsed = 0
+                self:_processSceneCoverage(90)
+            end
+            if self.ContactElapsed >= 0.12 then
+                self.ContactElapsed = 0
+                self:_refreshContact()
+            end
+            if self.ShadowElapsed >= 0.34 and not self.ShadowConnection then
+                self.ShadowElapsed = 0
+                self:_refreshSceneShadows()
+            end
+            self.MirrorScanElapsed = self.MirrorScanElapsed + delta
+            self.MirrorStepElapsed = self.MirrorStepElapsed + delta
+            if self.ObjectMirrorEnabled then
+                if self.MirrorScanElapsed >= 0.5 then
+                    self.MirrorScanElapsed, self.MirrorStepElapsed = 0, 0
+                    self:_refreshMirror()
+                elseif self.MirrorStepElapsed >= 1 / 30 then
+                    self.MirrorStepElapsed = 0
+                    self:_updateMirror()
+                end
+            end
+            if self.Elapsed >= 1.15 then
+                self.Elapsed = 0
+                self:Refresh()
+            end
+        end)
+        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.Position or nil end
+        if self.CharacterConn then self.CharacterConn:Disconnect() end
+        self.CharacterConn = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(0.5) -- esperar a que cargue el mapa/cuerpo de la nueva ronda
+            if self.Enabled then self:_recover() end
+        end)
+    end
+
+    function ShaderReflections:ApplyGoldenFinish()
+        self.OilSheen = false
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetIntensity(0.46)
+        self:SetWetness(0.96)
+        self:SetContactStrength(0.38)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.46)
+        self:SetShadowEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    function ShaderReflections:ApplyOilFinish()
+        self.OilSheen = true
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetSkyMirrorEnabled(true)
+        self:SetStripTexturesEnabled(true)
+        self:SetIntensity(0.60)
+        self:SetWetness(1)
+        self:SetContactStrength(0.45)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.46)
+        self:SetShadowEnabled(true)
+        self:SetObjectMirrorEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    -- Espejo realista sin aceite (Ciudad Neón): piso espejo con copias sólidas, sin quitar texturas
+    function ShaderReflections:ApplyMirrorFinish()
+        self.OilSheen = false
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetStripTexturesEnabled(false)
+        self:SetSkyMirrorEnabled(true)
+        self:SetIntensity(0.50)
+        self:SetWetness(1)
+        self:SetContactStrength(0.40)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.40)
+        self:SetShadowEnabled(true)
+        self:SetObjectMirrorEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    local ShaderSolarTone = {
+        Hue = 0.10,
+        Saturation = 0.38,
+        Strength = 0.42,
+    }
+
+    function ShaderSolarTone:Apply()
+        local tint = Color3.fromHSV(self.Hue, self.Saturation, 1)
+        local top = Color3.new(1, 1, 1):Lerp(tint, self.Strength)
+        local bottomBase = Color3.fromRGB(176, 194, 226)
+        local bottom = bottomBase:Lerp(tint, self.Strength * 0.44)
+        return ShaderManager:Apply({Lighting = {ColorShift_Top = top, ColorShift_Bottom = bottom}}, {tween = true, duration = 0.28})
+    end
+
+    function ShaderSolarTone:SetHue(value)
+        self.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
+        return self:Apply()
+    end
+
+    function ShaderSolarTone:SetSaturation(value)
+        self.Saturation = math.clamp(tonumber(value) or self.Saturation, 0, 1)
+        return self:Apply()
+    end
+
+    function ShaderSolarTone:SetStrength(value)
+        self.Strength = math.clamp(tonumber(value) or self.Strength, 0, 1)
+        return self:Apply()
+    end
+
+    local ShaderManualLighting = {
+        Brightness = ShaderLightingService.Brightness,
+        ExposureCompensation = ShaderLightingService.ExposureCompensation,
+    }
+
+    local ShaderSilhouette = {
+        Enabled = false,
+        Original = {},
+        ClothingOriginal = {},
+        TerrainOriginal = {},
+        TerrainWaterColor = nil,
+        Connection = nil,
+        ScanToken = 0,
+    }
+
+    function ShaderSilhouette:_applyPart(part)
+        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
+        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
+
+        if self.Original[part] == nil then
+            self.Original[part] = {}
+            pcall(function() self.Original[part].Color = part.Color end)
+            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
+        end
+
+        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
+        pcall(function() part.Reflectance = 0 end)
+
+        for _, child in ipairs(part:GetChildren()) do
+            if child:IsA("SurfaceAppearance") then
+                if self.Original[child] == nil then
+                    self.Original[child] = {}
+                    pcall(function() self.Original[child].Color = child.Color end)
+                end
+                pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
+            end
+        end
+    end
+
+    function ShaderSilhouette:_applyClothing(instance)
+        if not self.Enabled or not instance or not instance.Parent then return end
+        local property
+        if instance:IsA("Shirt") then
+            property = "ShirtTemplate"
+        elseif instance:IsA("Pants") then
+            property = "PantsTemplate"
+        elseif instance:IsA("ShirtGraphic") then
+            property = "Graphic"
+        else
+            return
+        end
+
+        if self.ClothingOriginal[instance] == nil then
+            self.ClothingOriginal[instance] = {}
+            pcall(function() self.ClothingOriginal[instance][property] = instance[property] end)
+        end
+        pcall(function() instance[property] = "" end)
+    end
+
+    function ShaderSilhouette:_applyTerrain()
+        if not self.Enabled then return end
+        if self.TerrainWaterColor == nil then
+            pcall(function() self.TerrainWaterColor = ShaderTerrain.WaterColor end)
+        end
+        for _, material in ipairs(Enum.Material:GetEnumItems()) do
+            if self.TerrainOriginal[material] == nil then
+                local ok, color = pcall(function() return ShaderTerrain:GetMaterialColor(material) end)
+                if ok then
+                    self.TerrainOriginal[material] = color
+                end
+            end
+            pcall(function() ShaderTerrain:SetMaterialColor(material, Color3.fromRGB(0, 0, 0)) end)
+        end
+        pcall(function() ShaderTerrain.WaterColor = Color3.fromRGB(0, 0, 0) end)
+    end
+
+    function ShaderSilhouette:_scan()
+        if not self.Enabled then return end
+        self.ScanToken = self.ScanToken + 1
+        local token = self.ScanToken
+        task.spawn(function()
+            local descendants = workspace:GetDescendants()
+            for index, instance in ipairs(descendants) do
+                if not self.Enabled or token ~= self.ScanToken then return end
+                if instance:IsA("BasePart") then
+                    self:_applyPart(instance)
+                elseif instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic") then
+                    self:_applyClothing(instance)
+                end
+                if index % 300 == 0 then task.wait() end
+            end
+        end)
+        self:_applyTerrain()
+    end
+
+    function ShaderSilhouette:_restore()
+        self.ScanToken = self.ScanToken + 1
+        for instance, original in pairs(self.Original) do
+            if instance and instance.Parent and original then
+                if original.Color ~= nil then pcall(function() instance.Color = original.Color end) end
+                if original.Reflectance ~= nil then pcall(function() instance.Reflectance = original.Reflectance end) end
+            end
+        end
+        self.Original = {}
+
+        for instance, original in pairs(self.ClothingOriginal) do
+            if instance and instance.Parent and original then
+                for property, value in pairs(original) do
+                    if value ~= nil then pcall(function() instance[property] = value end) end
+                end
+            end
+        end
+        self.ClothingOriginal = {}
+
+        for material, color in pairs(self.TerrainOriginal) do
+            pcall(function() ShaderTerrain:SetMaterialColor(material, color) end)
+        end
+        if self.TerrainWaterColor ~= nil then
+            pcall(function() ShaderTerrain.WaterColor = self.TerrainWaterColor end)
+        end
+        self.TerrainOriginal = {}
+        self.TerrainWaterColor = nil
+    end
+
+    function ShaderSilhouette:SetEnabled(enabled)
+        enabled = enabled == true
+        if self.Enabled == enabled then
+            if enabled then self:_scan() end
+            return
+        end
+
+        self.Enabled = enabled
+        if self.Connection then
+            self.Connection:Disconnect()
+            self.Connection = nil
+        end
+
+        if not enabled then
+            self:_restore()
+            return
+        end
+
+        self:_scan()
+        self.Connection = workspace.DescendantAdded:Connect(function(instance)
+            if self.Enabled and (instance:IsA("BasePart") or instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic")) then
+                task.defer(function()
+                    if not self.Enabled then return end
+                    if instance:IsA("BasePart") then
+                        self:_applyPart(instance)
+                    else
+                        self:_applyClothing(instance)
+                    end
+                end)
+            end
+        end)
+    end
+
+    function ShaderSilhouette:Destroy()
+        self.Enabled = false
+        if self.Connection then
+            self.Connection:Disconnect()
+            self.Connection = nil
+        end
+        self:_restore()
+    end
+
+    local ShaderRain = {
+        Enabled = false,
+        StormEnabled = false,
+        Intensity = 0.72,
+        Rig = nil,
+        Emitter = nil,
+        Drops = {},
+        Random = Random.new(),
+        Sound = nil,
+        SoundEnabled = true,
+        SoundVolume = 0.34,
+        RespectShelter = false,
+        FollowConnection = nil,
+        StormToken = 0,
+        Splashes = {},
+        SplashCursor = 1,
+        SplashSpawned = 0,
+        ResetBudget = 0,
+        Clock = 0,
+        DropColor = nil,
+        ColorElapsed = 1,
+        SkySnapshot = nil,
+        SkyPresets = {Rain = true, Stormfront = true, Monsoon = true},
+        FlashToken = 0,
+        FlashBase = nil,
+        BoltFolder = nil,
+        ThunderSoundId = nil,
+        -- truenos reales (IDs de Nick): corto 6 s para relámpagos entre nubes, largo 9 s para rayos visibles
+        ThunderSounds = {
+            {id = "rbxassetid://139319051979882", length = 6},
+            {id = "rbxassetid://136909414800877", length = 9},
+        },
+        StormGapMin = 5,
+        StormGapMax = 12,
+    }
+
+    function ShaderRain:_destroyRig()
+        if self.FollowConnection then self.FollowConnection:Disconnect(); self.FollowConnection = nil end
+        if self.Sound then pcall(function() self.Sound:Stop() end) end
+        if self.Rig and self.Rig.Parent then pcall(function() self.Rig:Destroy() end) end
+        self.Rig, self.Emitter, self.Drops = nil, nil, {}
+        self.Splashes, self.SplashCursor = {}, 1
+    end
+
+    function ShaderRain:_syncVisuals()
+        if self.Emitter then self.Emitter.Rate = math.floor(shaderQualityProfile().rainRate * self.Intensity) end
+        if self.Sound then self.Sound.Volume = self.SoundVolume * self.Intensity end
+    end
+
+    function ShaderRain:_ensureSound()
+        if self.Sound and self.Sound.Parent then return self.Sound end
+        local existing = SoundService:FindFirstChild("YinYangShader_RainLoop")
+        if existing and existing:IsA("Sound") then
+            self.Sound = existing
+            return existing
+        end
+        local sound = Instance.new("Sound")
+        sound.Name = "YinYangShader_RainLoop"
+        sound.SoundId = "rbxassetid://107459242972988"
+        sound.Looped, sound.Volume = true, self.SoundVolume * self.Intensity
+        sound.Parent = SoundService
+        self.Sound = sound
+        return sound
+    end
+
+    function ShaderRain:_dropTargetCount()
+        local profile = shaderQualityProfile()
+        return math.clamp(math.floor(profile.rainDrops * (0.35 + 0.65 * self.Intensity)), 12, 220)
+    end
+
+    function ShaderRain:_center(root)
+        local camera = workspace.CurrentCamera
+        if camera then
+            local look = camera.CFrame.LookVector
+            return camera.CFrame.Position + Vector3.new(look.X, 0, look.Z) * 8
+        end
+        return root.Position
+    end
+
+    -- Color de las gotas según la luz del momento (de noche casi no se ven, como en la vida real)
+    function ShaderRain:_refreshDropColor()
+        local lighting = ShaderLightingService
+        local ambient = lighting.OutdoorAmbient
+        local fog = lighting.FogColor
+        local base = ambient:Lerp(fog, 0.35):Lerp(Color3.fromRGB(226, 234, 246), 0.55)
+        local brightness = math.clamp(lighting.Brightness / 2.4, 0.35, 1)
+        self.DropColor = base:Lerp(Color3.new(0, 0, 0), (1 - brightness) * 0.45)
+    end
+
+    function ShaderRain:_resetDrop(drop, center, character, initial)
+        local radius = shaderQualityProfile().rainRadius
+        local angle = self.Random:NextNumber() * math.pi * 2
+        local distance = math.sqrt(self.Random:NextNumber()) * radius
+        local x = center.X + math.cos(angle) * distance
+        local z = center.Z + math.sin(angle) * distance
+        local top = center.Y + 34
+        local filter = {}
+        if self.Rig then table.insert(filter, self.Rig) end
+        if character then table.insert(filter, character) end
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = filter
+        params.IgnoreWater = false
+        local hit = workspace:Raycast(Vector3.new(x, top, z), Vector3.new(0, -120, 0), params)
+        local ground = hit and hit.Position.Y or (center.Y - 20)
+        local startY = top - self.Random:NextNumber(0, 4)
+        if initial then startY = self.Random:NextNumber(math.min(ground + 1, top - 1), top) end
+        drop.ground = ground
+        drop.landed = hit ~= nil
+        drop.position = Vector3.new(x, startY, z)
+        drop.speed = self.Random:NextNumber(92, 124)
+        -- gotas finas y largas (estela de movimiento real); las cercanas a la cámara un poco más gruesas
+        local near = 1 - math.clamp(distance / math.max(radius, 1), 0, 1)
+        local width = self.Random:NextNumber(0.018, 0.032) + near * 0.018
+        drop.part.Size = Vector3.new(width, width, drop.speed * self.Random:NextNumber(0.022, 0.032))
+        drop.alpha = math.clamp(self.Random:NextNumber(0.42, 0.66) + (1 - near) * 0.16 - (self.Intensity - 0.6) * 0.12, 0.34, 0.86)
+        local tone = self.DropColor or Color3.fromRGB(205, 216, 232)
+        drop.part.Color = tone:Lerp(Color3.fromRGB(240, 246, 255), self.Random:NextNumber(0, 0.35))
+        drop.active = true
+    end
+
+    function ShaderRain:_ensureDrops(center, character)
+        local target = self:_dropTargetCount()
+        local created = 0
+        while #self.Drops < target and created < 40 do
+            local part = Instance.new("Part")
+            part.Name = "YinYangShader_RainDrop"
+            part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+            -- vidrio: la gota refracta y refleja la luz en vez de brillar como neón
+            part.Material = Enum.Material.Glass
+            part.Reflectance = 0.18
+            part.Transparency = 1
+            part.Parent = self.Rig
+            local drop = {part = part, active = false, position = center, ground = center.Y, landed = false, speed = 96, alpha = 0.7}
+            table.insert(self.Drops, drop)
+            self:_resetDrop(drop, center, character, true)
+            created = created + 1
+        end
+        while #self.Drops > target do
+            local drop = table.remove(self.Drops)
+            if drop and drop.part and drop.part.Parent then drop.part:Destroy() end
+        end
+    end
+
+    function ShaderRain._splashPart(name, shape, parent)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Shape = shape
+        part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+        part.Material = Enum.Material.Glass
+        part.Reflectance = 0.2
+        part.Color = Color3.fromRGB(222, 232, 246)
+        part.Transparency = 1
+        part.Parent = parent
+        return part
+    end
+
+    -- Salpicadura: anillo que se abre en el piso + dos gotitas que rebotan (corona)
+    function ShaderRain:_spawnSplash(position, center)
+        local limit = shaderQualityProfile().rainSplashes
+        if self.SplashSpawned >= 4 or not self.Rig then return end
+        if (position - center).Magnitude > 38 then return end
+        self.SplashSpawned = self.SplashSpawned + 1
+        local index = self.SplashCursor
+        self.SplashCursor = index % limit + 1
+        local splash = self.Splashes[index]
+        if not splash or not splash.part.Parent then
+            local ring = ShaderRain._splashPart("YinYangShader_RainSplash", Enum.PartType.Cylinder, self.Rig)
+            local bits = {}
+            for bit = 1, 2 do
+                bits[bit] = {part = ShaderRain._splashPart("YinYangShader_RainBit", Enum.PartType.Ball, self.Rig), velocity = Vector3.new(0, 0, 0), position = position}
+            end
+            splash = {part = ring, bits = bits, age = 1, life = 0.3, size = 1, position = position}
+            self.Splashes[index] = splash
+        end
+        splash.age = 0
+        splash.life = self.Random:NextNumber(0.24, 0.38)
+        splash.size = self.Random:NextNumber(0.6, 1.3)
+        splash.position = position + Vector3.new(0, 0.03, 0)
+        for _, bit in ipairs(splash.bits or {}) do
+            local angle = self.Random:NextNumber() * math.pi * 2
+            local spread = self.Random:NextNumber(2.2, 4.2)
+            bit.position = splash.position
+            bit.velocity = Vector3.new(math.cos(angle) * spread, self.Random:NextNumber(5.5, 9), math.sin(angle) * spread)
+            bit.part.Size = Vector3.new(0.07, 0.07, 0.07) * self.Random:NextNumber(0.8, 1.3)
+        end
+    end
+
+    function ShaderRain:_updateSplashes(delta)
+        for _, splash in pairs(self.Splashes) do
+            if splash.part and splash.part.Parent then
+                if splash.age < splash.life then
+                    splash.age = splash.age + delta
+                    local t = math.clamp(splash.age / splash.life, 0, 1)
+                    local eased = 1 - (1 - t) * (1 - t)
+                    local diameter = 0.1 + splash.size * eased
+                    splash.part.Size = Vector3.new(0.015, diameter, diameter)
+                    splash.part.CFrame = CFrame.new(splash.position) * CFrame.Angles(0, 0, math.pi / 2)
+                    splash.part.Transparency = 0.38 + 0.62 * t
+                    for _, bit in ipairs(splash.bits or {}) do
+                        bit.velocity = bit.velocity + Vector3.new(0, -46 * delta, 0)
+                        bit.position = bit.position + bit.velocity * delta
+                        if bit.position.Y < splash.position.Y then bit.position = Vector3.new(bit.position.X, splash.position.Y, bit.position.Z) end
+                        bit.part.CFrame = CFrame.new(bit.position)
+                        bit.part.Transparency = 0.3 + 0.7 * t
+                    end
+                elseif splash.part.Transparency < 1 then
+                    splash.part.Transparency = 1
+                    for _, bit in ipairs(splash.bits or {}) do bit.part.Transparency = 1 end
+                end
+            end
+        end
+    end
+
+    function ShaderRain:_updateDrops(root, delta, sheltered)
+        local character = LocalPlayer and LocalPlayer.Character
+        local center = self:_center(root)
+        self.Clock = self.Clock + delta
+        self.SplashSpawned = 0
+        self.ResetBudget = 10
+        self.ColorElapsed = (self.ColorElapsed or 1) + delta
+        if self.ColorElapsed >= 1 then
+            self.ColorElapsed = 0
+            self:_refreshDropColor()
+        end
+        self:_ensureDrops(center, character)
+        local radius = shaderQualityProfile().rainRadius
+        local windScale = (0.6 + self.Intensity * 0.8) * (self.StormEnabled and 1.6 or 1)
+        -- ráfagas: el viento sube y baja en olas lentas, más fuerte con tormenta
+        local gust = 1 + math.max(0, math.sin(self.Clock * 0.23) * math.sin(self.Clock * 0.71)) * (self.StormEnabled and 1.4 or 0.6)
+        local windX = (math.sin(self.Clock * 0.31) * 4 + 5) * windScale * gust
+        local windZ = (math.cos(self.Clock * 0.19) * 3) * windScale * gust
+        for _, drop in ipairs(self.Drops) do
+            local part = drop.part
+            if part and part.Parent then
+                if sheltered then
+                    part.Transparency = 1
+                elseif drop.active then
+                    local velocity = Vector3.new(windX, -drop.speed, windZ)
+                    local position = drop.position + velocity * delta
+                    drop.position = position
+                    local dx, dz = position.X - center.X, position.Z - center.Z
+                    if position.Y <= drop.ground then
+                        if drop.landed then self:_spawnSplash(Vector3.new(position.X, drop.ground, position.Z), center) end
+                        drop.active = false
+                        part.Transparency = 1
+                    elseif math.sqrt(dx * dx + dz * dz) > radius * 1.3 then
+                        drop.active = false
+                        part.Transparency = 1
+                    else
+                        part.CFrame = CFrame.lookAt(position, position + velocity)
+                        part.Transparency = drop.alpha
+                    end
+                elseif self.ResetBudget > 0 then
+                    self.ResetBudget = self.ResetBudget - 1
+                    self:_resetDrop(drop, center, character, false)
+                end
+            end
+        end
+        self:_updateSplashes(delta)
+    end
+
+    function ShaderRain:_createRig()
+        if self.Rig and self.Rig.Parent and self.Emitter then return end
+        local existing = workspace:FindFirstChild("YinYangShader_RainRig")
+        if existing then pcall(function() existing:Destroy() end) end
+        local rig = Instance.new("Part")
+        rig.Name = "YinYangShader_RainRig"
+        rig.Anchored, rig.CanCollide, rig.CanQuery, rig.CanTouch, rig.CastShadow = true, false, false, false, false
+        rig.Transparency, rig.Size = 1, Vector3.new(68, 1, 68)
+        rig.Parent = workspace
+
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = "YinYangShader_Rain"
+        emitter.Enabled = false
+        emitter.EmissionDirection = Enum.NormalId.Bottom
+        emitter.Shape = Enum.ParticleEmitterShape.Box
+        emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+        emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
+        emitter.Color = ColorSequence.new(Color3.fromRGB(188, 211, 255), Color3.fromRGB(225, 238, 255))
+        emitter.LightInfluence, emitter.LightEmission = 0.78, 0
+        emitter.Lifetime, emitter.Speed = NumberRange.new(1.05, 1.45), NumberRange.new(62, 76)
+        emitter.Acceleration, emitter.Drag, emitter.VelocityInheritance = Vector3.new(2, -44, 0), 0.8, 0.18
+        emitter.SpreadAngle = Vector2.new(8, 8)
+        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.16), NumberSequenceKeypoint.new(1, 0.08)})
+        emitter.Squash = NumberSequence.new(1.7)
+        emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.34), NumberSequenceKeypoint.new(0.85, 0.46), NumberSequenceKeypoint.new(1, 1)})
+        emitter.Parent = rig
+        self.Rig, self.Emitter = rig, emitter
+
+        self.FollowConnection = RunService.RenderStepped:Connect(function(delta)
+            local character = LocalPlayer and LocalPlayer.Character
+            local root = character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+            if not root or not rig.Parent then return end
+            local profile = shaderQualityProfile()
+            rig.Size = Vector3.new(profile.rainRadius * 2, 1, profile.rainRadius * 2)
+            rig.CFrame = CFrame.new(root.Position + Vector3.new(0, 30, 0))
+            local sheltered = false
+            if self.RespectShelter then
+                pcall(function()
+                    local params = RaycastParams.new()
+                    params.FilterType = Enum.RaycastFilterType.Exclude
+                    params.FilterDescendantsInstances = {character, rig}
+                    params.IgnoreWater = true
+                    sheltered = workspace:Raycast(root.Position + Vector3.new(0, 2, 0), Vector3.new(0, 34, 0), params) ~= nil
+                end)
+            end
+            self:_updateDrops(root, delta, sheltered)
+        end)
+    end
+
+    function ShaderRain:SetIntensity(value)
+        self.Intensity = math.clamp(tonumber(value) or self.Intensity, 0.20, 1)
+        self:_syncVisuals()
+    end
+
+    function ShaderRain:SetSoundEnabled(enabled)
+        self.SoundEnabled = enabled == true
+        local sound = self:_ensureSound()
+        if self.Enabled and self.SoundEnabled then
+            pcall(function() sound:Play() end)
+        else
+            pcall(function() sound:Stop() end)
+        end
+    end
+
+    function ShaderRain:SetSoundVolume(value)
+        self.SoundVolume = math.clamp(tonumber(value) or self.SoundVolume, 0, 1)
+        self:_syncVisuals()
+    end
+
+    function ShaderRain:SetRespectShelter(enabled)
+        self.RespectShelter = enabled == true
+    end
+
+    -- ---------- Cielo de lluvia: se nubla y oscurece al prender la lluvia, y vuelve como estaba al apagarla ----------
+    function ShaderRain:_skyPatch()
+        local storm = self.StormEnabled == true
+        -- se parte de la foto previa a la lluvia (si existe) para que prender/apagar tormenta no oscurezca de más
+        local lighting = setmetatable({}, {__index = function(_, key)
+            local snapshot = self.SkySnapshot and self.SkySnapshot.Lighting
+            if snapshot and snapshot[key] ~= nil then return snapshot[key] end
+            return ShaderLightingService[key]
+        end})
+        local function toward(current, target, amount)
+            if typeof(current) ~= "Color3" then return target end
+            return current:Lerp(target, amount)
+        end
+        local brightness = math.clamp(lighting.Brightness * (storm and 0.38 or 0.48), 0.35, storm and 1.05 or 1.35)
+        return {
+            Lighting = {
+                Brightness = brightness,
+                ExposureCompensation = math.clamp(lighting.ExposureCompensation - (storm and 0.22 or 0.14), -1.2, 0.4),
+                Ambient = toward(lighting.Ambient, Color3.fromRGB(38, 43, 56), 0.75),
+                OutdoorAmbient = toward(lighting.OutdoorAmbient, storm and Color3.fromRGB(58, 65, 80) or Color3.fromRGB(74, 81, 96), 0.8),
+                ColorShift_Top = toward(lighting.ColorShift_Top, Color3.fromRGB(118, 136, 170), 0.85),
+                ColorShift_Bottom = toward(lighting.ColorShift_Bottom, Color3.fromRGB(44, 52, 72), 0.85),
+                EnvironmentSpecularScale = 1,
+                ShadowSoftness = 0.92,
+                FogColor = storm and Color3.fromRGB(70, 80, 100) or Color3.fromRGB(92, 102, 120),
+                FogStart = 10,
+                FogEnd = storm and 380 or 560,
+            },
+            Atmosphere = {
+                Density = storm and 0.5 or 0.4, Offset = 0.22,
+                Color = storm and Color3.fromRGB(88, 100, 124) or Color3.fromRGB(110, 122, 144),
+                Decay = storm and Color3.fromRGB(32, 38, 54) or Color3.fromRGB(48, 56, 74),
+                Glare = 0, Haze = storm and 3.6 or 2.8,
+            },
+            Clouds = {Cover = storm and 0.97 or 0.88, Density = storm and 0.9 or 0.74, Color = storm and Color3.fromRGB(56, 62, 76) or Color3.fromRGB(80, 88, 104)},
+            ColorCorrectionEffect = {Enabled = true, Brightness = storm and -0.07 or -0.04, Contrast = 0.18, Saturation = storm and -0.24 or -0.16, TintColor = Color3.fromRGB(204, 218, 244)},
+            SunRaysEffect = {Enabled = false},
+        }
+    end
+
+    function ShaderRain:_applySky()
+        -- los presets de lluvia ya traen su propio cielo
+        if ShaderManager.ActivePreset and self.SkyPresets[ShaderManager.ActivePreset] then return end
+        local patch = self:_skyPatch()
+        if not self.SkySnapshot then
+            local snapshot = {}
+            for target, properties in pairs(patch) do
+                local wanted = {}
+                for property in pairs(properties) do wanted[property] = true end
+                local values = ShaderManager:Read(target, wanted)
+                -- false = no existía (nubes/atmósfera nuevas): al apagar la lluvia se quita lo que creó la lluvia
+                snapshot[target] = values or false
+            end
+            self.SkySnapshot = snapshot
+        end
+        ShaderManager:Apply(patch, {tween = true, duration = 2.2, easingStyle = Enum.EasingStyle.Sine, easingDirection = Enum.EasingDirection.InOut})
+        ShaderManualLighting.Brightness = patch.Lighting.Brightness
+        ShaderManualLighting.ExposureCompensation = patch.Lighting.ExposureCompensation
+        pcall(PerfOpt.AfterShaders)
+    end
+
+    function ShaderRain:_restoreSky(apply)
+        local snapshot = self.SkySnapshot
+        self.SkySnapshot = nil
+        if not apply or not snapshot then return end
+        local values = {}
+        for target, saved in pairs(snapshot) do
+            if saved then
+                values[target] = saved
+            elseif ShaderManager.Created[target] then
+                local instance = ShaderManager.Instances[target]
+                if instance and instance.Parent then pcall(function() instance:Destroy() end) end
+                ShaderManager.Instances[target], ShaderManager.Created[target] = nil, nil
+            end
+        end
+        ShaderManager:Apply(values, {tween = true, duration = 1.8, easingStyle = Enum.EasingStyle.Sine, easingDirection = Enum.EasingDirection.InOut})
+        if snapshot.Lighting then
+            if type(snapshot.Lighting.Brightness) == "number" then ShaderManualLighting.Brightness = snapshot.Lighting.Brightness end
+            if type(snapshot.Lighting.ExposureCompensation) == "number" then ShaderManualLighting.ExposureCompensation = snapshot.Lighting.ExposureCompensation end
+        end
+        pcall(PerfOpt.AfterShaders)
+    end
+
+    -- ---------- Relámpagos ----------
+    -- Rayo visible a lo lejos: canal principal quebrado + ramas, en neón (brilla con el bloom)
+    function ShaderRain:_spawnBolt()
+        local camera = workspace.CurrentCamera
+        if not camera then return nil, 300 end
+        local look = camera.CFrame.LookVector
+        local flat = Vector3.new(look.X, 0, look.Z)
+        if flat.Magnitude < 0.1 then flat = Vector3.new(0, 0, -1) end
+        flat = flat.Unit
+        local direction = CFrame.Angles(0, self.Random:NextNumber(-0.85, 0.85), 0):VectorToWorldSpace(flat)
+        local distance = self.Random:NextNumber(170, 430)
+        local origin = camera.CFrame.Position
+        local base = Vector3.new(origin.X, origin.Y - 24, origin.Z) + direction * distance
+        local top = base + Vector3.new(self.Random:NextNumber(-50, 50), self.Random:NextNumber(260, 360), self.Random:NextNumber(-50, 50))
+        local folder = Instance.new("Folder")
+        folder.Name = "YinYangShader_Lightning"
+        local function segment(a, b, width)
+            local length = (b - a).Magnitude
+            if length < 0.05 then return end
+            local part = Instance.new("Part")
+            part.Name = "Bolt"
+            part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+            part.Material = Enum.Material.Neon
+            part.Color = Color3.fromRGB(214, 224, 255)
+            part.Size = Vector3.new(width, width, length)
+            part.CFrame = CFrame.lookAt((a + b) * 0.5, b)
+            part.Parent = folder
+        end
+        local points, steps = {top}, 16
+        for step = 1, steps do
+            local t = step / steps
+            local point = top:Lerp(base, t)
+            if step < steps then
+                local jitter = 20 * (1 - t * 0.4)
+                point = point + Vector3.new(self.Random:NextNumber(-jitter, jitter), self.Random:NextNumber(-4, 4), self.Random:NextNumber(-jitter, jitter))
+            end
+            table.insert(points, point)
+        end
+        for index = 1, #points - 1 do
+            segment(points[index], points[index + 1], 2.4 - 1.2 * (index / #points))
+        end
+        for _ = 1, self.Random:NextInteger(2, 4) do
+            local point = points[self.Random:NextInteger(3, steps - 3)]
+            local branch = Vector3.new(self.Random:NextNumber(-1, 1), -self.Random:NextNumber(0.5, 1), self.Random:NextNumber(-1, 1)).Unit
+            for _ = 1, self.Random:NextInteger(3, 6) do
+                local nextPoint = point + branch * self.Random:NextNumber(12, 24) + Vector3.new(self.Random:NextNumber(-6, 6), 0, self.Random:NextNumber(-6, 6))
+                segment(point, nextPoint, 0.7)
+                point = nextPoint
+            end
+        end
+        folder.Parent = workspace
+        return folder, distance
+    end
+
+    -- Trueno: llega con retraso según la distancia (como en la vida real: primero la luz, después el sonido).
+    -- Usa los truenos reales de ThunderSounds; ThunderSoundId (si se define) tiene prioridad.
+    function ShaderRain:_thunder(distance, strength, withBolt)
+        if not self.SoundEnabled then return end
+        local delayTime = math.clamp((distance or 300) / 210, 0.5, 2.8)
+        local pick
+        if self.ThunderSoundId then
+            pick = {id = self.ThunderSoundId, length = 9}
+        elseif self.ThunderSounds and #self.ThunderSounds > 0 then
+            pick = self.ThunderSounds[withBolt and #self.ThunderSounds or 1]
+        end
+        task.delay(delayTime, function()
+            if not self.Enabled then return end
+            local sound = Instance.new("Sound")
+            sound.Name = "YinYangShader_Thunder"
+            local speed
+            if pick then
+                sound.SoundId = pick.id
+                speed = self.Random:NextNumber(0.92, 1.04)
+            else
+                sound.SoundId = "rbxassetid://107459242972988"
+                speed = self.Random:NextNumber(0.26, 0.34)
+            end
+            sound.PlaybackSpeed = speed
+            -- más fuerte cuanto más cerca y más intenso el rayo
+            local near = 1 - math.clamp(((distance or 300) - 170) / 260, 0, 1)
+            local peak = math.clamp(self.SoundVolume * (1.8 + near * 1.2) * (strength or 1), 0.15, 1)
+            sound.Volume = pick and peak or 0
+            sound.Parent = SoundService
+            pcall(function() sound:Play() end)
+            if pick then
+                -- el audio real ya trae su propio retumbo: se deja sonar entero y se borra al terminar
+                task.delay(pick.length / speed + 0.5, function() pcall(function() sound:Destroy() end) end)
+            else
+                TweenService:Create(sound, TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Volume = peak}):Play()
+                task.delay(0.6, function()
+                    TweenService:Create(sound, TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Volume = 0}):Play()
+                end)
+                task.delay(3.4, function() pcall(function() sound:Destroy() end) end)
+            end
+        end)
+    end
+
+    function ShaderRain:_endFlash(restore)
+        self.FlashToken = (self.FlashToken or 0) + 1
+        local base = self.FlashBase
+        self.FlashBase = nil
+        if base and restore then
+            pcall(function()
+                for property, value in pairs(base) do ShaderLightingService[property] = value end
+            end)
+        end
+        if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
+        self.BoltFolder = nil
+    end
+
+    -- Destello real: 2-4 pulsos rápidos con oscuridad entre medio, ilumina hasta las sombras, y se apaga suave
+    function ShaderRain:Flash(strength, withBolt)
+        if not self.Enabled then return end
+        strength = math.clamp(tonumber(strength) or 1, 0.2, 1.4)
+        self.FlashToken = (self.FlashToken or 0) + 1
+        local token = self.FlashToken
+        local lighting = ShaderLightingService
+        local base = self.FlashBase
+        if not base then
+            base = {
+                Brightness = ShaderManualLighting.Brightness or lighting.Brightness,
+                ExposureCompensation = ShaderManualLighting.ExposureCompensation or lighting.ExposureCompensation,
+                OutdoorAmbient = lighting.OutdoorAmbient,
+                Ambient = lighting.Ambient,
+            }
+            self.FlashBase = base
+        end
+        local bolt, distance = nil, 300
+        if withBolt then
+            local ok, folder, boltDistance = pcall(function() return self:_spawnBolt() end)
+            if ok and folder then
+                if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
+                bolt, distance = folder, boltDistance
+                self.BoltFolder = folder
+            end
+        end
+        local flashColor = Color3.fromRGB(206, 216, 255)
+        local function setBolt(visible)
+            if not bolt then return end
+            for _, part in ipairs(bolt:GetChildren()) do
+                if part:IsA("BasePart") then part.Transparency = visible and 0 or 1 end
+            end
+        end
+        task.spawn(function()
+            local pulses = self.Random:NextInteger(2, 4)
+            for pulse = 1, pulses do
+                if token ~= self.FlashToken or not self.Enabled then break end
+                local k = strength * (pulse == 1 and 1 or self.Random:NextNumber(0.45, 0.9))
+                pcall(function()
+                    lighting.Brightness = math.min(10, base.Brightness + 2.6 * k)
+                    lighting.ExposureCompensation = math.min(3, base.ExposureCompensation + 0.8 * k)
+                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.78 * k)
+                    lighting.Ambient = base.Ambient:Lerp(flashColor, 0.45 * k)
+                end)
+                setBolt(true)
+                ta

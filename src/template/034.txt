@@ -1,0 +1,740 @@
+end
+        local speedS, amountS, dirChips, styleChips
+        local function refreshMovement()
+            local info = MOVE_INFO[lay.Movement] or {}
+            speedS.Holder.Visible = info.speed ~= nil
+            amountS.Holder.Visible = info.amount ~= nil
+            dirChips.Row.Visible = info.dir == true
+            styleChips.Row.Visible = info.style == true
+            if info.speed then speedS.Configure(info.speed, info.speed[6], info.speed[7], lay.Speed) end
+            if info.amount then amountS.Configure(info.amount, info.amount[6], info.amount[7], lay.Amount ~= 0 and lay.Amount or info.amount[4]) end
+            dirChips.Set(lay.Direction == -1 and -1 or 1)
+            styleChips.Set(lay.Style == "Constant" and "Constant" or "Organic")
+        end
+        local moveChips = chips(c, moveOpts, 3, function(key)
+            lay.Movement = key
+            local info = MOVE_INFO[key] or {}
+            -- al cambiar de movimiento, valores por defecto con sentido para ese movimiento
+            if info.speed then lay.Speed = info.speed[4] end
+            lay.Amount = info.amount and info.amount[4] or 0
+            refreshMovement()
+            changed()
+        end)
+        moveChips.Set(lay.Movement)
+        speedS = slider(c, 4, "Velocidad", "Speed", { 10, 600, 5, 60, "" }, lay.Speed, function(v) lay.Speed = v changed() end)
+        amountS = slider(c, 5, "Intensidad", "Amount", { 0, 10, 1, 0, "" }, lay.Amount, function(v) lay.Amount = v changed() end)
+        dirChips = chips(c, { { 1, "Horario", "Clockwise" }, { -1, "Antihorario", "Counter-clockwise" } }, 6, function(k) lay.Direction = k changed() end, 26)
+        styleChips = chips(c, { { "Organic", "Orgánico (acelera y frena)", "Organic (speeds up & slows)" }, { "Constant", "Constante", "Constant" } }, 7, function(k) lay.Style = k changed() end, 26)
+        slider(c, 8, "Tamaño", "Size", { 0.4, 4, 0.05, 1.6, "x" }, lay.Scale, function(v) lay.Scale = v changed() end)
+        slider(c, 9, "Transparencia", "Transparency", { 0, 0.9, 0.05, 0, "" }, lay.Transparency or 0, function(v) lay.Transparency = v changed() end)
+        local tint = swatchRow(c, 10, "Teñir la imagen", "Tint the image", function() return lay.Color end, function(col)
+            lay.Color = col
+            thumb.ImageColor3 = col or WHITE
+        end, "Original", "Original")
+        tint.Refresh()
+        refreshMovement()
+        return c
+    end
+
+    local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
+    AddLayerBtn.MouseButton1Click:Connect(function()
+        if #ED.rec.Layers >= 3 then return end
+        table.insert(ED.rec.Layers, blankLayer(""))
+        rebuildLayerCards()
+        changed()
+        task.defer(function()
+            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
+        end)
+    end)
+    rebuildLayerCards = function()
+        activeSlider = nil
+        for _, ch in ipairs(LayersHolder:GetChildren()) do
+            if ch:IsA("Frame") then ch:Destroy() end
+        end
+        for i = 1, #ED.rec.Layers do
+            layerCard(i)
+        end
+        AddLayerBtn.Visible = #ED.rec.Layers < 3
+    end
+
+    -- =====================================================================
+    -- 5) SONIDOS
+    -- =====================================================================
+    sectionTitle(Content, "SONIDOS (OPCIONAL)", "SOUNDS (OPTIONAL)", 9, "Al tocar el botón y uno de fondo mientras flota", "On tap, plus an ambient one while it floats")
+    local SoundCard = card(Content, 10)
+    pad(SoundCard, 10, 10, 10, 10)
+    list(SoundCard, 8)
+    local function soundInput(order, es, en, getId, setId, getVol)
+        local row = mk("Frame", { Parent = SoundCard, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 3 })
+        label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, 0, 0, 16), ZIndex = Z + 4 })
+        local box = mk("TextBox", {
+            Parent = row,
+            Size = UDim2.new(1, -84, 0, 30),
+            Position = UDim2.fromOffset(0, 20),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = Z + 4,
+        })
+        box:SetAttribute("ThemeRole", "Background")
+        box:SetAttribute("ThemeTextRole", "Text")
+        box:SetAttribute("PlaceholderSpanish", "ID del sonido (vacío = el de siempre)")
+        box:SetAttribute("PlaceholderEnglish", "Sound ID (empty = default)")
+        box.PlaceholderText = GetText("ID del sonido (vacío = el de siempre)", "Sound ID (empty = default)")
+        corner(box, 9)
+        pad(box, 0, 10, 10, 0)
+        local test = button(row, "Probar", "Test", "Accent", { Size = UDim2.fromOffset(76, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 20), TextSize = 11 })
+        box.FocusLost:Connect(function()
+            setId(CL.CleanAsset(box.Text))
+            box.Text = getId()
+        end)
+        test.MouseButton1Click:Connect(function()
+            local id = CL.CleanAsset(box.Text)
+            if id == "" then
+                playSound(Sounds.Click, 0.6)
+            else
+                playSound(id, getVol())
+            end
+        end)
+        return box
+    end
+    local clickBox = soundInput(1, "Sonido al tocar", "Tap sound", function() return ED.rec.ClickSound.Id end, function(v) ED.rec.ClickSound.Id = v end, function() return ED.rec.ClickSound.Volume end)
+    local clickVol = slider(SoundCard, 2, "Volumen al tocar", "Tap volume", { 0, 1, 0.05, 0.6, "" }, 0.6, function(v) ED.rec.ClickSound.Volume = v end)
+    local idleBox = soundInput(3, "Sonido de fondo (con la ventana cerrada)", "Ambient sound (window closed)", function() return ED.rec.IdleSound.Id end, function(v) ED.rec.IdleSound.Id = v end, function() return ED.rec.IdleSound.Volume end)
+    local idleEvery = slider(SoundCard, 4, "Cada cuántos segundos", "Every how many seconds", { 3, 120, 1, 15, "s" }, 15, function(v) ED.rec.IdleSound.Interval = v end)
+    local idleVol = slider(SoundCard, 5, "Volumen de fondo", "Ambient volume", { 0, 1, 0.05, 0.15, "" }, 0.15, function(v) ED.rec.IdleSound.Volume = v end)
+    refreshSoundCard = function()
+        clickBox.Text = ED.rec.ClickSound.Id or ""
+        clickVol.Set(ED.rec.ClickSound.Volume or 0.6, false)
+        idleBox.Text = ED.rec.IdleSound.Id or ""
+        idleEvery.Set(ED.rec.IdleSound.Interval or 15, false)
+        idleVol.Set(ED.rec.IdleSound.Volume or 0.15, false)
+    end
+
+    -- =====================================================================
+    -- 6) COMPARTIR
+    -- =====================================================================
+    sectionTitle(Content, "COMPARTIR", "SHARE", 11, "Pasale el código a un amigo y él lo pega acá", "Send the code to a friend and they paste it here")
+    local ShareCard = card(Content, 12)
+    pad(ShareCard, 10, 10, 10, 10)
+    list(ShareCard, 8)
+    local CodeBox = mk("TextBox", {
+        Parent = ShareCard,
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        TextSize = 10,
+        Font = Enum.Font.Code,
+        ClearTextOnFocus = false,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        LayoutOrder = 1,
+        ZIndex = Z + 4,
+    })
+    CodeBox:SetAttribute("ThemeRole", "Background")
+    CodeBox:SetAttribute("ThemeTextRole", "Text")
+    CodeBox:SetAttribute("PlaceholderSpanish", "Pegá acá un código YYLOGO1:...")
+    CodeBox:SetAttribute("PlaceholderEnglish", "Paste a YYLOGO1:... code here")
+    CodeBox.PlaceholderText = GetText("Pegá acá un código YYLOGO1:...", "Paste a YYLOGO1:... code here")
+    corner(CodeBox, 9)
+    pad(CodeBox, 0, 10, 10, 0)
+    local shareRow = mk("Frame", { Parent = ShareCard, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
+    local CopyBtn = button(shareRow, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
+    local ImportBtn = button(shareRow, "Cargar código", "Load code", "Secondary", { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new(0.5, 4, 0, 0), TextSize = 11 })
+    CopyBtn.MouseButton1Click:Connect(function()
+        local saved = recToSaved(ED.rec, "share")
+        if not saved then
+            setStatus("Agregá al menos una imagen antes de copiar", "Add at least one image before copying", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        local code = CL.Export(saved)
+        CodeBox.Text = code
+        if type(setclipboard) == "function" then
+            pcall(setclipboard, code)
+            setStatus("Código copiado: pegalo en un chat para compartirlo", "Code copied: paste it in a chat to share it", Color3.fromRGB(80, 200, 120))
+        else
+            setStatus("Tu ejecutor no copia al portapapeles: el código quedó en el cuadro", "Your executor can't copy: the code is in the box", Theme.Accent)
+        end
+    end)
+    ImportBtn.MouseButton1Click:Connect(function()
+        local rec = CL.Import(CodeBox.Text)
+        if not rec then
+            setStatus("Ese código no es válido (tiene que empezar con YYLOGO1:)", "That code isn't valid (it must start with YYLOGO1:)", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        loadRecIntoEditor(recFromIcon(CL.ToIcon(rec), rec.Name), false)
+        setStatus("Logo \"" .. rec.Name .. "\" cargado: tocá Crear logo para guardarlo", "Logo \"" .. rec.Name .. "\" loaded: tap Create logo to save it", Color3.fromRGB(80, 200, 120))
+    end)
+
+    -- =====================================================================
+    -- ABRIR / CERRAR / GUARDAR
+    -- =====================================================================
+    local function stopLoop()
+        if LS.loop then LS.loop:Disconnect() LS.loop = nil end
+    end
+    local function closeEditor()
+        stopLoop()
+        activeSlider = nil
+        if LS.realLive then setRealLive(false) end
+        setGhost(false)
+        TweenService:Create(PanelScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.94 }):Play()
+        task.delay(0.15, function() Overlay.Visible = false end)
+    end
+
+    openEditor = function(id)
+        ED.editingId = id
+        local saved = id and CL.Logos[id]
+        if saved then
+            ED.rec = recFromIcon(CL.ToIcon(saved), saved.Name)
+        else
+            ED.rec = blankRec()
+        end
+        NameBox.Text = ED.rec.Name
+        L(Title, saved and "Editar logo" or "Estudio de Logos", saved and "Edit logo" or "Logo Studio")
+        L(SaveBtn, saved and "Guardar cambios" or "Crear logo", saved and "Save changes" or "Create logo")
+        L(Status, "", "")
+        rebuildLayerCards()
+        refreshBaseCard()
+        refreshSoundCard()
+        setBackdrop(LS.backdrop)
+        backdropChips.Set(LS.backdrop)
+        zoomChips.Set(LS.zoom)
+        applyZoom()
+        Hint.Visible, Hint.TextTransparency, Hint.BackgroundTransparency = true, 0, 0.45
+        Ghost.Visible, ghostOpen, Ghost.GroupTransparency = false, false, 1
+        PvButton.Position = UDim2.fromOffset(26, 52)
+        Content.CanvasPosition = Vector2.new(0, 0)
+        rebuildPreview()
+        Overlay.Visible = true
+        PanelScale.Scale = 0.94
+        TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        stopLoop()
+        -- la vista previa se anima solo mientras el editor está abierto
+        LS.loop = RunService.RenderStepped:Connect(function(dt)
+            stepLayers(LS.live, dt)
+        end)
+    end
+
+    CloseBtn.MouseButton1Click:Connect(closeEditor)
+    CancelBtn.MouseButton1Click:Connect(closeEditor)
+    SaveBtn.MouseButton1Click:Connect(function()
+        ED.rec.Name = NameBox.Text:sub(1, 24)
+        if ED.rec.Name:match("^%s*$") then
+            setStatus("Ponele un nombre a tu logo", "Give your logo a name", Color3.fromRGB(235, 90, 90))
+            NameBox:CaptureFocus()
+            return
+        end
+        local saved = recToSaved(ED.rec, ED.editingId or CL.NewId())
+        if not saved then
+            setStatus("Falta la imagen: pegá un ID en la capa 1", "Missing image: paste an ID in layer 1", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        local okSave, err = CL.Put(saved)
+        if err == "max" then
+            setStatus("Llegaste al máximo de " .. CL.Max .. " logos: borrá uno primero", "You reached the max of " .. CL.Max .. " logos: delete one first", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        playSound(Sounds.Click, 0.6)
+        local key = CL.Key(saved.Id)
+        SavedConfig.SelectedLogoIcon = key
+        SaveConfig()
+        if LS.realLive then
+            setRealLive(false) -- vuelve a dibujar SavedConfig.SelectedLogoIcon (el nuevo)
+        else
+            ApplyLogoIcon(key)
+        end
+        LS.RefreshCards()
+        for _, other in ipairs(LP.cards) do
+            LP.paint(other, other.key == key, true)
+        end
+        LP.setHero(key)
+        closeEditor()
+        if not okSave then
+            warn("[YinYang Logos] Tu ejecutor no tiene writefile: el logo dura hasta que cierres el juego")
+        end
+    end)
+
+    -- =====================================================================
+    -- PREMIUM (gamepass "Yin Yang Studio Logos"): crear / editar logos
+    -- =====================================================================
+    -- El gamepass queda en la CUENTA de Roblox: se consulta a Roblox cada vez que carga el script
+    -- (cualquier dispositivo, cualquier ejecutor). El archivo local solo se usa si Roblox no responde.
+    local MPS = game:GetService("MarketplaceService")
+    local PR = { owned = false, checking = true, listeners = {}, price = nil }
+    local PASS_ID = PremiumConfig.GamepassId
+    local PASS_URL = "https://www.roblox.com/game-pass/" .. tostring(PASS_ID)
+
+    local function readCache()
+        local ok, data = pcall(function()
+            if isfile and readfile and isfile(PremiumConfig.CacheFile) then
+                return HttpService:JSONDecode(readfile(PremiumConfig.CacheFile))
+            end
+            return nil
+        end)
+        return ok and type(data) == "table" and data.UserId == LocalPlayer.UserId and data.Pass == PASS_ID and data.Owned == true
+    end
+    local function writeCache(owned)
+        pcall(function()
+            if writefile then
+                writefile(PremiumConfig.CacheFile, HttpService:JSONEncode({ UserId = LocalPlayer.UserId, Pass = PASS_ID, Owned = owned == true, At = os.time() }))
+            end
+        end)
+    end
+    function PR.set(owned, fromApi)
+        PR.owned = owned == true
+        PR.checking = false
+        if fromApi then writeCache(PR.owned) end
+        for _, fn in ipairs(PR.listeners) do pcall(fn, PR.owned) end
+    end
+    local function isOwnerName()
+        local me = string.lower(LocalPlayer.Name)
+        for _, n in ipairs(PremiumConfig.Owners or {}) do
+            if string.lower(tostring(n)) == me then return true end
+        end
+        return false
+    end
+    function PR.check()
+        PR.checking = true
+        for _, fn in ipairs(PR.listeners) do pcall(fn, PR.owned) end
+        task.spawn(function()
+            if isOwnerName() then PR.set(true, false) return end
+            local okOwn, owns = false, nil
+            for attempt = 1, 3 do
+                okOwn, owns = pcall(function()
+                    return MPS:UserOwnsGamePassAsync(LocalPlayer.UserId, PASS_ID)
+                end)
+                if okOwn then break end
+                task.wait(attempt * 1.5)
+            end
+            -- el creador del pase siempre tiene acceso (aunque no se lo haya "comprado")
+            local okInfo, info = pcall(function()
+                return MPS:GetProductInfo(PASS_ID, Enum.InfoType.GamePass)
+            end)
+            if okInfo and type(info) == "table" then
+                PR.price = tonumber(info.PriceInRobux)
+                local creator = info.Creator
+                if type(creator) == "table" and tonumber(creator.CreatorTargetId) == LocalPlayer.UserId then
+                    owns, okOwn = true, true
+                end
+            end
+            if okOwn then
+                PR.set(owns == true, true)
+            else
+                -- Roblox no respondió: se usa la última verificación buena de esta cuenta
+                PR.set(readCache(), false)
+            end
+        end)
+    end
+    -- compra terminada dentro del juego: se desbloquea al instante
+    pcall(function()
+        MPS.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+            if player == LocalPlayer and tonumber(passId) == PASS_ID and purchased then
+                PR.set(true, true)
+            end
+        end)
+    end)
+
+    -- ---------- candado dibujado (arco + cuerpo) ----------
+    local GOLD_A, GOLD_B = Color3.fromRGB(255, 214, 90), Color3.fromRGB(255, 140, 40)
+    local function goldGradient(parent, rotation)
+        return mk("UIGradient", { Parent = parent, Rotation = rotation or 45, Color = ColorSequence.new(GOLD_A, GOLD_B) })
+    end
+    local function drawLock(parent, px, z)
+        local holder = mk("Frame", { Parent = parent, Size = UDim2.fromOffset(px, px), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, ZIndex = z })
+        local shackle = mk("Frame", { Parent = holder, Size = UDim2.fromScale(0.56, 0.62), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02), BackgroundTransparency = 1, ZIndex = z })
+        corner(shackle, 999)
+        local ss = mk("UIStroke", { Parent = shackle, Color = WHITE, Thickness = math.max(2, px * 0.1) })
+        goldGradient(ss, 90)
+        local body = mk("Frame", { Parent = holder, Size = UDim2.fromScale(0.82, 0.56), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = z + 1 })
+        corner(body, math.max(3, math.floor(px * 0.14)))
+        goldGradient(body, 90)
+        local hole = mk("Frame", { Parent = body, Size = UDim2.fromScale(0.16, 0.36), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = z + 2 })
+        corner(hole, 999)
+        return holder
+    end
+
+    -- ---------- hoja "Premium" ----------
+    local PSheet = mk("Frame", { Parent = Main, Name = "LogoPremiumOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.3, BorderSizePixel = 0, Visible = false, Active = true, ZIndex = Z })
+    local PCard = mk("Frame", { Parent = PSheet, Size = UDim2.new(0.94, 0, 0.92, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 1 })
+    PCard:SetAttribute("ThemeRole", "Background")
+    corner(PCard, 18)
+    local PCardStroke = mk("UIStroke", { Parent = PCard, Color = WHITE, Thickness = 2 })
+    local PCardGrad = goldGradient(PCardStroke, 0)
+    PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKeypoint.new(1, GOLD_B) })
+    TweenService:Create(PCardGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+    local PScale = mk("UIScale", { Parent = PCard, Scale = 1 })
+    pad(PCard, 14, 16, 16, 14)
+
+    -- encabezado: candado que flota + título + chip PREMIUM
+    local PHead = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = Z + 2 })
+    local PIcon = mk("Frame", { Parent = PHead, Size = UDim2.fromOffset(60, 60), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = Z + 2 })
+    corner(PIcon, 16)
+    local PIconStroke = mk("UIStroke", { Parent = PIcon, Color = WHITE, Thickness = 1.5 })
+    goldGradient(PIconStroke, 45)
+    local PLock = drawLock(PIcon, 32, Z + 3)
+    TweenService:Create(PLock, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 0, 0.5, -3) }):Play()
+    local PChip = mk("TextLabel", { Parent = PHead, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(72, 2), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 10, Font = Enum.Font.GothamBlack, ZIndex = Z + 3 })
+    PChip:SetAttribute("IgnoreTextEffect", true)
+    corner(PChip, 999)
+    pad(PChip, 0, 9, 9, 0)
+    goldGradient(PChip, 0)
+    label(PHead, "Yin Yang Studio Logos", "Yin Yang Studio Logos", 17, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72, 22), ZIndex = Z + 3 })
+    label(PHead, "Creá tus propios botones flotantes", "Create your own floating buttons", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -110, 0, 14), Position = UDim2.fromOffset(72, 45), ZIndex = Z + 3 })
+    local PClose = mk("TextButton", { Parent = PHead, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 19, Font = Enum.Font.GothamBold, ZIndex = Z + 4 })
+    PClose:SetAttribute("ThemeRole", "Secondary")
+    PClose:SetAttribute("ThemeTextRole", "Text")
+    corner(PClose, 999)
+    RowKit.Control(PClose)
+
+    -- cuerpo en dos columnas: demostración (cuadrado) + información y compra
+    local PBody = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 1, -74), Position = UDim2.fromOffset(0, 74), BackgroundTransparency = 1, ZIndex = Z + 2 })
+    local RightCol = mk("ScrollingFrame", {
+        Parent = PBody,
+        Size = UDim2.new(0.5, -6, 1, 0),
+        Position = UDim2.new(0.5, 6, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ZIndex = Z + 2,
+    })
+    list(RightCol, 8)
+
+    -- =================== DEMOSTRACIÓN ANIMADA ===================
+    -- Un mini estudio que se arma solo: ID -> imagen, movimiento, colores, guardar.
+    -- Corre solo mientras la ventana premium está abierta (tweens nativos + una corrutina).
+    -- Va en su propia función: BuildLogoStudio está cerca del límite de 200 locales de Luau.
+    local startDemo, stopDemo = (function()
+    local Demo = mk("Frame", { Parent = PBody, Size = UDim2.new(0.5, -6, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.25, -3, 0.5, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 2 })
+    mk("UIAspectRatioConstraint", { Parent = Demo, AspectRatio = 1 })
+    corner(Demo, 14)
+    vgrad(Demo, Color3.fromRGB(78, 150, 232), Color3.fromRGB(176, 220, 252))
+    local DemoStroke = mk("UIStroke", { Parent = Demo, Color = WHITE, Thickness = 1.5, Transparency = 0.2 })
+    goldGradient(DemoStroke, 45)
+    local DZ = Z + 3
+    local function dframe(props)
+        props.Parent = props.Parent or Demo
+        props.BorderSizePixel = 0
+        props.ZIndex = props.ZIndex or DZ
+        return mk("Frame", props)
+    end
+    local function dtext(parent, txt, size, color, props)
+        local t = mk("TextLabel", { Parent = parent, BackgroundTransparency = 1, Text = txt, TextColor3 = color or WHITE, TextSize = size, Font = Enum.Font.GothamBold, TextScaled = false, ZIndex = DZ + 2 })
+        t:SetAttribute("IgnoreTextEffect", true)
+        for k, v in pairs(props or {}) do t[k] = v end
+        return t
+    end
+    -- paisaje
+    for _, m in ipairs({ { 0.2, 0.7 }, { 0.62, 0.9 }, { 0.95, 0.6 } }) do
+        dframe({ Size = UDim2.fromScale(m[2] * 0.6, m[2] * 0.6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(m[1], 0.74), Rotation = 45, BackgroundColor3 = Color3.fromRGB(96, 128, 170), ZIndex = DZ })
+    end
+    local dGround = dframe({ Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.72), BackgroundColor3 = WHITE, ZIndex = DZ + 1 })
+    vgrad(dGround, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
+
+    -- mini panel del estudio (arriba): campo de ID + chips + colores + guardar
+    local dPanel = dframe({ Size = UDim2.new(0.92, 0, 0.3, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.04), BackgroundColor3 = Color3.fromRGB(18, 18, 24), BackgroundTransparency = 0.15, ZIndex = DZ + 2 })
+    corner(dPanel, 10)
+    local dId = dframe({ Parent = dPanel, Size = UDim2.new(0.94, 0, 0.36, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.08), BackgroundColor3 = Color3.fromRGB(40, 40, 48), ZIndex = DZ + 3 })
+    corner(dId, 6)
+    local dIdText = dtext(dId, "ID: ", 9, Color3.fromRGB(230, 230, 240), { Size = UDim2.new(1, -10, 1, 0), Position = UDim2.fromOffset(6, 0), Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = DZ + 4 })
+    local function dchip(txt, x)
+        local c = dframe({ Parent = dPanel, Size = UDim2.new(0.24, 0, 0.34, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(x, 0.56), BackgroundColor3 = Color3.fromRGB(50, 50, 60), ZIndex = DZ + 3 })
+        corner(c, 999)
+        dtext(c, txt, 8, WHITE, { Size = UDim2.fromScale(1, 1), ZIndex = DZ + 4 })
+        return c
+    end
+    local chipSpin = dchip("Girar", 0.15)
+    local swPink = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.38, 0, 0.56, 0), BackgroundColor3 = Color3.fromRGB(255, 90, 170), ZIndex = DZ + 3 })
+    corner(swPink, 999)
+    local swGold = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.56, 0), BackgroundColor3 = GOLD_A, ZIndex = DZ + 3 })
+    corner(swGold, 999)
+    local chipSave = dchip("Guardar", 0.8)
+    chipSave.BackgroundColor3 = GOLD_B
+
+    -- el botón que se va armando (misma composición que el real: círculo + capas a 1.6x)
+    local dBtn = dframe({ Size = UDim2.fromScale(0.26, 0.26), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.58), BackgroundColor3 = Color3.fromRGB(60, 60, 70), ZIndex = DZ + 5 })
+    mk("UIAspectRatioConstraint", { Parent = dBtn, AspectRatio = 1 })
+    corner(dBtn, 999)
+    mk("UIStroke", { Parent = dBtn, Color = WHITE, Thickness = 1.5, Transparency = 0.3 })
+    local dBtnScale = mk("UIScale", { Parent = dBtn, Scale = 1 })
+    local function dlayer(img, z)
+        return mk("ImageLabel", { Parent = dBtn, Size = UDim2.fromScale(1.6, 1.6), Position = UDim2.fromScale(-0.3, -0.3), BackgroundTransparency = 1, Image = img, ImageTransparency = 1, ZIndex = z })
+    end
+    -- imágenes del Yin Yang Clásico (catálogo oficial)
+    local dBase = dlayer("rbxassetid://106130066496682", DZ + 6)
+    local dRing = dlayer("rbxassetid://70721341917757", DZ + 7)
+
+    -- texto del paso + cartel de guardado
+    local dCaption = dtext(Demo, "", 10, WHITE, { Size = UDim2.new(0.9, 0, 0, 20), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, Font = Enum.Font.GothamBlack, ZIndex = DZ + 8 })
+    corner(dCaption, 999)
+    local dToast = dtext(Demo, "", 11, Color3.fromRGB(50, 28, 6), { Size = UDim2.new(0.5, 0, 0, 22), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundColor3 = WHITE, BackgroundTransparency = 0, Font = Enum.Font.GothamBlack, Visible = false, ZIndex = DZ + 9 })
+    corner(dToast, 999)
+    goldGradient(dToast, 0)
+    local dToastScale = mk("UIScale", { Parent = dToast, Scale = 1 })
+
+    -- dedo que toca (círculo blanco con onda)
+    local dFinger = dframe({ Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.85, 0.9), BackgroundColor3 = WHITE, BackgroundTransparency = 0.15, ZIndex = DZ + 10 })
+    corner(dFinger, 999)
+    mk("UIStroke", { Parent = dFinger, Color = Color3.new(0, 0, 0), Thickness = 1.5, Transparency = 0.5 })
+    local dFingerScale = mk("UIScale", { Parent = dFinger, Scale = 1 })
+
+    local demoGen = 0
+    local ringTween = nil
+    -- posición (en el cuadrado) del centro de un elemento del mini panel
+    local function centerOf(el)
+        if el.Parent == dPanel then
+            local p = el.Position
+            -- dPanel: x 0.04..0.96, y 0.04..0.34 del cuadrado
+            return UDim2.new(0.04 + p.X.Scale * 0.92, 0, 0.04 + (p.Y.Scale + 0.17) * 0.3, 0)
+        end
+        return el.Position
+    end
+    local function demoReset()
+        if ringTween then ringTween:Cancel() ringTween = nil end
+        dIdText.Text = "ID: "
+        dBase.ImageTransparency, dRing.ImageTransparency, dRing.Rotation = 1, 1, 0
+        dRing.ImageColor3 = WHITE
+        dBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        dBtn.Position = UDim2.fromScale(0.5, 0.58)
+        dBtnScale.Scale = 1
+        chipSpin.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        dToast.Visible = false
+        dCaption.Text = ""
+    end
+    local function runDemo(gen)
+        local function alive() return demoGen == gen and PSheet.Visible end
+        local function pause(t)
+            task.wait(t)
+            return alive()
+        end
+        local function tap(el)
+            TweenService:Create(dFinger, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = centerOf(el) }):Play()
+            if not pause(0.5) then return false end
+            TweenService:Create(dFingerScale, TweenInfo.new(0.08), { Scale = 0.65 }):Play()
+            -- onda del toque
+            local ring = dframe({ Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = dFinger.Position, BackgroundTransparency = 1, ZIndex = DZ + 9 })
+            corner(ring, 999)
+            local rs = mk("UIStroke", { Parent = ring, Color = WHITE, Thickness = 2 })
+            TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(40, 40) }):Play()
+            TweenService:Create(rs, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+            task.delay(0.45, function() ring:Destroy() end)
+            if not pause(0.1) then return false end
+            TweenService:Create(dFingerScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            return pause(0.25)
+        end
+        local function caption(es, en)
+            dCaption.Text = GetText(es, en)
+        end
+        while alive() do
+            demoReset()
+            if not pause(0.4) then break end
+            -- 1) pegar el ID: aparece la imagen base
+            caption("1 · Pegá el ID de tu imagen", "1 · Paste your image ID")
+            if not tap(dId) then break end
+            local id = "106130066496682"
+            for i = 1, #id do
+                dIdText.Text = "ID: " .. id:sub(1, i)
+                if not pause(0.035) then break end
+            end
+            if not alive() then break end
+            dBtnScale.Scale = 0.75
+            TweenService:Create(dBase, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
+            TweenService:Create(dBtnScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            if not pause(0.7) then break end
+            -- 2) movimiento: el anillo aparece y gira
+            caption("2 · Elegí un movimiento", "2 · Pick a movement")
+            if not tap(chipSpin) then break end
+            chipSpin.BackgroundColor3 = GOLD_B
+            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
+            ringTween = TweenService:Create(dRing, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
+            ringTween:Play()
+            if not pause(1) then break end
+            -- 3) colores: círculo rosa, anillo dorado
+            caption("3 · Cambiá los colores", "3 · Change the colors")
+            if not tap(swPink) then break end
+            TweenService:Create(dBtn, TweenInfo.new(0.35), { BackgroundColor3 = Color3.fromRGB(255, 90, 170) }):Play()
+            if not pause(0.3) then break end
+            if not tap(swGold) then break end
+            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageColor3 = GOLD_A }):Play()
+            if not pause(0.7) then break end
+            -- 4) guardar: cartel + el logo vuela a la esquina como botón flotante
+            caption("4 · Guardalo y ¡listo!", "4 · Save it and done!")
+            if not tap(chipSave) then break end
+            dToast.Text = GetText("Guardado", "Saved")
+            dToast.Visible = true
+            dToastScale.Scale = 0.6
+            TweenService:Create(dToastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            if not pause(0.7) then break end
+            dToast.Visible = false
+            TweenService:Create(dBtn, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), { Position = UDim2.fromScale(0.13, 0.45) }):Play()
+            TweenService:Create(dBtnScale, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), { Scale = 0.6 }):Play()
+            TweenService:Create(dFinger, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.85, 0.9) }):Play()
+            caption("Tu botón flotante, a tu gusto", "Your floating button, your way")
+            if not pause(2.2) then break end
+        end
+    end
+    local function startDemo()
+        demoGen += 1
+        task.spawn(runDemo, demoGen)
+    end
+    local function stopDemo()
+        demoGen += 1
+        if ringTween then ringTween:Cancel() ringTween = nil end
+    end
+    return startDemo, stopDemo
+    end)()
+
+    -- lo que incluye
+    local PList = mk("Frame", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = 2, ZIndex = Z + 2 })
+    PList:SetAttribute("ThemeRole", "Secondary")
+    corner(PList, 12)
+    pad(PList, 10, 12, 12, 10)
+    list(PList, 7)
+    for i, f in ipairs({
+        { "Hasta 30 logos propios con tus imágenes", "Up to 30 custom logos with your images" },
+        { "3 capas con 7 movimientos, tinte y tamaño", "3 layers with 7 movements, tint and size" },
+        { "Vista previa realista y en tu botón real", "Realistic preview and on your real button" },
+        { "Sonidos propios y códigos para compartir", "Custom sounds and share codes" },
+        { "Estudio de Toggles Flotantes completo", "Full Floating Toggle Studio" },
+    }) do
+        local row = mk("Frame", { Parent = PList, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = Z + 3 })
+        local dot = mk("Frame", { Parent = row, Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(0, 2), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 3 })
+        corner(dot, 999)
+        goldGradient(dot, 45)
+        corner(mk("Frame", { Parent = dot, Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = Z + 4 }), 999)
+        label(row, f[1], f[2], 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -22, 1, 0), Position = UDim2.fromOffset(22, 0), ZIndex = Z + 3 })
+    end
+    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any executor.", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, 0, 0, 26), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, LayoutOrder = 3, ZIndex = Z + 2 })
+
+    local PBuy = mk("TextButton", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = WHITE, Text = "", LayoutOrder = 4, ZIndex = Z + 3 })
+    corner(PBuy, 12)
+    goldGradient(PBuy, 0)
+    local PBuyText = mk("TextLabel", { Parent = PBuy, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(50, 28, 6), TextSize = 14, Font = Enum.Font.GothamBlack, ZIndex = Z + 4 })
+    PBuyText:SetAttribute("IgnoreTextEffect", true)
+    local PShine = mk("Frame", { Parent = PBuy, Size = UDim2.new(0.25, 0, 1, 0), Position = UDim2.fromScale(-0.3, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.6, BorderSizePixel = 0, Rotation = 0, ZIndex = Z + 4 })
+    mk("UIGradient", { Parent = PShine, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }) })
+    PBuy.ClipsDescendants = true
+    TweenService:Create(PShine, TweenInfo.new(2.2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, false, 0.8), { Position = UDim2.fromScale(1.1, 0) }):Play()
+    RowKit.Control(PBuy)
+    PBuy.BackgroundColor3 = WHITE
+    PBuy.BackgroundTransparency = 0
+    PBuy:SetAttribute("ThemeRole", nil)
+    local PCheck = button(RightCol, "Ya lo compré · verificar", "I already bought it · verify", "Secondary", { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 5, TextSize = 12 })
+    local PStatus = label(RightCol, "", "", 10, Enum.Font.GothamBold, "TextDim", { Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 6, ZIndex = Z + 2 })
+
+    local function refreshBuyText()
+        if PR.price then
+            L(PBuyText, "Comprar · R$ " .. PR.price, "Buy · R$ " .. PR.price)
+        else
+            L(PBuyText, "Comprar en Roblox", "Buy on Roblox")
+        end
+    end
+    local function closeSheet()
+        TweenService:Create(PScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.92 }):Play()
+        task.delay(0.14, function() PSheet.Visible = false end)
+        stopDemo()
+    end
+    local function showSheet()
+        refreshBuyText()
+        if PR.checking then
+            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        else
+            L(PStatus, "", "")
+        end
+        PSheet.Visible = true
+        startDemo()
+        PScale.Scale = 0.9
+        TweenService:Create(PScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    end
+    PClose.MouseButton1Click:Connect(closeSheet)
+    PBuy.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        local ok = pcall(function()
+            MPS:PromptGamePassPurchase(LocalPlayer, PASS_ID)
+        end)
+        if type(setclipboard) == "function" then pcall(setclipboard, PASS_URL) end
+        if ok then
+            L(PStatus, "Se abrió la compra de Roblox · el link también quedó copiado", "Roblox purchase opened · link also copied")
+        else
+            L(PStatus, "Link copiado: compralo en el navegador y tocá Ya lo compré", "Link copied: buy it in the browser and tap I already bought it")
+        end
+    end)
+    PCheck.MouseButton1Click:Connect(function()
+        L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        PR.check()
+    end)
+
+    -- entrada única al editor: sin el pase se muestra la hoja premium
+    local function guardedOpen(id)
+        if PR.owned then
+            openEditor(id)
+        else
+            showSheet()
+        end
+    end
+    LS.Open = guardedOpen
+    LS.Premium = PR
+    FloatingPillV5.Studio.SetPremium(PR, showSheet) -- el mismo pase desbloquea el Estudio de Toggles Flotantes
+    -- la hoja reacciona cuando termina una verificación o una compra
+    table.insert(PR.listeners, function(owned)
+        if not PSheet.Visible then return end
+        refreshBuyText()
+        if PR.checking then
+            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        elseif owned then
+            L(PStatus, "¡Listo! Ya tenés el Studio Logos", "Done! You now have Studio Logos")
+            playSound(Sounds.Click, 0.6)
+            task.delay(0.9, closeSheet)
+        else
+            L(PStatus, "Todavía no figura la compra en tu cuenta", "The purchase isn't on your account yet")
+        end
+    end)
+
+    -- =====================================================================
+    -- PESTAÑA LOGO: sección "MIS LOGOS"
+    -- =====================================================================
+    local function header(order, es, en, subEs, subEn)
+        local h = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11 })
+        local t = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(4, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
+        t:SetAttribute("ThemeTextRole", "Text")
+        L(t, es, en)
+        local d = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 13), Position = UDim2.fromOffset(4, 19), BackgroundTransparency = 1, TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12 })
+        d:SetAttribute("ThemeTextRole", "TextDim")
+        d:SetAttribute("IgnoreTextEffect", true)
+        L(d, subEs, subEn)
+        return h, d
+    end
+    local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
+    local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
+    mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
+    header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
+
+    -- tarjeta "Crear": círculo con + y aro de colores girando
+    do
+        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickness = 1.5, Transparency = 0.1 })
+        local g = mk("UIGradient", {
+            Parent = cs,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Theme.Accent),
+            }),
+        })
+        TweenService:Create(g, TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+        local circle = mk("Frame", { Parent = c, Size = UDim2.fromOffset(52, 52), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), BackgroundColor3 = Theme.Accent, ZIndex = 13 })
+        circle:SetAttribute("ThemeRole", "Accent")
+        corner(circle, 999)
+        local plus = mk("TextLabel", { Parent = circle, Size = UDim2.fromScale(1, 1), Background

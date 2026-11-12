@@ -1,0 +1,838 @@
+
+        local m = D.Motion
+        local spd = D.MotionSpeed or 1.6
+        local amt = D.MotionAmount or 4
+        if m == "Float" then
+            local h = math.max(win.Size.Y.Offset, 1)
+            win.AnchorPoint = Vector2.new(0, amt / h)
+            loop(win, TweenInfo.new(spd, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { AnchorPoint = Vector2.new(0, -amt / h) })
+        elseif m == "Wiggle" then
+            local w = math.max(win.Size.X.Offset, 1)
+            win.AnchorPoint = Vector2.new(amt / w, 0)
+            loop(win, TweenInfo.new(math.max(0.08, spd * 0.25), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { AnchorPoint = Vector2.new(-amt / w, 0) })
+        elseif m == "Sway" then
+            win.Rotation = -amt
+            loop(win, TweenInfo.new(spd, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Rotation = amt })
+        elseif m == "Beat" then
+            local target = live.BStroke or (st and st.Enabled and st) or nil
+            if target then
+                loop(target, TweenInfo.new(math.max(0.15, spd * 0.5), Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Thickness = target.Thickness + amt * 0.5 })
+            end
+        end
+
+        -- texto
+        local lbl = live.Label
+        if lbl and lbl.Parent then
+            local font = nil
+            if D.Font then
+                local okF, f = pcall(function() return Enum.Font[D.Font] end)
+                if okF then font = f end
+            end
+            lbl.Font = font or Enum.Font.GothamBlack
+            lbl.TextSize = D.TextSize or (pill5 and (win:GetAttribute("HasLinkedSlider") and 16 or 17)) or (kind == "Circle" and 11) or 21
+            lbl.TextTransparency = (D.HideText and not pill5) and 1 or (D.TextAlpha or 0)
+            lbl.TextStrokeTransparency = D.TextStroke and 0.35 or 1
+            lbl.TextStrokeColor3 = Color3.new(0, 0, 0)
+            FS.SetText(live)
+            FS.FitWidth(live)
+        end
+    end
+
+    -- Colores según el estado (se llama justo después del pintado original del toggle)
+    function FS.Paint(win, state, instant)
+        local live = win and FS.Live[win]
+        if not (live and live.D and win.Parent) then return end
+        local D, kind = live.D, live.Kind
+        local pill5 = kind == "Pill5"
+        state = state == true
+        local info = (not instant) and TweenInfo.new(pill5 and 0.22 or 0.15, Enum.EasingStyle.Quint, Enum.EasingDirection.Out) or nil
+        local function go(obj, goal)
+            if not (obj and obj.Parent) then return end
+            if info then
+                TweenService:Create(obj, info, goal):Play()
+            else
+                for k, v in pairs(goal) do obj[k] = v end
+            end
+        end
+
+        local bg, txt
+        if state then bg, txt = D.OnColor, D.TextOnColor else bg, txt = D.OffColor, D.TextOffColor end
+        if not txt and bg then txt = getContrastColor(bg) end
+        if bg then
+            go(win, { BackgroundColor3 = bg })
+            if pill5 then
+                local fill = win:FindFirstChildOfClass("UIGradient")
+                if fill then fill.Color = ColorSequence.new(WHITE, Color3.fromRGB(215, 215, 215)) end
+            end
+        end
+        if txt and live.Label then go(live.Label, { TextColor3 = txt }) end
+        if pill5 and (bg or txt) then
+            local eff = txt or (state and getContrastColor(Theme.ToggleOn) or WHITE)
+            local orb, sw = win:FindFirstChild("FloatOrb"), win:FindFirstChild("FloatSwitch")
+            local knob = sw and sw:FindFirstChild("FloatKnob")
+            if state then
+                go(orb, { BackgroundColor3 = eff })
+                go(sw, { BackgroundColor3 = eff })
+                go(knob, { BackgroundColor3 = bg or Theme.ToggleOn })
+            elseif bg then
+                go(orb, { BackgroundColor3 = bg })
+            end
+        end
+        if live.BorderAuto then
+            local bc = state and Theme.ToggleOn or Theme.Accent
+            go(live.BStroke, { Color = bc })
+            go(live.NeonStroke, { Color = bc })
+        end
+        if live.GradAuto and live.BGrad then -- degradado sin color propio: sigue al tema activo
+            live.BGrad.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent),
+                ColorSequenceKeypoint.new(0.5, D.BorderColor2 or WHITE),
+                ColorSequenceKeypoint.new(1, Theme.Accent),
+            })
+        end
+
+        -- aura
+        local au = live.Aura
+        if au and au.Parent then
+            if live.AuraPulse then
+                pcall(function() live.AuraPulse:Cancel() end)
+                live.AuraPulse = nil
+                FS.PruneLoops(au)
+            end
+            live.AuraToken = (live.AuraToken or 0) + 1
+            local my = live.AuraToken
+            local show = live.GlowMode == "Always" or (live.GlowMode == "OnOnly" and state)
+            au.BackgroundColor3 = D.GlowColor or (state and (D.OnColor or Theme.ToggleOn)) or D.BorderColor or Theme.Accent
+            local hi = 1 - (D.GlowPower or 0.5) * 0.44 -- 0.5 = igual que el aura original (0.78)
+            if show then
+                go(au, { BackgroundTransparency = hi })
+                local beat = D.Motion == "Beat"
+                task.delay(instant and 0 or 0.36, function()
+                    if live.AuraToken ~= my or not au.Parent then return end
+                    au.BackgroundTransparency = hi
+                    live.AuraPulse = TweenService:Create(au,
+                        TweenInfo.new(beat and math.max(0.15, (D.MotionSpeed or 1.6) * 0.5) or 1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                        { BackgroundTransparency = math.min(1, hi + (beat and 0.2 or 0.14)) })
+                    live.AuraPulse:Play()
+                end)
+            else
+                go(au, { BackgroundTransparency = 1 })
+            end
+        end
+
+        -- onda al encender (la píldora V5 ya trae la suya)
+        if D.Ripple and state and live.LastState == false and not instant and not pill5 and live.FX then
+            local r = mk("Frame", {
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5),
+                Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = false,
+                ZIndex = win.ZIndex,
+            })
+            local rcn = Instance.new("UICorner")
+            rcn.CornerRadius = live.Radius or UDim.new(0, 999)
+            rcn.Parent = r
+            local rs = Instance.new("UIStroke")
+            rs.Color = bg or Theme.ToggleOn
+            rs.Thickness = 2
+            rs.Transparency = 0.1
+            rs.Parent = r
+            r.Parent = live.FX
+            local ri = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            TweenService:Create(r, ri, { Size = UDim2.new(1, 28, 1, 20) }):Play()
+            TweenService:Create(rs, ri, { Transparency = 1 }):Play()
+            task.delay(0.8, function() pcall(function() r:Destroy() end) end)
+        end
+        live.LastState = state
+    end
+
+    -- win: el flotante · glow: su aura hermana (píldora V5) · label: su texto · id: el mismo que usa el candado
+    -- opts.Refresh: repinta con el código original (y ese llama a FS.Paint) · opts.Kind / opts.GetDesign: vista previa
+    function FS.Attach(win, glow, label, id, getState, opts)
+        if not win then return nil end
+        opts = opts or {}
+        local live = {
+            Win = win, Glow = glow, Label = label, Id = id, GetState = getState,
+            Refresh = opts.Refresh, ForceKind = opts.Kind,
+            Tweens = {}, Src = label and label.Text or "", Desired = label and label.Text or "",
+        }
+        live.GetDesign = opts.GetDesign or function()
+            return (FS.LiveResolver or FS.Resolve)(id)
+        end
+        FS.Live[win] = live
+        if label then
+            label:GetPropertyChangedSignal("Text"):Connect(function()
+                if live.Guard or label.Text == live.Desired then return end
+                live.Src = label.Text
+                FS.SetText(live)
+                FS.FitWidth(live)
+            end)
+        end
+        win.Destroying:Connect(function()
+            FS.Clear(live)
+            FS.Live[win] = nil
+        end)
+        FS.Decorate(live)
+        if live.Refresh then
+            pcall(live.Refresh)
+        else
+            FS.Paint(win, getState and getState(), true)
+        end
+        return live
+    end
+
+    function FS.Reapply(live)
+        if not (live and live.Win and live.Win.Parent) then return end
+        pcall(FS.Decorate, live)
+        if live.Refresh then
+            pcall(live.Refresh)
+        else
+            pcall(FS.Paint, live.Win, live.GetState and live.GetState(), true)
+        end
+    end
+    function FS.ApplyAll()
+        local list = {}
+        for _, live in pairs(FS.Live) do list[#list + 1] = live end
+        for _, live in ipairs(list) do FS.Reapply(live) end
+    end
+
+    function FS.Summary()
+        local n = 0
+        for _ in pairs(FS.Data.Overrides) do n += 1 end
+        local custom = next(FS.Data.Global) ~= nil
+        return custom, n
+    end
+
+    FS.Load()
+end
+
+-- ---------- Estudio de Toggles Flotantes: vista previa, editor y entrada en Ajustes ----------
+do
+    local FS = FloatingPillV5.Studio
+    local WHITE = Color3.new(1, 1, 1)
+
+    -- Sube el ZIndex de todo lo que cuelga de root (los flotantes usan ZIndex 3-7 fijos; el editor vive en ZIndex 300+)
+    function FS.Lift(root, base)
+        local function fix(o)
+            if o and o.Parent and o:IsA("GuiObject") and o.ZIndex < base then o.ZIndex = o.ZIndex + base end
+        end
+        for _, d in ipairs(root:GetDescendants()) do fix(d) end
+        local conn = root.DescendantAdded:Connect(function(d) task.defer(fix, d) end)
+        root.Destroying:Connect(function() conn:Disconnect() end)
+    end
+
+    -- Réplica fiel de cada flotante (mismo código de construcción) para la vista previa
+    -- kind: "Pill5" | "Circle" | "Pill"   ·   getDesign: diseño que está editando el estudio
+    function FS.MakeSample(slot, kind, text, getDesign, zBase)
+        local S = { State = false, Kind = kind }
+        local holder = mk("Frame", { Parent = slot, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3 })
+        local glow = mk("Frame", {
+            Parent = holder, Size = UDim2.fromOffset(216, 48), Position = UDim2.new(0.5, -108, 0.5, -24),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3,
+        })
+        corner(glow, 999)
+        local win, lbl, pill
+        if kind == "Pill5" then
+            local w = FloatingPillV5.FitWidth(text, 21)
+            win = mk("Frame", {
+                Parent = holder, Size = UDim2.fromOffset(w, 30), Position = UDim2.new(0.5, -w / 2, 0.5, -15),
+                BackgroundColor3 = FloatingPillV5.OffColor(), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 4,
+            })
+            win:SetAttribute("YYPillV5", true)
+            corner(win, 999)
+            local st = mk("UIStroke", { Parent = win, Color = WHITE, Thickness = 2, Transparency = 0 })
+            lbl = mk("TextLabel", {
+                Parent = win, Size = UDim2.new(1, -24, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1,
+                Text = text, TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 21,
+                TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+            })
+            lbl:SetAttribute("IgnoreTextEffect", true)
+            pill = FloatingPillV5.Build(win, glow, lbl, st, false)
+        else
+            local isC = kind == "Circle"
+            local w, h = isC and 64 or 200, isC and 64 or 36
+            win = mk("Frame", {
+                Parent = holder, Size = UDim2.fromOffset(w, h), Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2),
+                BackgroundColor3 = isC and Color3.fromRGB(20, 20, 26) or Theme.Secondary,
+                BackgroundTransparency = isC and 0.55 or 0.30, BorderSizePixel = 0, ZIndex = 4,
+            })
+            corner(win, 999)
+            if not isC then
+                mk("UIGradient", {
+                    Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 185, 200)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 185, 200)),
+                    }),
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.45),
+                        NumberSequenceKeypoint.new(0.5, 0.15),
+                        NumberSequenceKeypoint.new(1, 0.45),
+                    }),
+                    Rotation = 90,
+                }, win)
+            end
+            mk("UIStroke", { Parent = win, Color = Theme.Accent, Thickness = isC and 3 or 2.5, Transparency = 0.20 })
+            buildAnimatedBorder(win, Theme.Border, UDim.new(1, 0), true)
+            win.Destroying:Connect(function() stopGlowTweens(tostring(win)) end)
+            lbl = mk("TextLabel", {
+                Parent = win,
+                Size = isC and UDim2.new(1, -24, 1, -24) or UDim2.new(1, -24, 1, 0),
+                Position = isC and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
+                BackgroundTransparency = 1, Text = text, TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack,
+                TextSize = isC and 11 or 21, TextWrapped = isC,
+                TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+                TextTruncate = isC and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd, ZIndex = 5,
+            })
+            lbl:SetAttribute("IgnoreTextEffect", true)
+        end
+        S.Win, S.Label = win, lbl
+        function S.Refresh(instant)
+            if not win.Parent then return end
+            if pill then
+                pill.Apply(S.State, instant == true)
+            else
+                local c = S.State and Theme.ToggleOn or Theme.Secondary
+                if instant then
+                    win.BackgroundColor3 = c
+                else
+                    TweenService:Create(win, TweenInfo.new(0.15), { BackgroundColor3 = c }):Play()
+                end
+            end
+            FS.Paint(win, S.State, instant == true)
+        end
+        FS.Lift(holder, zBase)
+        S.Live = FS.Attach(win, kind == "Pill5" and glow or nil, lbl, nil, function() return S.State end, {
+            Kind = kind,
+            GetDesign = getDesign,
+            Refresh = function() S.Refresh(true) end,
+        })
+        function S.SetText(t)
+            lbl.Text = t
+        end
+        return S
+    end
+
+    -- Entrada en Ajustes (debajo de "Estilo de Toggle Flotante")
+    function FS.BuildEntry(page, Window)
+        -- cambiar Píldora/Círculo rehace la forma de los flotantes: después se vuelve a aplicar el diseño
+        local baseApply = Window.ApplyFloatingStyle
+        if type(baseApply) == "function" and not FS.WrappedApply then
+            FS.WrappedApply = true
+            Window.ApplyFloatingStyle = function(...)
+                baseApply(...)
+                FS.ApplyAll()
+            end
+        end
+
+        local card = mk("Frame", {
+            Parent = page, Size = UDim2.new(1, 0, 0, 98), BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 9,
+        })
+        card:SetAttribute("ThemeRole", "Secondary")
+        corner(card, 14)
+        local cs = mk("UIStroke", { Parent = card, Color = WHITE, Thickness = 1.5, Transparency = 0.15 })
+        local cg = mk("UIGradient", {
+            Parent = cs,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, WHITE), ColorSequenceKeypoint.new(1, Theme.Accent),
+            }),
+        })
+        TweenService:Create(cg, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+
+        -- mini píldora animada (dibujo de la tarjeta)
+        local art = mk("Frame", {
+            Parent = card, Size = UDim2.fromOffset(62, 30), Position = UDim2.fromOffset(14, 16),
+            BackgroundColor3 = Theme.ToggleOn, BorderSizePixel = 0, ZIndex = 10,
+        })
+        art:SetAttribute("ThemeRole", "ToggleOn")
+        corner(art, 999)
+        local artStroke = mk("UIStroke", { Parent = art, Color = WHITE, Thickness = 2 })
+        local artRing = mk("UIGradient", { Parent = artStroke, Color = FS.RAINBOW })
+        TweenService:Create(artRing, TweenInfo.new(3, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+        local knob = mk("Frame", {
+            Parent = art, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
+            BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = 11,
+        })
+        corner(knob, 999)
+        TweenService:Create(knob, TweenInfo.new(1.1, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, -1, true, 0.5), { Position = UDim2.new(1, -25, 0.5, 0) }):Play()
+        local dot = mk("Frame", {
+            Parent = card, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(30, 52),
+            BackgroundColor3 = Color3.fromRGB(20, 20, 26), BorderSizePixel = 0, ZIndex = 10,
+        })
+        corner(dot, 999)
+        local dotStroke = mk("UIStroke", { Parent = dot, Color = Theme.Accent, Thickness = 2 })
+        dotStroke:SetAttribute("ThemeRole", "Accent")
+        TweenService:Create(dot, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromOffset(30, 48) }):Play()
+
+        local title = mk("TextLabel", {
+            Parent = card, Size = UDim2.new(1, -196, 0, 18), Position = UDim2.fromOffset(90, 12), BackgroundTransparency = 1,
+            TextColor3 = Theme.Text, TextSize = 14, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 10,
+        })
+        title:SetAttribute("ThemeTextRole", "Text")
+        title:SetAttribute("TextSpanish", "Estudio de Toggles Flotantes")
+        title:SetAttribute("TextEnglish", "Floating Toggle Studio")
+        title.Text = GetText("Estudio de Toggles Flotantes", "Floating Toggle Studio")
+        local sub = mk("TextLabel", {
+            Parent = card, Size = UDim2.new(1, -196, 0, 28), Position = UDim2.fromOffset(90, 31), BackgroundTransparency = 1,
+            TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top, TextWrapped = true, ZIndex = 10,
+        })
+        sub:SetAttribute("ThemeTextRole", "TextDim")
+        sub:SetAttribute("IgnoreTextEffect", true)
+        sub:SetAttribute("TextSpanish", "Colores, imágenes, bordes, brillos, movimientos y textos para la píldora, el círculo y el combinado")
+        sub:SetAttribute("TextEnglish", "Colors, images, borders, glows, motion and text for the pill, circle and combined toggles")
+        sub.Text = GetText(sub:GetAttribute("TextSpanish"), sub:GetAttribute("TextEnglish"))
+        local chip = mk("TextLabel", {
+            Parent = card, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(90, 66),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.82, TextColor3 = Theme.Accent, TextSize = 10,
+            Font = Enum.Font.GothamBlack, ZIndex = 10,
+        })
+        chip:SetAttribute("ThemeRole", "Accent")
+        chip:SetAttribute("ThemeTextRole", "Accent")
+        chip:SetAttribute("IgnoreTextEffect", true)
+        corner(chip, 999)
+        mk("UIPadding", { Parent = chip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9) })
+        function FS.RefreshEntry()
+            if not chip.Parent then return end
+            local custom, n = FS.Summary()
+            local es = (custom and "Global: personalizado" or "Global: original") .. " · " .. n .. (n == 1 and " excepción" or " excepciones")
+            local en = (custom and "Global: custom" or "Global: original") .. " · " .. n .. (n == 1 and " exception" or " exceptions")
+            if not FS.HasPremium() then
+                es, en = es .. " · 🔒 Premium con Studio Logos", en .. " · 🔒 Premium with Studio Logos"
+            end
+            chip:SetAttribute("TextSpanish", es)
+            chip:SetAttribute("TextEnglish", en)
+            chip.Text = GetText(es, en)
+        end
+        FS.RefreshEntry()
+
+        local open = mk("TextButton", {
+            Parent = card, Size = UDim2.fromOffset(92, 34), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+            BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, TextColor3 = Theme.AccentText, TextSize = 13,
+            Font = Enum.Font.GothamBlack, ZIndex = 11,
+        })
+        open:SetAttribute("TextSpanish", "Abrir")
+        open:SetAttribute("TextEnglish", "Open")
+        open.Text = GetText("Abrir", "Open")
+        corner(open, 10)
+        RowKit.Control(open, true)
+        open.TextSize = 13
+        open.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            local Main = Window.ScreenGui and Window.ScreenGui:FindFirstChild("Main")
+            if not Main then return end
+            if not FS.UI then
+                local ok, ui = pcall(FS.BuildUI, Window, Main)
+                if not ok then
+                    warn("[YinYang Estudio de Toggles] No se pudo abrir: " .. tostring(ui))
+                    return
+                end
+                FS.UI = ui
+            end
+            FS.UI.Open()
+        end)
+        return card
+    end
+
+    -- ---------- kit de UI del editor (mismo estilo que el Estudio de Logos) ----------
+    function FS.UIKit(K)
+        local Z = K.Z
+        function K.L(obj, es, en)
+            obj:SetAttribute("TextSpanish", es)
+            obj:SetAttribute("TextEnglish", en)
+            obj.Text = GetText(es, en)
+            return obj
+        end
+        function K.label(parent, es, en, size, font, role, props)
+            local t = mk("TextLabel", {
+                Parent = parent, BackgroundTransparency = 1, TextColor3 = Theme[role or "Text"] or Theme.Text,
+                TextSize = size, Font = font, TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = Z + 3,
+            })
+            t:SetAttribute("ThemeTextRole", role or "Text")
+            if role and role ~= "Text" then t:SetAttribute("IgnoreTextEffect", true) end
+            K.L(t, es, en)
+            for k, v in pairs(props or {}) do t[k] = v end
+            return t
+        end
+        function K.button(parent, es, en, role, props)
+            local b = mk("TextButton", {
+                Parent = parent, BackgroundColor3 = Theme[role] or Theme.Secondary, BorderSizePixel = 0,
+                TextColor3 = role == "Accent" and Theme.AccentText or Theme.Text, TextSize = 12,
+                Font = Enum.Font.GothamBold, ZIndex = Z + 4,
+            })
+            b:SetAttribute("ThemeRole", role or "Secondary")
+            b:SetAttribute("ThemeTextRole", role == "Accent" and "AccentText" or "Text")
+            if role == "Accent" then b:SetAttribute("IgnoreTextEffect", true) end
+            K.L(b, es, en)
+            corner(b, 10)
+            for k, v in pairs(props or {}) do b[k] = v end
+            RowKit.Control(b, role == "Accent")
+            if role == "Accent" then
+                b.TextSize = (props and props.TextSize) or 13
+            elseif role and role ~= "Secondary" then
+                b.BackgroundColor3 = Theme[role] or Theme.Secondary
+                b.BackgroundTransparency = 0.1
+                b:SetAttribute("ThemeRole", role)
+            end
+            return b
+        end
+        function K.pad(obj, t, l, r, b)
+            mk("UIPadding", { Parent = obj, PaddingTop = UDim.new(0, t), PaddingLeft = UDim.new(0, l), PaddingRight = UDim.new(0, r), PaddingBottom = UDim.new(0, b) })
+        end
+        function K.list(obj, padding, horizontal)
+            return mk("UIListLayout", {
+                Parent = obj, Padding = UDim.new(0, padding), SortOrder = Enum.SortOrder.LayoutOrder,
+                FillDirection = horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,
+                VerticalAlignment = horizontal and Enum.VerticalAlignment.Center or Enum.VerticalAlignment.Top,
+            })
+        end
+        function K.fmt(v, step)
+            if step >= 1 then return tostring(math.floor(v + 0.5)) end
+            if step >= 0.1 then return string.format("%.1f", v) end
+            return string.format("%.2f", v)
+        end
+        function K.box(parent, props)
+            local b = mk("TextBox", {
+                Parent = parent, BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, BorderSizePixel = 0,
+                Text = "", PlaceholderColor3 = Theme.TextDim, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.Code,
+                ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = Z + 4,
+            })
+            b:SetAttribute("ThemeRole", "Background")
+            b:SetAttribute("ThemeTextRole", "Text")
+            corner(b, 9)
+            K.pad(b, 0, 10, 10, 0)
+            for k, v in pairs(props or {}) do b[k] = v end
+            return b
+        end
+        function K.placeholder(box, es, en)
+            box:SetAttribute("PlaceholderSpanish", es)
+            box:SetAttribute("PlaceholderEnglish", en)
+            box.PlaceholderText = GetText(es, en)
+        end
+
+        -- chips: opts = { {valor, es, en, fuente?}, ... } · valor "_nil" = original
+        function K.chips(parent, order, opts, getKey, onPick, height, autoX)
+            local h = height or 28
+            local row
+            if autoX then
+                row = mk("Frame", { Parent = parent, Size = UDim2.fromOffset(0, h), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 3 })
+            else
+                row = mk("ScrollingFrame", {
+                    Parent = parent, Size = UDim2.new(1, 0, 0, h), BackgroundTransparency = 1, BorderSizePixel = 0,
+                    ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X,
+                    CanvasSize = UDim2.new(), ScrollBarThickness = 0, LayoutOrder = order, ZIndex = Z + 3,
+                })
+            end
+            K.list(row, 6, true)
+            local api = { Items = {}, Row = row }
+            function api.Set(key)
+                local sk = tostring(key)
+                for k, it in pairs(api.Items) do
+                    local on = k == sk
+                    it.BackgroundColor3 = on and Theme.Accent or Theme.Background
+                    it.BackgroundTransparency = on and 0 or 0.3
+                    it.TextColor3 = on and Theme.AccentText or Theme.Text
+                    it:SetAttribute("ThemeRole", on and "Accent" or "Background")
+                    it:SetAttribute("ThemeTextRole", on and "AccentText" or "Text")
+                end
+                api.Value = key
+            end
+            for i, o in ipairs(opts) do
+                local b = mk("TextButton", {
+                    Parent = row, Size = UDim2.fromOffset(0, h - 2), AutomaticSize = Enum.AutomaticSize.X,
+                    BackgroundColor3 = Theme.Background, BorderSizePixel = 0, TextSize = 11, Font = Enum.Font.GothamBold,
+                    LayoutOrder = i, ZIndex = Z + 4,
+                })
+                b:SetAttribute("IgnoreTextEffect", true)
+                if o[4] then
+                    local okF, f = pcall(function() return Enum.Font[o[4]] end)
+                    if okF and f then b.Font = f end
+                end
+                K.L(b, o[2], o[3])
+                corner(b, 999)
+                K.pad(b, 0, 11, 11, 0)
+                local sc = mk("UIScale", { Parent = b, Scale = 1 })
+                b.MouseButton1Down:Connect(function() TweenService:Create(sc, TweenInfo.new(0.07), { Scale = 0.9 }):Play() end)
+                b.MouseButton1Up:Connect(function() TweenService:Create(sc, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play() end)
+                b.MouseLeave:Connect(function() sc.Scale = 1 end)
+                b.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.35)
+                    api.Set(o[1])
+                    onPick(o[1])
+                end)
+                api.Items[tostring(o[1])] = b
+            end
+            if getKey then
+                local function rf() api.Set(getKey()) end
+                table.insert(K.refreshers, rf)
+                rf()
+            end
+            return api
+        end
+        -- chips atados a un campo del diseño
+        function K.fieldChips(parent, order, key, opts, height)
+            return K.chips(parent, order, opts, function()
+                local v = K.get(key)
+                if v == nil then return "_nil" end
+                return v
+            end, function(v)
+                if v == "_nil" then K.set(key, nil) else K.set(key, v) end
+                K.changed()
+            end, height)
+        end
+        function K.caption(parent, order, es, en)
+            return K.label(parent, es, en, 10, Enum.Font.GothamBold, "TextDim", { Size = UDim2.new(1, 0, 0, 14), LayoutOrder = order, ZIndex = Z + 4 })
+        end
+
+        -- deslizador con "Auto" (= original)  ·  cfg = {min, max, paso, valorAuto, unidad}
+        function K.slider(parent, order, es, en, cfg, key)
+            local s = { cfg = cfg }
+            local holder = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
+            K.label(holder, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -124, 0, 16), ZIndex = Z + 5 })
+            s.Value = K.label(holder, "", "", 11, Enum.Font.Code, "Accent", {
+                Size = UDim2.fromOffset(60, 16), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -58, 0, 0),
+                TextXAlignment = Enum.TextXAlignment.Right, ZIndex = Z + 5,
+            })
+            local auto = K.button(holder, "Auto", "Auto", "Background", { Size = UDim2.fromOffset(52, 18), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, -1), TextSize = 9 })
+            local track = mk("Frame", { Parent = holder, Size = UDim2.new(1, -8, 0, 6), Position = UDim2.new(0, 4, 0, 27), BackgroundColor3 = Theme.SliderTrack or Theme.AccentOff, BorderSizePixel = 0, ZIndex = Z + 5 })
+            track:SetAttribute("ThemeRole", "SliderTrack")
+            corner(track, 999)
+            local fill = mk("Frame", { Parent = track, Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.SliderFill or Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 6 })
+            fill:SetAttribute("ThemeRole", "SliderFill")
+            corner(fill, 999)
+            local knob = mk("Frame", { Parent = track, Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 7 })
+            corner(knob, 999)
+            mk("UIStroke", { Parent = knob, Color = Theme.SliderThumb or Theme.Accent, Thickness = 2 }):SetAttribute("ThemeRole", "SliderThumb")
+            local hit = mk("TextButton", { Parent = holder, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 18), BackgroundTransparency = 1, Text = "", ZIndex = Z + 8 })
+            function s.Show(v)
+                local c = s.cfg
+                local shown = math.clamp(v or c[4], c[1], c[2])
+                local a = (c[2] > c[1]) and (shown - c[1]) / (c[2] - c[1]) or 0
+                fill.Size = UDim2.fromScale(a, 1)
+                knob.Position = UDim2.fromScale(a, 0.5)
+                fill.BackgroundTransparency = v and 0 or 0.6
+                knob.BackgroundTransparency = v and 0 or 0.35
+                auto.BackgroundTransparency = v and 0.1 or 0.75
+                if v then
+                    s.Value:SetAttribute("TextSpanish", nil)
+                    s.Value:SetAttribute("TextEnglish", nil)
+                    s.Value.Text = K.fmt(v, c[3]) .. (c[5] or "")
+                else
+                    K.L(s.Value, "Auto", "Auto")
+                end
+            end
+            function s.At(x)
+                local a0, w = track.AbsolutePosition.X, track.AbsoluteSize.X
+                if w <= 0 then return end
+                local c = s.cfg
+                local v = c[1] + math.clamp((x - a0) / w, 0, 1) * (c[2] - c[1])
+                v = math.floor((v - c[1]) / c[3] + 0.5) * c[3] + c[1]
+                v = tonumber(string.format("%.3f", math.clamp(v, c[1], c[2])))
+                if v ~= s.last then
+                    s.last = v
+                    K.set(key, v)
+                    s.Show(v)
+                    K.changed()
+                end
+            end
+            hit.InputBegan:Connect(function(input)
+                if K.isPress(input) then
+                    K.activeSlider = s
+                    s.last = nil
+                    K.Content.ScrollingEnabled = false
+                    TweenService:Create(knob, TweenInfo.new(0.1), { Size = UDim2.fromOffset(20, 20) }):Play()
+                    s.At(input.Position.X)
+                end
+            end)
+            auto.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                K.set(key, nil)
+                s.Show(nil)
+                K.changed()
+            end)
+            s.Knob = knob
+            s.Holder = holder
+            table.insert(K.refreshers, function() s.Show(K.get(key)) end)
+            s.Show(K.get(key))
+            return s
+        end
+
+        -- muestra de color tocable (abre el selector) + botón para volver al color original
+        function K.swatch(parent, order, es, en, key, resetEs, resetEn)
+            local row = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
+            K.label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -150, 1, 0), ZIndex = Z + 5 })
+            local sw = mk("TextButton", { Parent = row, Size = UDim2.fromOffset(64, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -78, 0.5, 0), Text = "", ZIndex = Z + 5 })
+            corner(sw, 8)
+            mk("UIStroke", { Parent = sw, Color = WHITE, Thickness = 1.5, Transparency = 0.4 })
+            local tag = mk("TextLabel", {
+                Parent = sw, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", TextColor3 = WHITE,
+                TextSize = 9, Font = Enum.Font.GothamBlack, TextStrokeTransparency = 0.4, ZIndex = Z + 6,
+            })
+            tag:SetAttribute("IgnoreTextEffect", true)
+            local reset = K.button(row, resetEs or "Original", resetEn or "Original", "Background", { Size = UDim2.fromOffset(72, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), TextSize = 10 })
+            local function cur() return arrayToColor(K.get(key), nil) end
+            local function refresh()
+                local c = cur()
+                sw.BackgroundColor3 = c or Theme.Accent
+                sw.BackgroundTransparency = c and 0 or 0.6
+                if c then
+                    tag:SetAttribute("TextSpanish", nil)
+                    tag:SetAttribute("TextEnglish", nil)
+                    tag.Text = ""
+                else
+                    K.L(tag, "AUTO", "AUTO")
+                end
+                reset.BackgroundTransparency = c and 0.1 or 0.75
+            end
+            sw.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                local before = K.getRaw(key)
+                K.openPicker(es, en, cur() or Theme.Accent, function(c)
+                    K.set(key, colorToArray(c))
+                    refresh()
+                    K.changed()
+                end, function(c)
+                    K.set(key, colorToArray(c))
+                    refresh()
+                    K.changed()
+                end, function()
+                    K.setRaw(key, before)
+                    refresh()
+                    K.changed()
+                end)
+            end)
+            reset.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                K.set(key, nil)
+                refresh()
+                K.changed()
+            end)
+            table.insert(K.refreshers, refresh)
+            refresh()
+            return row
+        end
+
+        -- ID de imagen con estado de carga (igual que las capas del Estudio de Logos)
+        function K.asset(parent, order, es, en, key)
+            local row = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 54), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
+            K.label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -100, 0, 16), ZIndex = Z + 5 })
+            local pill = mk("TextLabel", {
+                Parent = row, Size = UDim2.fromOffset(0, 16), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Color3.fromRGB(120, 120, 130), TextColor3 = WHITE,
+                TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = Z + 5,
+            })
+            pill:SetAttribute("IgnoreTextEffect", true)
+            corner(pill, 999)
+            K.pad(pill, 0, 8, 8, 0)
+            local thumbBox = mk("Frame", { Parent = row, Size = UDim2.fromOffset(32, 32), Position = UDim2.fromOffset(0, 21), BackgroundColor3 = Color3.fromRGB(230, 230, 236), BorderSizePixel = 0, ZIndex = Z + 4 })
+            corner(thumbBox, 8)
+            local thumb = mk("ImageLabel", { Parent = thumbBox, Size = UDim2.new(1, -4, 1, -4), Position = UDim2.fromOffset(2, 2), BackgroundTransparency = 1, ScaleType = Enum.ScaleType.Fit, ZIndex = Z + 5 })
+            local box = K.box(row, { Size = UDim2.new(1, -124, 0, 32), Position = UDim2.fromOffset(40, 21) })
+            K.placeholder(box, "ID de la imagen", "Image ID")
+            local clr = K.button(row, "Quitar", "Remove", "Background", { Size = UDim2.fromOffset(76, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 21), TextSize = 10 })
+            local token = 0
+            local function show(es2, en2, color, my)
+                if token ~= my or not pill.Parent then return end
+                K.L(pill, es2, en2)
+                pill.BackgroundColor3 = color
+            end
+            local function check(url)
+                token += 1
+                local my = token
+                thumb.Image = url
+                if url == "" then
+                    show("Sin imagen", "No image", Color3.fromRGB(120, 120, 130), my)
+                    return
+                end
+                show("Cargando...", "Loading...", Color3.fromRGB(200, 150, 40), my)
+                task.spawn(function()
+                    local result = nil
+                    pcall(function()
+                        ContentProvider:PreloadAsync({ url }, function(_, status) result = status end)
+                    end)
+                    if result == Enum.AssetFetchStatus.Success then
+                        show("Lista", "Ready", Color3.fromRGB(40, 170, 90), my)
+                    elseif result == Enum.AssetFetchStatus.Failure then
+                        show("No carga", "Not loading", Color3.fromRGB(205, 60, 70), my)
+                    else
+                        show("Sin respuesta", "No answer", Color3.fromRGB(120, 120, 130), my)
+                    end
+                end)
+            end
+            box.FocusLost:Connect(function()
+                local a = FS.CleanAsset(box.Text)
+                K.set(key, a ~= "" and a or nil)
+                box.Text = a
+                check(a)
+                K.changed()
+            end)
+            clr.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                K.set(key, nil)
+                box.Text = ""
+                check("")
+                K.changed()
+            end)
+            table.insert(K.refreshers, function()
+                local v = K.get(key) or ""
+                if not box:IsFocused() then box.Text = v end
+                check(v)
+            end)
+            return row
+        end
+
+        -- secciones: título + "Original/Usar global" + tarjeta
+        function K.section(order, es, en, subEs, subEn, keys, premium)
+            local h = mk("Frame", { Parent = K.Content, Size = UDim2.new(1, -4, 0, 34), BackgroundTransparency = 1, LayoutOrder = order * 2, ZIndex = Z + 2 })
+            local bar = mk("Frame", { Parent = h, Size = UDim2.fromOffset(3, 14), Position = UDim2.fromOffset(2, 3), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 3 })
+            bar:SetAttribute("ThemeRole", "Accent")
+            corner(bar, 2)
+            K.label(h, es, en, 11, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -112, 0, 20), Position = UDim2.fromOffset(12, 0) })
+            K.label(h, subEs, subEn, 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -112, 0, 12), Position = UDim2.fromOffset(12, 20) })
+            if keys then
+                local r = K.button(h, "Original", "Original", "Background", { Size = UDim2.fromOffset(94, 24), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), TextSize = 10 })
+                table.insert(K.refreshers, function()
+                    if K.ED.scope then K.L(r, "Usar global", "Use global") else K.L(r, "Original", "Original") end
+                end)
+                r.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.4)
+                    K.resetKeys(keys)
+                    if K.ED.scope then
+                        K.setStatus("Sección vuelta al diseño global", "Section back to the global design", Theme.Accent)
+                    else
+                        K.setStatus("Sección vuelta al diseño original", "Section back to the original design", Theme.Accent)
+                    end
+                end)
+            end
+            local wrap = K.Content
+            if premium then
+                -- la tarjeta va dentro de un marco sin layout, así la tapa del candado puede ir encima
+                wrap = mk("Frame", {
+                    Parent = K.Content, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+                    BackgroundTransparency = 1, LayoutOrder = order * 2 + 1, ZIndex = Z + 2,
+                })
+            end
+            local c = mk("Frame", {
+                Parent = wrap, Size = UDim2.new(1, premium and 0 or -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0,
+                LayoutOrder = order * 2 + 1, ZIndex = Z + 2,
+            })
+            c:SetAttribute("ThemeRole", "Secondary")
+            corner(c, 14)
+            stroke(c, Theme.Stroke, 1, 0.65)
+            K.pad(c, 10, 10, 10, 10)
+            K.list(c, 8)
+            if premium then K.lockCover(wrap) end
+            return c
+        end
+        -- tapa con candado sobre una sección premium (tocarla abre la hoja premium)
+        function K.lockCover(parent)
+            local cover = mk("TextButton", {
+                Parent = parent, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2

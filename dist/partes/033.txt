@@ -1,0 +1,902 @@
+ TextSize = 19, TextColor3 = Theme.Text, Text = "Nick",
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11,
+    }, nil, nil, "Text")
+    local RoleChip = text({
+        Parent = DevCard, Size = UDim2.new(0, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 96, 0, 40), BackgroundColor3 = Theme.Accent,
+        Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Theme.Text, ZIndex = 11,
+    }, "Desarrollador Principal", "Lead Developer", "Text")
+    RoleChip.BackgroundTransparency = 0.82
+    RoleChip:SetAttribute("ThemeRole", "Accent")
+    corner(RoleChip, 999)
+    mk("UIPadding", {Parent = RoleChip, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+    text({
+        Parent = DevCard, Size = UDim2.new(1, -110, 0, 26), Position = UDim2.new(0, 96, 0, 62),
+        Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true, ZIndex = 11,
+    }, "Creador de Yin Yang v28. Apasionado por la programación y la comunidad.",
+       "Creator of Yin Yang v28. Passionate about programming and the community.", "TextDim")
+
+    sectionLabel(4, 132202203337109, "COMUNIDAD", "COMMUNITY")
+
+    local DC = card(5, 128)
+    DC.ClipsDescendants = true
+    local Stripe = mk("Frame", {
+        Parent = DC, Size = UDim2.new(0, 4, 1, -24), Position = UDim2.new(0, 0, 0, 12),
+        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, ZIndex = 11,
+    })
+    corner(Stripe, 999)
+    local DCBadge = mk("Frame", {
+        Parent = DC, Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 16, 0, 14),
+        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, ZIndex = 11,
+    })
+    corner(DCBadge, 12)
+    mk("ImageLabel", {
+        Parent = DCBadge, Size = UDim2.new(0, 22, 0, 22), AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1,
+        Image = "rbxassetid://132202203337109", ImageColor3 = Color3.new(1, 1, 1),
+        ScaleType = Enum.ScaleType.Fit, ZIndex = 12,
+    })
+    text({
+        Parent = DC, Size = UDim2.new(1, -80, 0, 20), Position = UDim2.new(0, 66, 0, 14),
+        Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = Theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11,
+    }, "Únete a nuestro Discord", "Join our Discord", "Text")
+    text({
+        Parent = DC, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 66, 0, 34),
+        Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true, ZIndex = 11,
+    }, "Soporte, actualizaciones, sorteos y mucho más.", "Support, updates, giveaways and much more.", "TextDim")
+
+    local CopyBtn = mk("TextButton", {
+        Parent = DC, Size = UDim2.new(1, -32, 0, 40), Position = UDim2.new(0, 16, 1, -52),
+        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 12,
+    })
+    corner(CopyBtn, 12)
+    local CopyScale = mk("UIScale", {Parent = CopyBtn, Scale = 1})
+    local CopyIcon = mk("ImageLabel", {
+        Parent = CopyBtn, Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 14, 0.5, -8),
+        BackgroundTransparency = 1, Image = "rbxassetid://127734233169485",
+        ImageColor3 = Color3.new(1, 1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 13,
+    })
+    local CopyLabel = text({
+        Parent = CopyBtn, Size = UDim2.new(1, -120, 1, 0), Position = UDim2.new(0, 38, 0, 0),
+        Font = Enum.Font.GothamBlack, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+    }, "Copiar invitación", "Copy invite", nil)
+    text({
+        Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
+        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/KAtgYysjp",
+        TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
+    })
+    CopyBtn.MouseEnter:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1.02}):Play() end)
+    CopyBtn.MouseLeave:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1}):Play() end)
+    local copyToken = 0
+    CopyBtn.MouseButton1Click:Connect(function()
+        local ok = pcall(function() setclipboard(DISCORD_LINK) end)
+        copyToken = copyToken + 1
+        local mine = copyToken
+        CopyScale.Scale = 0.96
+        TweenService:Create(CopyScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        TweenService:Create(CopyBtn, TweenInfo.new(0.2), {BackgroundColor3 = ok and GREEN or Color3.fromRGB(237, 66, 69)}):Play()
+        CopyLabel:SetAttribute("TextSpanish", ok and "✓ ¡Link copiado!" or "No se pudo copiar")
+        CopyLabel:SetAttribute("TextEnglish", ok and "✓ Link copied!" or "Could not copy")
+        CopyLabel.Text = ok and GetText("✓ ¡Link copiado!", "✓ Link copied!") or GetText("No se pudo copiar", "Could not copy")
+        task.delay(2.5, function()
+            if mine ~= copyToken or not CopyBtn.Parent then return end
+            TweenService:Create(CopyBtn, TweenInfo.new(0.25), {BackgroundColor3 = BLURPLE}):Play()
+            CopyLabel:SetAttribute("TextSpanish", "Copiar invitación")
+            CopyLabel:SetAttribute("TextEnglish", "Copy invite")
+            CopyLabel.Text = GetText("Copiar invitación", "Copy invite")
+        end)
+    end)
+
+    local Footer = mk("Frame", {
+        Parent = CredRoot_, Size = UDim2.new(1, 0, 0, 34),
+        BackgroundTransparency = 1, LayoutOrder = 6, ZIndex = 10,
+    })
+    for _, x in ipairs({0, 0.62}) do
+        local line = mk("Frame", {
+            Parent = Footer, Size = UDim2.new(0.38, 0, 0, 1), Position = UDim2.new(x, 0, 0, 9),
+            BackgroundColor3 = Theme.Stroke, BorderSizePixel = 0, ZIndex = 11,
+        })
+        line:SetAttribute("ThemeRole", "Stroke")
+        mk("UIGradient", {
+            Parent = line,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, x == 0 and 1 or 0),
+                NumberSequenceKeypoint.new(1, x == 0 and 0 or 1),
+            }),
+        })
+    end
+    local FooterIcon = mk("ImageLabel", {
+        Parent = Footer, Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0.5, -7, 0, 2),
+        BackgroundTransparency = 1, Image = "rbxassetid://132202203337109",
+        ImageColor3 = Theme.Stroke, ScaleType = Enum.ScaleType.Fit, ZIndex = 12,
+    })
+    FooterIcon:SetAttribute("ThemeImageRole", "Stroke")
+    text({
+        Parent = Footer, Size = UDim2.new(1, 0, 0, 13), Position = UDim2.new(0, 0, 0, 20),
+        Font = Enum.Font.GothamMedium, TextSize = 9, TextColor3 = Theme.Stroke,
+        TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 11,
+    }, "© 2026 Yin Yang | Script Hub  •  Todos los derechos reservados.",
+       "© 2026 Yin Yang | Script Hub  •  All rights reserved.", "Stroke")
+
+    end
+
+    Window:CreateCreditsTab()
+
+    local function BuildLogoTab()
+    local TabLogo = Window:CreateTab("Logo", "Logo", "rbxassetid://102470093365848")
+    local LogoPage = TabLogo.Page
+
+    LogoPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    LogoPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    LogoPage.ScrollBarThickness = 2
+    LogoPage.ScrollingEnabled = true
+
+    mk("UIPadding", {
+        Parent       = LogoPage,
+        PaddingTop   = UDim.new(0, 10),
+        PaddingLeft  = UDim.new(0, 10),
+        PaddingRight = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 10),
+    })
+    mk("UIListLayout", {
+        Parent            = LogoPage,
+        Padding           = UDim.new(0, 8),
+        SortOrder         = Enum.SortOrder.LayoutOrder,
+        FillDirection     = Enum.FillDirection.Vertical,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
+
+    -- Cabecera: el icono en uso, en grande
+    local LP = {cards = {}}
+    LP.hero = mk("Frame", {
+        Parent = LogoPage,
+        Size = UDim2.new(1, 0, 0, 104),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        LayoutOrder = 0,
+        ZIndex = 11,
+    })
+    LP.hero:SetAttribute("ThemeRole", "Secondary")
+    corner(LP.hero, 16)
+    stroke(LP.hero, Theme.Stroke, 1, 0.55)
+    mk("UIGradient", {
+        Parent = LP.hero,
+        Rotation = 0,
+        Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.5)}),
+    })
+    LP.stage = mk("Frame", {
+        Parent = LP.hero,
+        Size = UDim2.fromOffset(80, 80),
+        Position = UDim2.new(0, 14, 0.5, -40),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.15,
+        BorderSizePixel = 0,
+        ZIndex = 12,
+    })
+    LP.stage:SetAttribute("ThemeRole", "Background")
+    corner(LP.stage, 999)
+    local heroRing = stroke(LP.stage, Theme.Accent, 2.5, 0)
+    heroRing:SetAttribute("ThemeRole", "Accent")
+    LP.caption = mk("TextLabel", {
+        Parent = LP.hero,
+        Size = UDim2.new(1, -120, 0, 12),
+        Position = UDim2.new(0, 108, 0, 24),
+        BackgroundTransparency = 1,
+        Text = GetText("ÍCONO FLOTANTE EN USO", "FLOATING ICON IN USE"),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 9,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 12,
+    })
+    LP.caption:SetAttribute("ThemeTextRole", "TextDim")
+    LP.caption:SetAttribute("TextSpanish", "ÍCONO FLOTANTE EN USO")
+    LP.caption:SetAttribute("TextEnglish", "FLOATING ICON IN USE")
+    LP.name = mk("TextLabel", {
+        Parent = LP.hero,
+        Size = UDim2.new(1, -120, 0, 24),
+        Position = UDim2.new(0, 108, 0, 38),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 19,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+    LP.name:SetAttribute("ThemeTextRole", "Text")
+    LP.hint = mk("TextLabel", {
+        Parent = LP.hero,
+        Size = UDim2.new(1, -120, 0, 14),
+        Position = UDim2.new(0, 108, 0, 64),
+        BackgroundTransparency = 1,
+        Text = GetText("Tocá un ícono para usarlo · se guarda solo", "Tap an icon to use it · saved automatically"),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+    LP.hint:SetAttribute("ThemeTextRole", "TextDim")
+    LP.hint:SetAttribute("TextSpanish", "Tocá un ícono para usarlo · se guarda solo")
+    LP.hint:SetAttribute("TextEnglish", "Tap an icon to use it · saved automatically")
+
+    local function LP_Preview(parent, iconData, px, z)
+        local layer = iconData and iconData.Layers and iconData.Layers[1]
+        if not layer then return end
+        local size = UDim2.fromOffset(px, px)
+        local pos = UDim2.new(0.5, -px / 2, 0.5, -px / 2)
+        if type(layer.SpriteSheet) == "table" then
+            createSpriteSheetLabels(parent, layer.SpriteSheet, size, pos, z)
+        elseif layer.Image then
+            mk("ImageLabel", {
+                Parent = parent, Size = size, Position = pos, BackgroundTransparency = 1,
+                Image = layer.Image, ScaleType = Enum.ScaleType.Fit, ZIndex = z,
+            })
+        end
+    end
+
+    function LP.setHero(iconName)
+        for _, ch in ipairs(LP.stage:GetChildren()) do
+            if ch:IsA("ImageLabel") or ch.Name == "LogoComposite" then ch:Destroy() end
+        end
+        local data = IconCatalog.Icons[iconName]
+        if data and data.Custom and LP.composite then
+            LP.composite(LP.stage, data, 74, 13)
+        else
+            LP_Preview(LP.stage, data, 60, 13)
+        end
+        LP.name.Text = data and GetText(data.LabelES or iconName, data.LabelEN or data.LabelES or iconName) or tostring(iconName or "")
+    end
+
+    local LP_Grid = mk("Frame", {
+        Parent               = LogoPage,
+        Size                 = UDim2.new(1, 0, 0, 0),
+        AutomaticSize        = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        BorderSizePixel      = 0,
+        LayoutOrder          = 10,
+    })
+    mk("UIGridLayout", {
+        Parent             = LP_Grid,
+        CellSize           = UDim2.new(1 / 3, -6, 0, 118),
+        CellPadding        = UDim2.new(0, 8, 0, 8),
+        SortOrder          = Enum.SortOrder.LayoutOrder,
+        HorizontalAlignment = Enum.HorizontalAlignment.Left,
+    })
+
+    function LP.paint(entry, sel, animate)
+        local info = TweenInfo.new(animate and 0.22 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+        TweenService:Create(entry.stroke, info, {Transparency = sel and 0 or 0.6, Thickness = sel and 2 or 1}):Play()
+        entry.stroke.Color = sel and Theme.Accent or Theme.Stroke
+        entry.stroke:SetAttribute("ThemeRole", sel and "Accent" or "Stroke")
+        entry.ring.Color = sel and Theme.Accent or Theme.Stroke
+        entry.ring.Transparency = sel and 0 or 0.7
+        entry.ring:SetAttribute("ThemeRole", sel and "Accent" or "Stroke")
+        entry.badge.Visible = sel
+        entry.card.BackgroundTransparency = sel and 0.15 or 0.4
+        entry.name.TextColor3 = sel and Theme.Accent or Theme.Text
+        entry.name:SetAttribute("ThemeTextRole", sel and "Accent" or "Text")
+    end
+
+    local function CreateIconCard(iconName, iconData, order)
+        local card = mk("Frame", {
+            Parent               = LP_Grid,
+            BackgroundColor3     = Theme.Secondary,
+            BackgroundTransparency = 0.4,
+            BorderSizePixel      = 0,
+            LayoutOrder          = order or 1,
+            ZIndex               = 12,
+        })
+        corner(card, 14)
+        local cardStroke = stroke(card, Theme.Stroke, 1, 0.6)
+        card:SetAttribute("IconName", iconName)
+        card:SetAttribute("ThemeRole", "Secondary")
+        local cardScale = mk("UIScale", {Parent = card, Scale = 1})
+
+        local stage = mk("Frame", {
+            Parent = card,
+            Size = UDim2.fromOffset(62, 62),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.5, 0, 0, 10),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.25,
+            BorderSizePixel = 0,
+            ZIndex = 13,
+        })
+        stage:SetAttribute("ThemeRole", "Background")
+        corner(stage, 999)
+        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
+        LP_Preview(stage, iconData, 44, 14)
+
+        local nameLbl = mk("TextLabel", {
+            Parent               = card,
+            Size                 = UDim2.new(1, -10, 0, 30),
+            Position             = UDim2.new(0, 5, 0, 78),
+            BackgroundTransparency = 1,
+            Text                 = GetText(iconData.LabelES or iconName, iconData.LabelEN or iconData.LabelES or iconName),
+            TextColor3           = Theme.Text,
+            TextSize             = 11,
+            Font                 = Enum.Font.GothamBold,
+            TextXAlignment       = Enum.TextXAlignment.Center,
+            TextYAlignment       = Enum.TextYAlignment.Center,
+            TextWrapped          = true,
+            TextTruncate         = Enum.TextTruncate.AtEnd,
+            ZIndex               = 14,
+        })
+        nameLbl:SetAttribute("ThemeTextRole", "Text")
+
+        local badge = mk("TextLabel", {
+            Parent = card,
+            Size = UDim2.fromOffset(20, 20),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -6, 0, 6),
+            BackgroundColor3 = Theme.Accent,
+            Text = "",
+            Visible = false,
+            ZIndex = 15,
+        })
+        badge:SetAttribute("ThemeRole", "Accent")
+        corner(badge, 999)
+        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
+
+        local btn = mk("TextButton", {
+            Parent               = card,
+            Size                 = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text                 = "",
+            ZIndex               = 16,
+        })
+
+        local entry = {card = card, stroke = cardStroke, ring = ring, badge = badge, name = nameLbl, key = iconName}
+        LP.cards[#LP.cards + 1] = entry
+        LP.paint(entry, SavedConfig.SelectedLogoIcon == iconName, false)
+
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(cardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.04}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+        btn.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            cardScale.Scale = 0.93
+            TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            SavedConfig.SelectedLogoIcon = iconName
+            SaveConfig()
+            ApplyLogoIcon(iconName)
+            for _, other in ipairs(LP.cards) do
+                LP.paint(other, other.key == iconName, true)
+            end
+            LP.setHero(iconName)
+        end)
+
+        return card
+    end
+
+    -- ==================== ESTUDIO DE LOGOS (crear logos flotantes propios) ====================
+    -- Usa IconCatalog.Custom (arriba) para guardar y ApplyLogoIcon para dibujar el botón real.
+    local function BuildLogoStudio()
+    local CL = IconCatalog.Custom
+    if not CL then return end
+
+    local WHITE = Color3.new(1, 1, 1)
+    local Z = 280 -- capa base del editor (por encima del creador de temas: 200-265)
+    local LS = { live = {}, realLive = false, zoom = 1, backdrop = "day" }
+
+    local MOVES = {
+        { "None", "Quieto", "Still" },
+        { "Spin", "Girar", "Spin" },
+        { "Pulse", "Latir", "Pulse" },
+        { "Orbit", "Órbita", "Orbit" },
+        { "Float", "Flotar", "Float" },
+        { "Shake", "Temblar", "Shake" },
+        { "Fade", "Parpadeo", "Fade" },
+    }
+    -- rango de Speed / Amount por movimiento (mismos significados que el catálogo Yin-logos)
+    local MOVE_INFO = {
+        None = {},
+        Spin = { speed = { 10, 600, 5, 60, "°/s", "Velocidad de giro", "Spin speed" }, dir = true, style = true },
+        Pulse = { speed = { 0.3, 4, 0.1, 1.2, "s", "Duración del latido", "Beat duration" }, amount = { 2, 40, 1, 12, "%", "Cuánto crece", "Grow amount" } },
+        Orbit = { speed = { 10, 360, 5, 40, "°/s", "Velocidad de órbita", "Orbit speed" }, amount = { 1, 20, 1, 6, "px", "Radio de la órbita", "Orbit radius" }, dir = true },
+        Float = { speed = { 0.5, 6, 0.1, 2, "s", "Duración sube-baja", "Up-down duration" }, amount = { 1, 14, 1, 4, "px", "Distancia", "Distance" } },
+        Shake = { speed = { 2, 30, 1, 12, "/s", "Vibraciones por segundo", "Shakes per second" }, amount = { 0.5, 8, 0.5, 2, "px", "Intensidad", "Intensity" } },
+        Fade = { speed = { 0.4, 5, 0.1, 1.5, "s", "Duración del parpadeo", "Fade duration" }, amount = { 0.1, 1, 0.05, 0.6, "", "Transparencia máxima", "Max transparency" } },
+    }
+
+    -- ---------- helpers de UI ----------
+    local function L(obj, es, en)
+        obj:SetAttribute("TextSpanish", es)
+        obj:SetAttribute("TextEnglish", en)
+        obj.Text = GetText(es, en)
+        return obj
+    end
+    local function label(parent, es, en, size, font, role, props)
+        local t = mk("TextLabel", {
+            Parent = parent,
+            BackgroundTransparency = 1,
+            TextColor3 = Theme[role or "Text"] or Theme.Text,
+            TextSize = size,
+            Font = font,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = Z + 3,
+        })
+        t:SetAttribute("ThemeTextRole", role or "Text")
+        if role and role ~= "Text" then t:SetAttribute("IgnoreTextEffect", true) end
+        L(t, es, en)
+        for k, v in pairs(props or {}) do t[k] = v end
+        return t
+    end
+    local function button(parent, es, en, role, props)
+        local b = mk("TextButton", {
+            Parent = parent,
+            BackgroundColor3 = Theme[role] or Theme.Secondary,
+            BorderSizePixel = 0,
+            TextColor3 = role == "Accent" and Theme.AccentText or Theme.Text,
+            TextSize = 12,
+            Font = Enum.Font.GothamBold,
+            ZIndex = Z + 4,
+        })
+        b:SetAttribute("ThemeRole", role or "Secondary")
+        b:SetAttribute("ThemeTextRole", role == "Accent" and "AccentText" or "Text")
+        if role == "Accent" then b:SetAttribute("IgnoreTextEffect", true) end
+        L(b, es, en)
+        corner(b, 10)
+        for k, v in pairs(props or {}) do b[k] = v end
+        RowKit.Control(b, role == "Accent")
+        if role == "Accent" then
+            b.TextSize = (props and props.TextSize) or 13
+        elseif role and role ~= "Secondary" then
+            -- RowKit.Control deja todo en Secondary: se vuelve al rol pedido
+            b.BackgroundColor3 = Theme[role] or Theme.Secondary
+            b.BackgroundTransparency = 0.1
+            b:SetAttribute("ThemeRole", role)
+        end
+        return b
+    end
+    local function sectionTitle(parent, es, en, order, subEs, subEn)
+        local h = mk("Frame", { Parent = parent, Size = UDim2.new(1, -4, 0, subEs and 34 or 20), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 2 })
+        local bar = mk("Frame", { Parent = h, Size = UDim2.fromOffset(3, 14), Position = UDim2.fromOffset(2, 3), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 3 })
+        bar:SetAttribute("ThemeRole", "Accent")
+        corner(bar, 2)
+        label(h, es, en, 11, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -14, 0, 20), Position = UDim2.fromOffset(12, 0) })
+        if subEs then
+            label(h, subEs, subEn, 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -14, 0, 12), Position = UDim2.fromOffset(12, 20) })
+        end
+        return h
+    end
+    local function card(parent, order, height)
+        local c = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -4, 0, height or 0),
+            AutomaticSize = height and Enum.AutomaticSize.None or Enum.AutomaticSize.Y,
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.35,
+            BorderSizePixel = 0,
+            LayoutOrder = order,
+            ZIndex = Z + 2,
+        })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        stroke(c, Theme.Stroke, 1, 0.65)
+        return c
+    end
+    local function pad(obj, t, l, r, b)
+        mk("UIPadding", { Parent = obj, PaddingTop = UDim.new(0, t), PaddingLeft = UDim.new(0, l), PaddingRight = UDim.new(0, r), PaddingBottom = UDim.new(0, b) })
+    end
+    local function list(obj, padding, horizontal)
+        return mk("UIListLayout", {
+            Parent = obj,
+            Padding = UDim.new(0, padding),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            FillDirection = horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical,
+            VerticalAlignment = horizontal and Enum.VerticalAlignment.Center or Enum.VerticalAlignment.Top,
+        })
+    end
+    -- chips (segmentado): opts = { {key, es, en}, ... }
+    local function chips(parent, opts, order, onPick, height)
+        local row = mk("ScrollingFrame", {
+            Parent = parent,
+            Size = UDim2.new(1, 0, 0, height or 28),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollingDirection = Enum.ScrollingDirection.X,
+            AutomaticCanvasSize = Enum.AutomaticSize.X,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            ScrollBarThickness = 0,
+            LayoutOrder = order,
+            ZIndex = Z + 3,
+        })
+        list(row, 6, true)
+        local items = {}
+        local api = {}
+        function api.Set(key)
+            for k, it in pairs(items) do
+                local on = k == key
+                it.BackgroundColor3 = on and Theme.Accent or Theme.Background
+                it.BackgroundTransparency = on and 0 or 0.3
+                it.TextColor3 = on and Theme.AccentText or Theme.Text
+                it:SetAttribute("ThemeRole", on and "Accent" or "Background")
+                it:SetAttribute("ThemeTextRole", on and "AccentText" or "Text")
+            end
+            api.Value = key
+        end
+        for i, o in ipairs(opts) do
+            local b = mk("TextButton", {
+                Parent = row,
+                Size = UDim2.fromOffset(0, (height or 28) - 2),
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = Theme.Background,
+                BorderSizePixel = 0,
+                TextSize = 11,
+                Font = Enum.Font.GothamBold,
+                LayoutOrder = i,
+                ZIndex = Z + 4,
+            })
+            b:SetAttribute("IgnoreTextEffect", true)
+            L(b, o[2], o[3])
+            corner(b, 999)
+            pad(b, 0, 11, 11, 0)
+            local sc = mk("UIScale", { Parent = b, Scale = 1 })
+            b.MouseButton1Down:Connect(function() TweenService:Create(sc, TweenInfo.new(0.07), { Scale = 0.9 }):Play() end)
+            b.MouseButton1Up:Connect(function() TweenService:Create(sc, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play() end)
+            b.MouseLeave:Connect(function() sc.Scale = 1 end)
+            b.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.35)
+                api.Set(o[1])
+                onPick(o[1])
+            end)
+            items[o[1]] = b
+        end
+        api.Row = row
+        api.Items = items
+        return api
+    end
+    local function fmtNum(v, step)
+        if step >= 1 then return tostring(math.floor(v + 0.5)) end
+        if step >= 0.1 then return string.format("%.1f", v) end
+        return string.format("%.2f", v)
+    end
+    local function toHex(c)
+        return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+    end
+    local function fromHex(s)
+        s = tostring(s or ""):gsub("#", ""):gsub("%s", "")
+        if not s:match("^%x%x%x%x%x%x$") then return nil end
+        return Color3.fromRGB(tonumber(s:sub(1, 2), 16), tonumber(s:sub(3, 4), 16), tonumber(s:sub(5, 6), 16))
+    end
+
+    -- ---------- motor de capas (misma matemática que ApplyLogoIcon) ----------
+    local function buildLayers(btn, layers, zBase)
+        local out = {}
+        for i, def in ipairs(layers) do
+            local sc = def.Scale or 1.6
+            local off = -((sc - 1) / 2)
+            local lbl = mk("ImageLabel", {
+                Parent = btn,
+                Size = UDim2.new(sc, 0, sc, 0),
+                Position = UDim2.new(off, 0, off, 0),
+                BackgroundTransparency = 1,
+                Image = def.Image or "",
+                ImageColor3 = def.Color or WHITE,
+                ImageTransparency = def.Transparency or 0,
+                ZIndex = zBase + i,
+            })
+            mk("UIAspectRatioConstraint", { AspectRatio = 1 }, lbl)
+            out[i] = { label = lbl, def = def, state = { angle = 0, speed = def.Speed or 60, time = 0 } }
+        end
+        return out
+    end
+    local function stepLayers(entries, dt)
+        for _, entry in ipairs(entries) do
+            local lbl, def, st = entry.label, entry.def, entry.state
+            if lbl.Parent then
+                local mv = def.Movement or "None"
+                local spd = def.Speed or 60
+                local amt = def.Amount or 0
+                local dir = def.Direction or 1
+                local sc = def.Scale or 1.6
+                local off = -((sc - 1) / 2)
+                st.time = st.time + dt
+                if mv == "Spin" then
+                    if (def.Style or "Constant") == "Organic" then
+                        local target = spd + math.sin(st.time * 0.8) * (spd * 0.33)
+                        st.speed = st.speed + (target - st.speed) * 0.08
+                    else
+                        st.speed = spd
+                    end
+                    st.angle = st.angle + st.speed * dir * dt
+                    lbl.Rotation = st.angle
+                elseif mv == "Pulse" then
+                    local scale = 1 + math.sin(st.time * (2 * math.pi / spd)) * ((amt ~= 0 and amt or 12) / 100)
+                    lbl.Size = UDim2.new(sc * scale, 0, sc * scale, 0)
+                    lbl.Position = UDim2.new(off * scale, 0, off * scale, 0)
+                elseif mv == "Orbit" then
+                    local radius = amt ~= 0 and amt or 6
+                    local angle = st.time * math.rad(spd) * dir
+                    lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
+                elseif mv == "Float" then
+                    lbl.Position = UDim2.new(off, 0, off, math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4))
+                elseif mv == "Shake" then
+                    local intensity = amt ~= 0 and amt or 2
+                    lbl.Position = UDim2.new(off, math.sin(st.time * spd * math.pi * 2 + 0.3) * intensity, off, math.cos(st.time * spd * math.pi * 2) * intensity)
+                elseif mv == "Fade" then
+                    local maxAlpha = math.clamp(amt ~= 0 and amt or 0.6, 0, 1)
+                    lbl.ImageTransparency = ((math.sin(st.time * (2 * math.pi / spd)) + 1) / 2) * maxAlpha
+                end
+            end
+        end
+    end
+    -- Botón base: círculo del color del tema (o el elegido) + borde 1.5, igual que ToggleButton
+    local function paintButtonBase(btn, btnStroke, icon)
+        if icon.NoBackground then
+            btn.BackgroundTransparency = 1
+            btnStroke.Transparency = 1
+        else
+            btn.BackgroundTransparency = 0
+            btn.BackgroundColor3 = icon.BgColor or Theme.Accent
+            btnStroke.Transparency = 0
+            btnStroke.Color = icon.BorderColor or Theme.Accent
+        end
+    end
+    -- Miniatura fija (tarjetas y cabecera): botón + todas las capas, sin animar
+    local function composite(parent, icon, px, z)
+        local holder = mk("Frame", {
+            Parent = parent,
+            Name = "LogoComposite",
+            Size = UDim2.fromOffset(px, px),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            BackgroundTransparency = 1,
+            ZIndex = z,
+        })
+        -- el botón se achica si alguna capa es grande, así todo entra en la miniatura
+        local maxScale = 1
+        for _, lay in ipairs(icon.Layers or {}) do
+            maxScale = math.max(maxScale, tonumber(lay.Scale) or 1.6)
+        end
+        local frac = math.clamp(0.98 / maxScale, 0.3, 0.62)
+        local btn = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.fromScale(frac, frac),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.fromScale(0.5, 0.5),
+            BorderSizePixel = 0,
+            ZIndex = z,
+        })
+        corner(btn, 999)
+        local st = mk("UIStroke", { Parent = btn, Thickness = 1.5 })
+        paintButtonBase(btn, st, icon)
+        buildLayers(btn, icon.Layers or {}, z)
+        return holder
+    end
+    LP.composite = composite
+
+    -- ---------- estado del editor ----------
+    local ED = { rec = nil, editingId = nil }
+    local function blankLayer(img)
+        return { Image = img or "", Movement = "None", Speed = 60, Amount = 0, Direction = 1, Style = "Organic", Scale = 1.6, Transparency = 0, Color = nil }
+    end
+    local function blankRec()
+        return {
+            Name = "",
+            NoBackground = false,
+            BgColor = nil,
+            BorderColor = nil,
+            Layers = { blankLayer("rbxassetid://106130066496682") },
+            ClickSound = { Id = "", Volume = 0.6 },
+            IdleSound = { Id = "", Interval = 15, Volume = 0.15 },
+        }
+    end
+    -- catálogo/guardado -> estado editable (colores Color3, sonidos siempre presentes)
+    local function recFromIcon(icon, name)
+        local r = blankRec()
+        r.Name = name or ""
+        r.NoBackground = icon.NoBackground == true
+        r.BgColor = typeof(icon.BgColor) == "Color3" and icon.BgColor or (type(icon.BgColor) == "table" and arrayToColor(icon.BgColor, nil)) or nil
+        r.BorderColor = typeof(icon.BorderColor) == "Color3" and icon.BorderColor or (type(icon.BorderColor) == "table" and arrayToColor(icon.BorderColor, nil)) or nil
+        r.Layers = {}
+        for i, src in ipairs(icon.Layers or {}) do
+            if i > 3 then break end
+            if type(src.Image) == "string" and src.Image ~= "" then
+                local lay = blankLayer(src.Image)
+                lay.Movement = CL.Moves[src.Movement] and src.Movement or "None"
+                lay.Speed = tonumber(src.Speed) or (MOVE_INFO[lay.Movement].speed and MOVE_INFO[lay.Movement].speed[4]) or 60
+                lay.Amount = tonumber(src.Amount) or 0
+                lay.Direction = src.Direction == -1 and -1 or 1
+                lay.Style = src.Style == "Constant" and "Constant" or "Organic"
+                lay.Scale = tonumber(src.Scale) or 1.6
+                lay.Transparency = tonumber(src.Transparency) or 0
+                lay.Color = typeof(src.Color) == "Color3" and src.Color or (type(src.Color) == "table" and arrayToColor(src.Color, nil)) or nil
+                table.insert(r.Layers, lay)
+            end
+        end
+        if #r.Layers == 0 then r.Layers = { blankLayer("") } end
+        if type(icon.ClickSound) == "table" and type(icon.ClickSound.Id) == "string" then
+            r.ClickSound = { Id = icon.ClickSound.Id, Volume = tonumber(icon.ClickSound.Volume) or 0.6 }
+        end
+        if type(icon.IdleSound) == "table" and type(icon.IdleSound.Id) == "string" then
+            r.IdleSound = { Id = icon.IdleSound.Id, Interval = tonumber(icon.IdleSound.Interval) or 15, Volume = tonumber(icon.IdleSound.Volume) or 0.15 }
+        end
+        return r
+    end
+    -- estado editable -> registro para guardar (pasa por CL.Sanitize)
+    local function recToSaved(r, id)
+        local s = {
+            Id = id,
+            Name = r.Name,
+            NoBackground = r.NoBackground,
+            BgColor = r.BgColor and colorToArray(r.BgColor) or nil,
+            BorderColor = r.BorderColor and colorToArray(r.BorderColor) or nil,
+            Created = os.time(),
+            Layers = {},
+            ClickSound = r.ClickSound,
+            IdleSound = r.IdleSound,
+        }
+        for i, lay in ipairs(r.Layers) do
+            local c = table.clone(lay)
+            c.Color = lay.Color and colorToArray(lay.Color) or nil
+            s.Layers[i] = c
+        end
+        return CL.Sanitize(s)
+    end
+    -- capas que se pueden dibujar ya (las que tienen imagen)
+    local function drawableIcon(r)
+        local icon = { NoBackground = r.NoBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
+        for _, lay in ipairs(r.Layers) do
+            local img = CL.CleanAsset(lay.Image)
+            if img ~= "" then
+                local c = table.clone(lay)
+                c.Image = img
+                table.insert(icon.Layers, c)
+            end
+        end
+        return icon
+    end
+
+    -- =====================================================================
+    -- VENTANA DEL EDITOR
+    -- =====================================================================
+    local Overlay = mk("Frame", {
+        Parent = Main,
+        Name = "LogoStudioOverlay",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        Visible = false,
+        Active = true,
+        ZIndex = Z,
+    })
+    local Panel = mk("Frame", {
+        Parent = Overlay,
+        Size = UDim2.new(0.94, 0, 0.94, 0),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = Z + 1,
+    })
+    Panel:SetAttribute("ThemeRole", "Background")
+    corner(Panel, 16)
+    stroke(Panel, Theme.Stroke, 1.5, 0.2)
+    local PanelScale = mk("UIScale", { Parent = Panel, Scale = 1 })
+
+    -- cabecera con insignia que gira
+    local Badge = mk("Frame", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 2 })
+    Badge:SetAttribute("ThemeRole", "Accent")
+    corner(Badge, 9)
+    local BadgeStroke = mk("UIStroke", { Parent = Badge, Thickness = 1.5, Color = WHITE })
+    local BadgeGrad = mk("UIGradient", {
+        Parent = BadgeStroke,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 80)),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 255, 160)),
+            ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 170, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 90, 90)),
+        }),
+    })
+    TweenService:Create(BadgeGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+    mk("ImageLabel", { Parent = Badge, Size = UDim2.fromOffset(20, 20), Position = UDim2.fromOffset(5, 5), BackgroundTransparency = 1, Image = "rbxassetid://102470093365848", ImageColor3 = Theme.AccentText, ZIndex = Z + 3 }):SetAttribute("ThemeImageRole", "AccentText")
+    local Title = label(Panel, "Estudio de Logos", "Logo Studio", 17, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -120, 0, 22), Position = UDim2.fromOffset(54, 8), ZIndex = Z + 2 })
+    label(Panel, "Armá tu botón flotante capa por capa · todo se ve en vivo", "Build your floating button layer by layer · everything is live", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -120, 0, 14), Position = UDim2.fromOffset(54, 30), ZIndex = Z + 2 })
+    local CloseBtn = mk("TextButton", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -42, 0, 10), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 20, Font = Enum.Font.GothamBold, ZIndex = Z + 3 })
+    CloseBtn:SetAttribute("ThemeRole", "Secondary")
+    CloseBtn:SetAttribute("ThemeTextRole", "Text")
+    corner(CloseBtn, 999)
+    RowKit.Control(CloseBtn)
+    mk("Frame", { Parent = Panel, Size = UDim2.new(1, -28, 0, 1), Position = UDim2.fromOffset(14, 50), BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = Z + 2 }):SetAttribute("ThemeRole", "Stroke")
+
+    local Content = mk("ScrollingFrame", {
+        Parent = Panel,
+        Size = UDim2.new(1, -24, 1, -112),
+        Position = UDim2.fromOffset(12, 58),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ZIndex = Z + 2,
+    })
+    list(Content, 10)
+    pad(Content, 0, 0, 4, 10)
+
+    -- pie: estado + cancelar + guardar
+    mk("Frame", { Parent = Panel, Size = UDim2.new(1, -28, 0, 1), Position = UDim2.new(0, 14, 1, -54), BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, ZIndex = Z + 2 }):SetAttribute("ThemeRole", "Stroke")
+    local Status = label(Panel, "", "", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -290, 0, 34), Position = UDim2.new(0, 14, 1, -44), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, ZIndex = Z + 3 })
+    local SaveBtn = button(Panel, "Crear logo", "Create logo", "Accent", { Size = UDim2.fromOffset(132, 36), Position = UDim2.new(1, -144, 1, -46) })
+    local CancelBtn = button(Panel, "Cancelar", "Cancel", "Secondary", { Size = UDim2.fromOffset(118, 36), Position = UDim2.new(1, -270, 1, -46) })
+    local statusToken = 0
+    local function setStatus(es, en, color)
+        statusToken += 1
+        Status:SetAttribute("TextSpanish", es)
+        Status:SetAttribute("TextEnglish", en)
+        Status.Text = GetText(es, en)
+        Status.TextColor3 = color or Theme.TextDim
+        local my = statusToken
+        task.delay(5, function()
+            if statusToken == my and Status.Text == GetText(es, en) then
+                L(Status, "", "")
+            end
+        end)
+    end
+
+    -- =====================================================================
+    -- 1) ESCENARIO REALISTA (vista previa)
+    -- =====================================================================
+    local PreviewCard = card(Content, 1)
+    pad(PreviewCard, 8, 8, 8, 8)
+    list(PreviewCard, 8)
+    local Stage = mk("Frame", {
+        Parent = PreviewCard,
+        Name = "Stage",
+        Size = UDim2.new(1, 0, 0, 214),
+        BackgroundColor3 = Color3.fromRGB(20, 22, 28),
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        LayoutOrder = 1,
+        ZIndex = Z + 3,
+    })
+    corner(Stage, 12)
+    local StageStroke = mk("UIStroke", { Parent = Stage, Color = Color3.new(0, 0, 0), Thickness = 2, Transparency = 0.35 })
+    local SZ = Z + 4 -- capas del escenario: SZ..SZ+14 · botón: SZ+30.. · ventana: SZ+20
+
+    local function sframe(parent, props)
+        props.Parent = parent
+        props.BorderSizePixel = 0
+        props.ZIndex = props.ZIndex or SZ
+        return mk("Frame", props)
+    end
+    local function round(f) corner(f, 999) return f end
+    local function vgrad(f, top, bottom)
+        mk("UIGradient", { Parent = f, Rotation = 90, Color = ColorSequence.new(top, bottom) })
+    end
+
+    local Scenes = {}
+    -- Día: cielo, sol con halo, nubes que se mueven, montañas, pasto, perspectiva y un personaje
+    function Scenes.day()
+        local s = sframe(Stage, { Name = "SceneDay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
+        vgrad(s, Color3.fromRGB(78, 150, 232), Color3.fromRGB(176, 220, 252))
+        round(sframe(s, { Size = UDim2.fromOffset(70, 70), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.82, 0.2), BackgroundColor3 = Color3.fromRGB(255, 244, 200), BackgroundTransparency = 0.75, ZIndex = SZ + 1 }))
+        round(sframe(s, { Size = UDim2.fromOffset(30, 30), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.82, 0.2), BackgroundColor3 = Color3.fromRGB(255, 236, 160), ZIndex = SZ + 2 }))
+        for i, c in ipairs({ { 0.18, 0.16, 1 }, { 0.55, 0.1, 0.8 }, { 0.38, 0.3, 0.65 } }) do
+            local cloud = sframe(s, { Size = UDim2.fromOffset(70 * c[3], 24 * c[3]), Position = UDim2.fromScale(c[1], c[2]), BackgroundTransparency = 1, ZIndex = SZ + 2 })
+            round(sframe(cloud, { Size = UDim2.fromScale(0.62, 0.7), Position = UDim2.fromScale(0, 0.3), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            round(sframe(cloud, { Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.25, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            round(sframe(cloud, { Size = UDim2.fromScale(0.55, 0.62), Position = UDim2.fromScale(0.45, 0.38), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            TweenService:Create(cloud, TweenInfo.new(14 + i * 5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(c[1] + 0.12, c[2]) }):Play()
+        end
+        for _, m in ipairs({ { 0.12, 120, Color3.fromRGB(96, 128, 170) }, { 0.42, 150, Color3.fromRG

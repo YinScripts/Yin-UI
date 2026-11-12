@@ -1,0 +1,866 @@
+ent = self._ContentParent or TabPage
+            if self._homeBuilt then
+                return nil
+            end
+            local Divider = mk("Frame", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 1),
+                BackgroundColor3 = Theme.Stroke,
+                ZIndex = 9
+            })
+            Divider:SetAttribute("ThemeRole", "Stroke")
+            return Divider
+        end
+
+        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
+            local contentParent = self._ContentParent or TabPage
+            if selectable == nil then selectable = true end
+            items = items or {}
+
+            local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
+            if displayTitle then
+                local Title = mk("TextLabel", {
+                    Parent = contentParent,
+                    Size = UDim2.new(1, 0, 0, 20),
+                    BackgroundTransparency = 1,
+                    Text = displayTitle,
+                    TextColor3 = Theme.Text,
+                    TextSize = 13,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 9,
+                })
+                Title:SetAttribute("ThemeTextRole", "Text")
+                Title:SetAttribute("TextSpanish", titleSpanish)
+                Title:SetAttribute("TextEnglish", titleEnglish)
+            end
+
+            local GridHolder = mk("Frame", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 9,
+            })
+            mk("UIGridLayout", {
+                Parent = GridHolder,
+                CellSize = UDim2.new(0.485, 0, 0, 180),
+                CellPadding = UDim2.new(0.03, 0, 0, 10),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            })
+
+            local selectedIndex = nil
+            local cards = {}
+
+            local function refreshSelection()
+                for i, c in ipairs(cards) do
+                    local isSel = selectable and (i == selectedIndex)
+                    c.Card.BackgroundColor3 = isSel and Theme.Accent or Theme.Secondary
+                    c.Card.BackgroundTransparency = isSel and 0 or 0.4
+                    c.Stroke.Color = isSel and Theme.Accent or Theme.Stroke
+                    c.Stroke.Transparency = isSel and 0 or 0.4
+                    if c.Label then
+                        c.Label.TextColor3 = isSel and Theme.AccentText or Theme.Text
+                        c.Label:SetAttribute("ThemeTextRole", isSel and "AccentText" or "Text")
+                    end
+                end
+            end
+
+            for i, item in ipairs(items) do
+                local Card = mk("Frame", {
+                    Parent = GridHolder,
+                    BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.4,
+                    BorderSizePixel = 0,
+                    ZIndex = 9,
+                })
+                corner(Card, 10)
+                local CardStroke = stroke(Card, Theme.Stroke, 1.5, 0.4)
+
+                mk("ImageLabel", {
+                    Parent = Card,
+                    Size = UDim2.new(1, -20, 0, 130),
+                    Position = UDim2.new(0, 10, 0, 10),
+                    BackgroundTransparency = 1,
+                    Image = item.Image or "",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 10,
+                })
+
+                local Label = nil
+                local labelText = item.LabelES and GetText(item.LabelES, item.LabelEN)
+                if labelText then
+                    Label = mk("TextLabel", {
+                        Parent = Card,
+                        Size = UDim2.new(1, -8, 0, 32),
+                        Position = UDim2.new(0, 4, 1, -36),
+                        BackgroundTransparency = 1,
+                        Text = labelText,
+                        TextColor3 = Theme.Text,
+                        TextSize = 12,
+                        Font = Enum.Font.GothamMedium,
+                        TextXAlignment = Enum.TextXAlignment.Center,
+                        TextWrapped = true,
+                        ZIndex = 10,
+                    })
+                    Label:SetAttribute("ThemeTextRole", "Text")
+                    Label:SetAttribute("TextSpanish", item.LabelES)
+                    Label:SetAttribute("TextEnglish", item.LabelEN)
+                end
+
+                local Btn = mk("TextButton", {
+                    Parent = Card,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    ZIndex = 11,
+                })
+
+                cards[i] = { Card = Card, Stroke = CardStroke, Label = Label }
+
+                Btn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.5)
+                    local isSelected
+                    if selectable then
+                        if selectedIndex == i then
+                            selectedIndex = nil
+                            isSelected = false
+                        else
+                            selectedIndex = i
+                            isSelected = true
+                        end
+                        refreshSelection()
+                    else
+                        isSelected = true
+                    end
+                    pcall(callback, item, i, isSelected)
+                end)
+            end
+
+            refreshSelection()
+            if contentParent == TabPage then resetScrollTop(TabPage) end
+
+            return {
+                Holder = GridHolder,
+                GetSelected = function()
+                    return selectedIndex
+                end,
+                SetSelected = function(index)
+                    selectedIndex = index
+                    refreshSelection()
+                end,
+            }
+        end
+
+        function Tab:CreateWelcomeCard()
+            if self._homeBuilt then
+                return self._homeRoot
+            end
+
+            self._homeBuilt = true
+
+            local HomeRoot = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 296),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ClipsDescendants = false,
+                ZIndex = 9,
+            })
+            self._homeRoot = HomeRoot
+
+            local function makeStatCard(parent, xScale, y, wScale, h, iconId, titleES, titleEN, valueText, subES, subEN)
+                local Card = mk("Frame", {
+                    Parent = parent,
+                    Size = UDim2.new(wScale, 0, 0, h),
+                    Position = UDim2.new(xScale, 0, 0, y),
+                    BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.08,
+                    BorderSizePixel = 0,
+                    ClipsDescendants = true,
+                    ZIndex = 9,
+                })
+                Card:SetAttribute("ThemeRole", "Secondary")
+                corner(Card, 16)
+                stroke(Card, Theme.Stroke, 1.2, 0.45)
+                mk("UIGradient", {
+                    Parent = Card,
+                    Rotation = 90,
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0),
+                        NumberSequenceKeypoint.new(1, 0.22),
+                    }),
+                })
+
+                local Glow = mk("Frame", {
+                    Parent = Card,
+                    Size = UDim2.new(1, 0, 0, 2),
+                    BackgroundColor3 = Theme.Accent,
+                    BorderSizePixel = 0,
+                    ZIndex = 10,
+                })
+                Glow:SetAttribute("ThemeRole", "Accent")
+                mk("UIGradient", {
+                    Parent = Glow,
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.5, 0.15),
+                        NumberSequenceKeypoint.new(1, 1),
+                    }),
+                })
+
+                local Badge = mk("Frame", {
+                    Parent = Card,
+                    Size = UDim2.new(0, 34, 0, 34),
+                    Position = UDim2.new(0, 10, 0, 10),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.86,
+                    BorderSizePixel = 0,
+                    ZIndex = 10,
+                })
+                Badge:SetAttribute("ThemeRole", "Accent")
+                corner(Badge, 11)
+                mk("ImageLabel", {
+                    Parent = Badge,
+                    Size = UDim2.new(0, 24, 0, 24),
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(0.5, 0, 0.5, 0),
+                    BackgroundTransparency = 1,
+                    Image = iconId and ("rbxassetid://" .. tostring(iconId)) or "",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 11,
+                })
+
+                local Title = mk("TextLabel", {
+                    Parent = Card,
+                    Size = UDim2.new(1, -58, 0, 34),
+                    Position = UDim2.new(0, 52, 0, 10),
+                    BackgroundTransparency = 1,
+                    Text = GetText(titleES, titleEN),
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 12,
+                    TextWrapped = true,
+                    TextColor3 = Theme.TextDim,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 10,
+                })
+                Title:SetAttribute("ThemeTextRole", "TextDim")
+                Title:SetAttribute("TextSpanish", titleES)
+                Title:SetAttribute("TextEnglish", titleEN)
+
+                local Value = mk("TextLabel", {
+                    Parent = Card,
+                    Size = UDim2.new(1, -20, 0, 24),
+                    Position = UDim2.new(0, 10, 0, 46),
+                    BackgroundTransparency = 1,
+                    Text = valueText or "...",
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 18,
+                    TextColor3 = Theme.Text,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 10,
+                })
+                Value:SetAttribute("ThemeTextRole", "Text")
+
+                local Dot = mk("Frame", {
+                    Parent = Card,
+                    Size = UDim2.fromOffset(6, 6),
+                    AnchorPoint = Vector2.new(0, 0.5),
+                    Position = UDim2.new(0, 10, 1, -13),
+                    BackgroundColor3 = Color3.fromRGB(46, 213, 115),
+                    BorderSizePixel = 0,
+                    Visible = false,
+                    ZIndex = 11,
+                })
+                corner(Dot, 999)
+
+                local Subtitle = mk("TextLabel", {
+                    Parent = Card,
+                    Size = UDim2.new(1, -20, 0, 24),
+                    Position = UDim2.new(0, 10, 1, -26),
+                    BackgroundTransparency = 1,
+                    Text = GetText(subES, subEN),
+                    Font = Enum.Font.GothamMedium,
+                    TextSize = 10,
+                    TextWrapped = true,
+                    TextColor3 = Theme.TextDim,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextYAlignment = Enum.TextYAlignment.Bottom,
+                    ZIndex = 10,
+                })
+                Subtitle:SetAttribute("ThemeTextRole", "TextDim")
+                Subtitle:SetAttribute("TextSpanish", subES)
+                Subtitle:SetAttribute("TextEnglish", subEN)
+
+                return Card, Value, Subtitle, Dot
+            end
+
+            local function createViewport(parent)
+                local ViewportWrap = mk("Frame", {
+                    Parent = parent,
+                    Size = UDim2.new(0.50, 0, 0, 290),
+                    Position = UDim2.new(0.5, 0, 0, -8),
+                    AnchorPoint = Vector2.new(0.5, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ClipsDescendants = false,
+                    ZIndex = 10,
+                })
+
+
+                local Halo = mk("Frame", {
+                    Parent = ViewportWrap,
+                    Size = UDim2.new(0, 170, 0, 170),
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(0.5, 0, 0.55, 0),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.82,
+                    BorderSizePixel = 0,
+                    ZIndex = 10,
+                })
+                Halo:SetAttribute("ThemeRole", "Accent")
+                corner(Halo, 999)
+                mk("UIGradient", {
+                    Parent = Halo,
+                    Rotation = 90,
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.35),
+                        NumberSequenceKeypoint.new(1, 1),
+                    }),
+                })
+                local Floor = mk("Frame", {
+                    Parent = ViewportWrap,
+                    Size = UDim2.new(0, 120, 0, 16),
+                    AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(0.5, 0, 1, -22),
+                    BackgroundColor3 = Color3.new(0, 0, 0),
+                    BackgroundTransparency = 0.6,
+                    BorderSizePixel = 0,
+                    ZIndex = 10,
+                })
+                corner(Floor, 999)
+
+                local Viewport = Instance.new("ViewportFrame")
+                Viewport.Name = "HomeAvatarViewport"
+                Viewport.Parent = ViewportWrap
+                Viewport.Size = UDim2.new(1, 0, 1, 0)
+                Viewport.Position = UDim2.new(0, 0, 0, 0)
+                Viewport.BackgroundTransparency = 1
+                Viewport.BorderSizePixel = 0
+                Viewport.ZIndex = 11
+                Viewport.Ambient = Color3.fromRGB(255, 255, 255)
+                pcall(function() Viewport.LightColor = Color3.fromRGB(255, 255, 255) end)
+                pcall(function() Viewport.LightDirection = Vector3.new(-0.3, -1, -0.2) end)
+
+                local World = Instance.new("WorldModel")
+                World.Parent = Viewport
+
+                local Camera = Instance.new("Camera")
+                Camera.Parent = Viewport
+                Viewport.CurrentCamera = Camera
+
+                local function cleanModel(model)
+                    for _, obj in ipairs(model:GetDescendants()) do
+                        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+                            pcall(function() obj:Destroy() end)
+                        end
+                    end
+                end
+
+                local function getSourceModel()
+                    local source = LocalPlayer.Character
+                    if source and source.Parent then
+                        local ok, clone = pcall(function()
+                            return source:Clone()
+                        end)
+                        if ok and clone then
+                            return clone
+                        end
+                    end
+
+                    local ok, model = pcall(function()
+                        return Players:CreateHumanoidModelFromUserId(LocalPlayer.UserId)
+                    end)
+                    if ok and model then
+                        return model
+                    end
+                    return nil
+                end
+
+                -- ==================== ANIMACIÓN PROPIA (R6 y R15, por código) ====================
+                -- Se mueven los Motor6D girando su C0 alrededor de la propia articulación, en el espacio del
+                -- torso (X = derecha, Y = arriba, -Z = adelante): así la misma pose sirve para R6 y R15.
+                local HomeAnim = {}
+                -- articulación abstracta -> nombres reales (R15 primero, R6 después)
+                HomeAnim.JOINTS = {
+                    Root = { "Root", "RootJoint" },
+                    Waist = { "Waist" },
+                    Neck = { "Neck" },
+                    RShoulder = { "RightShoulder", "Right Shoulder" },
+                    LShoulder = { "LeftShoulder", "Left Shoulder" },
+                    RElbow = { "RightElbow" },
+                    LElbow = { "LeftElbow" },
+                    RHip = { "RightHip", "Right Hip" },
+                    LHip = { "LeftHip", "Left Hip" },
+                    RKnee = { "RightKnee" },
+                    LKnee = { "LeftKnee" },
+                }
+                function HomeAnim.Rig(model)
+                    local rig = { joints = {}, count = 0, r15 = model:FindFirstChild("UpperTorso") ~= nil }
+                    for key, names in pairs(HomeAnim.JOINTS) do
+                        for _, n in ipairs(names) do
+                            local m = model:FindFirstChild(n, true)
+                            if m and m:IsA("Motor6D") then
+                                rig.joints[key] = { motor = m, base = m.C0 }
+                                rig.count += 1
+                                break
+                            end
+                        end
+                    end
+                    -- R6 no tiene cintura: lo de la cintura va al RootJoint
+                    if not rig.joints.Waist and rig.joints.Root then
+                        rig.waistIsRoot = true
+                    end
+                    -- largo y grosor de la pierna (para sentarse justo en el piso)
+                    local function sizeY(n) local p = model:FindFirstChild(n) return p and p:IsA("BasePart") and p.Size.Y or 0 end
+                    local function sizeX(n) local p = model:FindFirstChild(n) return p and p:IsA("BasePart") and p.Size.X or 0 end
+                    if rig.r15 then
+                        rig.legLen = sizeY("RightUpperLeg") + sizeY("RightLowerLeg") + sizeY("RightFoot")
+                        rig.legThick = math.max(sizeX("RightUpperLeg"), 0.6)
+                    else
+                        rig.legLen = sizeY("Right Leg")
+                        rig.legThick = math.max(sizeX("Right Leg"), 0.6)
+                    end
+                    if rig.legLen <= 0 then rig.legLen = 2 end
+                    return rig
+                end
+                -- pose = { Key = { rx, ry, rz [, dy] } en grados (dy: subir/bajar en studs, solo Root)
+                local function rotC0(j, a)
+                    local base = j.base
+                    local p = base.Position
+                    local rot = CFrame.Angles(math.rad(a[1] or 0), math.rad(a[2] or 0), math.rad(a[3] or 0))
+                    local lift = Vector3.new(0, a[4] or 0, 0)
+                    return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
+                end
+                function HomeAnim.Apply(rig, pose)
+                    local waist = pose.Waist
+                    for key, j in pairs(rig.joints) do
+                        local a = pose[key]
+                        if key == "Root" and rig.waistIsRoot and waist then
+                            a = { (a and a[1] or 0) + waist[1], (a and a[2] or 0) + waist[2], (a and a[3] or 0) + waist[3], a and a[4] or 0 }
+                        end
+                        if a then
+                            j.motor.C0 = rotC0(j, a)
+                        else
+                            j.motor.C0 = j.base
+                        end
+                    end
+                end
+                function HomeAnim.Reset(rig)
+                    for _, j in pairs(rig.joints) do
+                        pcall(function() j.motor.C0 = j.base end)
+                    end
+                end
+                -- suma pose b * peso sobre a
+                local function addPose(a, b, w)
+                    for key, v in pairs(b) do
+                        local cur = a[key]
+                        if not cur then
+                            cur = { 0, 0, 0, 0 }
+                            a[key] = cur
+                        end
+                        cur[1] = (cur[1] or 0) + (v[1] or 0) * w
+                        cur[2] = (cur[2] or 0) + (v[2] or 0) * w
+                        cur[3] = (cur[3] or 0) + (v[3] or 0) * w
+                        cur[4] = (cur[4] or 0) + (v[4] or 0) * w
+                    end
+                end
+                local function ease(x) return x * x * (3 - 2 * x) end
+                local sin = math.sin
+
+                -- ---------- acciones del avatar del jugador (u = 0..1 dentro de la acción) ----------
+                HomeAnim.Actions = {
+                    -- saludar: brazo derecho arriba y la mano va y viene
+                    wave = { dur = 2.6, pose = function(u, t)
+                        local w = sin(t * 9) * 22
+                        return { RShoulder = { 0, 0, 150 + w * 0.3 }, RElbow = { 0, 0, 25 + w }, Neck = { 0, -8, 4 }, Waist = { 0, -6, 2 }, LShoulder = { 0, 0, -6 } }
+                    end },
+                    -- mirar a los lados: cabeza y torso siguen una curva izquierda-derecha
+                    look = { dur = 3.4, pose = function(u)
+                        local side = sin(u * math.pi * 2) * 1
+                        return { Neck = { -4, side * 48, 0 }, Waist = { 0, side * 14, 0 }, RShoulder = { 0, 0, 4 }, LShoulder = { 0, 0, -4 } }
+                    end },
+                    -- estirarse: brazos arriba, se inclina para atrás y vuelve
+                    stretch = { dur = 2.8, pose = function(u)
+                        local k = sin(u * math.pi)
+                        return { RShoulder = { 0, 0, 165 * k }, LShoulder = { 0, 0, -165 * k }, RElbow = { 0, 0, -10 * k }, LElbow = { 0, 0, 10 * k }, Waist = { 10 * k, 0, 0 }, Neck = { 12 * k, 0, 0 }, Root = { 0, 0, 0, 0.12 * k } }
+                    end },
+                    -- pasito: rebote con la cadera de lado a lado y brazos al ritmo
+                    dance = { dur = 3.4, pose = function(u, t)
+                        local b = sin(t * 8)
+                        local bounce = math.abs(sin(t * 8)) * 0.18
+                        return {
+                            Root = { 0, b * 10, b * 6, bounce - 0.1 },
+                            Waist = { 0, -b * 8, -b * 5 },
+                            Neck = { 0, b * 10, -b * 6 },
+                            RShoulder = { 60 + b * 30, 0, 20 }, LShoulder = { 60 - b * 30, 0, -20 },
+                            RElbow = { 70, 0, 0 }, LElbow = { 70, 0, 0 },
+                            RHip = { b * 12, 0, 4 }, LHip = { -b * 12, 0, -4 },
+                            RKnee = { -math.max(0, b) * 25, 0, 0 }, LKnee = { -math.max(0, -b) * 25, 0, 0 },
+                        }
+                    end },
+                    -- manos en la cintura con un leve balanceo
+                    hips = { dur = 2.8, pose = function(u, t)
+                        local s = sin(t * 2.4) * 4
+                        return { RShoulder = { -10, 0, 38 }, LShoulder = { -10, 0, -38 }, RElbow = { 0, 0, -95 }, LElbow = { 0, 0, 95 }, Waist = { 0, s, s * 0.5 }, Neck = { -4, -s * 2, 0 } }
+                    end },
+                }
+                HomeAnim.Order = { "look", "wave", "stretch", "hips", "dance" }
+
+                -- respiración y peso (siempre)
+                function HomeAnim.Idle(t)
+                    local br = sin(t * 2.1)
+                    local sway = sin(t * 0.9)
+                    return {
+                        Root = { 0, 0, sway * 2.2, br * 0.035 },
+                        Waist = { br * 1.6, 0, -sway * 1.4 },
+                        Neck = { -br * 1.5, sin(t * 0.55) * 7, sway * 1.2 },
+                        RShoulder = { br * 2, 0, 4 + br * 2 },
+                        LShoulder = { br * 2, 0, -4 - br * 2 },
+                        RElbow = { 0, 0, 6 }, LElbow = { 0, 0, -6 },
+                        RHip = { 0, 0, sway * 1.5 }, LHip = { 0, 0, sway * 1.5 },
+                    }
+                end
+
+                -- controlador del avatar del jugador
+                function HomeAnim.Player(rig)
+                    local ctl = { t = 0, action = nil, actionT = 0, nextAt = 3, idx = 0 }
+                    function ctl.Trigger(name)
+                        if HomeAnim.Actions[name] then
+                            ctl.action, ctl.actionT = name, 0
+                        end
+                    end
+                    function ctl.Step(dt)
+                        ctl.t += dt
+                        local pose = HomeAnim.Idle(ctl.t)
+                        if not ctl.action and ctl.t >= ctl.nextAt then
+                            ctl.idx = ctl.idx % #HomeAnim.Order + 1
+                            ctl.Trigger(HomeAnim.Order[ctl.idx])
+                        end
+                        if ctl.action then
+                            local a = HomeAnim.Actions[ctl.action]
+                            ctl.actionT += dt
+                            local u = math.clamp(ctl.actionT / a.dur, 0, 1)
+                            -- entra y sale suave (0.35 s de cada lado)
+                            local w = math.min(1, ctl.actionT / 0.35, (a.dur - ctl.actionT) / 0.35)
+                            addPose(pose, a.pose(u, ctl.t), ease(math.clamp(w, 0, 1)))
+                            if ctl.actionT >= a.dur then
+                                ctl.action = nil
+                                ctl.nextAt = ctl.t + 3.5 + math.random() * 2.5
+                            end
+                        end
+                        HomeAnim.Apply(rig, pose)
+                    end
+                    return ctl
+                end
+
+                -- controlador del Owner: sentado en el piso mirando de un lado a otro. Se puede agarrar con el dedo:
+                -- cuelga como muñeco de trapo, al soltarlo cae, aterriza, camina a su lugar y se vuelve a sentar.
+                -- Todo es matemática (resortes + gravedad), sin el motor de física: no agrega lag.
+                -- env (opcional): { model, shadow, home = CFrame, floorY, H, standY }
+                local function lerpPose(a, b, u)
+                    local out = {}
+                    for key, va in pairs(a) do
+                        local vb = b[key] or { 0, 0, 0, 0 }
+                        out[key] = { (va[1] or 0) + ((vb[1] or 0) - (va[1] or 0)) * u, (va[2] or 0) + ((vb[2] or 0) - (va[2] or 0)) * u,
+                            (va[3] or 0) + ((vb[3] or 0) - (va[3] or 0)) * u, (va[4] or 0) + ((vb[4] or 0) - (va[4] or 0)) * u }
+                    end
+                    for key, vb in pairs(b) do
+                        if not a[key] then
+                            out[key] = { (vb[1] or 0) * u, (vb[2] or 0) * u, (vb[3] or 0) * u, (vb[4] or 0) * u }
+                        end
+                    end
+                    return out
+                end
+                -- resorte amortiguado: devuelve valor y velocidad nuevos
+                local function spring(x, v, target, k, damp, dt)
+                    local a = (target - x) * k - v * damp
+                    v = v + a * dt
+                    return x + v * dt, v
+                end
+
+                function HomeAnim.Owner(rig, env)
+                    local drop = rig.legLen - rig.legThick * 0.5
+                    local ctl = {
+                        t = 0, look = 0, lookTarget = 0, lookNext = 1.5, torso = 0,
+                        state = "sit", stateT = 0,
+                        roll = 0, rollV = 0, pitch = 0, pitchV = 0,
+                        holdVel = Vector3.new(), vel = Vector3.new(),
+                    }
+                    local function sitPose(t)
+                        local br = sin(t * 1.8)
+                        return {
+                            Root = { 0, 0, 0, -drop + br * 0.02 },
+                            Waist = { 6 + br * 1.2, ctl.torso, 0 },
+                            Neck = { -3 + br * 1, ctl.look, sin(t * 0.7) * 2 },
+                            -- brazos para atrás, apoyados en el piso
+                            RShoulder = { -28, 0, 14 }, LShoulder = { -28, 0, -14 },
+                            RElbow = { 0, 0, 0 }, LElbow = { 0, 0, 0 },
+                            -- piernas adelante, una un poco más doblada
+                            RHip = { 90, 0, 6 }, LHip = { 84, 0, -8 },
+                            RKnee = { -12, 0, 0 }, LKnee = { -28, 0, 0 },
+                        }
+                    end
+                    -- colgando: los miembros siguen al balanceo con retraso y tiemblan según la velocidad
+                    local function heldPose(t, wob)
+                        local r = ctl.roll
+                        local f1, f2 = sin(t * 11) * wob, sin(t * 13 + 1.3) * wob
+                        return {
+                            Root = { ctl.pitch * 0.4, 0, 0, 0 },
+                            Waist = { -ctl.pitch * 0.3, f1 * 6, r * 0.25 },
+                            Neck = { -22 + f2 * 10, r * 0.5, -r * 0.7 + f1 * 8 },
+                            RShoulder = { f1 * 35, 0, 18 - r * 0.9 + f2 * 22 }, LShoulder = { -f2 * 35, 0, -18 - r * 0.9 - f1 * 22 },
+                            RElbow = { 0, 0, 18 + f2 * 20 }, LElbow = { 0, 0, -18 - f1 * 20 },
+                            RHip = { f2 * 38, 0, 5 - r * 0.6 }, LHip = { -f1 * 38, 0, -5 - r * 0.6 },
+                            RKnee = { -12 - math.abs(f1) * 35, 0, 0 }, LKnee = { -12 - math.abs(f2) * 35, 0, 0 },
+                        }
+                    end
+                    -- cayendo: agita brazos y piernas
+                    local function fallPose(t)
+                        local a, b = sin(t * 17), sin(t * 15 + 1)
+                        return {
+                            Neck = { 14, 0, a * 6 },
+                            Waist = { 6, 0, b * 4 },
+                            RShoulder = { 0, 0, 135 + a * 25 }, LShoulder = { 0, 0, -135 + b * 25 },
+                            RElbow = { 0, 0, 25 + b * 20 }, LElbow = { 0, 0, -25 - a * 20 },
+                            RHip = { 25 + a * 30, 0, 8 }, LHip = { 25 - a * 30, 0, -8 },
+                            RKnee = { -40 - b * 20, 0, 0 }, LKnee = { -40 + b * 20, 0, 0 },
+                        }
+                    end
+                    -- aterrizaje: se agacha por el golpe y rebota
+                    local function landPose(u)
+                        local k = sin(math.min(u, 1) * math.pi) -- 0 -> 1 -> 0
+                        return {
+                            Root = { 12 * k, 0, 0, -0.45 * k },
+                            Neck = { -14 * k, 0, 0 },
+                            RShoulder = { 25 * k, 0, 40 * k }, LShoulder = { 25 * k, 0, -40 * k },
+                            RHip = { 45 * k, 0, 4 }, LHip = { 45 * k, 0, -4 },
+                            RKnee = { -70 * k, 0, 0 }, LKnee = { -70 * k, 0, 0 },
+                        }
+                    end
+                    -- caminar de vuelta
+                    local function walkPose(ph)
+                        local s = sin(ph)
+                        return {
+                            Root = { 0, s * 5, 0, math.abs(sin(ph)) * 0.08 },
+                            Waist = { 3, -s * 6, 0 },
+                            Neck = { -2, s * 4, 0 },
+                            RShoulder = { -s * 28, 0, 6 }, LShoulder = { s * 28, 0, -6 },
+                            RElbow = { 15, 0, 0 }, LElbow = { 15, 0, 0 },
+                            RHip = { s * 30, 0, 0 }, LHip = { -s * 30, 0, 0 },
+                            RKnee = { -math.max(0, -s) * 45, 0, 0 }, LKnee = { -math.max(0, s) * 45, 0, 0 },
+                        }
+                    end
+
+                    local function facing()
+                        return env.home - env.home.Position
+                    end
+                    local function moveShadow(p, height)
+                        if not env.shadow then return end
+                        local ahead = ctl.state == "sit" and (env.home.LookVector * (env.H * 0.18)) or Vector3.new()
+                        local s = math.clamp(1 - height / (env.H * 2.2), 0.35, 1)
+                        env.shadow.Size = Vector3.new(0.05, env.H * 0.85 * s, env.H * 0.85 * s)
+                        env.shadow.Transparency = 0.62 + (1 - s) * 0.25
+                        env.shadow.CFrame = CFrame.new(p.X + ahead.X, env.floorY + 0.03, p.Z + ahead.Z) * CFrame.Angles(0, 0, math.rad(90))
+                    end
+                    function ctl.SetHome(cf)
+                        env.home = cf
+                        if ctl.state == "sit" then
+                            env.model:PivotTo(cf)
+                            moveShadow(cf.Position, 0)
+                        end
+                    end
+                    -- dónde está "el agarre" (pecho) respecto al centro del personaje
+                    local function holdOffset() return env.H * 0.2 end
+                    function ctl.Grab()
+                        if not env then return end
+                        local piv = env.model:GetPivot()
+                        ctl.hold = piv.Position + Vector3.new(0, holdOffset(), 0)
+                        ctl.holdTarget = ctl.hold
+                        ctl.state, ctl.stateT = "held", 0
+                    end
+                    function ctl.MoveTo(p)
+                        if ctl.state ~= "held" then return end
+                        -- los pies no pueden quedar bajo el piso
+                        ctl.holdTarget = Vector3.new(p.X, math.max(p.Y, env.standY + holdOffset() + env.H * 0.05), p.Z)
+                    end
+                    function ctl.Release()
+                        if ctl.state ~= "held" then return end
+                        local v = ctl.holdVel
+                        -- conserva el envión (limitado) y cae
+                        ctl.vel = Vector3.new(math.clamp(v.X, -18, 18), math.clamp(v.Y, -10, 14), 0)
+                        ctl.pos = ctl.hold - Vector3.new(0, holdOffset(), 0)
+                        ctl.state, ctl.stateT = "fall", 0
+                    end
+                    function ctl.IsBusy()
+                        return ctl.state ~= "sit"
+                    end
+
+                    function ctl.Step(dt)
+                        ctl.t += dt
+                        ctl.stateT += dt
+                        local t = ctl.t
+                        -- mirar a los lados (solo sentado)
+                        if ctl.t >= ctl.lookNext then
+                            local r = math.random()
+                            ctl.lookTarget = r < 0.25 and 0 or ((r < 0.62 and -1 or 1) * (32 + math.random() * 26))
+                            ctl.lookNext = ctl.t + 1.8 + math.random() * 2.6
+                        end
+                        local k = math.min(1, dt * 2.6)
+                        ctl.look += (ctl.lookTarget - ctl.look) * k
+                        ctl.torso += (ctl.lookTarget * 0.22 - ctl.torso) * k
+
+                        if not env or ctl.state == "sit" then
+                            HomeAnim.Apply(rig, sitPose(t))
+                            return
+                        end
+                        local face = facing()
+                        if ctl.state == "held" then
+                            local prev = ctl.hold
+                            ctl.hold = prev:Lerp(ctl.holdTarget, math.min(1, dt * 16))
+                            local hv = (ctl.hold - prev) / math.max(dt, 1 / 120)
+                            ctl.holdVel = ctl.holdVel:Lerp(hv, 0.5)
+                            -- balanceo tipo péndulo: se inclina al revés del movimiento y oscila al frenar
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, math.clamp(hv.X * 5, -60, 60), 90, 7, dt)
+                            ctl.pitch, ctl.pitchV = spring(ctl.pitch, ctl.pitchV, math.clamp(-hv.Y * 3, -35, 35), 80, 7, dt)
+                            local wob = math.clamp(ctl.holdVel.Magnitude / 10, 0.18, 1)
+                            HomeAnim.Apply(rig, heldPose(t, wob))
+                            env.model:PivotTo(CFrame.new(ctl.hold) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)) * CFrame.new(0, -holdOffset(), 0))
+                            moveShadow(ctl.hold, ctl.hold.Y - holdOffset() - env.standY)
+                        elseif ctl.state == "fall" then
+                            local g = env.H * 14 -- gravedad proporcional al tamaño (se siente igual en R6 y R15)
+                            ctl.vel = Vector3.new(ctl.vel.X * (1 - math.min(1, dt * 1.5)), ctl.vel.Y - g * dt, 0)
+                            ctl.pos = ctl.pos + ctl.vel * dt
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, 0, 40, 5, dt)
+                            HomeAnim.Apply(rig, fallPose(t))
+                            if ctl.pos.Y <= env.standY then
+                                ctl.pos = Vector3.new(ctl.pos.X, env.standY, ctl.pos.Z)
+                                ctl.state, ctl.stateT = "land", 0
+                            end
+                            env.model:PivotTo(CFrame.new(ctl.pos) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)))
+                            moveShadow(ctl.pos, ctl.pos.Y - env.standY)
+                        elseif ctl.state == "land" then
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, 0, 60, 8, dt)
+                            HomeAnim.Apply(rig, landPose(ctl.stateT / 0.5))
+                            env.model:PivotTo(CFrame.new(ctl.pos) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)))
+                            moveShadow(ctl.pos, 0)
+                            if ctl.stateT >= 0.55 then
+                                ctl.state, ctl.stateT = "walk", 0
+                                ctl.walkPhase = 0
+                                ctl.walkFace = face
+                            end
+                        elseif ctl.state == "walk" then
+                            local home = env.home.Position
+                            local to = Vector3.new(home.X - ctl.pos.X, 0, home.Z - ctl.pos.Z)
+                            local dist = to.Magnitude
+                            if dist < 0.15 then
+                                ctl.pos = Vector3.new(home.X, env.standY, home.Z)
+                                ctl.state, ctl.stateT = "sitdown", 0
+                                ctl.fromFace = ctl.walkFace
+                            else
+                                local speed = env.H * 1.3
+                                local stepLen = math.min(dist, speed * dt)
+                                ctl.pos = ctl.pos + to.Unit * stepLen
+                                -- gira de a poco hacia donde camina
+                                local want = CFrame.new(Vector3.new(), to.Unit)
+                                ctl.walkFace = ctl.walkFace:Lerp(want, math.min(1, dt * 8))
+                                ctl.walkPhase += dt * 11
+                                HomeAnim.Apply(rig, walkPose(ctl.walkPhase))
+                                env.model:PivotTo(CFrame.new(ctl.pos) * ctl.walkFace)
+                                moveShadow(ctl.pos, 0)
+                            end
+                        elseif ctl.state == "sitdown" then
+                            -- se da vuelta hacia la cámara y se sienta igual que antes
+                            local u = math.clamp(ctl.stateT / 0.7, 0, 1)
+                            local e = ease(u)
+                            HomeAnim.Apply(rig, lerpPose({}, sitPose(t), e))
+                            env.model:PivotTo(CFrame.new(ctl.pos) * ctl.fromFace:Lerp(face, e))
+                            if u >= 1 then
+                                ctl.state, ctl.stateT = "sit", 0
+                                ctl.roll, ctl.rollV, ctl.pitch, ctl.pitchV = 0, 0, 0, 0
+                                env.model:PivotTo(env.home)
+                                moveShadow(env.home.Position, 0)
+                            end
+                        end
+                    end
+                    return ctl
+                end
+
+                local model = getSourceModel()
+                if model then
+                    model.Name = "HomeAvatarModel"
+                    cleanModel(model)
+                    model.Parent = World
+
+                    local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")
+                    if root and model.PrimaryPart == nil then
+                        pcall(function() model.PrimaryPart = root end)
+                    end
+
+                    pcall(function()
+                        model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(180), 0))
+                    end)
+
+                    local okBox, cf, size = pcall(function()
+                        return model:GetBoundingBox()
+                    end)
+                    if okBox and cf and size then
+                        local biggest = math.max(size.X, size.Y, size.Z)
+                        local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
+                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.30)
+                        Camera.CFrame = CFrame.new(camPos, focus)
+                    else
+                        Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
+                    end
+
+                    -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
+                    local animAcc = 0
+                    local function startAnimLoop()
+                        if HomeAnim.Loop then return end
+                        HomeAnim.Loop = RunService.RenderStepped:Connect(function(dt)
+                            if not Viewport.Parent then
+                                HomeAnim.Loop:Disconnect()
+                                return
+                            end
+                            if not TabPage.Visible or PerfOpt.Flags.NoHomeAvatar then return end
+                            animAcc += dt
+                            if animAcc < 1 / 30 then return end
+                            local step = math.min(animAcc, 0.1)
+                            animAcc = 0
+                            if HomeAnim.PlayerCtl then pcall(HomeAnim.PlayerCtl.Step, step) end
+                            if HomeAnim.OwnerCtl then pcall(HomeAnim.OwnerCtl.Step, step) end
+                            if HomeAnim.OwnerAfterStep then pcall(HomeAnim.OwnerAfterStep) end
+                        end)
+                        track(HomeAnim.Loop)
+                    end
+                    HomeAnim.StartLoop = startAnimLoop
+
+                    -- ---------- agarrar al owner con el dedo ----------
+                    -- Proyección propia (la cámara de la vista no está en workspace): FOV vertical + proporción de la vista.
+                    local function camInfo()
+                        local abs = Viewport.AbsoluteSize
+                        local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
+                        local tanV = math.tan(math.rad((tonumber(Camera.FieldOfView) or 70) / 2))
+                        return abs, aspect, tanV
+                    end
+                    function HomeAnim.SetupOwnerGrab(ctl, env)
+                        -- zona invisible que sigue al owner (encima del área para girar al jugador)
+                        local Grab = mk("TextButton", {
+                            Parent = ViewportWrap,
+                            Name = "OwnerGrab",
+                            Size = UDim2.fromOffset(0, 0),
+                            BackgroundTransparency = 1,
+                            Te

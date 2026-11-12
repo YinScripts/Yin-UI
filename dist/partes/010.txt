@@ -1,0 +1,1053 @@
+oreTextEffect", true)
+            round(c, 999)
+            new("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, c)
+            chips[g.Key] = c
+            c.Activated:Connect(function()
+                Current = g.Key
+                if search.Text ~= "" then search.Text = "" end
+                renderTab(Current)
+                paintChips()
+                page.CanvasPosition = Vector2.new(0, 0)
+            end)
+        end
+
+        local searchToken = 0
+        search:GetPropertyChangedSignal("Text"):Connect(function()
+            searchToken = searchToken + 1
+            local token = searchToken
+            task.delay(0.25, function()
+                if token ~= searchToken then return end
+                local q = search.Text:match("^%s*(.-)%s*$")
+                if #q >= 2 then renderSearch(q) else renderTab(Current) end
+                paintChips()
+            end)
+        end)
+
+        renderTab(Current)
+        paintChips()
+        -- si cambia el tema, al volver a la guía se repintan chips y tarjetas
+        page:GetPropertyChangedSignal("Visible"):Connect(function()
+            if page.Visible then
+                if search.Text == "" then renderTab(Current) end
+                paintChips()
+                repaintAll()
+            end
+        end)
+        return {Root = root, Search = search}
+    end
+end
+
+-- ===== CHAT GLOBAL (YY_ChatGlobal_v14 integrado) =====
+-- Todo el chat v14 (inicio con grupo y privados, mensajes, respuestas, reacciones, stickers, emojis, fijados,
+-- editar/borrar, perfil, en línea, escribiendo..., traducción, avisos al costado) dentro de la pestaña Chat.
+-- Cambios respecto del v14 suelto: sin ventana 3D (vive en ctx.Host), sin botón cerrar/reabrir, sin el texto
+-- "proxy" (en ScreenGui los TextBox funcionan), ZIndex desplazado para quedar dentro de la ventana, contador online
+-- y globo de no leídos conectados a la librería, Railway nuevo (yin-chatt) con latido para el contador.
+function YinYang._BuildChatGlobal(ctx)
+    local Players = game:GetService("Players")
+    local RunService = game:GetService("RunService")
+    local UserInputService = game:GetService("UserInputService")
+    local HttpService = game:GetService("HttpService")
+    local TweenService = game:GetService("TweenService")
+    local ContentProvider = game:GetService("ContentProvider")
+    local TextService = game:GetService("TextService")
+    local LocalPlayer = Players.LocalPlayer
+    local CONFIG = {
+        NAME = "YY_ChatGlobal_Lib",
+        TILT_DEG = 10,
+        DISTANCE_PC = 9.15,
+        DISTANCE_MOBILE = 7.55,
+        CANVAS_PC = Vector2.new(860, 593),
+        CANVAS_MOBILE = Vector2.new(600, 711),
+        MAX_MESSAGES = 100,
+        MAX_CHAR = 500,
+        POLL_RATE = 10,
+        FB_POLL_RATE = 3,
+        WATCH_RATE = 4,
+    }
+    local THEME = {
+        BG = Color3.fromRGB(0, 0, 0),
+        PANEL = Color3.fromRGB(18, 18, 18),
+        PANEL2 = Color3.fromRGB(38, 38, 38),
+        ACC = Color3.fromRGB(245, 245, 245),
+        ACC2 = Color3.fromRGB(54, 54, 54),
+        TXT = Color3.fromRGB(245, 245, 245),
+        DIM = Color3.fromRGB(200, 200, 200), -- v15: más legible (antes 168)
+        GOOD = Color3.fromRGB(88, 200, 110),
+        DANGER = Color3.fromRGB(237, 73, 86),
+    }
+    local ZB = 9 -- desplazamiento de ZIndex: el chat va dentro de la ventana (ZIndex 5 a 8) y por debajo de sus popups (1000+)
+    local function mk(className, props, parent)
+        local obj = Instance.new(className)
+        for k, v in pairs(props or {}) do obj[k] = v end
+        if obj:IsA("GuiObject") then obj.ZIndex = obj.ZIndex + ZB end
+        obj.Parent = parent
+        return obj
+    end
+    local function corner(obj, radius)
+        mk("UICorner", {CornerRadius = UDim.new(0, radius or 10)}, obj)
+    end
+    local function stroke(obj, color, thickness, transparency)
+        mk("UIStroke", {
+            Color = color or THEME.ACC,
+            Thickness = thickness or 1,
+            Transparency = transparency or 0,
+        }, obj)
+    end
+    local UI = {}
+    local Chat = {}
+    UI.ICON = {
+        back = "rbxassetid://74796775741491", search = "rbxassetid://83258052038009",
+        bell = "rbxassetid://89295019910511", bellOff = "rbxassetid://99202807344897",
+        more = "rbxassetid://114906210968666", pin = "rbxassetid://86392028702497",
+        pencil = "rbxassetid://104485628186988", crown = "rbxassetid://93104462877422",
+        tick = "rbxassetid://134652733924299", alert = "rbxassetid://92336184304336",
+        reply = "rbxassetid://140466985063077", copy = "rbxassetid://95657322010780",
+        trash = "rbxassetid://133795804974827", dm = "rbxassetid://140466985063077",
+        server = "rbxassetid://70960808418506", emoji = "rbxassetid://123610893406648",
+        people = "rbxassetid://90819416372909",
+        group = "rbxassetid://97389367768202",
+        globalBg = "rbxassetid://75673376659530",
+        ownerAvatar = "rbxassetid://74189877924111",
+        mousozaAvatar = "rbxassetid://127423980218258",
+    }
+    UI.C = {
+        blue = Color3.fromRGB(0, 149, 246),
+        ownA = Color3.fromRGB(122, 64, 255),
+        ownB = Color3.fromRGB(0, 132, 255),
+        other = Color3.fromRGB(38, 38, 38),
+        line = Color3.fromRGB(38, 38, 38),
+        online = Color3.fromRGB(88, 200, 110),
+        gold = Color3.fromRGB(255, 196, 0),
+    }
+    UI.icon = function(parent, id, size, color, props)
+        local img = mk("ImageLabel", {
+            Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, Image = id,
+            ImageColor3 = color or THEME.TXT, ScaleType = Enum.ScaleType.Fit,
+        }, parent)
+        for k, v in pairs(props or {}) do if k == "ZIndex" then v = v + ZB end img[k] = v end -- v15: ZIndex con el mismo desplazamiento que mk
+        return img
+    end
+    UI.noTr = function(o)
+        if o then o:SetAttribute("NoTr", true) end
+        return o
+    end
+    UI.iconButton = function(parent, id, size, iconSize, props)
+        local b = mk("TextButton", {
+            Size = UDim2.fromOffset(size, size), BackgroundColor3 = THEME.PANEL2,
+            BackgroundTransparency = 1, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
+        }, parent)
+        corner(b, math.floor(size / 2))
+        for k, v in pairs(props or {}) do if k == "ZIndex" then v = v + ZB end b[k] = v end -- v15: ZIndex con el mismo desplazamiento que mk (antes los botones del encabezado quedaban tapados)
+        local img = UI.icon(b, id, iconSize or math.floor(size * 0.58), THEME.TXT, {
+            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            ZIndex = b.ZIndex + 1 - ZB,
+        })
+        return b, img
+    end
+    UI.storyRing = function(target, thickness)
+        local s = mk("UIStroke", {Thickness = thickness or 2.5, Color = Color3.new(1, 1, 1), ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, target)
+        mk("UIGradient", {
+            Rotation = 45,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(254, 218, 117)),
+                ColorSequenceKeypoint.new(0.35, Color3.fromRGB(250, 126, 30)),
+                ColorSequenceKeypoint.new(0.65, Color3.fromRGB(214, 41, 118)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 47, 191)),
+            }),
+        }, s)
+        return s
+    end
+    local function getRequest()
+        return (syn and syn.request)
+            or (http and http.request)
+            or fluxus_request
+            or http_request
+            or request
+            or function(opts)
+                local method = string.upper(opts.Method or "GET")
+                local ok, result = pcall(function()
+                    if method == "POST" then
+                        return HttpService:PostAsync(opts.Url, opts.Body or "", Enum.HttpContentType.ApplicationJson)
+                    elseif method ~= "GET" then
+                        return HttpService:RequestAsync({
+                            Url = opts.Url,
+                            Method = method,
+                            Headers = opts.Headers or { ["Content-Type"] = "application/json" },
+                            Body = opts.Body or "",
+                        }).Body
+                    else
+                        return HttpService:GetAsync(opts.Url)
+                    end
+                end)
+                return {
+                    Success = ok,
+                    Body = ok and tostring(result or "") or "",
+                    StatusCode = ok and 200 or 0,
+                }
+            end
+    end
+    local request = getRequest()
+    local OverlayParent = ctx.OverlayParent or LocalPlayer:WaitForChild("PlayerGui")
+    pcall(function()
+        local old = OverlayParent:FindFirstChild(CONFIG.NAME .. "_UI")
+        if old then old:Destroy() end
+    end)
+    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
+    -- capa aparte solo para lo que va fuera de la ventana (avisos al costado)
+    local ScreenGui = mk("ScreenGui", {
+        Name = CONFIG.NAME .. "_UI",
+        ResetOnSpawn = false,
+        IgnoreGuiInset = true,
+        DisplayOrder = 2147483000,
+        ZIndexBehavior = Enum.ZIndexBehavior.Global,
+    }, OverlayParent)
+    local Surface = mk("Frame", {
+        Name = CONFIG.NAME,
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+    }, ctx.Host)
+    local Root = mk("Frame", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = THEME.BG,
+        BorderSizePixel = 0,
+        Active = true,
+    }, Surface)
+    UI.RootScale = mk("UIScale", {Scale = 1}, Root)
+    corner(Root, 22)
+    stroke(Root, UI.C.line, 1.5, 0)
+    Root.ClipsDescendants = true
+    UI.ChatBg = mk("ImageLabel", {
+        Size = UDim2.new(1, 0, 1, -58), Position = UDim2.fromOffset(0, 58),
+        BackgroundTransparency = 1, Image = UI.ICON.globalBg, ScaleType = Enum.ScaleType.Crop,
+        ImageTransparency = 0.1, Visible = false, ZIndex = 1,
+    }, Root)
+    mk("Frame", {
+        Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.55, BorderSizePixel = 0, ZIndex = 1,
+    }, UI.ChatBg)
+    local Header = mk("Frame", {
+        Size = UDim2.new(1, 0, 0, 58),
+        BackgroundColor3 = THEME.BG,
+        BorderSizePixel = 0,
+        Active = true,
+    }, Root)
+    corner(Header, 22)
+    mk("Frame", {Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -22), BackgroundColor3 = THEME.BG, BorderSizePixel = 0}, Header)
+    mk("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = UI.C.line, BorderSizePixel = 0, ZIndex = 2}, Header)
+    UI.Title = mk("TextLabel", {
+        Size = UDim2.new(1, -235, 0, 24),
+        Position = UDim2.fromOffset(19, 8),
+        BackgroundTransparency = 1,
+        Text = "CHAT GLOBAL",
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamBold,
+        TextSize = 20,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 3,
+    }, Header)
+    UI.Subtitle = mk("TextLabel", {
+        Size = UDim2.new(1, -235, 0, 16),
+        Position = UDim2.fromOffset(20, 33),
+        BackgroundTransparency = 1,
+        Text = "Yin Yang • comunidad global",
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 3,
+    }, Header)
+    local OnlinePill = mk("Frame", {
+        Size = UDim2.fromOffset(92, 32),
+        Position = UDim2.new(1, -140, 0, 13),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        ZIndex = 3,
+    }, Header)
+    corner(OnlinePill, 16)
+    UI.icon(OnlinePill, UI.ICON.people, 18, THEME.TXT, {Position = UDim2.fromOffset(10, 7), ZIndex = 4})
+    local OnlineDot = mk("Frame", {
+        Size = UDim2.fromOffset(8, 8),
+        Position = UDim2.fromOffset(23, 20),
+        BackgroundColor3 = THEME.GOOD,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+    }, OnlinePill)
+    corner(OnlineDot, 99)
+    stroke(OnlineDot, THEME.PANEL2, 1.5, 0)
+    local OnlineLabel = mk("TextLabel", {
+        Size = UDim2.new(1, -38, 1, 0),
+        Position = UDim2.fromOffset(34, 0),
+        BackgroundTransparency = 1,
+        Text = "0",
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 4,
+    }, OnlinePill)
+    local CloseButton = mk("TextButton", {
+        Size = UDim2.fromOffset(32, 32),
+        Position = UDim2.new(1, -42, 0, 13),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        Text = "×",
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamBold,
+        TextSize = 22,
+        ZIndex = 3,
+    }, Header)
+    corner(CloseButton, 16)
+    CloseButton.Visible = false
+    OnlinePill.Position = UDim2.new(1, -102, 0, 13)
+    OnlinePill.Visible = false -- v15: el contador de en línea queda solo en la barra de la librería
+    local MessageScroll = mk("ScrollingFrame", {
+        Size = UDim2.new(1, -28, 1, -164),
+        Position = UDim2.fromOffset(14, 70),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = THEME.DIM,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ScrollingEnabled = true,
+        Active = true,
+    }, Root)
+    local MessageLayout = mk("UIListLayout", {
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, MessageScroll)
+    mk("UIPadding", {
+        PaddingLeft = UDim.new(0, 3),
+        PaddingRight = UDim.new(0, 7),
+        PaddingTop = UDim.new(0, 3),
+        PaddingBottom = UDim.new(0, 6),
+    }, MessageScroll)
+    local EmptyLabel = mk("TextLabel", {
+        Size = UDim2.new(1, -40, 0, 60),
+        Position = UDim2.fromOffset(20, 245),
+        BackgroundTransparency = 1,
+        Text = "Conectando al Chat Global...",
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 15,
+        TextWrapped = true,
+    }, Root)
+    local messageRows = {}
+    local localReactions = {}
+    local localDeletedKeys = {}
+    local pendingReply = nil
+    local reactionPickerTargetKey = nil
+    local actionTarget = nil
+    local actionToken = 0
+    local renderMessage
+    local showStickerTab
+    local MessageBox
+    local StickerPanel
+    local ReactionBar = mk("Frame", {
+        Size = UDim2.fromOffset(315, 50),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 120,
+    }, Root)
+    corner(ReactionBar, 25)
+    stroke(ReactionBar, UI.C.line, 1, 0)
+    local ReactionBarLayout = mk("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 3),
+    }, ReactionBar)
+    local function makeActionButton(parent, text, width, iconId)
+        local b = mk("TextButton", {
+            Size = UDim2.fromOffset(width, 46),
+            BackgroundColor3 = THEME.PANEL2,
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Text = text,
+            TextColor3 = THEME.TXT,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 17,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            AutoButtonColor = true,
+            ZIndex = 121,
+        }, parent)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 52)}, b)
+        if iconId then
+            UI.icon(b, iconId, 22, THEME.TXT, {
+                Name = "Icon", AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, -36, 0.5, 0), ZIndex = 122,
+            })
+        end
+        return b
+    end
+    local QuickReactionEmojis = {"❤️", "😂", "😮", "😢", "🙏", "👍"}
+    local QuickReactionButtons = {}
+    for _, emoji in ipairs(QuickReactionEmojis) do
+        local b = mk("TextButton", {
+            Size = UDim2.fromOffset(40, 40),
+            BackgroundTransparency = 1,
+            Text = emoji,
+            TextColor3 = Color3.fromRGB(255,255,255),
+            Font = Enum.Font.Gotham,
+            TextSize = 27,
+            ZIndex = 121,
+        }, ReactionBar)
+        QuickReactionButtons[#QuickReactionButtons+1] = {button=b, emoji=emoji}
+    end
+    local ReactionMoreButton = mk("TextButton", {
+        Size = UDim2.fromOffset(40, 40),
+        BackgroundColor3 = THEME.PANEL2,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "+",
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.Gotham,
+        TextSize = 34,
+        ZIndex = 121,
+    }, ReactionBar)
+    corner(ReactionMoreButton, 20)
+    UI.MenuDim = mk("TextButton", {
+        Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45,
+        BorderSizePixel = 0, Text = "", AutoButtonColor = false, Visible = false, ZIndex = 110,
+    }, Root)
+    local ActionMenu = mk("Frame", {
+        Size = UDim2.fromOffset(230, 142),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 120,
+    }, Root)
+    corner(ActionMenu, 16)
+    UI.MenuDate = mk("TextLabel", {
+        Size = UDim2.new(1, -32, 0, 34), Position = UDim2.fromOffset(16, 4), BackgroundTransparency = 1,
+        Text = "", TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 121,
+    }, ActionMenu)
+    local ReplyAction = makeActionButton(ActionMenu, "Responder", 230, UI.ICON.reply)
+    ReplyAction.Position = UDim2.fromOffset(0, 38)
+    local CopyAction = makeActionButton(ActionMenu, "Copiar", 230, UI.ICON.copy)
+    CopyAction.Position = UDim2.fromOffset(0, 84)
+    local DeleteAction = makeActionButton(ActionMenu, "Eliminar", 230, UI.ICON.trash)
+    DeleteAction.Position = UDim2.fromOffset(0, 130)
+    DeleteAction.TextColor3 = THEME.DANGER
+    DeleteAction.Icon.ImageColor3 = THEME.DANGER
+    UI.PrivateAction = makeActionButton(ActionMenu, "Mensaje privado", 230, UI.ICON.dm)
+    UI.PinAction = makeActionButton(ActionMenu, "Fijar", 230, UI.ICON.pin)
+    UI.EditAction = makeActionButton(ActionMenu, "Editar", 230, UI.ICON.pencil)
+    local ReplyBanner = mk("Frame", {
+        Size = UDim2.new(1, -28, 0, 60),
+        Position = UDim2.new(0, 14, 1, -130),
+        BackgroundColor3 = Color3.fromRGB(26, 26, 30),
+        BackgroundTransparency = 0.04,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 65,
+    }, Root)
+    corner(ReplyBanner, 18)
+    stroke(ReplyBanner, UI.C.line, 1, 0)
+    UI.ReplyTitle = mk("TextLabel", {
+        Size = UDim2.new(1, -70, 0, 20),
+        Position = UDim2.fromOffset(18, 9),
+        BackgroundTransparency = 1,
+        Text = "",
+        RichText = true,
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 66,
+    }, ReplyBanner)
+    local ReplyLabel = mk("TextLabel", {
+        Size = UDim2.new(1, -70, 0, 22),
+        Position = UDim2.fromOffset(18, 30),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 16,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 66,
+    }, ReplyBanner)
+    UI.noTr(ReplyLabel)
+    local ReplyCancel = mk("TextButton", {
+        Size = UDim2.fromOffset(40, 40),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -10, 0.5, 0),
+        BackgroundTransparency = 1,
+        Text = "×",
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 30,
+        ZIndex = 66,
+    }, ReplyBanner)
+    local function hideMessageActions()
+        actionTarget = nil
+        actionToken += 1
+        ReactionBar.Visible = false
+        ActionMenu.Visible = false
+        UI.MenuDim.Visible = false
+    end
+    UI.MONTHS = {"ENE", "FEB", "MAR", "ABR", "MAY", "JUN", "JUL", "AGO", "SEP", "OCT", "NOV", "DIC"}
+    UI.fullDate = function(ts)
+        local t = os.date("*t", tonumber(ts) or os.time())
+        local h = t.hour % 12
+        if h == 0 then h = 12 end
+        return string.format("%d %s, %d:%02d %s", t.day, UI.MONTHS[t.month], h, t.min, t.hour < 12 and "A. M." or "P. M.")
+    end
+    local function showMessageActions(meta)
+        if not meta or not meta.row or not meta.row.Parent then return end
+        actionTarget = meta
+        actionToken += 1
+        local myToken = actionToken
+        local rootPos = Root.AbsolutePosition
+        local rowPos = meta.row.AbsolutePosition
+        local rowSize = meta.row.AbsoluteSize
+        local rootSize = Root.AbsoluteSize
+        local isMine = tostring(meta.uid) == tostring(LocalPlayer.UserId)
+        local canOwner = Chat.meIsOwner == true and meta.fbKey ~= nil
+        DeleteAction.Visible = isMine or canOwner
+        DeleteAction.Text = canOwner and "Eliminar para todos" or "Eliminar para mí"
+        UI.PrivateAction.Visible = (not isMine) and Chat.kind == "global"
+        UI.PinAction.Visible = canOwner
+        UI.EditAction.Visible = isMine and meta.fbKey ~= nil and not meta.isSticker and meta.t ~= "invite" and not localDeletedKeys[meta.key]
+        UI.MenuDate.Text = UI.fullDate(meta.ts)
+        local menuH = 38
+        for _, b in ipairs({ReplyAction, UI.EditAction, CopyAction, UI.PrivateAction, UI.PinAction, DeleteAction}) do
+            if b.Visible then
+                b.Position = UDim2.fromOffset(0, menuH)
+                menuH += 46
+            end
+        end
+        menuH += 6
+        ActionMenu.Size = UDim2.fromOffset(230, menuH)
+        local relX = rowPos.X - rootPos.X
+        local relY = rowPos.Y - rootPos.Y
+        local barX = isMine and (relX + rowSize.X - 315) or (relX + 50)
+        local barY = math.clamp(relY - 58, 64, math.max(64, rootSize.Y - menuH - 70))
+        barX = math.clamp(barX, 8, math.max(8, rootSize.X - 323))
+        ReactionBar.Position = UDim2.fromOffset(barX, barY)
+        local menuX = isMine and (relX + rowSize.X - 230) or (relX + 50)
+        menuX = math.clamp(menuX, 8, math.max(8, rootSize.X - 238))
+        local menuY = math.clamp(barY + 58, 64, math.max(64, rootSize.Y - menuH - 8))
+        ActionMenu.Position = UDim2.fromOffset(menuX, menuY)
+        UI.MenuDim.Visible = true
+        ReactionBar.Visible = true
+        ActionMenu.Visible = true
+        task.delay(15, function()
+            if actionToken == myToken then hideMessageActions() end
+        end)
+    end
+    local function reactionText(meta)
+        if not meta then return "" end
+        local counts = localReactions[meta.key]
+        if type(counts) ~= "table" then return "" end
+        local parts = {}
+        for _, emoji in ipairs(QuickReactionEmojis) do
+            local n = tonumber(counts[emoji]) or 0
+            if n > 0 then parts[#parts+1] = emoji .. " " .. tostring(n) end
+        end
+        for emoji, n in pairs(counts) do
+            if n > 0 and not table.find(QuickReactionEmojis, emoji) then parts[#parts+1] = emoji .. " " .. tostring(n) end
+        end
+        return table.concat(parts, "  ")
+    end
+    local function refreshReactionChips(meta)
+        if not meta or not meta.reactionWrap then return end
+        local text = reactionText(meta)
+        meta.reactionWrap.Text = text
+        meta.reactionWrap.Visible = text ~= ""
+    end
+    local function addLocalReaction(meta, emoji)
+        if not meta or not emoji or emoji == "" then return end
+        local counts = localReactions[meta.key]
+        if type(counts) ~= "table" then counts = {}; localReactions[meta.key] = counts end
+        counts[emoji] = (tonumber(counts[emoji]) or 0) + 1
+        refreshReactionChips(meta)
+        if Chat.sendReaction then Chat.sendReaction(meta, emoji) end
+        hideMessageActions()
+    end
+    local function copyMessage(meta)
+        if not meta then return end
+        local copyText = tostring(meta.text or "")
+        local stickerBody = copyText:match("^%[%[STICKER:(.-)%]%]$")
+        if stickerBody then copyText = stickerBody:match("([^|]+)") or stickerBody end
+        if type(setclipboard) == "function" then
+            pcall(function() setclipboard(copyText) end)
+        end
+        hideMessageActions()
+    end
+    local function setReplyTarget(meta)
+        if not meta then return end
+        local preview = tostring(meta.text or "")
+        if preview:match("^%[%[STICKER:") then preview = "Sticker" end
+        preview = preview:gsub("%s+", " "):sub(1, 70)
+        local quoted = tostring(meta.text or "")
+        if quoted:match("^%[%[STICKER:") then quoted = "[Sticker]" elseif meta.t == "invite" then quoted = "Invitación al servidor" end
+        pendingReply = {
+            uid = meta.uid, user = tostring(meta.name or "Unknown"), dn = tostring(meta.dn or meta.name or "Unknown"),
+            text = Chat.clip and Chat.clip(quoted, 80) or quoted:sub(1, 80), key = meta.fbKey,
+            name = tostring(meta.dn or meta.name or "Unknown"),
+        }
+        UI.ReplyTitle.Text = "Respondiendo a <b>" .. Chat.esc(tostring(meta.name or "Unknown")) .. "</b>"
+        ReplyLabel.Text = (meta.isSticker and "Sticker") or (meta.t == "invite" and "Invitación al servidor") or preview
+        ReplyBanner.Visible = true
+        if Chat.refreshTypingPill then Chat.refreshTypingPill() Chat.refreshNewPill() end
+        hideMessageActions()
+        task.defer(function() Chat.focusBox(MessageBox, function() if Chat.sendText then Chat.sendText() end end) end)
+    end
+    local function cancelReply()
+        pendingReply = nil
+        Chat.editing = nil
+        ReplyBanner.Visible = false
+        if Chat.refreshTypingPill then Chat.refreshTypingPill() Chat.refreshNewPill() end
+    end
+    local function deleteLocalMessage(meta)
+        if not meta then return end
+        if Chat.meIsOwner and meta.fbKey then
+            hideMessageActions()
+            Chat.ownerDelete(meta)
+            return
+        end
+        if tostring(meta.uid) ~= tostring(LocalPlayer.UserId) then return end
+        localDeletedKeys[meta.key] = true
+        localReactions[meta.key] = nil
+        if meta.row and meta.row.Parent then meta.row:Destroy() end
+        Chat.renderedKeys[meta.key] = nil
+        hideMessageActions()
+        task.defer(function() renderMessage(meta.name, meta.uid, meta.text, meta.ts, meta.id, nil, {order = meta.order, dn = meta.dn, fbKey = meta.fbKey}) end)
+    end
+    local function bindLongPress(row, meta)
+        row.Active = false
+        local LONG_PRESS_TIME = 1
+        local MOVE_CANCEL_DISTANCE = 12
+        local pressed = false
+        local pressToken = 0
+        local pressStart = nil
+        local swipeStart, swipeLast = nil, nil
+        local pressAt, lastTapAt = 0, 0
+        row.InputBegan:Connect(function(input)
+            if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            pressAt = os.clock()
+            pressed = true
+            pressStart = Vector2.new(input.Position.X, input.Position.Y)
+            swipeStart, swipeLast = pressStart, pressStart
+            pressToken += 1
+            local myToken = pressToken
+            task.delay(LONG_PRESS_TIME, function()
+                if pressed and pressToken == myToken and row.Parent then
+                    showMessageActions(meta)
+                end
+            end)
+        end)
+        row.InputChanged:Connect(function(input)
+            if swipeStart and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                swipeLast = Vector2.new(input.Position.X, input.Position.Y)
+            end
+            if not pressed or not pressStart then return end
+            if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+            local now = Vector2.new(input.Position.X, input.Position.Y)
+            if (now - pressStart).Magnitude > MOVE_CANCEL_DISTANCE then
+                pressed = false
+                pressStart = nil
+                pressToken += 1
+            end
+        end)
+        row.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                pressed = false
+                pressStart = nil
+                pressToken += 1
+                if swipeStart and swipeLast then
+                    local d = swipeLast - swipeStart
+                    if math.abs(d.X) > 60 and math.abs(d.Y) < 30 and row.Parent then
+                        setReplyTarget(meta)
+                    elseif d.Magnitude < 12 and os.clock() - pressAt < 0.3 then
+                        if os.clock() - lastTapAt < 0.35 then
+                            lastTapAt = 0
+                            if Chat.doubleTapLike then Chat.doubleTapLike(meta) end
+                        else
+                            lastTapAt = os.clock()
+                        end
+                    end
+                end
+                swipeStart, swipeLast = nil, nil
+            end
+        end)
+    end
+    for _, item in ipairs(QuickReactionButtons) do
+        item.button.MouseButton1Click:Connect(function()
+            if actionTarget then addLocalReaction(actionTarget, item.emoji) end
+        end)
+    end
+    ReactionMoreButton.MouseButton1Click:Connect(function()
+        if not actionTarget then return end
+        reactionPickerTargetKey = actionTarget.key
+        ReactionBar.Visible = false
+        ActionMenu.Visible = false
+        StickerPanel.Visible = true
+        showStickerTab(false, true)
+    end)
+    ReplyAction.MouseButton1Click:Connect(function() setReplyTarget(actionTarget) end)
+    CopyAction.MouseButton1Click:Connect(function() copyMessage(actionTarget) end)
+    DeleteAction.MouseButton1Click:Connect(function() deleteLocalMessage(actionTarget) end)
+    UI.PrivateAction.MouseButton1Click:Connect(function()
+        local m = actionTarget
+        hideMessageActions()
+        if m then Chat.openChat("private", m.uid, m.dn or m.name, m.name) end
+    end)
+    UI.EditAction.MouseButton1Click:Connect(function()
+        local m = actionTarget
+        hideMessageActions()
+        if m then Chat.startEdit(m) end
+    end)
+    UI.PinAction.MouseButton1Click:Connect(function()
+        local m = actionTarget
+        hideMessageActions()
+        if m then Chat.pinMessage(m) end
+    end)
+    ReplyCancel.MouseButton1Click:Connect(cancelReply)
+    UI.MenuDim.MouseButton1Click:Connect(hideMessageActions)
+    local Composer = mk("Frame", {
+        Size = UDim2.new(1, -28, 0, 52),
+        Position = UDim2.new(0, 14, 1, -64),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        ZIndex = 5,
+    }, Root)
+    corner(Composer, 26)
+    UI.EmojiButton = UI.iconButton(Composer, UI.ICON.emoji, 40, 24, {
+        Position = UDim2.fromOffset(6, 6), BackgroundTransparency = 0, BackgroundColor3 = UI.C.blue, ZIndex = 6,
+    })
+    local StickerButton = mk("ImageButton", {
+        Size = UDim2.fromOffset(34, 34),
+        Position = UDim2.new(1, -134, 0, 9),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Image = "rbxassetid://70677501354748",
+        ImageColor3 = Color3.fromRGB(255,255,255),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 6,
+    }, Composer)
+    MessageBox = mk("TextBox", {
+        Size = UDim2.new(1, -196, 0, 42),
+        Position = UDim2.fromOffset(54, 5),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderText = "Mensaje...",
+        PlaceholderColor3 = THEME.DIM,
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 16,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        MultiLine = false,
+        ZIndex = 6,
+    }, Composer)
+    mk("UIPadding", {
+        PaddingLeft = UDim.new(0, 6),
+        PaddingRight = UDim.new(0, 6),
+        PaddingTop = UDim.new(0, 11),
+        PaddingBottom = UDim.new(0, 7),
+    }, MessageBox)
+    local SendButton = mk("ImageButton", {
+        Size = UDim2.fromOffset(40, 40),
+        Position = UDim2.new(1, -46, 0, 6),
+        BackgroundColor3 = UI.C.blue,
+        BorderSizePixel = 0,
+        Image = "rbxassetid://132362297660069",
+        ImageColor3 = Color3.fromRGB(255,255,255),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 6,
+    }, Composer)
+    corner(SendButton, 20)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), PaddingTop = UDim.new(0, 9), PaddingBottom = UDim.new(0, 9)}, SendButton)
+    local CharLabel = mk("TextLabel", {
+        Size = UDim2.fromOffset(70, 16),
+        Position = UDim2.new(1, -84, 0, -20),
+        BackgroundTransparency = 1,
+        Text = "0/500",
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        Visible = false,
+        ZIndex = 6,
+    }, Composer)
+    StickerPanel = mk("Frame", {
+        Size = UDim2.new(1, -28, 0, 270),
+        Position = UDim2.new(0, 14, 1, -344),
+        BackgroundColor3 = THEME.PANEL,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 50,
+    }, Root)
+    corner(StickerPanel, 18)
+    stroke(StickerPanel, UI.C.line, 1, 0)
+    local StickerHeader = mk("Frame", {
+        Size = UDim2.new(1, 0, 0, 38),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 51,
+    }, StickerPanel)
+    local function makeTab(text, x, width)
+        local b = mk("TextButton", {
+            Size = UDim2.fromOffset(width, 28),
+            Position = UDim2.fromOffset(x, 6),
+            BackgroundColor3 = THEME.PANEL2,
+            BorderSizePixel = 0,
+            Text = text,
+            TextColor3 = THEME.TXT,
+            Font = Enum.Font.GothamBold,
+            TextSize = 11,
+            ZIndex = 52,
+        }, StickerHeader)
+        corner(b, 14)
+        return b
+    end
+    local TabStickers = makeTab("STICKERS", 8, 82)
+    local TabMine = makeTab("MIS STICKERS", 96, 98)
+    local TabEmoji = makeTab("EMOJIS", 202, 74)
+    UI.TabFavs = makeTab("RECIENTES", 284, 84)
+    local PanelClose = mk("TextButton", {
+        Size = UDim2.fromOffset(27, 27),
+        Position = UDim2.new(1, -35, 0, 6),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        Text = "×",
+        TextColor3 = THEME.DIM,
+        Font = Enum.Font.GothamBold,
+        TextSize = 18,
+        ZIndex = 52,
+    }, StickerHeader)
+    corner(PanelClose, 7)
+    local StickerGrid = mk("ScrollingFrame", {
+        Size = UDim2.new(1, -16, 1, -48),
+        Position = UDim2.fromOffset(8, 42),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = THEME.DIM,
+        CanvasSize = UDim2.new(),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ScrollingEnabled = true,
+        Active = true,
+        ZIndex = 51,
+    }, StickerPanel)
+    local StickerLayout = mk("UIGridLayout", {
+        CellSize = UDim2.fromOffset(68, 68),
+        CellPadding = UDim2.fromOffset(7, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, StickerGrid)
+    mk("UIPadding", {PaddingTop=UDim.new(0,3), PaddingLeft=UDim.new(0,3)}, StickerGrid)
+    local MineGrid = StickerGrid:Clone()
+    MineGrid.Name = "MineGrid"
+    MineGrid.Parent = StickerPanel
+    MineGrid.Visible = false
+    MineGrid:ClearAllChildren()
+    local MineLayout = mk("UIGridLayout", {
+        CellSize = UDim2.fromOffset(68, 68),
+        CellPadding = UDim2.fromOffset(7, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, MineGrid)
+    mk("UIPadding", {PaddingTop=UDim.new(0,3), PaddingLeft=UDim.new(0,3)}, MineGrid)
+    local EmojiGrid = StickerGrid:Clone()
+    EmojiGrid.Name = "EmojiGrid"
+    EmojiGrid.Parent = StickerPanel
+    EmojiGrid.Visible = false
+    EmojiGrid:ClearAllChildren()
+    local EmojiLayout = mk("UIGridLayout", {
+        CellSize = UDim2.fromOffset(48, 48),
+        CellPadding = UDim2.fromOffset(4, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, EmojiGrid)
+    mk("UIPadding", {PaddingTop=UDim.new(0,3), PaddingLeft=UDim.new(0,3)}, EmojiGrid)
+    UI.FavGrid = StickerGrid:Clone()
+    UI.FavGrid.Name = "FavGrid"
+    UI.FavGrid.Parent = StickerPanel
+    UI.FavGrid.Visible = false
+    UI.FavGrid:ClearAllChildren()
+    UI.FavLayout = mk("UIGridLayout", {
+        CellSize = UDim2.fromOffset(68, 68),
+        CellPadding = UDim2.fromOffset(7, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, UI.FavGrid)
+    mk("UIPadding", {PaddingTop=UDim.new(0,3), PaddingLeft=UDim.new(0,3)}, UI.FavGrid)
+    local AddStickerInput = mk("TextBox", {
+        Size = UDim2.new(1, -84, 0, 28),
+        Position = UDim2.new(0, 8, 1, -36),
+        BackgroundColor3 = THEME.PANEL2,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderText = "ID o rbxassetid://...",
+        PlaceholderColor3 = THEME.DIM,
+        TextColor3 = THEME.TXT,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        Visible = false,
+        ZIndex = 55,
+    }, StickerPanel)
+    corner(AddStickerInput, 7)
+    local ConfirmAdd = mk("TextButton", {
+        Size = UDim2.fromOffset(68, 28),
+        Position = UDim2.new(1, -76, 1, -36),
+        BackgroundColor3 = UI.C.blue,
+        BorderSizePixel = 0,
+        Text = "AGREGAR",
+        TextColor3 = Color3.fromRGB(255,255,255),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 10,
+        Visible = false,
+        ZIndex = 55,
+    }, StickerPanel)
+    corner(ConfirmAdd, 7)
+    local STICKERS_URL = "https://raw.githubusercontent.com/Sephtis32/Yin-stickers/refs/heads/main/YinYang_Stickers.lua"
+    local StickerPalettes = {}
+    local StickerOrder = nil
+    local FALLBACK_STICKERS = {
+        {"rbxassetid://135857695171095", "Sonrisa"},
+        {"rbxassetid://138363247925206", "Llorar"},
+        {"rbxassetid://76164124882568", "Amor"},
+        {"rbxassetid://76164124882568", "Corazon"},
+        {"rbxassetid://133861773375312", "Emoji"},
+        {"rbxassetid://109165098870367", "Risa"},
+        {"rbxassetid://89213081637073", "Sorpresa"},
+        {"rbxassetid://80817302481160", "Triste"},
+        {"rbxassetid://72815688632249", "Enojado"},
+        {"rbxassetid://72602706593283", "Wink"},
+        {"rbxassetid://129224642026377", "Cool"},
+    }
+    for _, item in ipairs(FALLBACK_STICKERS) do
+        StickerPalettes[item[2]] = {Image=item[1], LabelES=item[2], LabelEN=item[2]}
+    end
+    local function normalizeFrames(list)
+        if type(list) ~= "table" then return nil end
+        local out = {}
+        for _, id in ipairs(list) do
+            if type(id) == "string" and id:match("^rbxassetid://%d+$") and #out < 3 then
+                out[#out+1] = id
+            end
+        end
+        return #out >= 2 and out or nil
+    end
+    local function intervalValue(v)
+        local n = tonumber(v)
+        if not n then return 0.5 end
+        return math.clamp(n, 0.08, 5)
+    end
+    local function stickerParse(text)
+        local body = tostring(text or ""):match("^%[%[STICKER:(.-)%]%]$")
+        if not body then return nil end
+        local frames, interval = {}, nil
+        for token in body:gmatch("[^|]+") do
+            if token:match("^rbxassetid://%d+$") then
+                if #frames < 3 then frames[#frames+1] = token end
+            elseif tonumber(token) and not interval then
+                interval = intervalValue(token)
+            else
+                return nil
+            end
+        end
+        if #frames < 1 then return nil end
+        if #frames == 1 then return frames, nil end
+        return frames, interval or 0.5
+    end
+    local function stickerBuild(assetId, frames, interval)
+        local list = normalizeFrames(frames)
+        if not list then return "[[STICKER:" .. tostring(assetId) .. "]]" end
+        return "[[STICKER:" .. table.concat(list, "|") .. "|" .. tostring(intervalValue(interval)) .. "]]"
+    end
+    local function animateSticker(label, frames, interval)
+        local list = normalizeFrames(frames)
+        if not label or not label.Parent then return end
+        if not list then
+            label.Image = (type(frames) == "string" and frames) or label.Image
+            return
+        end
+        task.spawn(function()
+            pcall(function() ContentProvider:PreloadAsync(list) end)
+            local index = 1
+            label.Image = list[index]
+            while label.Parent do
+                task.wait(intervalValue(interval))
+                if not label.Parent then break end
+                index = index % #list + 1
+                label.Image = list[index]
+            end
+        end)
+    end
+    local function loadStickerRepo()
+        local raw
+        local ok, result = pcall(function()
+            return request({Url=STICKERS_URL, Method="GET"})
+        end)
+        if ok and result and result.Success ~= false and type(result.Body) == "string" and #result.Body > 20 then
+            raw = result.Body
+        end
+        if not raw then
+            local ok2, body = pcall(function() return game:HttpGet(STICKERS_URL, true) end)
+            if ok2 and type(body) == "string" and #body > 20 then raw = body end
+        end
+        if not raw or type(loadstring) ~= "function" then
+            warn("[YY Chat] No se pudo descargar el repo de stickers (o falta loadstring); quedan los de respaldo")
+            return
+        end
+        local parsed, data = pcall(function() return loadstring(raw)() end)
+        if not parsed or type(data) ~= "table" or type(data.Stickers) ~= "table" then
+            warn("[YY Chat] El repo de stickers no se pudo leer: " .. tostring(data))
+            return
+        end
+        for name, sticker in pairs(data.Stickers) do
+            if type(sticker) == "table" and type(sticker.Image) == "string" then
+                StickerPalettes[name] = {
+                    Image = sticker.Image,
+                    Frames = normalizeFrames(sticker.Frames),
+                    Interval = sticker.Interval,
+                    LabelES = sticker.LabelES or name,
+                    LabelEN = sticker.LabelEN or name,
+                }
+            end
+        end
+        if type(data.Order) == "table" then StickerOrder = data.Order end
+        Chat.stickersLoaded = true
+        if Chat.onStickersLoaded then pcall(Chat.onStickersLoaded) end
+    end
+    task.spawn(loadStickerRepo)
+    local FIREBASE = "https://neohyper-9a843-default-rtdb.europe-west1.firebasedatabase.app/"
+    local FIREBASE_ROOM = "global"
+    local SCRIPT_IMG = "rbxassetid://113137557066757"
+    local CID_PREFIX = "yy_"
+    local OWNER_ID = 9549448191
+    local chatMessages = {}
+    local renderedKeys = {}
+    local firebaseSeen = {}
+    local firebaseInitialLoad = true
+    local contentSeen = {}
+    local sending = false
+    Chat.OWNER_NAMES = { v_orc = true, n_oqv = true, mousoza = true }
+    Chat.isOwner = function(uid, user)
+        if tonumber(uid) == OWNER_ID then return true end
+        return Chat.OWNER_NAMES[string.lower(tostring(user or ""))] == true
+    end
+    Chat.meIsOwner = Chat.isOwner(LocalPlayer.UserId, LocalPlayer.Name)
+    Chat.renderedKeys = renderedKeys
+    Chat.view = "home"
+    Chat.kind = "global"
+    Chat.room = FIREBASE_ROOM
+    Chat.roomGen = 0
+    Chat.byFbKey = {}
+    Chat.pending = {}
+    Chat.unread = {}
+    Chat.previews = {}
+    Chat.lastSeenKey = {}
+    Chat.notified = {}
+    Chat.checkQueue = {}
+    Cha

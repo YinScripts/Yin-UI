@@ -1,0 +1,968 @@
+= UDim.new(1, 0)
+    c.Parent = label
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 8)
+    pad.PaddingRight = UDim.new(0, 8)
+    pad.Parent = label
+end
+
+function RowKit.Control(btn, accent)
+    pcall(function() btn.AutoButtonColor = false end)
+    local c = btn:FindFirstChildOfClass("UICorner")
+    if c then c.CornerRadius = UDim.new(0, 9) end
+    if accent then
+        btn.BackgroundColor3 = Theme.Accent
+        btn:SetAttribute("ThemeRole", "Accent")
+        if btn:IsA("TextButton") then
+            btn.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
+            btn:SetAttribute("ThemeTextRole", "AccentText")
+            btn.Font = Enum.Font.GothamBlack
+            btn.TextSize = 15
+        end
+    else
+        btn.BackgroundColor3 = Theme.Secondary
+        btn.BackgroundTransparency = 0.2
+        btn:SetAttribute("ThemeRole", "Secondary")
+    end
+    local scale = Instance.new("UIScale")
+    scale.Parent = btn
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(scale, TweenInfo.new(0.07), {Scale = 0.86}):Play()
+    end)
+    local function release()
+        TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end
+    btn.MouseButton1Up:Connect(release)
+    btn.MouseLeave:Connect(release)
+end
+
+function RowKit.Press(holder)
+    local scale = holder:FindFirstChild("RowPressScale")
+    if not scale then
+        scale = Instance.new("UIScale")
+        scale.Name = "RowPressScale"
+        scale.Parent = holder
+    end
+    scale.Scale = 0.975
+    TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+end
+
+-- Mini interfaz que muestra los 8 colores de un tema (tarjetas de temas y editor)
+function RowKit.ThemeMock(parent, z)
+    local m = {}
+    local function f(props, par)
+        local o = Instance.new("Frame")
+        o.BorderSizePixel = 0
+        for k, v in pairs(props) do o[k] = v end
+        o.Parent = par
+        return o
+    end
+    local function rc(o, r)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, r)
+        c.Parent = o
+    end
+    m.Root = f({Size = UDim2.new(1, 0, 1, 0), ZIndex = z}, parent)
+    rc(m.Root, 8)
+    m.RootStroke = Instance.new("UIStroke")
+    m.RootStroke.Thickness = 1
+    m.RootStroke.Transparency = 0.4
+    m.RootStroke.Parent = m.Root
+    m.Side = f({Size = UDim2.new(0.24, 0, 1, -8), Position = UDim2.new(0, 4, 0, 4), ZIndex = z + 1}, m.Root)
+    rc(m.Side, 6)
+    m.Logo = f({Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0.5, -7, 0, 7), ZIndex = z + 2}, m.Side)
+    rc(m.Logo, 4)
+    m.Navs = {}
+    for i = 1, 3 do
+        local n = f({Size = UDim2.new(0.6, 0, 0, 4), Position = UDim2.new(0.2, 0, 0, 28 + (i - 1) * 9), ZIndex = z + 2}, m.Side)
+        rc(n, 2)
+        m.Navs[i] = n
+    end
+    m.Top = f({Size = UDim2.new(0.76, -12, 0, 16), Position = UDim2.new(0.24, 8, 0, 4), ZIndex = z + 1}, m.Root)
+    rc(m.Top, 5)
+    m.Title = f({Size = UDim2.new(0.34, 0, 0, 4), Position = UDim2.new(0, 6, 0.5, -2), ZIndex = z + 2}, m.Top)
+    rc(m.Title, 2)
+    m.Pill = f({Size = UDim2.new(0.22, 0, 0, 8), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0), ZIndex = z + 2}, m.Top)
+    rc(m.Pill, 4)
+    m.Rows = {}
+    for i = 1, 2 do
+        local row = f({Size = UDim2.new(0.76, -12, 0.5, -15), Position = UDim2.new(0.24, 8, i == 1 and 0 or 0.5, i == 1 and 24 or 10), ZIndex = z + 1}, m.Root)
+        rc(row, 5)
+        local bar = f({Size = UDim2.new(0, 2, 0.6, 0), Position = UDim2.new(0, 4, 0.2, 0), ZIndex = z + 2}, row)
+        rc(bar, 1)
+        local line = f({Size = UDim2.new(0.4, 0, 0, 4), Position = UDim2.new(0, 11, 0.32, -2), ZIndex = z + 2}, row)
+        rc(line, 2)
+        local sub = f({Size = UDim2.new(0.24, 0, 0, 3), Position = UDim2.new(0, 11, 0.62, -1), ZIndex = z + 2}, row)
+        rc(sub, 2)
+        local track = f({Size = UDim2.new(0, 20, 0, 10), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0), ZIndex = z + 2}, row)
+        rc(track, 5)
+        local knob = f({Size = UDim2.new(0, 7, 0, 7), AnchorPoint = Vector2.new(0, 0.5), Position = i == 1 and UDim2.new(1, -9, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = z + 3}, track)
+        rc(knob, 4)
+        m.Rows[i] = {Row = row, Bar = bar, Line = line, Sub = sub, Track = track}
+    end
+    return m
+end
+
+function RowKit.PaintMock(m, p, overImage)
+    if not m or not p then return end
+    local text = p.Text or Color3.new(1, 1, 1)
+    local dim = p.TextDim or text
+    m.Root.BackgroundColor3 = p.Background or Color3.new(0, 0, 0)
+    m.Root.BackgroundTransparency = overImage and 0.1 or 0
+    m.RootStroke.Color = p.Stroke or Color3.new(1, 1, 1)
+    m.Side.BackgroundColor3 = p.Secondary or m.Root.BackgroundColor3
+    m.Logo.BackgroundColor3 = p.Accent or text
+    for i, n in ipairs(m.Navs) do
+        n.BackgroundColor3 = i == 1 and (p.Accent or text) or dim
+        n.BackgroundTransparency = i == 1 and 0 or 0.35
+    end
+    m.Top.BackgroundColor3 = p.Secondary or m.Root.BackgroundColor3
+    m.Title.BackgroundColor3 = text
+    m.Pill.BackgroundColor3 = p.Accent or text
+    m.Pill.BackgroundTransparency = 0.35
+    for i, r in ipairs(m.Rows) do
+        r.Row.BackgroundColor3 = p.Secondary or m.Root.BackgroundColor3
+        r.Bar.BackgroundColor3 = i == 1 and (p.ToggleOn or p.Accent or text) or (p.AccentOff or dim)
+        r.Line.BackgroundColor3 = text
+        r.Sub.BackgroundColor3 = i == 1 and (p.ToggleOn or p.Accent or text) or dim
+        r.Track.BackgroundColor3 = i == 1 and (p.ToggleOn or p.Accent or text) or (p.AccentOff or dim)
+    end
+end
+
+-- Vista previa "estudio" del editor de temas: ventana real en miniatura + toggles flotantes + legibilidad.
+-- Cada parte es tocable y abre el selector del color que usa (st.OnPick(role)).
+local STUDIO_ROLES = {
+    Background = {"Fondo", "Background"}, Secondary = {"Secundario", "Secondary"},
+    AccentOff = {"Acento apagado", "Inactive accent"}, Text = {"Texto", "Text"},
+    TextDim = {"Texto tenue", "Dim text"}, Stroke = {"Bordes", "Borders"},
+    Accent = {"Acento", "Accent"}, ToggleOn = {"Toggle activo", "Active toggle"},
+}
+local STUDIO_ORDER = {"Background", "Secondary", "AccentOff", "Text", "TextDim", "Stroke", "Accent", "ToggleOn"}
+
+function RowKit.Contrast(a, b)
+    local function lum(c)
+        local function ch(v) return v <= 0.03928 and v / 12.92 or ((v + 0.055) / 1.055) ^ 2.4 end
+        return 0.2126 * ch(c.R) + 0.7152 * ch(c.G) + 0.0722 * ch(c.B)
+    end
+    local la, lb = lum(a), lum(b)
+    if la < lb then la, lb = lb, la end
+    return (la + 0.05) / (lb + 0.05)
+end
+
+function RowKit.ThemeStudio(parent, z)
+    local st = {Hot = {}, Paints = {}, Palette = {}}
+    local function f(cls, props, par)
+        local o = Instance.new(cls)
+        if o:IsA("GuiObject") then o.BorderSizePixel = 0 end
+        for k, v in pairs(props) do o[k] = v end
+        o.Parent = par
+        return o
+    end
+    local function rc(o, r)
+        local c = Instance.new("UICorner")
+        c.CornerRadius = UDim.new(0, r)
+        c.Parent = o
+    end
+    local function txt(par, props)
+        props.BackgroundTransparency = 1
+        props.Font = props.Font or Enum.Font.GothamBold
+        props.TextXAlignment = props.TextXAlignment or Enum.TextXAlignment.Left
+        props.TextTruncate = Enum.TextTruncate.AtEnd
+        local l = f("TextLabel", props, par)
+        l:SetAttribute("IgnoreTextEffect", true)
+        return l
+    end
+    local function paint(fn) table.insert(st.Paints, fn) end
+    local function hot(o, role)
+        local b = f("TextButton", {
+            Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "",
+            AutoButtonColor = false, ZIndex = o.ZIndex,
+        }, o)
+        b.MouseEnter:Connect(function() if st.Hover then st.Hover(role) end end)
+        b.MouseLeave:Connect(function() if st.Hover then st.Hover(nil) end end)
+        b.MouseButton1Click:Connect(function()
+            if st.Flash then st.Flash(o) end
+            if st.OnPick then st.OnPick(role) end
+        end)
+        table.insert(st.Hot, b)
+        return b
+    end
+
+    st.Root = f("Frame", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = z}, parent)
+
+    -- ===== Ventana en miniatura =====
+    local W = f("Frame", {Size = UDim2.new(0.63, 0, 1, 0), ZIndex = z + 1, ClipsDescendants = false}, st.Root)
+    rc(W, 12)
+    local wStroke = f("UIStroke", {Thickness = 2, Color = Color3.new(1, 1, 1), LineJoinMode = Enum.LineJoinMode.Round}, W)
+    local wRing = f("UIGradient", {Rotation = 0}, wStroke)
+    st.Spin = TweenService:Create(wRing, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Rotation = 360})
+    local wShade = f("UIGradient", {Rotation = 90}, W)
+    hot(W, "Background")
+    paint(function(p)
+        W.BackgroundColor3 = p.Background
+        local base = p.Accent
+        local h, s, v = Color3.toHSV(base)
+        local light = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+        wRing.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.33, base),
+            ColorSequenceKeypoint.new(0.46, light), ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(0.54, light), ColorSequenceKeypoint.new(0.67, base),
+            ColorSequenceKeypoint.new(1, base),
+        })
+        wShade.Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(205, 205, 205))
+    end)
+
+    -- Barra de titulo
+    local logo = f("Frame", {Size = UDim2.fromOffset(14, 14), Position = UDim2.new(0, 8, 0, 6), ZIndex = z + 2}, W)
+    rc(logo, 999)
+    f("UIGradient", {Rotation = 45, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 150))}, logo)
+    hot(logo, "Accent")
+    local title = txt(W, {Size = UDim2.new(0.5, 0, 0, 12), Position = UDim2.new(0, 27, 0, 4), Text = "Yin Yang", TextSize = 11, Font = Enum.Font.GothamBlack, ZIndex = z + 2})
+    hot(title, "Accent")
+    local by = txt(W, {Size = UDim2.new(0.5, 0, 0, 9), Position = UDim2.new(0, 27, 0, 15), Text = "by Nick", TextSize = 8, Font = Enum.Font.GothamMedium, ZIndex = z + 2})
+    hot(by, "TextDim")
+    local dots = {}
+    for i = 1, 3 do
+        local d = f("Frame", {Size = UDim2.fromOffset(7, 7), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8 - (i - 1) * 11, 0, 9), ZIndex = z + 2}, W)
+        rc(d, 999)
+        dots[i] = d
+    end
+    local divider = f("Frame", {Size = UDim2.new(1, -12, 0, 1), Position = UDim2.new(0, 6, 0, 27), ZIndex = z + 2}, W)
+    local divHot = f("Frame", {Size = UDim2.new(1, 0, 0, 7), Position = UDim2.new(0, 0, 0, -3), BackgroundTransparency = 1, ZIndex = z + 2}, divider)
+    hot(divHot, "Stroke")
+    paint(function(p)
+        logo.BackgroundColor3 = p.Accent
+        title.TextColor3 = p.Accent
+        by.TextColor3 = p.TextDim
+        for i, d in ipairs(dots) do
+            d.BackgroundColor3 = i == 1 and p.Accent or p.TextDim
+            d.BackgroundTransparency = i == 1 and 0 or 0.45
+        end
+        divider.BackgroundColor3 = p.Stroke
+        divider.BackgroundTransparency = 0.45
+    end)
+
+    -- Barra lateral de pestanas
+    local side = f("Frame", {Size = UDim2.new(0, 26, 1, -38), Position = UDim2.new(0, 6, 0, 32), ZIndex = z + 2}, W)
+    rc(side, 8)
+    hot(side, "Secondary")
+    local icons = {}
+    for i = 1, 4 do
+        local ic = f("Frame", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 5 + (i - 1) * 22), ZIndex = z + 3}, side)
+        rc(ic, 5)
+        hot(ic, i == 1 and "Accent" or "AccentOff")
+        icons[i] = ic
+    end
+    paint(function(p)
+        side.BackgroundColor3 = p.Secondary
+        for i, ic in ipairs(icons) do ic.BackgroundColor3 = i == 1 and p.Accent or p.AccentOff end
+    end)
+
+    -- Contenido
+    local C = f("Frame", {Size = UDim2.new(1, -44, 1, -38), Position = UDim2.new(0, 38, 0, 32), BackgroundTransparency = 1, ZIndex = z + 2}, W)
+    local section = txt(C, {Size = UDim2.new(1, 0, 0, 9), Text = GetText("PRINCIPAL", "MAIN"), TextSize = 7, Font = Enum.Font.GothamBlack, ZIndex = z + 3})
+    section:SetAttribute("TextSpanish", "PRINCIPAL")
+    section:SetAttribute("TextEnglish", "MAIN")
+    hot(section, "TextDim")
+
+    local function row(y, h)
+        local r = f("Frame", {Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), ZIndex = z + 3}, C)
+        rc(r, 7)
+        local s = f("UIStroke", {Thickness = 1, Transparency = 0.55}, r)
+        hot(r, "Secondary")
+        paint(function(p)
+            r.BackgroundColor3 = p.Secondary
+            s.Color = p.Stroke
+        end)
+        return r
+    end
+    local function toggleRow(y, name, onState)
+        local r = row(y, 28)
+        local bar = f("Frame", {Size = UDim2.new(0, 2, 0.56, 0), Position = UDim2.new(0, 5, 0.22, 0), ZIndex = z + 4}, r)
+        rc(bar, 2)
+        local nm = txt(r, {Size = UDim2.new(1, -50, 0, 11), Position = UDim2.new(0, 12, 0, 4), Text = name, TextSize = 9, ZIndex = z + 4})
+        hot(nm, "Text")
+        local subES, subEN = onState and "Activado" or "Apagado", onState and "On" or "Off"
+        local sub = txt(r, {Size = UDim2.new(1, -50, 0, 9), Position = UDim2.new(0, 12, 0, 15), Text = GetText(subES, subEN), TextSize = 7, Font = Enum.Font.GothamMedium, ZIndex = z + 4})
+        sub:SetAttribute("TextSpanish", subES)
+        sub:SetAttribute("TextEnglish", subEN)
+        hot(sub, onState and "ToggleOn" or "TextDim")
+        local tr = f("Frame", {Size = UDim2.fromOffset(24, 13), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -7, 0.5, 0), ZIndex = z + 4}, r)
+        rc(tr, 999)
+        hot(tr, onState and "ToggleOn" or "AccentOff")
+        local kn = f("Frame", {Size = UDim2.fromOffset(9, 9), AnchorPoint = Vector2.new(0, 0.5), Position = onState and UDim2.new(1, -11, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = z + 5}, tr)
+        rc(kn, 999)
+        paint(function(p)
+            local c = onState and p.ToggleOn or p.AccentOff
+            bar.BackgroundColor3 = c
+            nm.TextColor3 = p.Text
+            sub.TextColor3 = onState and p.ToggleOn or p.TextDim
+            tr.BackgroundColor3 = c
+        end)
+    end
+    toggleRow(12, "Aimbot", true)
+    toggleRow(44, "ESP", false)
+
+    local sr = row(76, 30)
+    local sName = txt(sr, {Size = UDim2.new(1, -40, 0, 11), Position = UDim2.new(0, 8, 0, 4), Text = GetText("Velocidad", "Speed"), TextSize = 9, ZIndex = z + 4})
+    sName:SetAttribute("TextSpanish", "Velocidad")
+    sName:SetAttribute("TextEnglish", "Speed")
+    hot(sName, "Text")
+    local sVal = txt(sr, {Size = UDim2.new(0, 30, 0, 11), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 4), Text = "64", TextSize = 9, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z + 4})
+    hot(sVal, "Accent")
+    local track = f("Frame", {Size = UDim2.new(1, -16, 0, 4), Position = UDim2.new(0, 8, 0, 20), ZIndex = z + 4}, sr)
+    rc(track, 999)
+    hot(track, "AccentOff")
+    local fillBar = f("Frame", {Size = UDim2.new(0.64, 0, 1, 0), ZIndex = z + 5}, track)
+    rc(fillBar, 999)
+    hot(fillBar, "Accent")
+    local thumb = f("Frame", {Size = UDim2.fromOffset(10, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), ZIndex = z + 6}, fillBar)
+    rc(thumb, 999)
+    local thumbStroke = f("UIStroke", {Thickness = 2}, thumb)
+    paint(function(p)
+        sName.TextColor3 = p.Text
+        sVal.TextColor3 = p.Accent
+        track.BackgroundColor3 = p.AccentOff
+        fillBar.BackgroundColor3 = p.Accent
+        thumbStroke.Color = p.Accent
+    end)
+
+    local btn = f("Frame", {Size = UDim2.new(1, 0, 0, 24), Position = UDim2.new(0, 0, 0, 112), ZIndex = z + 3}, C)
+    rc(btn, 7)
+    f("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(215, 215, 215))}, btn)
+    hot(btn, "Accent")
+    local btnText = txt(btn, {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.new(0, 8, 0, 0), Text = GetText("Ejecutar script", "Run script"), TextSize = 9, Font = Enum.Font.GothamBlack, ZIndex = z + 4})
+    btnText:SetAttribute("TextSpanish", "Ejecutar script")
+    btnText:SetAttribute("TextEnglish", "Run script")
+    local chev = txt(btn, {Size = UDim2.new(0, 14, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 0), Text = "›", TextSize = 14, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z + 4})
+    paint(function(p)
+        btn.BackgroundColor3 = p.Accent
+        local c = getContrastColor(p.Accent)
+        btnText.TextColor3 = c
+        chev.TextColor3 = c
+    end)
+
+    -- ===== Columna derecha =====
+    local R = f("Frame", {Size = UDim2.new(0.37, -10, 1, 0), Position = UDim2.new(0.63, 10, 0, 0), BackgroundTransparency = 1, ZIndex = z + 1}, st.Root)
+    local function card(y, h, labelES, labelEN)
+        local c = f("Frame", {Size = UDim2.new(1, 0, 0, h), Position = UDim2.new(0, 0, 0, y), ZIndex = z + 2}, R)
+        rc(c, 10)
+        local cs = f("UIStroke", {Thickness = 1, Transparency = 0.6}, c)
+        local cap = txt(c, {Size = UDim2.new(1, -16, 0, 10), Position = UDim2.new(0, 8, 0, 6), Text = GetText(labelES, labelEN), TextSize = 7, Font = Enum.Font.GothamBlack, ZIndex = z + 3})
+        cap:SetAttribute("TextSpanish", labelES)
+        cap:SetAttribute("TextEnglish", labelEN)
+        paint(function(p)
+            c.BackgroundColor3 = p.Background:Lerp(p.Secondary, 0.5)
+            cs.Color = p.Stroke
+            cap.TextColor3 = p.TextDim
+        end)
+        return c
+    end
+
+    -- Toggles flotantes (encendido / apagado)
+    local fc = card(0, 74, "TOGGLE FLOTANTE", "FLOATING TOGGLE")
+    local function pill(y, name, on)
+        local pl = f("Frame", {Size = UDim2.new(1, -16, 0, 22), Position = UDim2.new(0, 8, 0, y), BackgroundTransparency = on and 0 or 0.3, ZIndex = z + 3}, fc)
+        rc(pl, 999)
+        local ps = f("UIStroke", {Thickness = 1.5, Color = Color3.new(1, 1, 1)}, pl)
+        local pg = f("UIGradient", {Rotation = 0}, ps)
+        local led = f("Frame", {Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 9, 0.5, 0), ZIndex = z + 4}, pl)
+        rc(led, 999)
+        local ledRing = f("UIStroke", {Thickness = 1}, led)
+        local nm = txt(pl, {Size = UDim2.new(1, -48, 1, 0), Position = UDim2.new(0, 20, 0, 0), Text = name, TextSize = 9, Font = Enum.Font.GothamBlack, ZIndex = z + 4})
+        local sw = f("Frame", {Size = UDim2.fromOffset(18, 10), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -7, 0.5, 0), ZIndex = z + 4}, pl)
+        rc(sw, 999)
+        local swk = f("Frame", {Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0, 0.5), Position = on and UDim2.new(1, -8, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), ZIndex = z + 5}, sw)
+        rc(swk, 999)
+        hot(pl, on and "ToggleOn" or "Background")
+        paint(function(p)
+            local h, s, v = Color3.toHSV(p.ToggleOn)
+            local onLight = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+            local offBg = p.Background:Lerp(Color3.new(0, 0, 0), 0.6)
+            local t = on and getContrastColor(p.ToggleOn) or Color3.new(1, 1, 1)
+            local base = on and onLight or p.Accent:Lerp(offBg, 0.45)
+            local hi = on and Color3.new(1, 1, 1) or Color3.fromHSV(select(1, Color3.toHSV(p.Accent)), 0.25, 1)
+            pl.BackgroundColor3 = on and p.ToggleOn or offBg
+            pg.Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.36, base),
+                ColorSequenceKeypoint.new(0.5, hi), ColorSequenceKeypoint.new(0.64, base),
+                ColorSequenceKeypoint.new(1, base),
+            })
+            led.BackgroundColor3 = on and t or offBg
+            ledRing.Color = on and t or Color3.fromRGB(200, 200, 200)
+            nm.TextColor3 = t
+            sw.BackgroundColor3 = on and t or Color3.fromRGB(70, 70, 76)
+            swk.BackgroundColor3 = on and p.ToggleOn or Color3.fromRGB(235, 235, 235)
+        end)
+        st.PillSpins = st.PillSpins or {}
+        table.insert(st.PillSpins, TweenService:Create(pg, TweenInfo.new(3.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Rotation = 360}))
+    end
+    pill(20, "Aimbot", true)
+    pill(46, "ESP", false)
+
+    -- Legibilidad (contraste WCAG)
+    local lc = card(80, 82, "LEGIBILIDAD", "READABILITY")
+    local checks = {
+        {"Texto · Fondo", "Text · Background", "Text", "Background"},
+        {"Texto · Secundario", "Text · Secondary", "Text", "Secondary"},
+        {"Botón", "Button", nil, "Accent"},
+    }
+    for i, ck in ipairs(checks) do
+        local y = 18 + (i - 1) * 20
+        local dot = f("Frame", {Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 8, 0, y + 7), ZIndex = z + 3}, lc)
+        rc(dot, 999)
+        local nm = txt(lc, {Size = UDim2.new(1, -60, 0, 14), Position = UDim2.new(0, 18, 0, y), Text = GetText(ck[1], ck[2]), TextSize = 8, Font = Enum.Font.GothamMedium, ZIndex = z + 3})
+        nm:SetAttribute("TextSpanish", ck[1])
+        nm:SetAttribute("TextEnglish", ck[2])
+        local val = txt(lc, {Size = UDim2.new(0, 40, 0, 14), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, y), Text = "", TextSize = 8, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z + 3})
+        paint(function(p)
+            local fg = ck[3] and p[ck[3]] or getContrastColor(p[ck[4]])
+            local ratio = RowKit.Contrast(fg, p[ck[4]])
+            local good = ratio >= 4.5
+            local ok = ratio >= 3
+            local col = good and Color3.fromRGB(70, 210, 120) or ok and Color3.fromRGB(240, 190, 60) or Color3.fromRGB(240, 80, 80)
+            dot.BackgroundColor3 = col
+            nm.TextColor3 = p.Text
+            val.TextColor3 = col
+            val.Text = string.format("%.1f:1", ratio)
+            if i == 1 then st.LastRatio = ratio end
+        end)
+    end
+
+    -- Paleta completa (tocable)
+    local pal = card(168, 26, "", "")
+    local palRow = f("Frame", {Size = UDim2.new(1, -12, 0, 14), Position = UDim2.new(0, 6, 0.5, -7), BackgroundTransparency = 1, ZIndex = z + 3}, pal)
+    f("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center, Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder}, palRow)
+    for i, role in ipairs(STUDIO_ORDER) do
+        local sw = f("Frame", {Size = UDim2.new(0.125, -3, 1, 0), LayoutOrder = i, ZIndex = z + 4}, palRow)
+        rc(sw, 999)
+        f("UIStroke", {Thickness = 1, Transparency = 0.5, Color = Color3.new(1, 1, 1)}, sw)
+        hot(sw, role)
+        paint(function(p) sw.BackgroundColor3 = p[role] end)
+    end
+
+    -- ===== Ayuda / tooltip y destello al tocar =====
+    st.Hint = txt(parent.Parent or parent, {
+        Size = UDim2.new(0.6, 0, 0, 18), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 8),
+        Text = GetText("Tocá cualquier parte para editar su color", "Tap any part to edit its color"),
+        TextSize = 9, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = z + 7,
+    })
+    st.Hint:SetAttribute("TextSpanish", "Tocá cualquier parte para editar su color")
+    st.Hint:SetAttribute("TextEnglish", "Tap any part to edit its color")
+    st.Hover = function(role)
+        local p = st.Palette
+        if role and STUDIO_ROLES[role] and p[role] then
+            local c = p[role]
+            st.Hint.Text = string.format("%s  ·  #%02X%02X%02X", GetText(STUDIO_ROLES[role][1], STUDIO_ROLES[role][2]),
+                math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+            st.Hint.TextColor3 = p.Text or Color3.new(1, 1, 1)
+        else
+            st.Hint.Text = GetText(st.Hint:GetAttribute("TextSpanish"), st.Hint:GetAttribute("TextEnglish"))
+            st.Hint.TextColor3 = p.TextDim or Color3.fromRGB(170, 170, 170)
+        end
+    end
+    st.Flash = function(o)
+        local s = Instance.new("UIScale")
+        s.Scale = 0.94
+        s.Parent = o
+        local tw = TweenService:Create(s, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1})
+        tw.Completed:Connect(function() s:Destroy() end)
+        tw:Play()
+    end
+
+    function st.Paint(p)
+        if type(p) ~= "table" then return end
+        local full = {}
+        for _, role in ipairs(STUDIO_ORDER) do
+            full[role] = typeof(p[role]) == "Color3" and p[role] or (st.Palette[role] or Color3.new(0.5, 0.5, 0.5))
+        end
+        st.Palette = full
+        for _, fn in ipairs(st.Paints) do pcall(fn, full) end
+        st.Hover(nil)
+    end
+    function st.Play()
+        st.Spin:Play()
+        for _, tw in ipairs(st.PillSpins) do tw:Play() end
+    end
+    function st.Stop()
+        st.Spin:Pause()
+        for _, tw in ipairs(st.PillSpins) do tw:Pause() end
+    end
+    return st
+end
+
+-- Icono: si recibe un ID de Roblox usa la imagen (teñida con el color del tema); si no, el texto
+function RowKit.Icon(parent, icon, px, z, role)
+    role = role or "Accent"
+    local id = tonumber(icon) or (type(icon) == "string" and tonumber(icon:match("^rbxassetid://(%d+)$")))
+    if id then
+        local img = mk("ImageLabel", {
+            Parent = parent,
+            Size = UDim2.fromOffset(px, px),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://" .. tostring(id),
+            ImageColor3 = Theme[role] or Color3.new(1, 1, 1),
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = z,
+        })
+        img:SetAttribute("ThemeImageRole", role)
+        return img
+    end
+    local t = mk("TextLabel", {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = tostring(icon or "◆"),
+        TextSize = px,
+        Font = Enum.Font.GothamBold,
+        TextColor3 = Theme.Text,
+        ZIndex = z,
+    })
+    t:SetAttribute("IgnoreTextEffect", true)
+    return t
+end
+
+-- Icono dentro de un marco fijo (para chips, botones e insignias)
+function RowKit.IconAt(parent, icon, px, position, z, role)
+    local holder = mk("Frame", {
+        Parent = parent,
+        Size = UDim2.fromOffset(px, px),
+        Position = position,
+        BackgroundTransparency = 1,
+        ZIndex = z,
+    })
+    RowKit.Icon(holder, icon, px, z, role)
+    return holder
+end
+
+-- Cabecera de seccion para paginas de ajustes: icono + titulo + descripcion
+function RowKit.SettingsHeader(page, icon, titleES, titleEN, descES, descEN)
+    local head = mk("Frame", {
+        Parent = page,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        ZIndex = 9,
+    })
+    mk("UIPadding", {Parent = head, PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 2)})
+    local tile = mk("Frame", {
+        Parent = head,
+        Size = UDim2.fromOffset(34, 34),
+        BackgroundColor3 = Theme.Accent,
+        BackgroundTransparency = 0.8,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    })
+    tile:SetAttribute("ThemeRole", "Accent")
+    corner(tile, 10)
+    RowKit.Icon(tile, icon or "◆", 18, 11, "Accent")
+    local col = mk("Frame", {
+        Parent = head,
+        Size = UDim2.new(1, -46, 0, 0),
+        Position = UDim2.new(0, 46, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1,
+        ZIndex = 9,
+    })
+    mk("UIListLayout", {Parent = col, Padding = UDim.new(0, 1), SortOrder = Enum.SortOrder.LayoutOrder})
+    local title = mk("TextLabel", {
+        Parent = col,
+        Size = UDim2.new(1, 0, 0, 18),
+        BackgroundTransparency = 1,
+        Text = GetText(titleES, titleEN),
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 14,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        LayoutOrder = 1,
+        ZIndex = 10,
+    })
+    title:SetAttribute("ThemeTextRole", "Text")
+    title:SetAttribute("TextSpanish", titleES)
+    title:SetAttribute("TextEnglish", titleEN)
+    if descES then
+        local desc = mk("TextLabel", {
+            Parent = col,
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            Text = GetText(descES, descEN or descES),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            LayoutOrder = 2,
+            ZIndex = 10,
+        })
+        desc:SetAttribute("ThemeTextRole", "TextDim")
+        desc:SetAttribute("TextSpanish", descES)
+        desc:SetAttribute("TextEnglish", descEN or descES)
+    end
+    return head
+end
+
+-- Selector segmentado (opciones excluyentes) con resaltado que se desliza
+-- options = { {key=, es=, en=}, ... }  ->  devuelve { Set = function(key, animate) }
+function RowKit.Segmented(page, options, currentKey, onSelect)
+    local n = math.max(1, #options)
+    local seg = {buttons = {}, current = nil}
+    local holder = mk("Frame", {
+        Parent = page,
+        Size = UDim2.new(1, 0, 0, 42),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    holder:SetAttribute("ThemeRole", "Secondary")
+    corner(holder, 14)
+    stroke(holder, Theme.Stroke, 1, 0.6)
+    local pill = mk("Frame", {
+        Parent = holder,
+        Size = UDim2.new(1 / n, -6, 1, -6),
+        Position = UDim2.new(0, 3, 0, 3),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 10,
+    })
+    pill:SetAttribute("ThemeRole", "Accent")
+    corner(pill, 11)
+    mk("UIGradient", {Parent = pill, Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(215, 215, 215))})
+    seg.Holder = holder
+
+    for i, opt in ipairs(options) do
+        local b = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.new(1 / n, 0, 1, 0),
+            Position = UDim2.new((i - 1) / n, 0, 0, 0),
+            BackgroundTransparency = 1,
+            Text = GetText(opt.es, opt.en),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            AutoButtonColor = false,
+            ZIndex = 11,
+        })
+        b:SetAttribute("TextSpanish", opt.es)
+        b:SetAttribute("TextEnglish", opt.en)
+        b:SetAttribute("IgnoreTextEffect", true)
+        seg.buttons[i] = {key = opt.key, button = b}
+        b.MouseButton1Click:Connect(function()
+            if seg.current == opt.key then return end
+            playSound(Sounds.Click, 0.45)
+            seg.Set(opt.key, true)
+            if onSelect then onSelect(opt.key) end
+        end)
+    end
+
+    function seg.Set(key, animate)
+        for i, entry in ipairs(seg.buttons) do
+            local on = entry.key == key
+            if on then
+                seg.current = key
+                local goal = {Position = UDim2.new((i - 1) / n, 3, 0, 3)}
+                if animate then
+                    TweenService:Create(pill, TweenInfo.new(0.28, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), goal):Play()
+                else
+                    pill.Position = goal.Position
+                end
+            end
+            entry.button.TextColor3 = on and Theme.AccentText or Theme.TextDim
+            entry.button:SetAttribute("ThemeTextRole", on and "AccentText" or "TextDim")
+            entry.button.Font = on and Enum.Font.GothamBlack or Enum.Font.GothamBold
+        end
+    end
+    seg.Set(currentKey, false)
+    return seg
+end
+
+-- Tarjeta informativa: filas "nombre  ·  valor"
+function RowKit.InfoCard(page, rows)
+    local card = mk("Frame", {
+        Parent = page,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    card:SetAttribute("ThemeRole", "Secondary")
+    corner(card, 14)
+    stroke(card, Theme.Stroke, 1, 0.6)
+    mk("UIPadding", {Parent = card, PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)})
+    mk("UIListLayout", {Parent = card, SortOrder = Enum.SortOrder.LayoutOrder})
+    for i, r in ipairs(rows) do
+        local row = mk("Frame", {Parent = card, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = 10})
+        local k = mk("TextLabel", {
+            Parent = row, Size = UDim2.new(0.5, 0, 1, 0), BackgroundTransparency = 1,
+            Text = GetText(r[1], r[2]), TextColor3 = Theme.TextDim, Font = Enum.Font.GothamMedium, TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+        })
+        k:SetAttribute("ThemeTextRole", "TextDim")
+        k:SetAttribute("TextSpanish", r[1])
+        k:SetAttribute("TextEnglish", r[2])
+        local v = mk("TextLabel", {
+            Parent = row, Size = UDim2.new(0, 0, 0, 20), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.82,
+            Text = GetText(r[3], r[4]), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 10, ZIndex = 10,
+        })
+        v:SetAttribute("ThemeRole", "Accent")
+        v:SetAttribute("ThemeTextRole", "Accent")
+        v:SetAttribute("TextSpanish", r[3])
+        v:SetAttribute("TextEnglish", r[4])
+        corner(v, 999)
+        mk("UIPadding", {Parent = v, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
+        if i < #rows then
+            local line = mk("Frame", {Parent = row, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Theme.Stroke, BackgroundTransparency = 0.7, BorderSizePixel = 0, ZIndex = 10})
+            line:SetAttribute("ThemeRole", "Stroke")
+        end
+    end
+    return card
+end
+
+-- ============================================================================
+-- TOGGLE FLOTANTE (PILL) - DISENO V5
+-- Borde blanco/negro giratorio, brillos de fondo y efectos de activado.
+-- Todos los colores salen de Theme y se re-derivan en cada Apply(), asi que se
+-- adapta a cualquier tema (tambien al cambiar de tema con el toggle ya flotando).
+-- ============================================================================
+local FloatingPillV5 = {}
+
+function FloatingPillV5.Lighten(c)
+    local h, s, v = Color3.toHSV(c)
+    return Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+end
+
+-- Fondo apagado: casi negro con un matiz leve del fondo del tema
+function FloatingPillV5.OffColor()
+    return Theme.Background:Lerp(Color3.fromRGB(0, 0, 0), 0.6)
+end
+
+-- Ancho de la pildora ajustado al texto
+function FloatingPillV5.FitWidth(text, textSize)
+    local ok, bounds = pcall(function()
+        return game:GetService("TextService"):GetTextSize(
+            tostring(text or ""), textSize, Enum.Font.GothamBlack, Vector2.new(1000, 100)
+        )
+    end)
+    return math.ceil((ok and bounds.X) or 150) + 28
+end
+
+-- win: Frame de la pildora | glow: Frame de aura (hermano) | label: TextLabel
+-- winStroke: UIStroke de la pildora | hasLinkedSlider: la variante con slider no auto-ajusta el ancho
+-- Devuelve { Apply = function(state, instant) }
+function FloatingPillV5.Build(win, glow, label, winStroke, hasLinkedSlider, hasDial)
+    -- Diseno V6: capsula de cristal con LED de estado y mini interruptor.
+    -- Apagado: 0 animaciones corriendo. Encendido: solo el pulso del aura.
+    -- hasDial: el tambor de valores ocupa el borde derecho en lugar del mini interruptor (ver BuildDial).
+    local glowPulse = nil
+    local ringSpin = nil
+    local ROW_H = 34
+    local LEFT_PAD, RIGHT_PAD = 32, hasDial and 58 or 46
+    local TEXT_SIZE = hasLinkedSlider and 16 or 17
+
+    win.Destroying:Connect(function()
+        if glowPulse then pcall(function() glowPulse:Cancel() end) end
+        if ringSpin then pcall(function() ringSpin:Cancel() end) end
+    end)
+
+    local function fitGlow()
+        if glow and glow.Parent then
+            glow.Size = UDim2.fromOffset(win.Size.X.Offset + 16, win.Size.Y.Offset + 12)
+            glow.Position = UDim2.new(win.Position.X.Scale, win.Position.X.Offset - 8, win.Position.Y.Scale, win.Position.Y.Offset - 6)
+        end
+    end
+    local function widthFor(text)
+        local ok, bounds = pcall(function()
+            return game:GetService("TextService"):GetTextSize(tostring(text or ""), TEXT_SIZE, Enum.Font.GothamBlack, Vector2.new(1000, 100))
+        end)
+        return math.ceil((ok and bounds.X) or 120) + LEFT_PAD + RIGHT_PAD
+    end
+
+    win.BackgroundTransparency = 0.3
+    if not hasLinkedSlider then
+        local pos = win.Position
+        local oldW, oldH = win.Size.X.Offset, win.Size.Y.Offset
+        local w = widthFor(label.Text)
+        win.Size = UDim2.fromOffset(w, ROW_H)
+        win.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (oldW - w) / 2, pos.Y.Scale, pos.Y.Offset + (oldH - ROW_H) / 2)
+    end
+    fitGlow()
+
+    winStroke:SetAttribute("ThemeRole", nil)
+    winStroke.Thickness = 2
+    winStroke.Color = Color3.fromRGB(255, 255, 255)
+    winStroke.LineJoinMode = Enum.LineJoinMode.Round
+    local oldGrad = winStroke:FindFirstChildOfClass("UIGradient")
+    if oldGrad then oldGrad:Destroy() end
+
+    -- Borde giratorio (mismo estilo que el borde de la ventana): una franja de luz que orbita el contorno.
+    -- Un solo tween nativo en bucle: no corre codigo Lua por frame.
+    local ring = Instance.new("UIGradient")
+    ring.Name = "FloatRing"
+    ring.Rotation = 0
+    ring.Parent = winStroke
+    ringSpin = TweenService:Create(ring, TweenInfo.new(3.6, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), { Rotation = 360 })
+    ringSpin:Play()
+
+    local fill = Instance.new("UIGradient")
+    fill.Rotation = 90
+    fill.Parent = win
+
+    local gloss = mk("Frame", {
+        Parent = win,
+        Name = "FloatGloss",
+        Size = UDim2.new(1, -10, 0, math.floor(ROW_H * 0.42)),
+        Position = UDim2.new(0, 5, 0, 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Active = false,
+        ZIndex = 4,
+    })
+    corner(gloss, 999)
+    local glossGrad = Instance.new("UIGradient")
+    glossGrad.Rotation = 90
+    glossGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.82),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    glossGrad.Parent = gloss
+
+    label.TextSize = TEXT_SIZE
+    label.TextStrokeTransparency = 1
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    if hasLinkedSlider then
+        label.Size = UDim2.new(1, -(LEFT_PAD + RIGHT_PAD), 0, ROW_H)
+    else
+        label.Size = UDim2.new(1, -(LEFT_PAD + RIGHT_PAD), 1, 0)
+    end
+    label.Position = UDim2.new(0, LEFT_PAD, 0, 0)
+
+    local orb = mk("Frame", {
+        Parent = win,
+        Name = "FloatOrb",
+        Size = UDim2.fromOffset(10, 10),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 17, 0, ROW_H / 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Active = false,
+        ZIndex = 6,
+    })
+    corner(orb, 999)
+    local orbRing = Instance.new("UIStroke")
+    orbRing.Thickness = 1.5
+    orbRing.Parent = orb
+
+    local track = mk("Frame", {
+        Parent = win,
+        Name = "FloatSwitch",
+        Size = UDim2.fromOffset(28, 16),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -10, 0, ROW_H / 2),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Active = false,
+        ZIndex = 6,
+    })
+    corner(track, 999)
+    if hasDial then track.Visible = false end
+    local trackStroke = Instance.new("UIStroke")
+    trackStroke.Thickness = 1
+    trackStroke.Parent = track
+    local knob = mk("Frame", {
+        Parent = track,
+        Name = "FloatKnob",
+        Size = UDim2.fromOffset(12, 12),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 2, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        Active = false,
+        ZIndex = 7,
+    })
+    corner(knob, 999)
+
+    local pressScale = Instance.new("UIScale")
+    pressScale.Parent = win
+
+    if not hasLinkedSlider then
+        label:GetPropertyChangedSignal("Text"):Connect(function()
+            local w = widthFor(label.Text)
+            local oldW = win.Size.X.Offset
+            if w ~= oldW then
+                local pos = win.Position
+                win.Size = UDim2.fromOffset(w, win.Size.Y.Offset)
+                win.Position = UDim2.new(pos.X.Scale, pos.X.Offset + (oldW - w) / 2, pos.Y.Scale, pos.Y.Offset)
+                fitGlow()
+            end
+        end)
+    end
+
+    local function playActivateRipple(color)
+        local ripple = mk("Frame", {
+            Parent = win,
+            Name = "FloatRipple",
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Active = false,
+            ZIndex = 4,
+        })
+        corner(ripple, 999)
+        local rs = Instance.new("UIStroke")
+        rs.Color = color
+        rs.Thickness = 2
+        rs.Transparency = 0.1
+        rs.Parent = ripple
+        local info = TweenInfo.new(0.7, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+        TweenService:Create(ripple, info, { Size = UDim2.new(1, 28, 1, 20) }):Play()
+        TweenService:Create(rs, info, { Transparency = 1 }):Play()
+        task.delay(0.8, function()
+            pcall(function() ripple:Destroy() end)
+        end)
+    end
+
+    local wasOn, ready = false, false
+
+    local function apply(state, instant)
+        state = state == true
+        local onBg = Theme.ToggleOn
+        local onLight = FloatingPillV5.Lighten(onBg)
+        local offBg = FloatingPillV5.OffColor()
+        local txt = state and getContrastColor(onBg) or Color3.fromRGB(255, 255, 255)
+
+        fill.Color = state and ColorSequence.new(onLight, onBg) or ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 200, 200))
+        local ringBase, ringLight
+        if state then
+            ringBase, ringLight = onLight, Color3.fromRGB(255, 255, 255)
+        else
+            local pb = Theme.PillBorder or Theme.Border or Theme.Accent
+            ringBase = pb:Lerp(offBg, 0.45)
+            ringLight = Theme.PillBorderAlt or Theme.BorderLight or FloatingPillV5.Lighten(pb)
+        end
+        ring.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, ringBase),
+            ColorSequenceKeypoint.new(0.34, ringBase),
+            ColorSequenceKeypoint.new(0.46, ringLight),
+            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+            ColorSequenceKeypoint.new(0.54, ringLight),
+            ColorSequenceKeypoint.new(0.66, ringBase),
+            ColorSequenceKeypoint.new(1, ringBase),
+        })
+        orbRing.Color = state and txt or Color3.fromRGB(200, 200, 200)
+        trackStroke.Color = state and txt or Color3.fromRGB(255, 255, 255)
+        if glow and glow.Parent then glow.BackgroundColor3 = onBg end
+
+        local goals = {
+            win = { BackgroundColor3 = state and onBg or offBg },
+            label = { TextColor3 = txt },
+            stroke = { Transparency = state and 0 or 0.08 },
+            orb = { BackgroundColor3 = state and txt or offBg, Size

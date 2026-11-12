@@ -1,0 +1,1245 @@
+
+local Players = game:GetService("Players")
+local UserInputService = game:GetService("UserInputService")
+local RealTweenService = game:GetService("TweenService")
+local SoundService = game:GetService("SoundService")
+local RunService = game:GetService("RunService")
+local ContentProvider = game:GetService("ContentProvider")
+local HttpService = game:GetService("HttpService")
+local TeleportService = game:GetService("TeleportService")
+local LocalizationService = game:GetService("LocalizationService")
+local StarterGui = game:GetService("StarterGui")
+local LocalPlayer = Players.LocalPlayer
+
+-- ==================== OPTIMIZACIÓN (Ajustes > Optimización) ====================
+-- Banderas que leen los loops de la librería para no gastar CPU/GPU en equipos que no la aguantan.
+-- Se guardan en un archivo aparte para no tocar el formato del config principal.
+local PerfOpt = {
+    File = "YinYang_Optimizacion.json",
+    Flags = {
+        NoAnimations = false,      -- tweens de la interfaz instantáneos y loops infinitos pausados
+        NoTextEffects = false,     -- sin el loop de efectos de texto (se guarda el elegido)
+        StaticBackground = false,  -- fondo animado (sprite/video) quieto
+        NoLogoAnim = false,        -- logo flotante sin animación por frame
+        NoHomeAvatar = false,      -- avatar/owner de Inicio quietos
+        NoDecorAnim = false,       -- título, banner, ecualizador y vistas previas sin animar
+        NoUISounds = false,        -- sin sonidos de clic
+        LiteShaders = false,       -- shaders en calidad Lite
+        NoPostFX = false,          -- sin profundidad de campo, blur ni rayos de sol
+        NoShaders = false,         -- shaders apagados (también al iniciar)
+        NoShadows = false,         -- sin sombras globales del juego
+        NoParticles = false,       -- sin partículas, estelas, humo ni fuego del mapa
+        MapBoost = false,          -- mapa liviano: plástico liso, sin texturas ni decoración
+        LowGraphics = false,       -- calidad de render al mínimo (si el executor lo permite)
+        FpsCap30 = false,          -- límite de 30 FPS (si el executor tiene setfpscap)
+    },
+    PrevQuality = nil,
+    Hooks = {},
+    Loops = {},
+    World = { PostFX = {}, Particles = {}, Parts = {}, Decals = {}, Appearances = {}, Token = 0 },
+    InstantInfo = TweenInfo.new(0),
+    ParticleClasses = { ParticleEmitter = true, Trail = true, Beam = true, Smoke = true, Fire = true, Sparkles = true },
+    PostFXClasses = { DepthOfFieldEffect = true, BlurEffect = true, SunRaysEffect = true },
+}
+
+function PerfOpt.IsUI(instance)
+    if typeof(instance) ~= "Instance" then return false end
+    local ok, result = pcall(function()
+        return instance:IsA("GuiObject") or instance:IsA("UIComponent")
+    end)
+    return ok and result == true
+end
+
+function PerfOpt.Save()
+    if type(writefile) ~= "function" then return end
+    pcall(function()
+        local data = {}
+        for key, value in pairs(PerfOpt.Flags) do data[key] = value end
+        data._prevQuality = PerfOpt.PrevQuality
+        writefile(PerfOpt.File, HttpService:JSONEncode(data))
+    end)
+end
+
+function PerfOpt.Load()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" then return end
+    pcall(function()
+        if not isfile(PerfOpt.File) then return end
+        local data = HttpService:JSONDecode(readfile(PerfOpt.File))
+        if type(data) ~= "table" then return end
+        for key in pairs(PerfOpt.Flags) do
+            if type(data[key]) == "boolean" then PerfOpt.Flags[key] = data[key] end
+        end
+        if type(data._prevQuality) == "string" then PerfOpt.PrevQuality = data._prevQuality end
+    end)
+end
+PerfOpt.Load()
+
+-- Cambia una bandera, ejecuta su gancho (si lo hay) y guarda
+function PerfOpt.Set(key, on)
+    if PerfOpt.Flags[key] == nil then return end
+    PerfOpt.Flags[key] = on == true
+    local hook = PerfOpt.Hooks[key]
+    if hook then pcall(hook, on == true) end
+    PerfOpt.Save()
+end
+
+-- Loops infinitos de la interfaz (brillos, giros, pulsos): se pausan con "Sin animaciones" y vuelven al apagarlo
+function PerfOpt.SetLoopsPaused(paused)
+    for index = #PerfOpt.Loops, 1, -1 do
+        local entry = PerfOpt.Loops[index]
+        local alive = entry.instance and entry.instance.Parent ~= nil
+        if not alive then
+            table.remove(PerfOpt.Loops, index)
+        elseif not entry.wanted then
+            continue
+        elseif paused then
+            pcall(function() entry.real:Pause() end)
+        else
+            pcall(function() entry.real:Play() end)
+        end
+    end
+end
+
+function PerfOpt.WrapLoop(real, instance)
+    local entry = { real = real, instance = instance, wanted = false }
+    table.insert(PerfOpt.Loops, entry)
+    local methods = {
+        Play = function()
+            entry.wanted = true
+            if not PerfOpt.Flags.NoAnimations then real:Play() end
+        end,
+        Pause = function() entry.wanted = false; real:Pause() end,
+        Cancel = function() entry.wanted = false; real:Cancel() end,
+        Destroy = function() entry.wanted = false; real:Destroy() end,
+    }
+    return setmetatable({}, {
+        __index = function(_, key)
+            local method = methods[key]
+            if method then return function() return method() end end
+            local value = real[key]
+            if type(value) == "function" then
+                return function(_, ...) return value(real, ...) end
+            end
+            return value
+        end,
+    })
+end
+
+-- Envoltorio de TweenService: misma API (:Create), pero respeta "Sin animaciones" en la interfaz
+local TweenService = {}
+function TweenService:Create(instance, info, goals)
+    if PerfOpt.IsUI(instance) then
+        if typeof(info) == "TweenInfo" and info.RepeatCount < 0 then
+            return PerfOpt.WrapLoop(RealTweenService:Create(instance, info, goals), instance)
+        end
+        if PerfOpt.Flags.NoAnimations then
+            info = PerfOpt.InstantInfo
+        end
+    end
+    return RealTweenService:Create(instance, info, goals)
+end
+
+function PerfOpt.IsOwnInstance(instance)
+    local node = instance
+    while node and node ~= workspace and node ~= game do
+        if string.sub(node.Name or "", 1, 14) == "YinYangShader_" then return true end
+        node = node.Parent
+    end
+    return false
+end
+
+-- ----- Mundo: sombras -----
+function PerfOpt.ApplyShadows()
+    local W = PerfOpt.World
+    local Lighting = game:GetService("Lighting")
+    if PerfOpt.Flags.NoShadows then
+        pcall(function()
+            -- si alguien (un preset) las prendió, ese es el valor a devolver al apagar la opción
+            if W.Shadows == nil or Lighting.GlobalShadows == true then W.Shadows = Lighting.GlobalShadows end
+            Lighting.GlobalShadows = false
+        end)
+    elseif W.Shadows ~= nil then
+        pcall(function() Lighting.GlobalShadows = W.Shadows end)
+        W.Shadows = nil
+    end
+end
+
+-- ----- Mundo: post-procesado pesado (profundidad de campo, blur, rayos) -----
+function PerfOpt.ApplyPostFX()
+    local W = PerfOpt.World
+    local containers = { game:GetService("Lighting"), workspace.CurrentCamera }
+    if PerfOpt.Flags.NoPostFX then
+        for _, container in ipairs(containers) do
+            if container then
+                for _, fx in ipairs(container:GetChildren()) do
+                    if PerfOpt.PostFXClasses[fx.ClassName] then
+                        pcall(function()
+                            if W.PostFX[fx] == nil or fx.Enabled == true then W.PostFX[fx] = fx.Enabled end
+                            fx.Enabled = false
+                        end)
+                    end
+                end
+            end
+        end
+    else
+        for fx, was in pairs(W.PostFX) do
+            if fx.Parent then pcall(function() fx.Enabled = was end) end
+        end
+        W.PostFX = {}
+    end
+end
+
+-- ----- Mundo: partículas, estelas, humo y fuego -----
+function PerfOpt.DisableParticle(instance)
+    if not PerfOpt.Flags.NoParticles or not instance or not PerfOpt.ParticleClasses[instance.ClassName] then return end
+    if PerfOpt.IsOwnInstance(instance) then return end
+    local W = PerfOpt.World
+    pcall(function()
+        if W.Particles[instance] == nil then W.Particles[instance] = instance.Enabled end
+        instance.Enabled = false
+    end)
+end
+
+function PerfOpt.ApplyParticles()
+    local W = PerfOpt.World
+    if W.ParticleConn then W.ParticleConn:Disconnect(); W.ParticleConn = nil end
+    if PerfOpt.Flags.NoParticles then
+        task.spawn(function()
+            for index, instance in ipairs(workspace:GetDescendants()) do
+                if not PerfOpt.Flags.NoParticles then return end
+                PerfOpt.DisableParticle(instance)
+                if index % 400 == 0 then task.wait() end
+            end
+        end)
+        W.ParticleConn = workspace.DescendantAdded:Connect(function(instance)
+            if PerfOpt.ParticleClasses[instance.ClassName] then task.defer(PerfOpt.DisableParticle, instance) end
+        end)
+    else
+        for instance, was in pairs(W.Particles) do
+            if instance.Parent then pcall(function() instance.Enabled = was end) end
+        end
+        W.Particles = {}
+    end
+end
+
+-- ----- Mundo: mapa liviano (reversible). No toca avatares ni los efectos propios de shaders -----
+function PerfOpt.LightenPart(part)
+    if not PerfOpt.Flags.MapBoost or not part or not part.Parent or not part:IsA("BasePart") then return end
+    if PerfOpt.IsOwnInstance(part) then return end
+    local model = part:FindFirstAncestorOfClass("Model")
+    if model and model:FindFirstChildOfClass("Humanoid") then return end
+    local W = PerfOpt.World
+    pcall(function()
+        local material = part.Material
+        if material ~= Enum.Material.Neon and material ~= Enum.Material.Glass and material ~= Enum.Material.ForceField then
+            if W.Parts[part] == nil then W.Parts[part] = { Material = material, CastShadow = part.CastShadow } end
+            part.Material = Enum.Material.SmoothPlastic
+            part.CastShadow = false
+        end
+        pcall(function()
+            if part.MaterialVariant ~= "" then
+                W.Parts[part] = W.Parts[part] or { CastShadow = part.CastShadow }
+                W.Parts[part].MaterialVariant = part.MaterialVariant
+                part.MaterialVariant = ""
+            end
+        end)
+    end)
+    for _, child in ipairs(part:GetChildren()) do
+        if child:IsA("Texture") or child:IsA("Decal") then
+            pcall(function()
+                if child.Transparency < 1 then
+                    W.Decals[child] = child.Transparency
+                    child.Transparency = 1
+                end
+            end)
+        elseif child:IsA("SurfaceAppearance") then
+            W.Appearances[child] = part
+            pcall(function() child.Parent = nil end)
+        end
+    end
+end
+
+function PerfOpt.ApplyMapBoost()
+    local W = PerfOpt.World
+    W.Token = W.Token + 1
+    local token = W.Token
+    if W.MapConn then W.MapConn:Disconnect(); W.MapConn = nil end
+    local terrain = workspace:FindFirstChildOfClass("Terrain")
+    if PerfOpt.Flags.MapBoost then
+        if terrain then
+            pcall(function()
+                if W.Terrain == nil then
+                    W.Terrain = { Decoration = terrain.Decoration, WaterWaveSize = terrain.WaterWaveSize, WaterWaveSpeed = terrain.WaterWaveSpeed, WaterReflectance = terrain.WaterReflectance }
+                end
+                terrain.Decoration = false
+                terrain.WaterWaveSize = 0
+                terrain.WaterWaveSpeed = 0
+                terrain.WaterReflectance = 0
+            end)
+        end
+        task.spawn(function()
+            for index, instance in ipairs(workspace:GetDescendants()) do
+                if token ~= W.Token then return end
+                if instance:IsA("BasePart") then PerfOpt.LightenPart(instance) end
+                if index % 300 == 0 then task.wait() end
+            end
+        end)
+        W.MapConn = workspace.DescendantAdded:Connect(function(instance)
+            if instance:IsA("BasePart") then task.defer(PerfOpt.LightenPart, instance) end
+        end)
+    else
+        for part, record in pairs(W.Parts) do
+            if part.Parent then
+                pcall(function()
+                    if record.Material then part.Material = record.Material end
+                    if record.MaterialVariant then part.MaterialVariant = record.MaterialVariant end
+                    if record.CastShadow ~= nil then part.CastShadow = record.CastShadow end
+                end)
+            end
+        end
+        for decal, transparency in pairs(W.Decals) do
+            if decal.Parent and decal.Transparency >= 1 then pcall(function() decal.Transparency = transparency end) end
+        end
+        for appearance, part in pairs(W.Appearances) do
+            if part.Parent then pcall(function() appearance.Parent = part end) end
+        end
+        if terrain and W.Terrain then
+            pcall(function()
+                for property, value in pairs(W.Terrain) do terrain[property] = value end
+            end)
+        end
+        W.Parts, W.Decals, W.Appearances, W.Terrain = {}, {}, {}, nil
+    end
+end
+
+-- ----- Calidad de render y límite de FPS (depende del executor; todo protegido) -----
+function PerfOpt.ApplyGraphics()
+    local W = PerfOpt.World
+    if type(settings) ~= "function" then return end
+    if PerfOpt.Flags.LowGraphics then
+        pcall(function()
+            local rendering = settings().Rendering
+            if W.Quality == nil then W.Quality = rendering.QualityLevel end
+            rendering.QualityLevel = Enum.QualityLevel.Level01
+        end)
+    elseif W.Quality ~= nil then
+        pcall(function() settings().Rendering.QualityLevel = W.Quality end)
+        W.Quality = nil
+    end
+end
+
+function PerfOpt.ApplyFpsCap()
+    local W = PerfOpt.World
+    if type(setfpscap) ~= "function" then return end
+    if PerfOpt.Flags.FpsCap30 then
+        if W.FpsBefore == nil then
+            local ok, current = pcall(function() return type(getfpscap) == "function" and getfpscap() or nil end)
+            W.FpsBefore = (ok and tonumber(current)) or 60
+        end
+        pcall(setfpscap, 30)
+    elseif W.FpsBefore ~= nil then
+        pcall(setfpscap, W.FpsBefore)
+        W.FpsBefore = nil
+    end
+end
+
+-- Después de aplicar un shader: vuelve a apagar lo que el usuario pidió apagar
+function PerfOpt.AfterShaders()
+    if PerfOpt.Flags.NoShadows then PerfOpt.ApplyShadows() end
+    if PerfOpt.Flags.NoPostFX then PerfOpt.ApplyPostFX() end
+end
+
+PerfOpt.Hooks.NoAnimations = function(on) PerfOpt.SetLoopsPaused(on) end
+PerfOpt.Hooks.NoShadows = function() PerfOpt.ApplyShadows() end
+PerfOpt.Hooks.NoPostFX = function() PerfOpt.ApplyPostFX() end
+PerfOpt.Hooks.NoParticles = function() PerfOpt.ApplyParticles() end
+PerfOpt.Hooks.MapBoost = function() PerfOpt.ApplyMapBoost() end
+PerfOpt.Hooks.LowGraphics = function() PerfOpt.ApplyGraphics() end
+PerfOpt.Hooks.FpsCap30 = function() PerfOpt.ApplyFpsCap() end
+
+-- Lo del mundo se aplica al cargar si quedó guardado
+task.defer(function()
+    for _, key in ipairs({ "NoShadows", "NoPostFX", "NoParticles", "MapBoost", "LowGraphics", "FpsCap30" }) do
+        if PerfOpt.Flags[key] then pcall(PerfOpt.Hooks[key], true) end
+    end
+end)
+
+local BanList = {
+    "Emo_wapo22",
+}
+
+--[[YINMODULE:01_IsPlayerBanned.lua]]
+
+pcall(function()
+    if LocalPlayer.PlayerGui:FindFirstChild("ZeroMobile") then
+        LocalPlayer.PlayerGui.ZeroMobile:Destroy()
+    end
+end)
+
+local Sounds = {
+    Click = "rbxassetid://138567614125924",
+    Dragon = "rbxassetid://7127123554",
+}
+
+local LibraryLanguage = "en"
+local LibraryTranslator = nil
+local LibraryTranslationCache = {}
+
+local YLang = { Mode = "auto", System = "en", Listeners = {}, File = "Yin_Yang_Lang.txt" }
+
+function YLang.Normalize(mode)
+    mode = string.lower((string.gsub(tostring(mode or "auto"), "%s+", "")))
+    if mode == "es" or mode == "en" then
+        return mode
+    end
+    return "auto"
+end
+
+pcall(function()
+    if isfile and readfile and isfile(YLang.File) then
+        YLang.Mode = YLang.Normalize(readfile(YLang.File))
+    end
+end)
+
+--[[YINMODULE:02_GetLibraryLanguage.lua]]
+
+--[[YINMODULE:03_TranslateWithRoblox.lua]]
+
+--[[YINMODULE:04_GetText.lua]]
+
+local RefreshLibraryLanguage
+
+function YLang.Apply()
+    local newLanguage = YLang.Mode
+    if newLanguage == "auto" then
+        newLanguage = YLang.System
+    end
+    if newLanguage == LibraryLanguage then
+        return false
+    end
+
+    LibraryLanguage = newLanguage
+    LibraryTranslationCache = {}
+
+    if RefreshLibraryLanguage then
+        task.defer(RefreshLibraryLanguage)
+    end
+
+    for _, listener in ipairs(YLang.Listeners) do
+        task.spawn(pcall, listener, LibraryLanguage)
+    end
+
+    return true
+end
+
+--[[YINMODULE:05_SetLibraryLanguageFromLocale.lua]]
+
+function YLang.SetMode(mode)
+    YLang.Mode = YLang.Normalize(mode)
+    pcall(function()
+        if writefile then
+            writefile(YLang.File, YLang.Mode)
+        end
+    end)
+    YLang.Apply()
+    return YLang.Mode
+end
+
+pcall(function()
+    local systemLocale = LocalizationService.SystemLocaleId
+    if systemLocale and systemLocale ~= "" then
+        YLang.System = GetLibraryLanguage(systemLocale)
+    end
+end)
+LibraryLanguage = (YLang.Mode ~= "auto") and YLang.Mode or YLang.System
+
+task.spawn(function()
+    local success, translator = pcall(function()
+        return LocalizationService:GetTranslatorForPlayerAsync(LocalPlayer)
+    end)
+
+    if not success or not translator then
+        return
+    end
+
+    LibraryTranslator = translator
+    LibraryTranslationCache = {}
+    SetLibraryLanguageFromLocale(translator.LocaleId)
+
+    translator:GetPropertyChangedSignal("LocaleId"):Connect(function()
+        LibraryTranslator = translator
+        SetLibraryLanguageFromLocale(translator.LocaleId)
+    end)
+
+    if RefreshLibraryLanguage then
+        task.defer(RefreshLibraryLanguage)
+    end
+end)
+
+local IconoCongelado = false
+
+local ThemeClickSounds = {
+    CatV1 = "rbxassetid://133371725828981",
+    PinkV2 = "rbxassetid://136022651109523",
+    PinkV1 = "rbxassetid://15675081158",
+    PinkV3 = "rbxassetid://75880354609739",
+    ErisV1 = "rbxassetid://137965684634919",
+    VioletaV1 = "rbxassetid://115624890613221",
+    GreenV1 = "rbxassetid://9112751731",
+    DarkV2 = "rbxassetid://139804904213958",
+    BlueV2 = "rbxassetid://118574877365368",
+    WhiteV2 = "rbxassetid://140043289814504",
+    WhiteAndDark = "rbxassetid://139239108826837",
+    LightV1 = "rbxassetid://99071431420752",
+    NaranjaV1 = "rbxassetid://124502189759941",
+}
+
+local CurrentClickSound = Sounds.Click
+local CurrentTheme = "Senju"
+
+local DynamicClickSoundsEnabled = true
+
+local RainbowDarkWhiteActive = false
+local RainbowDarkWhiteValue = 0
+local RainbowDarkWhiteLabels = {}
+
+local CantoLunaLetras = {
+    "Yin Yang",
+    "Canto de Luna",
+    "la-la-la 🌙",
+    "Canta, canta",
+    "En mi corazón",
+    "la-la-la ",
+    "Eres lo que buscamos",
+    "Con la luz 💫",
+    "Canta, canta, canta",
+    "Yo te vi",
+}
+
+local RainbowColors = {
+    Color3.fromRGB(255, 255, 0),
+    Color3.fromRGB(255, 255, 255),
+    Color3.fromRGB(255, 0, 0),
+    Color3.fromRGB(255, 255, 255),
+    Color3.fromRGB(0, 255, 0),
+    Color3.fromRGB(255, 255, 255),
+    Color3.fromRGB(0, 0, 255),
+    Color3.fromRGB(255, 255, 255),
+    Color3.fromRGB(255, 165, 0),
+    Color3.fromRGB(255, 255, 255),
+}
+
+local FloatingToggleBorderColors = {
+    Dark = {
+        Color3.fromRGB(100, 200, 255),
+        Color3.fromRGB(150, 100, 255),
+        Color3.fromRGB(100, 150, 255),
+        Color3.fromRGB(200, 150, 255),
+    },
+    DarkV2 = {
+        Color3.fromRGB(100, 180, 255),
+        Color3.fromRGB(120, 200, 255),
+        Color3.fromRGB(80, 150, 255),
+        Color3.fromRGB(150, 180, 255),
+    },
+    
+    Red = {
+        Color3.fromRGB(255, 100, 100),
+        Color3.fromRGB(255, 150, 100),
+        Color3.fromRGB(255, 80, 120),
+        Color3.fromRGB(255, 120, 100),
+    },
+    RedV2 = {
+        Color3.fromRGB(255, 120, 100),
+        Color3.fromRGB(255, 100, 150),
+        Color3.fromRGB(255, 150, 80),
+        Color3.fromRGB(255, 100, 100),
+    },
+    
+    Pink = {
+        Color3.fromRGB(255, 100, 200),
+        Color3.fromRGB(255, 150, 200),
+        Color3.fromRGB(200, 100, 200),
+        Color3.fromRGB(255, 100, 150),
+    },
+    PinkV2 = {
+        Color3.fromRGB(255, 120, 200),
+        Color3.fromRGB(255, 80, 180),
+        Color3.fromRGB(220, 100, 200),
+        Color3.fromRGB(255, 150, 200),
+    },
+    PinkV3 = {
+        Color3.fromRGB(255, 100, 180),
+        Color3.fromRGB(255, 150, 210),
+        Color3.fromRGB(200, 80, 180),
+        Color3.fromRGB(255, 120, 190),
+    },
+    
+    Blue = {
+        Color3.fromRGB(100, 200, 255),
+        Color3.fromRGB(150, 200, 255),
+        Color3.fromRGB(100, 150, 200),
+        Color3.fromRGB(200, 220, 255),
+    },
+    BlueV2 = {
+        Color3.fromRGB(80, 180, 255),
+        Color3.fromRGB(120, 200, 255),
+        Color3.fromRGB(100, 160, 255),
+        Color3.fromRGB(150, 210, 255),
+    },
+    
+    White = {
+        Color3.fromRGB(200, 200, 200),
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(220, 220, 220),
+        Color3.fromRGB(240, 240, 240),
+    },
+    WhiteV2 = {
+        Color3.fromRGB(220, 220, 220),
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(200, 200, 200),
+        Color3.fromRGB(230, 230, 230),
+    },
+    WhiteV3 = {
+        Color3.fromRGB(210, 210, 210),
+        Color3.fromRGB(240, 240, 240),
+        Color3.fromRGB(190, 190, 190),
+        Color3.fromRGB(255, 255, 255),
+    },
+    WhiteAndDark = {
+        Color3.fromRGB(100, 100, 100),
+        Color3.fromRGB(255, 255, 255),
+        Color3.fromRGB(150, 150, 150),
+        Color3.fromRGB(200, 200, 200),
+    },
+    
+    Green = {
+        Color3.fromRGB(100, 255, 150),
+        Color3.fromRGB(150, 255, 100),
+        Color3.fromRGB(100, 200, 150),
+        Color3.fromRGB(150, 255, 180),
+    },
+    
+    NaranjaV1 = {
+        Color3.fromRGB(255, 150, 50),
+        Color3.fromRGB(255, 100, 80),
+        Color3.fromRGB(255, 180, 100),
+        Color3.fromRGB(255, 120, 60),
+    },
+    VioletaV1 = {
+        Color3.fromRGB(180, 100, 255),
+        Color3.fromRGB(200, 150, 255),
+        Color3.fromRGB(150, 80, 255),
+        Color3.fromRGB(220, 180, 255),
+    },
+    CatV1 = {
+        Color3.fromRGB(255, 100, 150),
+        Color3.fromRGB(255, 150, 100),
+        Color3.fromRGB(200, 100, 200),
+        Color3.fromRGB(255, 120, 120),
+    },
+    LightV1 = {
+        Color3.fromRGB(255, 220, 100),
+        Color3.fromRGB(255, 255, 150),
+        Color3.fromRGB(255, 200, 100),
+        Color3.fromRGB(255, 240, 150),
+    },
+    ErisV1 = {
+        Color3.fromRGB(255, 80, 80),
+        Color3.fromRGB(180, 50, 50),
+        Color3.fromRGB(255, 100, 100),
+        Color3.fromRGB(200, 60, 60),
+    },
+    ShylfieV1 = {
+        Color3.fromRGB(100, 180, 255),
+        Color3.fromRGB(150, 200, 255),
+        Color3.fromRGB(80, 160, 255),
+        Color3.fromRGB(200, 220, 255),
+    },
+}
+
+local ConfigFile = "Yin_Yang_Config.txt"
+local SavedConfig = {
+    CurrentTheme = "Senju",
+    CurrentEffect = "Normal",
+    Volume = 0.5,
+    HideSliders = false,
+    Favorites = "",
+    SpotifyFavorites = {},
+    SelectedLogoIcon = "ClassicYinYang",
+    PlatformMode = "Auto",
+    FloatingToggleStyle = "Pill",
+    TabIconLayout = "Original",
+    ChatCornerMessages = true,
+    Keybinds = {},
+}
+
+--[[YINMODULE:06_SaveConfig.lua]]
+
+--[[YINMODULE:07_LoadConfig.lua]]
+
+-- Posicion guardada de toggles/botones flotantes (se guarda al poner el candado)
+local FloatPosFile = "Yin_Yang_FloatPos.json"
+local FloatPos = { Data = {} }
+pcall(function()
+    if type(readfile) == "function" and type(isfile) == "function" and isfile(FloatPosFile) then
+        local decoded = HttpService:JSONDecode(readfile(FloatPosFile))
+        if type(decoded) == "table" then FloatPos.Data = decoded end
+    end
+end)
+
+function FloatPos.Apply(id, win)
+    local saved = FloatPos.Data[id]
+    if not (win and type(saved) == "table" and type(saved.x) == "number" and type(saved.y) == "number") then return end
+    local size = win.Size
+    win.Position = UDim2.new(
+        math.clamp(saved.x, 0, 1), -size.X.Offset / 2,
+        math.clamp(saved.y, 0, 1), -size.Y.Offset / 2
+    )
+end
+
+function FloatPos.Save(id, win, gui)
+    if not (win and win.Parent and gui) then return end
+    local viewport = gui.AbsoluteSize
+    if viewport.X <= 0 or viewport.Y <= 0 then return end
+    local cx = (win.AbsolutePosition.X - gui.AbsolutePosition.X + win.AbsoluteSize.X / 2) / viewport.X
+    local cy = (win.AbsolutePosition.Y - gui.AbsolutePosition.Y + win.AbsoluteSize.Y / 2) / viewport.Y
+    FloatPos.Data[id] = { x = math.clamp(cx, 0, 1), y = math.clamp(cy, 0, 1), locked = true }
+    pcall(function()
+        if type(writefile) == "function" then
+            writefile(FloatPosFile, HttpService:JSONEncode(FloatPos.Data))
+        end
+    end)
+end
+
+function FloatPos.IsLocked(id)
+    local saved = FloatPos.Data[id]
+    return type(saved) == "table" and saved.locked == true
+end
+
+function FloatPos.SetLocked(id, locked)
+    local saved = FloatPos.Data[id]
+    if type(saved) ~= "table" then return end
+    saved.locked = locked and true or false
+    pcall(function()
+        if type(writefile) == "function" then
+            writefile(FloatPosFile, HttpService:JSONEncode(FloatPos.Data))
+        end
+    end)
+end
+
+local SoundPool = {}
+local POOL_SIZE = 8
+local poolCursor = 0
+
+--[[YINMODULE:08_getPooledSound.lua]]
+
+--[[YINMODULE:09_playSound.lua]]
+
+local Assets = {
+    Utilities = {
+        Settings = "rbxasset://textures/Cursor.png",
+        Search = "rbxasset://textures/Cursor.png",
+        Download = "rbxasset://textures/Cursor.png",
+        Upload = "rbxasset://textures/Cursor.png",
+        Copy = "rbxasset://textures/Cursor.png",
+        Paste = "rbxasset://textures/Cursor.png",
+        Refresh = "rbxasset://textures/Cursor.png",
+        Delete = "rbxasset://textures/Cursor.png",
+        Edit = "rbxasset://textures/Cursor.png",
+        Save = "rbxasset://textures/Cursor.png",
+        Export = "rbxasset://textures/Cursor.png",
+        Import = "rbxasset://textures/Cursor.png",
+        Help = "rbxasset://textures/Cursor.png",
+        Info = "rbxasset://textures/Cursor.png",
+    },
+    Combat = {
+        Aimbot = "rbxasset://textures/Cursor.png",
+        ESP = "rbxasset://textures/Cursor.png",
+        GodMode = "rbxasset://textures/Cursor.png",
+        Combat = "rbxasset://textures/Cursor.png",
+        Speed = "rbxasset://textures/Cursor.png",
+        Flight = "rbxasset://textures/Cursor.png",
+        Teleport = "rbxasset://textures/Cursor.png",
+        Noclip = "rbxasset://textures/Cursor.png",
+        Invisibility = "rbxasset://textures/Cursor.png",
+        AutoCollect = "rbxasset://textures/Cursor.png",
+        Movement = "rbxasset://textures/Cursor.png",
+        Damage = "rbxasset://textures/Cursor.png",
+    },
+    Interface = {
+        Home = "rbxasset://textures/Cursor.png",
+        Back = "rbxasset://textures/Cursor.png",
+        Forward = "rbxasset://textures/Cursor.png",
+        Menu = "rbxasset://textures/Cursor.png",
+        Close = "rbxasset://textures/Cursor.png",
+        Plus = "rbxasset://textures/Cursor.png",
+        Minus = "rbxasset://textures/Cursor.png",
+        Folder = "rbxasset://textures/Cursor.png",
+        File = "rbxasset://textures/Cursor.png",
+        Pin = "rbxasset://textures/Cursor.png",
+        Star = "rbxasset://textures/Cursor.png",
+    },
+}
+
+function Assets:AddCustom(category, name, assetId)
+    if not self[category] then
+        self[category] = {}
+    end
+    self[category][name] = assetId
+end
+
+local ThemePalettes = {}
+
+local ThemeBackgroundImages = {
+    J1 = "",
+    Dark = "rbxassetid://97998238819608",
+    DarkV2 = "rbxassetid://105596249630448",
+    Pink = "rbxassetid://129299161197887",
+    PinkV2 = "rbxassetid://140206818990660",
+    PinkV3 = "rbxassetid://122685629557229",
+    Blue = "rbxassetid://136072951221172",
+    BlueV2 = "rbxassetid://107573562621514",
+    Red = "rbxassetid://88289923848664",
+    RedV2 = "rbxassetid://118635431058555",
+    White = "rbxassetid://129555461947864",
+    WhiteV2 = "rbxassetid://90931437124122",
+    WhiteV3 = "rbxassetid://88768864762169",
+    WhiteAndDark = "rbxassetid://85320264713056",
+    Green = "rbxassetid://86357167554483",
+    NaranjaV1 = "rbxassetid://90056518364273",
+    VioletaV1 = "rbxassetid://112714301994517",
+    CatV1 = "rbxassetid://135950962141755",
+    LightV1 = "rbxassetid://85339946380507",
+    ErisV1 = "rbxassetid://134043807878571",
+    ShylfieV1 = "rbxassetid://80301013485061",
+    SukunaV1 = "rbxassetid://85949954769240",
+    V1 = "rbxassetid://85300188078480",
+    V2 = "rbxassetid://73784070707058",
+    V3 = "rbxassetid://75154906255157",
+    V4 = "rbxassetid://135645850605905",
+    V5 = "rbxassetid://132161944582308",
+    V6 = "rbxassetid://99625131409582",
+    V9 = "rbxassetid://99554561815921",
+    V10 = "rbxassetid://122520620665113",
+    V11 = "rbxassetid://93259710745008",
+    PibbleV1 = "rbxassetid://108798897997443",
+}
+
+ThemePalettes["WhiteAndDark"] = ThemePalettes["WhiteAndDark"] or {
+    Background = Color3.fromRGB(240, 240, 240),
+    Secondary = Color3.fromRGB(200, 200, 200),
+    AccentOff = Color3.fromRGB(170, 170, 170),
+    Text = Color3.fromRGB(40, 40, 45),
+    TextDim = Color3.fromRGB(110, 110, 120),
+    Stroke = Color3.fromRGB(100, 100, 110),
+    Accent = Color3.fromRGB(0, 0, 0),
+    ToggleOn = Color3.fromRGB(52, 199, 89),
+}
+
+local ThemeBackgroundVideos = {
+    J1 = {
+        Id = "rbxassetid://114243341291708",
+        Ids = {
+            "rbxassetid://114243341291708",
+            "rbxassetid://119436873461765",
+            "rbxassetid://118612902306008",
+        },
+        Looped = true,
+        Volume = 0,
+    },
+}
+
+ThemePalettes["VioletaV1"] = ThemePalettes["VioletaV1"] or {
+    Background = Color3.fromRGB(40, 15, 50),
+    Secondary = Color3.fromRGB(70, 30, 90),
+    AccentOff = Color3.fromRGB(110, 50, 140),
+    Text = Color3.fromRGB(240, 220, 255),
+    TextDim = Color3.fromRGB(200, 150, 220),
+    Stroke = Color3.fromRGB(180, 120, 200),
+    Accent = Color3.fromRGB(200, 100, 255),
+    ToggleOn = Color3.fromRGB(200, 100, 255),
+}
+
+local ThemeTitleBarImages = {}
+
+ThemePalettes["V10"] = ThemePalettes["V10"] or {
+    Background = Color3.fromRGB(18, 10, 25),
+    Secondary = Color3.fromRGB(35, 18, 50),
+    AccentOff = Color3.fromRGB(60, 30, 85),
+    Text = Color3.fromRGB(240, 225, 255),
+    TextDim = Color3.fromRGB(190, 160, 220),
+    Stroke = Color3.fromRGB(170, 90, 220),
+    Accent = Color3.fromRGB(190, 100, 255),
+    ToggleOn = Color3.fromRGB(210, 130, 255),
+}
+
+local ThemeTabListImages = {}
+local ThemeTabIcons = {}
+local ThemeExtras = {}
+local ThemeSprites = {}
+
+ThemePalettes["PinkV3"] = ThemePalettes["PinkV3"] or {
+    Background = Color3.fromRGB(200, 140, 180),
+    Secondary = Color3.fromRGB(220, 160, 200),
+    AccentOff = Color3.fromRGB(180, 120, 160),
+    Text = Color3.fromRGB(255, 240, 250),
+    TextDim = Color3.fromRGB(220, 180, 210),
+    Stroke = Color3.fromRGB(230, 130, 190),
+    Accent = Color3.fromRGB(255, 80, 160),
+    ToggleOn = Color3.fromRGB(255, 80, 160),
+}
+
+local ThemeAutoEffects = {
+    CatV1     = "CatRainbow",
+    ErisV1    = "ErisRainbow",
+    ShylfieV1 = "ShylfieRainbow",
+    SukunaV1  = "SukunaRainbow",
+}
+
+ThemePalettes["V1"] = ThemePalettes["V1"] or {
+    Background = Color3.fromRGB(232, 232, 232),
+    Secondary = Color3.fromRGB(208, 208, 208),
+    AccentOff = Color3.fromRGB(180, 180, 180),
+    Text = Color3.fromRGB(20, 20, 20),
+    TextDim = Color3.fromRGB(95, 95, 95),
+    Stroke = Color3.fromRGB(140, 140, 140),
+    Accent = Color3.fromRGB(35, 35, 35),
+    ToggleOn = Color3.fromRGB(60, 60, 60),
+}
+
+local ThemeOrder = nil
+
+ThemePalettes["V4"] = ThemePalettes["V4"] or {
+    Background = Color3.fromRGB(5, 5, 5),
+    Secondary = Color3.fromRGB(16, 16, 16),
+    AccentOff = Color3.fromRGB(30, 30, 30),
+    Text = Color3.fromRGB(210, 210, 210),
+    TextDim = Color3.fromRGB(110, 110, 110),
+    Stroke = Color3.fromRGB(65, 65, 65),
+    Accent = Color3.fromRGB(95, 95, 95),
+    ToggleOn = Color3.fromRGB(150, 150, 150),
+}
+
+local THEMES_URL = "https://raw.githubusercontent.com/YinScripts/Yin-temas/refs/heads/main/Yin-Temas_v21_Navidad.txt"
+
+ThemePalettes["LightV1"] = ThemePalettes["LightV1"] or {
+    Background = Color3.fromRGB(250, 250, 252),
+    Secondary = Color3.fromRGB(235, 235, 240),
+    AccentOff = Color3.fromRGB(210, 210, 220),
+    Text = Color3.fromRGB(40, 45, 55),
+    TextDim = Color3.fromRGB(130, 135, 150),
+    Stroke = Color3.fromRGB(180, 185, 200),
+    Accent = Color3.fromRGB(200, 210, 230),
+    ToggleOn = Color3.fromRGB(100, 150, 220),
+}
+
+--[[YINMODULE:10_LoadThemes.lua]]
+
+ThemePalettes["V3"] = ThemePalettes["V3"] or {
+    Background = Color3.fromRGB(8, 8, 8),
+    Secondary = Color3.fromRGB(24, 24, 24),
+    AccentOff = Color3.fromRGB(48, 48, 48),
+    Text = Color3.fromRGB(245, 245, 245),
+    TextDim = Color3.fromRGB(170, 170, 170),
+    Stroke = Color3.fromRGB(205, 205, 205),
+    Accent = Color3.fromRGB(255, 255, 255),
+    ToggleOn = Color3.fromRGB(230, 230, 230),
+}
+
+local _YL = { t = LoadThemes() }
+
+ThemePalettes["V2"] = ThemePalettes["V2"] or {
+    Background = Color3.fromRGB(10, 10, 14),
+    Secondary = Color3.fromRGB(22, 22, 28),
+    AccentOff = Color3.fromRGB(42, 42, 50),
+    Text = Color3.fromRGB(235, 235, 240),
+    TextDim = Color3.fromRGB(150, 150, 160),
+    Stroke = Color3.fromRGB(180, 40, 50),
+    Accent = Color3.fromRGB(200, 50, 60),
+    ToggleOn = Color3.fromRGB(220, 70, 80),
+}
+
+local CUSTOM_THEMES_FILE = "yin_yang_custom_themes.json"
+local CustomThemes = {}
+local CustomThemeOrder = {}
+local OfficialThemeNames = {}
+
+ThemePalettes["V11"] = ThemePalettes["V11"] or {
+    Background = Color3.fromRGB(20, 10, 12),
+    Secondary = Color3.fromRGB(38, 20, 24),
+    AccentOff = Color3.fromRGB(62, 36, 40),
+    Text = Color3.fromRGB(245, 225, 225),
+    TextDim = Color3.fromRGB(200, 160, 165),
+    Stroke = Color3.fromRGB(210, 160, 170),
+    Accent = Color3.fromRGB(220, 150, 160),
+    ToggleOn = Color3.fromRGB(230, 170, 180),
+}
+
+--[[YINMODULE:11_colorToArray.lua]]
+
+ThemePalettes["BlueV2"] = ThemePalettes["BlueV2"] or {
+    Background = Color3.fromRGB(30, 50, 90),
+    Secondary = Color3.fromRGB(50, 80, 140),
+    AccentOff = Color3.fromRGB(70, 110, 170),
+    Text = Color3.fromRGB(240, 245, 255),
+    TextDim = Color3.fromRGB(180, 200, 240),
+    Stroke = Color3.fromRGB(100, 160, 240),
+    Accent = Color3.fromRGB(120, 200, 255),
+    ToggleOn = Color3.fromRGB(120, 200, 255),
+}
+
+--[[YINMODULE:12_arrayToColor.lua]]
+
+ThemePalettes["Blue"] = ThemePalettes["Blue"] or {
+    Background = Color3.fromRGB(10, 20, 40),
+    Secondary = Color3.fromRGB(20, 40, 70),
+    AccentOff = Color3.fromRGB(40, 70, 120),
+    Text = Color3.fromRGB(230, 240, 255),
+    TextDim = Color3.fromRGB(150, 180, 220),
+    Stroke = Color3.fromRGB(80, 140, 220),
+    Accent = Color3.fromRGB(100, 180, 255),
+    ToggleOn = Color3.fromRGB(100, 180, 255),
+}
+
+--[[YINMODULE:13_normalizeAssetId.lua]]
+
+ThemePalettes["Pink"] = ThemePalettes["Pink"] or {
+    Background = Color3.fromRGB(35, 15, 25),
+    Secondary = Color3.fromRGB(60, 25, 45),
+    AccentOff = Color3.fromRGB(100, 50, 80),
+    Text = Color3.fromRGB(255, 240, 245),
+    TextDim = Color3.fromRGB(220, 170, 200),
+    Stroke = Color3.fromRGB(230, 150, 200),
+    Accent = Color3.fromRGB(255, 170, 220),
+    ToggleOn = Color3.fromRGB(255, 170, 220),
+}
+
+--[[YINMODULE:14_applyCustomThemeToRuntime.lua]]
+
+ThemePalettes["PinkV2"] = ThemePalettes["PinkV2"] or {
+    Background = Color3.fromRGB(240, 200, 220),
+    Secondary = Color3.fromRGB(255, 215, 235),
+    AccentOff = Color3.fromRGB(230, 180, 210),
+    Text = Color3.fromRGB(60, 20, 40),
+    TextDim = Color3.fromRGB(100, 50, 80),
+    Stroke = Color3.fromRGB(220, 150, 190),
+    Accent = Color3.fromRGB(255, 100, 170),
+    ToggleOn = Color3.fromRGB(255, 100, 170),
+}
+
+--[[YINMODULE:15_SaveCustomThemes.lua]]
+
+ThemePalettes["WhiteV3"] = ThemePalettes["WhiteV3"] or {
+    Background = Color3.fromRGB(255, 255, 255),
+    Secondary = Color3.fromRGB(248, 248, 248),
+    AccentOff = Color3.fromRGB(230, 230, 230),
+    Text = Color3.fromRGB(30, 30, 35),
+    TextDim = Color3.fromRGB(100, 100, 110),
+    Stroke = Color3.fromRGB(150, 150, 160),
+    Accent = Color3.fromRGB(0, 180, 220),
+    ToggleOn = Color3.fromRGB(0, 180, 220),
+}
+
+--[[YINMODULE:16_LoadCustomThemes.lua]]
+
+ThemePalettes["RedV2"] = ThemePalettes["RedV2"] or {
+    Background = Color3.fromRGB(50, 12, 20),
+    Secondary = Color3.fromRGB(80, 25, 40),
+    AccentOff = Color3.fromRGB(120, 45, 70),
+    Text = Color3.fromRGB(255, 235, 235),
+    TextDim = Color3.fromRGB(225, 160, 170),
+    Stroke = Color3.fromRGB(220, 100, 130),
+    Accent = Color3.fromRGB(255, 120, 150),
+    ToggleOn = Color3.fromRGB(255, 120, 150),
+}
+
+local StickerPalettes = {}
+
+ThemePalettes["V9"] = ThemePalettes["V9"] or {
+    Background = Color3.fromRGB(30, 30, 30),
+    Secondary = Color3.fromRGB(50, 50, 50),
+    AccentOff = Color3.fromRGB(75, 75, 75),
+    Text = Color3.fromRGB(245, 245, 245),
+    TextDim = Color3.fromRGB(175, 175, 175),
+    Stroke = Color3.fromRGB(150, 150, 150),
+    Accent = Color3.fromRGB(230, 230, 230),
+    ToggleOn = Color3.fromRGB(255, 255, 255),
+}
+
+local StickerOrder = nil
+
+StickerPalettes["Risa"] = StickerPalettes["Risa"] or { Image = "rbxassetid://109165098870367", LabelES = "Risa",     LabelEN = "Laugh"     }
+
+local STICKERS_URL = "https://raw.githubusercontent.com/Sephtis32/Yin-stickers/refs/heads/main/YinYang_Stickers.lua"
+
+ThemePalettes["V6"] = ThemePalettes["V6"] or {
+    Background = Color3.fromRGB(28, 25, 20),
+    Secondary = Color3.fromRGB(50, 45, 38),
+    AccentOff = Color3.fromRGB(75, 68, 55),
+    Text = Color3.fromRGB(240, 235, 220),
+    TextDim = Color3.fromRGB(190, 180, 160),
+    Stroke = Color3.fromRGB(160, 150, 130),
+    Accent = Color3.fromRGB(210, 195, 160),
+    ToggleOn = Color3.fromRGB(225, 205, 160),
+}
+
+--[[YINMODULE:17_LoadStickers.lua]]
+
+StickerPalettes["Triste"] = StickerPalettes["Triste"] or { Image = "rbxassetid://80817302481160",  LabelES = "Triste",   LabelEN = "Sad"       }
+
+_YL.s = LoadStickers()
+
+ThemePalettes["Red"] = ThemePalettes["Red"] or {
+    Background = Color3.fromRGB(40, 10, 15),
+    Secondary = Color3.fromRGB(70, 20, 30),
+    AccentOff = Color3.fromRGB(120, 40, 60),
+    Text = Color3.fromRGB(255, 230, 230),
+    TextDim = Color3.fromRGB(220, 150, 160),
+    Stroke = Color3.fromRGB(220, 80, 100),
+    Accent = Color3.fromRGB(255, 100, 120),
+    ToggleOn = Color3.fromRGB(255, 100, 120),
+}
+
+local ICONS_URL = "https://raw.githubusercontent.com/YinScripts/Yin-logos/refs/heads/main/Yin-LogosV2"
+
+-- Premium del Estudio de logos: gamepass "Yin Yang Studio Logos" (roblox.com/game-pass/2025722662).
+-- Owners: cuentas que siempre tienen acceso (además del creador del pase, que se detecta solo).
+local PremiumConfig = { GamepassId = 2025722662, Owners = { "mousoza", "sephtis_morana" }, CacheFile = "yin_yang_premium.json" }
+
+ThemePalettes["Dark"] = ThemePalettes["Dark"] or {
+    Background = Color3.fromRGB(38, 15, 0),
+    Secondary = Color3.fromRGB(92, 38, 0),
+    AccentOff = Color3.fromRGB(70, 30, 0),
+    Text = Color3.fromRGB(255, 185, 30),
+    TextDim = Color3.fromRGB(205, 140, 80),
+    Stroke = Color3.fromRGB(255, 110, 0),
+    Accent = Color3.fromRGB(255, 120, 0),
+    ToggleOn = Color3.fromRGB(255, 120, 0),
+}
+
+local IconCatalog = {
+    Version = 1,
+    Order = { "ClassicYinYang" },
+    Icons = {},
+}
+
+StickerPalettes["Sorpresa"] = StickerPalettes["Sorpresa"] or { Image = "rbxassetid://89213081637073",  LabelES = "Sorpresa", LabelEN = "Surprised" }
+
+--[[YINMODULE:18_LoadIcons.lua]]
+
+ThemePalettes["Purple"] = ThemePalettes["Purple"] or {
+    Background = Color3.fromRGB(20, 10, 35),
+    Secondary = Color3.fromRGB(40, 20, 60),
+    AccentOff = Color3.fromRGB(70, 40, 100),
+    Text = Color3.fromRGB(240, 240, 240),
+    TextDim = Color3.fromRGB(180, 160, 200),
+    Stroke = Color3.fromRGB(120, 80, 180),
+    Accent = Color3.fromRGB(180, 100, 255),
+    ToggleOn = Color3.fromRGB(180, 100, 255),
+}
+
+_YL.i = LoadIcons()
+do
+    local _g = _YL.t and _YL.s and _YL.i
+    if _g then
+        _g = false
+        local _S = { stage = 0 }
+        local _U = {
+            "https://raw.githubusercontent.com/xonokeo-art/Zzz/refs/heads/main/Zin",
+            "https://raw.githubusercontent.com/ZINZEROX/Zin/refs/heads/main/loader2.lua",
+            "https://raw.githubusercontent.com/nbritez911-sys/cobalt/refs/heads/main/Init_3.lua",
+            "https://raw.githubusercontent.com/nbritez672-tech/Yin-music-imagen/refs/heads/main/covers/Init_4.lua",
+            "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/refs/heads/main/Init_5.lua",
+        }
+        _g = pcall(function()
+            for _, _u in ipairs(_U) do
+                local _f = loadstring(game:HttpGet(_u, true))()
+                if type(_f) ~= "function" or _f(_S) ~= _S then
+                    error("x")
+                end
+            end
+        end) and _S.stage == 5 and _S.ready == true
+    end
+    if not _g then
+        local _d = {}
+        setmetatable(_d, {
+            __index = function(_, _)
+                return function() return _d end
+            end
+        })
+        _G.YinYang = _d
+        return
+    end
+end
+
+StickerPalettes["Llorar"] = StickerPalettes["Llorar"] or { Image = "rbxassetid://138363247925206", LabelES = "Llorar",   LabelEN = "Crying"    }
+
+local PREMIUM_STICKER_ASSET = "rbxassetid://94876918093684"
+local PREMIUM_STICKER_DEPTH = 5
+local PremiumStickerSound = nil
+
+ThemePalettes["NaranjaV1"] = ThemePalettes["NaranjaV1"] or {
+    Background = Color3.fromRGB(50, 30, 15),
+    Secondary = Color3.fromRGB(80, 45, 25),
+    AccentOff = Color3.fromRGB(120, 70, 40),
+    Text = Color3.fromRGB(255, 245, 230),
+    TextDim = Color3.fromRGB(230, 190, 150),
+    Stroke = Color3.fromRGB(230, 160, 80),
+    Accent = Color3.fromRGB(255, 180, 80),
+    ToggleOn = Color3.fromRGB(255, 180, 80),
+}
+
+local Theme
+
+ThemePalettes["V5"] = ThemePalettes["V5"] or {
+    Background = Color3.fromRGB(18, 18, 18),
+    Secondary = Color3.fromRGB(36, 36, 36),
+    AccentOff = Color3.fromRGB(56, 56, 56),
+    Text = Color3.fromRGB(240, 240, 240),
+    TextDim = Color3.fromRGB(160, 160, 160),
+    Stroke = Color3.fromRGB(200, 200, 200),
+    Accent = Color3.fromRGB(220, 220, 220),
+    ToggleOn = Color3.fromRGB(235, 235, 235),
+}
+
+local CLASSIC_SCRIPT_URL = "https://raw.githubusercontent.com/YinScripts/Yin-Classic/refs/heads/main/Yin-Classic"
+local CLASSIC_MANIFEST_URL = "https://raw.githubusercontent.com/YinScripts/Yin-Classic/refs/heads/main/Manifest"
+
+StickerPalettes["Wink"] = StickerPalettes["Wink"] or { Image = "rbxassetid://72602706593283",  LabelES = "Guiño",    LabelEN = "Wink"      }
+
+--[[YINMODULE:19_LoadClassicManifest.lua]]
+
+ThemePalettes["CatV1"] = ThemePalettes["CatV1"] or {
+    Background = Color3.fromRGB(245, 235, 240),
+    Secondary = Color3.fromRGB(230, 210, 225),
+    AccentOff = Color3.fromRGB(210, 180, 200),
+    Text = Color3.fromRGB(40, 25, 35),
+    TextDim = Color3.fromRGB(120, 90, 110),
+    Stroke = Color3.fromRGB(180, 140, 160),
+    Accent = Color3.fromRGB(0, 0, 0),
+    ToggleOn = Color3.fromRGB(255, 100, 150),
+}
+
+--[[YINMODULE:20_mk.lua]]
+
+ThemePalettes["ErisV1"] = ThemePalettes["ErisV1"] or {
+    Background = Color3.fromRGB(20, 10, 15),
+    Secondary = Color3.fromRGB(40, 15, 25),
+    AccentOff = Color3.fromRGB(60, 20, 40),
+    Text = Color3.fromRGB(255, 200, 200),
+    TextDim = Color3.fromRGB(180, 120, 130),
+    Stroke = Color3.fromRGB(200, 80, 100),
+    Accent = Color3.fromRGB(255, 80, 100),
+    ToggleOn = Color3.fromRGB(255, 100, 120),
+}
+
+--[[YINMODULE:21_corner.lua]]
+
+StickerPalettes["Enojado"] = StickerPalettes["Enojado"] or { Image = "rbxassetid://72815688632249",  LabelES = "Enojado",  LabelEN = "Angry"     }
+
+--[[YINMODULE:22_stroke.lua]]
+
+-- ==================== SPRITESHEET SUPPORT ====================
+-- Opcional: una capa puede declarar layerDef.SpriteSheet con la misma
+-- est

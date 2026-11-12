@@ -1,0 +1,1008 @@
+ * step
+                            local distance = math.abs(i - Carousel.ActiveIndex)
+                            local targetX = centerX + offset
+                            local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
+                            local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
+                            local targetY = 4 + (cardHeight - targetHeight) * 0.5
+                            local isActive = distance == 0
+
+                            TweenService:Create(
+                                card,
+                                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                {
+                                    Position = UDim2.new(0, targetX, 0, targetY),
+                                    Size = UDim2.new(0, targetWidth, 0, targetHeight),
+                                    BackgroundTransparency = isActive and 0.12 or 0.72
+                                }
+                            ):Play()
+                            card.ZIndex = isActive and 50 or 20 - math.min(distance, 4)
+                            for _, descendant in ipairs(card:GetDescendants()) do
+                                if descendant:IsA("GuiObject") then
+                                    descendant.ZIndex = isActive and 51 or 21 - math.min(distance, 4)
+                                end
+                                if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
+                                    descendant.TextTransparency = isActive and 0 or 0.35
+                                elseif descendant:IsA("ImageLabel") or descendant:IsA("ImageButton") then
+                                    descendant.ImageTransparency = isActive and 0 or 0.35
+                                end
+                            end
+                        end
+                    end
+                    refreshDots()
+                end
+                Carousel.Reflow = reflow
+
+                local function goTo(index)
+                    local count = #Carousel.Cards
+                    if count == 0 then return end
+                    Carousel.ActiveIndex = math.clamp(index, 1, count)
+                    reflow()
+                end
+                Carousel.GoTo = goTo
+
+                PrevBtn.MouseButton1Click:Connect(function()
+                    goTo(Carousel.ActiveIndex - 1)
+                end)
+                NextBtn.MouseButton1Click:Connect(function()
+                    goTo(Carousel.ActiveIndex + 1)
+                end)
+
+                local swipeStartX = nil
+                Viewport.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch then
+                        swipeStartX = input.Position.X
+                    end
+                end)
+                Viewport.InputEnded:Connect(function(input)
+                    if swipeStartX and (input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch) then
+                        local deltaX = input.Position.X - swipeStartX
+                        swipeStartX = nil
+                        if math.abs(deltaX) >= 45 then
+                            if deltaX < 0 then
+                                goTo(Carousel.ActiveIndex + 1)
+                            else
+                                goTo(Carousel.ActiveIndex - 1)
+                            end
+                        end
+                    end
+                end)
+
+                Carousel._resizeConnection = Viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(reflow)
+            end
+
+            local Holder = mk("Frame", {
+                Parent = Carousel.Viewport,
+                Size = UDim2.new(0, 300, 0, 96),
+                Position = UDim2.new(0, 0, 0, 10),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.72,
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+                Active = true,
+                ZIndex = 53
+            })
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            Holder:SetAttribute("IsSliderHolder", true)
+            corner(Holder, 14)
+            stroke(Holder, Theme.Stroke, 1.5, 0.45)
+            buildAnimatedBorder(Holder, Theme.Border, UDim.new(0, 14), true)
+            Holder.Visible = not SlidersHidden
+
+            table.insert(Carousel.Cards, {Holder = Holder})
+
+            local dot = mk("Frame", {
+                Parent = Carousel.DotHolder,
+                Size = UDim2.new(0, 7, 0, 7),
+                BackgroundColor3 = Theme.AccentOff,
+                BackgroundTransparency = 0.35,
+                BorderSizePixel = 0,
+                LayoutOrder = #Carousel.Dots + 1,
+                ZIndex = 31
+            })
+            corner(dot, 4)
+            table.insert(Carousel.Dots, dot)
+
+            Holder.Destroying:Connect(function()
+                for i, cardData in ipairs(Carousel.Cards) do
+                    if cardData.Holder == Holder then
+                        table.remove(Carousel.Cards, i)
+                        break
+                    end
+                end
+                if Carousel.ActiveIndex > #Carousel.Cards then
+                    Carousel.ActiveIndex = math.max(1, #Carousel.Cards)
+                end
+                for i, existingDot in ipairs(Carousel.Dots) do
+                    if existingDot == dot then
+                        table.remove(Carousel.Dots, i)
+                        pcall(function() existingDot:Destroy() end)
+                        break
+                    end
+                end
+                if Carousel.Reflow then Carousel.Reflow() end
+            end)
+
+            Carousel.Reflow()
+
+            local LabelTxt = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -154, 0, 22),
+                Position = UDim2.new(0, 18, 0, 12),
+                BackgroundTransparency = 1,
+                Text = text,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 16
+            })
+            LabelTxt:SetAttribute("ThemeRole", "Text")
+
+            local ValueLabel = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(0, 58, 0, 22),
+                Position = UDim2.new(1, -146, 0, 12),
+                BackgroundTransparency = 1,
+                Text = tostring(math.floor(value * 100) / 100),
+                TextColor3 = Theme.Accent,
+                Font = Enum.Font.GothamBold,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                ZIndex = 51
+            })
+            ValueLabel:SetAttribute("ThemeRole", "Accent")
+
+            local MinLabel = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(0, 55, 0, 15),
+                Position = UDim2.new(0, 18, 1, -22),
+                BackgroundTransparency = 1,
+                Text = tostring(min),
+                TextColor3 = Theme.AccentOff,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 16
+            })
+            MinLabel:SetAttribute("ThemeRole", "AccentOff")
+
+            local MaxLabel = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(0, 55, 0, 15),
+                Position = UDim2.new(1, -73, 1, -22),
+                BackgroundTransparency = 1,
+                Text = tostring(max),
+                TextColor3 = Theme.AccentOff,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                ZIndex = 16
+            })
+            MaxLabel:SetAttribute("ThemeRole", "AccentOff")
+
+            local SliderBackground = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(1, -36, 0, 6),
+                Position = UDim2.new(0, 18, 0, 62),
+                BackgroundColor3 = Theme.SliderTrack,
+                BackgroundTransparency = 0.18,
+                BorderSizePixel = 0,
+                Active = true,
+                ZIndex = 51
+            })
+            SliderBackground:SetAttribute("ThemeRole", "SliderTrack")
+            corner(SliderBackground, 3)
+
+            local SliderFill = mk("Frame", {
+                Parent = SliderBackground,
+                Size = UDim2.new(0, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0, 0),
+                BackgroundColor3 = Theme.SliderFill,
+                BorderSizePixel = 0,
+                ZIndex = 52
+            })
+            SliderFill:SetAttribute("ThemeRole", "SliderFill")
+            corner(SliderFill, 3)
+
+            local SliderThumb = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 18, 0, 26),
+                Position = UDim2.new(0, 18, 0, 57),
+                BackgroundColor3 = Theme.SliderThumb,
+                BorderSizePixel = 0,
+                Active = true,
+                ZIndex = 53
+            })
+            SliderThumb:SetAttribute("ThemeRole", "SliderThumb")
+            corner(SliderThumb, 9)
+            stroke(SliderThumb, Theme.Stroke, 1, 0.55)
+
+            local ThumbGlow = mk("Frame", {
+                Parent = SliderThumb,
+                Size = UDim2.new(1, 8, 1, 8),
+                Position = UDim2.new(0, -4, 0, -4),
+                BackgroundColor3 = Theme.SliderThumb,
+                BackgroundTransparency = 0.76,
+                BorderSizePixel = 0,
+                ZIndex = 52
+            })
+            ThumbGlow:SetAttribute("ThemeRole", "SliderThumb")
+            corner(ThumbGlow, 12)
+
+            local function UpdateSlider(percentage, commit, animate)
+                percentage = math.clamp(percentage, 0, 1)
+                pendingValue = min + (max - min) * percentage
+                if commit then
+                    value = pendingValue
+                end
+
+                local barWidth = SliderBackground.AbsoluteSize.X
+                local targetSize = UDim2.new(percentage, 0, 1, 0)
+                local thumbTarget = UDim2.new(0, 18 + barWidth * percentage - 9, 0, 57)
+
+                if animate then
+                    TweenService:Create(SliderFill, TweenInfo.new(0.05), {Size = targetSize}):Play()
+                    TweenService:Create(
+                        SliderThumb,
+                        TweenInfo.new(0.04, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Position = thumbTarget}
+                    ):Play()
+                    TweenService:Create(
+                        ThumbGlow,
+                        TweenInfo.new(0.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {BackgroundTransparency = 0.4}
+                    ):Play()
+                else
+                    SliderFill.Size = targetSize
+                    SliderThumb.Position = thumbTarget
+                    ThumbGlow.BackgroundTransparency = 0.4
+                end
+
+                ValueLabel.Text = tostring(math.floor(pendingValue * 100) / 100)
+
+                if commit then
+                    task.spawn(function()
+                        pcall(callback, value)
+                    end)
+                end
+            end
+
+            local function isThisCardActive()
+                for i, cardData in ipairs(Carousel.Cards) do
+                    if cardData.Holder == Holder then
+                        return i == Carousel.ActiveIndex
+                    end
+                end
+                return false
+            end
+
+            local function OnSliderClick(input)
+                if not isThisCardActive() then return end
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = true
+                    TweenService:Create(
+                        SliderThumb,
+                        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 21, 0, 30)}
+                    ):Play()
+                end
+            end
+
+            local function OnSliderRelease(input)
+                if isDragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                    local percentage = math.clamp((pendingValue - min) / (max - min), 0, 1)
+                    isDragging = false
+                    UpdateSlider(percentage, true, true)
+                    TweenService:Create(
+                        SliderThumb,
+                        TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Size = UDim2.new(0, 18, 0, 26)}
+                    ):Play()
+
+                    playSound(Sounds.Click, 0.5)
+
+                    TweenService:Create(
+                        ThumbGlow,
+                        TweenInfo.new(0.3, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut),
+                        {BackgroundTransparency = 0.76}
+                    ):Play()
+                end
+            end
+
+            SliderBackground.InputBegan:Connect(OnSliderClick)
+            SliderThumb.InputBegan:Connect(OnSliderClick)
+
+            track(UserInputService.InputChanged:Connect(function(input)
+                if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local currentTime = tick()
+                    if currentTime - lastUpdateTime >= UPDATE_THROTTLE then
+                        lastUpdateTime = currentTime
+
+                        local relativeX = input.Position.X - SliderBackground.AbsolutePosition.X
+                        local barWidth = SliderBackground.AbsoluteSize.X
+                        local percentage = math.clamp(relativeX / barWidth, 0, 1)
+
+                        UpdateSlider(percentage, false, false)
+                    end
+                end
+            end))
+
+            track(UserInputService.InputEnded:Connect(OnSliderRelease))
+
+            track(SliderBackground:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                local currentPercentage = math.clamp((value - min) / (max - min), 0, 1)
+                local barWidth = SliderBackground.AbsoluteSize.X
+                local thumbTargetX = 18 + barWidth * currentPercentage - 9
+                SliderThumb.Position = UDim2.new(0, thumbTargetX, 0, 57)
+            end))
+
+            local initialPercentage = (value - min) / (max - min)
+            task.defer(function()
+                if Holder.Parent then
+                    UpdateSlider(initialPercentage)
+                end
+            end)
+
+            local resetRotation = 0
+            local ResetBtn = nil
+            local function doReset()
+                value = default or min
+                UpdateSlider((value - min) / (max - min))
+                if ResetBtn then
+                    playSound(Sounds.Click, 0.5)
+                    resetRotation = resetRotation + 360
+                    TweenService:Create(
+                        ResetBtn,
+                        TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {Rotation = resetRotation}
+                    ):Play()
+                end
+            end
+
+            if not isMirror then
+                ResetBtn = mk("ImageButton", {
+                    Parent = Holder,
+                    Size = UDim2.new(0, 18, 0, 18),
+                    Position = UDim2.new(1, -82, 0, 12),
+                    BackgroundTransparency = 1,
+                    Image = "rbxassetid://98954218682855",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 20
+                })
+                ResetBtn.MouseButton1Click:Connect(doReset)
+
+                local favId = nameSpanish .. "::" .. text
+                local isFavorite = SavedFavoriteIds[favId] or false
+                local FavBtn = mk("ImageButton", {
+                    Parent = Holder,
+                    Size = UDim2.new(0, 22, 0, 22),
+                    Position = UDim2.new(1, -52, 0, 10),
+                    BackgroundTransparency = 1,
+                    Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 20
+                })
+
+                local favRow = nil
+                local function syncFavoriteRow()
+                    if favRow then
+                        pcall(function() favRow.Holder:Destroy() end)
+                        favRow = nil
+                    end
+                    if isFavorite and AutoTabFavoritosRef then
+                        favRow = AutoTabFavoritosRef:CreateSlider(text, min, max, value, function(newVal)
+                            value = newVal
+                            UpdateSlider((value - min) / (max - min))
+                            pcall(callback, newVal)
+                        end, true)
+                    end
+                end
+                syncFavoriteRow()
+
+                FavBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.5)
+                    isFavorite = not isFavorite
+                    FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                    SavedFavoriteIds[favId] = isFavorite or nil
+                    syncFavoriteRow()
+                    SyncFavoritesToConfig()
+                end)
+            end
+
+            Carousel.Reflow()
+
+            if not isMirror then
+                Window._RegisterGlobalOption(self, {
+                    Id = nameSpanish .. "::" .. text,
+                    NameSpanish = text,
+                    NameEnglish = text,
+                    Holder = Holder,
+                    Kind = "Slider",
+                    GetValue = function() return value end,
+                    SetValue = function(v)
+                        local pct = math.clamp((v - min) / math.max(max - min, 0.0001), 0, 1)
+                        UpdateSlider(pct, true, false)
+                    end,
+                    Min = min,
+                    Max = max,
+                })
+            end
+
+            resetScrollTop(TabPage)
+
+            return {
+                Holder = Holder,
+                Set = function(newValue)
+                    value = math.clamp(newValue, min, max)
+                    UpdateSlider((value - min) / (max - min))
+                end,
+                Get = function()
+                    return value
+                end,
+                Reset = function()
+                    doReset()
+                end,
+                SetMin = function(newMin)
+                    min = newMin
+                    MinLabel.Text = tostring(min)
+                end,
+                SetMax = function(newMax)
+                    max = newMax
+                    MaxLabel.Text = tostring(max)
+                end,
+                _labelES = text,
+                _labelEN = text,
+                _min = min,
+                _max = max,
+                _value = value,
+                _callback = callback,
+            }
+        end
+
+        function Tab:CreateButton(textSpanish, textEnglishOrCallback, callbackOrIcon, iconAsset)
+            local contentParent = self._ContentParent or TabPage
+            local textEnglish = textSpanish
+            local callback, icon
+
+            if type(textEnglishOrCallback) == "string" then
+                textEnglish = textEnglishOrCallback
+                callback = callbackOrIcon
+                icon = iconAsset
+            else
+                callback = textEnglishOrCallback
+                icon = callbackOrIcon
+            end
+
+            local displayText = GetText(textSpanish, textEnglish)
+            local iconAsset = icon
+
+            local BtnWrapper = mk("Frame", {
+                Size = UDim2.new(1, 0, 0, 40),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+                ZIndex = 9
+            }, contentParent)
+            corner(BtnWrapper, 12)
+
+            local Btn = mk("TextButton", {
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Theme.Secondary,
+                Text = iconAsset and "" or displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 14,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 9
+            }, BtnWrapper)
+            Btn:SetAttribute("ThemeRole", "Secondary")
+            corner(Btn, 12)
+            stroke(BtnWrapper, Theme.Stroke, 1, 0.6)
+            mk("UIGradient", {
+                Rotation = 90,
+                Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0),
+                    NumberSequenceKeypoint.new(1, 0.2),
+                }),
+            }, Btn)
+            local BtnChevron = mk("TextLabel", {
+                Parent = Btn,
+                Size = UDim2.new(0, 20, 1, 0),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -10, 0, 0),
+                BackgroundTransparency = 1,
+                Text = "›",
+                TextColor3 = Theme.Accent,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 22,
+                ZIndex = 10,
+            })
+            BtnChevron:SetAttribute("ThemeTextRole", "Accent")
+            BtnChevron:SetAttribute("IgnoreTextEffect", true)
+            if contentParent == TabPage then resetScrollTop(TabPage) end
+
+            if iconAsset then
+                mk("ImageLabel", {
+                    Parent = Btn,
+                    Size = UDim2.new(0, 20, 0, 20),
+                    Position = UDim2.new(0, 8, 0.5, -10),
+                    BackgroundTransparency = 1,
+                    Image = iconAsset,
+                    ZIndex = 10
+                })
+                local BtnLabel = mk("TextLabel", {
+                    Parent = Btn,
+                    Size = UDim2.new(1, -40, 1, 0),
+                    Position = UDim2.new(0, 32, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = displayText,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 10
+                })
+                BtnLabel:SetAttribute("ThemeTextRole", "Text")
+                BtnLabel:SetAttribute("TextSpanish", textSpanish)
+                BtnLabel:SetAttribute("TextEnglish", textEnglish)
+            else
+                Btn:SetAttribute("TextSpanish", textSpanish)
+                Btn:SetAttribute("TextEnglish", textEnglish)
+            end
+
+            local function spawnRipple(inputPosition)
+                local btnPos = Btn.AbsolutePosition
+                local btnSize = Btn.AbsoluteSize
+                local relX = inputPosition.X - btnPos.X
+                local relY = inputPosition.Y - btnPos.Y
+
+                local dX = math.max(relX, btnSize.X - relX)
+                local dY = math.max(relY, btnSize.Y - relY)
+                local maxRadius = math.sqrt(dX * dX + dY * dY) * 2.1
+
+                local Ripple = Instance.new("Frame")
+                Ripple.Name = "LiquidRipple"
+                Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+                Ripple.BackgroundColor3 = Theme.Accent
+                Ripple.BackgroundTransparency = 0.55
+                Ripple.BorderSizePixel = 0
+                Ripple.Size = UDim2.fromOffset(1, 1)
+                Ripple.Position = UDim2.fromOffset(relX, relY)
+                Ripple.ZIndex = 11
+                Ripple.Parent = BtnWrapper
+
+                local rippleCorner = Instance.new("UICorner")
+                rippleCorner.CornerRadius = UDim.new(1, 0)
+                rippleCorner.Parent = Ripple
+
+                local expandTween = TweenService:Create(
+                    Ripple,
+                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {
+                        Size = UDim2.fromOffset(maxRadius, maxRadius),
+                        BackgroundTransparency = 0.72,
+                    }
+                )
+                expandTween:Play()
+
+                expandTween.Completed:Connect(function()
+                    local fadeTween = TweenService:Create(
+                        Ripple,
+                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 1 }
+                    )
+                    fadeTween:Play()
+                    fadeTween.Completed:Connect(function()
+                        pcall(function() Ripple:Destroy() end)
+                    end)
+                end)
+            end
+
+            track(Btn.MouseEnter:Connect(function()
+                TweenService:Create(
+                    Btn,
+                    TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.28 }
+                ):Play()
+            end))
+
+            track(Btn.MouseLeave:Connect(function()
+                TweenService:Create(
+                    Btn,
+                    TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0 }
+                ):Play()
+            end))
+
+            track(Btn.InputBegan:Connect(function(input2)
+                if input2.UserInputType == Enum.UserInputType.Touch then
+                    TweenService:Create(Btn, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 0.38 }):Play()
+                end
+            end))
+
+            track(Btn.InputEnded:Connect(function(input2)
+                if input2.UserInputType == Enum.UserInputType.Touch then
+                    TweenService:Create(Btn, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 0 }):Play()
+                end
+            end))
+
+            track(Btn.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                    spawnRipple(input.Position)
+                end
+            end))
+
+            Btn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.6)
+                pcall(callback)
+            end)
+
+            if Window._RegisterGlobalOption then
+                Window._RegisterGlobalOption(self, {
+                    Id = textSpanish,
+                    NameSpanish = textSpanish,
+                    NameEnglish = textEnglish,
+                    Holder = BtnWrapper,
+                    Kind = "Button",
+                })
+            end
+
+            return BtnWrapper
+        end
+
+        function Tab:CreateScriptToggle(textSpanish, textEnglish, url, scriptKey)
+            local displayText = GetText(textSpanish, textEnglish)
+            local active       = false
+            local loading      = false
+
+            local Holder = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 68),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.78,
+                ClipsDescendants = true,
+                ZIndex = 9
+            }, TabPage)
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            corner(Holder, 12)
+            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
+            resetScrollTop(TabPage)
+
+            local AccentBar = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 3, 0, 40),
+                Position = UDim2.new(0, 10, 0.5, -20),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            AccentBar:SetAttribute("ThemeRole", "AccentOff")
+            corner(AccentBar, 999)
+
+            local IconRing = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.fromOffset(38, 38),
+                Position = UDim2.new(0, 24, 0.5, -19),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.2,
+                ZIndex = 10
+            })
+            corner(IconRing, 999)
+            local IconRingStroke = stroke(IconRing, Theme.AccentOff, 1.5, 0.3)
+
+            local IconGlyph = mk("TextLabel", {
+                Parent = IconRing,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = string.upper(string.sub((tostring(textSpanish or ""):gsub("^%s+", "")), 1, 1)),
+                Font = Enum.Font.GothamBlack,
+                TextSize = 16,
+                TextColor3 = Theme.TextDim,
+                ZIndex = 11
+            })
+            IconGlyph:SetAttribute("ThemeTextRole", "TextDim")
+            IconGlyph:SetAttribute("IgnoreTextEffect", true)
+            if IconGlyph.Text == "" then IconGlyph.Text = "</>" end
+
+            local LabelTxt = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -160, 0, 20),
+                Position = UDim2.new(0, 74, 0, 14),
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish", textSpanish)
+            LabelTxt:SetAttribute("TextEnglish", textEnglish)
+
+            local StatusBadge = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.fromOffset(78, 20),
+                Position = UDim2.new(0, 74, 0, 38),
+                BackgroundColor3 = Theme.AccentOff,
+                BackgroundTransparency = 0.15,
+                ZIndex = 10
+            })
+            corner(StatusBadge, 999)
+
+            local StatusDot = mk("Frame", {
+                Parent = StatusBadge,
+                Size = UDim2.fromOffset(6, 6),
+                Position = UDim2.new(0, 8, 0.5, -3),
+                BackgroundColor3 = Theme.TextDim,
+                ZIndex = 11
+            })
+            corner(StatusDot, 999)
+
+            local StatusLabel = mk("TextLabel", {
+                Parent = StatusBadge,
+                Size = UDim2.new(1, -20, 1, 0),
+                Position = UDim2.new(0, 18, 0, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Inactivo", "Idle"),
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                TextColor3 = Theme.TextDim,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 11
+            })
+
+            local Switch = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 52, 0, 28),
+                Position = UDim2.new(1, -66, 0.5, -14),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            Switch:SetAttribute("ThemeRole", "AccentOff")
+            corner(Switch, 999)
+
+            local Knob = mk("Frame", {
+                Parent = Switch,
+                Size = UDim2.fromOffset(24, 24),
+                Position = UDim2.new(0, 2, 0.5, -12),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                ZIndex = 12
+            })
+            corner(Knob, 999)
+
+            local Spinner = mk("Frame", {
+                Parent = Knob,
+                Size = UDim2.new(1, -4, 1, -4),
+                Position = UDim2.new(0, 2, 0, 2),
+                BackgroundTransparency = 1,
+                Visible = false,
+                ZIndex = 13
+            })
+            local SpinnerArc = stroke(Spinner, Theme.Accent, 2.5, 0)
+            SpinnerArc.LineJoinMode = Enum.LineJoinMode.Round
+            local SpinnerGradient = Instance.new("UIGradient", Spinner)
+            SpinnerGradient.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(0.85, 0.85),
+                NumberSequenceKeypoint.new(1, 1),
+            })
+            corner(Spinner, 999)
+            local spinnerSpin
+            local function startSpinner()
+                Spinner.Visible = true
+                spinnerSpin = RunService.Heartbeat:Connect(function(dt)
+                    SpinnerGradient.Rotation = (SpinnerGradient.Rotation + dt * 360) % 360
+                end)
+            end
+            local function stopSpinner()
+                if spinnerSpin then spinnerSpin:Disconnect(); spinnerSpin = nil end
+                Spinner.Visible = false
+            end
+
+            buildAnimatedBorder(Holder, Theme.ToggleOn, UDim.new(0, 12), true)
+
+            local Click = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 14
+            })
+
+            local function spawnRipple(inputPosition)
+                local btnPos  = Holder.AbsolutePosition
+                local btnSize = Holder.AbsoluteSize
+                local relX    = inputPosition.X - btnPos.X
+                local relY    = inputPosition.Y - btnPos.Y
+                local dX      = math.max(relX, btnSize.X - relX)
+                local dY      = math.max(relY, btnSize.Y - relY)
+                local maxR    = math.sqrt(dX*dX + dY*dY) * 2.1
+                local Ripple  = Instance.new("Frame")
+                Ripple.Name                 = "LiquidRipple"
+                Ripple.AnchorPoint          = Vector2.new(0.5, 0.5)
+                Ripple.BackgroundColor3     = Theme.Accent
+                Ripple.BackgroundTransparency = 0.6
+                Ripple.BorderSizePixel      = 0
+                Ripple.Size                 = UDim2.fromOffset(1, 1)
+                Ripple.Position             = UDim2.fromOffset(relX, relY)
+                Ripple.ZIndex               = 13
+                Ripple.Parent               = Holder
+                local rc = Instance.new("UICorner")
+                rc.CornerRadius = UDim.new(1, 0)
+                rc.Parent       = Ripple
+                local ex = TweenService:Create(Ripple,
+                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { Size = UDim2.fromOffset(maxR, maxR), BackgroundTransparency = 0.78 })
+                ex:Play()
+                ex.Completed:Connect(function()
+                    local fd = TweenService:Create(Ripple,
+                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 1 })
+                    fd:Play()
+                    fd.Completed:Connect(function() pcall(function() Ripple:Destroy() end) end)
+                end)
+            end
+            track(Click.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1
+                or inp.UserInputType == Enum.UserInputType.Touch then
+                    spawnRipple(inp.Position)
+                end
+            end))
+
+            track(Click.MouseEnter:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.62 }):Play()
+            end))
+            track(Click.MouseLeave:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.78 }):Play()
+            end))
+
+            local knobOFF = UDim2.new(0, 2, 0.5, -12)
+            local knobON  = UDim2.new(1, -26, 0.5, -12)
+
+            local function setVisualState(newState)
+                local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                Holder:SetAttribute("ScriptState", newState)
+
+                if newState == "loading" then
+                    startSpinner()
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(IconRingStroke, ti, { Color = Theme.Accent, Transparency = 0 }):Play()
+                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.Accent }):Play()
+                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.75 }):Play()
+                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.Accent }):Play()
+                    StatusLabel.Text = GetText("Cargando...", "Loading...")
+                    TweenService:Create(Knob, ti, { Position = knobON }):Play()
+
+                elseif newState == "active" then
+                    stopSpinner()
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(IconRingStroke, ti, { Color = Theme.ToggleOn, Transparency = 0 }):Play()
+                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.ToggleOn, BackgroundTransparency = 0.75 }):Play()
+                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.ToggleOn }):Play()
+                    StatusLabel.Text = GetText("Activo", "Active")
+                    TweenService:Create(Knob, ti, { Position = knobON }):Play()
+
+                else
+                    stopSpinner()
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
+                    TweenService:Create(IconRingStroke, ti, { Color = Theme.AccentOff, Transparency = 0.3 }):Play()
+                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.TextDim }):Play()
+                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.AccentOff, BackgroundTransparency = 0.15 }):Play()
+                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.TextDim }):Play()
+                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.TextDim }):Play()
+                    StatusLabel.Text = GetText("Inactivo", "Idle")
+                    TweenService:Create(Knob, ti, { Position = knobOFF }):Play()
+                end
+            end
+
+            Click.MouseButton1Click:Connect(function()
+                if loading then return end
+                playSound(Sounds.Click, 0.6)
+
+                if not active then
+                    loading = true
+                    setVisualState("loading")
+                    task.spawn(function()
+                        local ok, err = pcall(function()
+                            _G["_YY_CLASSIC_LOADING_KEY"] = tostring(scriptKey)
+                            local chunk = loadstring(game:HttpGet(url, true))
+                            if type(chunk) ~= "function" then
+                                error("el archivo externo no devolvió código ejecutable")
+                            end
+                            chunk()
+                            _G["_YY_CLASSIC_LOADING_KEY"] = nil
+                        end)
+                        _G["_YY_CLASSIC_LOADING_KEY"] = nil
+                        loading = false
+                        if ok then
+                            active = true
+                            setVisualState("active")
+                        else
+                            active = false
+                            setVisualState("idle")
+                            local errColor = Color3.fromRGB(240, 80, 80)
+                            StatusLabel.Text = GetText("Error al cargar", "Load failed")
+                            StatusLabel.TextColor3 = errColor
+                            StatusDot.BackgroundColor3 = errColor
+                            StatusBadge.BackgroundColor3 = errColor
+                            StatusBadge.BackgroundTransparency = 0.78
+                            StatusBadge.Size = UDim2.fromOffset(104, 20)
+                            task.delay(2.5, function()
+                                StatusBadge.Size = UDim2.fromOffset(78, 20)
+                                if not active and not loading then setVisualState("idle") end
+                            end)
+                            warn("[YinYang] CreateScriptToggle: error al cargar '" .. tostring(scriptKey) .. "': " .. tostring(err))
+                        end
+                    end)
+                else
+                    active = false
+                    setVisualState("idle")
+                    local stopKey = "_YY_STOP_" .. tostring(scriptKey)
+                    if _G[stopKey] then
+                        pcall(_G[stopKey])
+                    end
+                end
+            end)
+
+            Window._RegisterGlobalOption(self, {
+                Id = nameSpanish .. "::" .. textSpanish,
+                NameSpanish = textSpanish,
+                NameEnglish = textEnglish,
+                Holder = Holder,
+                Kind = "Script",
+            })
+
+            return Holder
+        end
+
+        function Tab:CreateLabel(textSpanish, textEnglishOrSize, fontSize)
+            local contentParent = self._ContentParent or TabPage
+            local textEnglish = textSpanish
+            if type(textEnglishOrSize) == "number" then
+                fontSize = textEnglishOrSize
+                textEnglish = textSpanish
+            elseif type(textEnglishOrSize) == "string" then
+                textEnglish = textEnglishOrSize
+            end
+            
+            fontSize = fontSize or 14
+            local displayText = GetText(textSpanish, textEnglish)
+            
+            local Label = mk("TextLabel", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = fontSize,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextWrapped = true,
+                ZIndex = 9
+            })
+            Label:SetAttribute("ThemeTextRole", "Text")
+            Label:SetAttribute("TextSpanish", textSpanish)
+            Label:SetAttribute("TextEnglish", textEnglish)
+            if contentParent == TabPage then resetScrollTop(TabPage) end
+            return Label
+        end
+
+        function Tab:CreateDivider()
+            local contentPar

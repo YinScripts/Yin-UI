@@ -1,0 +1,863 @@
+l Plus = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -7, 1, -5), BackgroundTransparency = 1, Image = "",
+            ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 16, Active = true, Visible = false,
+        })
+        Plus.Name = "SongPlus"
+
+        local Play = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(30, 30), AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -8, 0, coverPad + coverSize - 4), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0, Image = asset(135609604299893), ImageColor3 = Color3.fromRGB(0, 0, 0),
+            AutoButtonColor = false, ZIndex = 17, Active = true,
+        })
+        Play.Name = "SongPlay"
+        corner(Play, 999)
+
+        bindRowTap(TapArea, function() SpotifyState.FavQueue = false playTrack(index) end)
+        Cover.Activated:Connect(function()
+            SpotifyState.FavQueue = false
+            playTrack(index)
+        end)
+
+        local _plusFired = false
+        local _playFired = false
+        local function fireLike()
+            if _plusFired then return end
+            _plusFired = true
+            toggleTrackLike(index)
+            task.defer(function() _plusFired = false end)
+        end
+        local function firePlay()
+            if _playFired then return end
+            _playFired = true
+            SpotifyState.FavQueue = false
+            playTrack(index)
+            task.defer(function() _playFired = false end)
+        end
+        Plus.Activated:Connect(fireLike)
+        Play.Activated:Connect(firePlay)
+
+        SpotifyState.RowButtons[index] = {
+            Row = Row, Accent = Accent, Cover = Cover, Title = Title, Artist = Artist,
+            Duration = Duration, Plus = Plus, Play = Play, TapArea = TapArea,
+        }
+
+        applySpotifyRowLayout(SpotifyState.RowButtons[index])
+        updateTrackRow(SpotifyState.RowButtons[index], index)
+        return Row
+    end
+clearSongRows = function()
+        for _, child in ipairs(SongList:GetChildren()) do
+            if child ~= SongListLayout and not child:IsA("UIPadding") then
+                safeDestroy(child)
+            end
+        end
+        SpotifyState.RowButtons = {}
+        updateSongListCanvas()
+    end
+
+    local function renderCatalog(catalog)
+        clearSongRows()
+        SPage.CanvasPosition = Vector2.new(0, 0)
+
+        SpotifyState.Catalog = {}
+        for i, track in ipairs(catalog or {}) do
+            local normalized = normalizeTrack(track, i)
+            if normalized then
+                normalized.IsUserSong = false
+                table.insert(SpotifyState.Catalog, normalized)
+            end
+        end
+
+        SpotifyState.UserSongs = {}
+        for _, track in ipairs(loadUserSongs()) do
+            if type(track) == "table"
+                and type(track.Name) == "string"
+                and type(track.Artist) == "string"
+                and type(track.AudioURL) == "string"
+                and isDirectMp3Url(track.AudioURL) then
+                local preparedTrack = table.clone(track)
+                preparedTrack.AudioURL = normalizeDownloadUrl(preparedTrack.AudioURL)
+                if type(preparedTrack.CoverURL) == "string" then
+                    preparedTrack.CoverURL = normalizeDownloadUrl(preparedTrack.CoverURL)
+                end
+                local normalized = normalizeTrack(preparedTrack, #SpotifyState.Catalog + 1)
+                if normalized then
+                    normalized.IsUserSong = true
+                    table.insert(SpotifyState.UserSongs, normalized)
+                    table.insert(SpotifyState.Catalog, normalized)
+                end
+            end
+        end
+
+        if #SpotifyState.Catalog == 0 then
+            -- Spotify no muestra estado del catálogo en la vista visual.
+            PlayerSongTitle.Text = GetText("Catálogo vacío", "Empty catalog")
+            PlayerSongArtist.Text = GetText("Revisa el repositorio remoto", "Check the remote repository")
+            PlayerMeta.Text = GetText("Sin canciones disponibles", "No songs available")
+            AlbumArt.Image = ""
+            ProgressTimeLeft.Text = "0:00"
+            ProgressTimeRight.Text = "0:00"
+            ProgressFill.Size = UDim2.new(0, 0, 1, 0)
+            syncPlaybackUI()
+            return
+        end
+
+        -- Spotify no muestra el contador del catálogo en la vista visual.
+        loadSpotifyFavorites()
+        renderSongRows()
+        updateSongListCanvas()
+        updateSpotifyCanvas()
+
+        local order = getRenderOrder()
+        selectTrack(order[1] or 1)
+        updateProgress(SpotifyState.Catalog[1], SpotifyState.CurrentSound)
+        syncPlaybackUI()
+    end
+
+    local function loadCatalogFromRemote()
+        destroyAllSpotifySounds()
+        local catalogData = nil
+
+        local okRemote, remoteResult = pcall(function()
+            local raw = game:HttpGet(SPOTIFY_CATALOG_URL, true)
+            local loader = loadstring(raw)
+            if not loader then
+                error("loadstring_failed")
+            end
+            return loader()
+        end)
+
+        if okRemote and type(remoteResult) == "table" then
+            if type(remoteResult.Catalog) == "table" then
+                catalogData = remoteResult.Catalog
+            elseif type(remoteResult.catalog) == "table" then
+                catalogData = remoteResult.catalog
+            else
+                catalogData = remoteResult
+            end
+        else
+            warn("[Spotify] No se pudo cargar el catálogo remoto: " .. tostring(remoteResult))
+        end
+
+        if type(catalogData) ~= "table" then
+            catalogData = {}
+        end
+
+        SpotifyState.CatalogLoaded = true
+        renderCatalog(catalogData)
+        updateSpotifyCanvas()
+    end
+
+    do
+        local staticTranslations = {
+            ["Favoritos"] = "Favorites",
+            ["Tus canciones favoritas"] = "Your favorite songs",
+            ["Ajustes de reproducción"] = "Playback settings",
+            ["El catálogo se carga desde GitHub"] = "The catalog loads from GitHub",
+        }
+        for _, element in ipairs(SpotifyShell:GetDescendants()) do
+            if element:IsA("TextLabel") or element:IsA("TextButton") then
+                local english = staticTranslations[element.Text]
+                if english then
+                    element:SetAttribute("TextSpanish", element.Text)
+                    element:SetAttribute("TextEnglish", english)
+                    element.Text = GetText(element.Text, english)
+                end
+            end
+        end
+    end
+
+    table.insert(YLang.Listeners, function()
+        local titleSpanish, titleEnglish = "Selecciona una canción", "Select a song"
+        if PlayerSongTitle.Text == titleSpanish or PlayerSongTitle.Text == titleEnglish then
+            PlayerSongTitle.Text = GetText(titleSpanish, titleEnglish)
+        end
+        local artistSpanish, artistEnglish = "El catálogo se carga desde GitHub", "The catalog loads from GitHub"
+        if PlayerSongArtist.Text == artistSpanish or PlayerSongArtist.Text == artistEnglish then
+            PlayerSongArtist.Text = GetText(artistSpanish, artistEnglish)
+        end
+        local metaPairs = {
+            {"Esperando canción", "Waiting for a song"},
+            {"Pausado por el temporizador", "Paused by sleep timer"},
+            {"Reproducción pausada", "Playback paused"},
+            {"Reproducción activa", "Playback active"},
+        }
+        for _, pair in ipairs(metaPairs) do
+            if PlayerMeta.Text == pair[1] or PlayerMeta.Text == pair[2] then
+                PlayerMeta.Text = GetText(pair[1], pair[2])
+                break
+            end
+        end
+        if FP.Title and (FP.Title.Text == titleSpanish or FP.Title.Text == titleEnglish) then
+            FP.Title.Text = GetText(titleSpanish, titleEnglish)
+        end
+    end)
+
+    SpotifyPages:JumpTo(PlayerPage)
+    refreshSpotifyCatalogMode()
+    syncPlaybackUI()
+    pcall(refreshSpotifyUILayout)
+    updateSongListCanvas()
+    updateSpotifyCanvas()
+    task.defer(function()
+        pcall(updateSongListCanvas)
+        pcall(updateSpotifyCanvas)
+    end)
+    task.spawn(loadCatalogFromRemote)
+
+    RepeatBtn.MouseButton1Click:Connect(function()
+        SpotifyState.IsRepeat = not SpotifyState.IsRepeat
+        if SpotifyState.CurrentSound then
+            pcall(function()
+                SpotifyState.CurrentSound.Looped = SpotifyState.IsRepeat
+                if SpotifyState.IsRepeat and SpotifyState.CurrentSound.TimePosition > 0 then
+                    local len = SpotifyState.CurrentSound.TimeLength
+                    if len > 0 and (len - SpotifyState.CurrentSound.TimePosition) < 0.5 then
+                        SpotifyState.CurrentSound.TimePosition = 0
+                        SpotifyState.CurrentSound:Play()
+                    end
+                end
+            end)
+        end
+        syncPlaybackUI()
+    end)
+
+    LikeBtn.MouseButton1Click:Connect(function()
+        toggleTrackLike(SpotifyState.SelectedIndex)
+    end)
+
+    PlayPauseBtnOuter.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.Touch or
+           input.UserInputType == Enum.UserInputType.MouseButton1 then
+            PlayPauseBtn.MouseButton1Click:Fire()
+        end
+    end)
+
+    PlayPauseBtn.MouseButton1Click:Connect(function()
+        if SpotifyState.CurrentSound then
+            if SpotifyState.IsPlaying then
+                SpotifyState.IsPlaying = false
+                pcall(function()
+                    SpotifyState.CurrentPausedPosition = math.max(0, tonumber(SpotifyState.CurrentSound.TimePosition) or 0)
+                    SpotifyState.CurrentSound:Pause()
+                end)
+                PlayerMeta.Text = GetText("Reproducción pausada", "Playback paused")
+            else
+                SpotifyState.IsPlaying = true
+                pcall(function()
+                    if SpotifyState.CurrentSound and SpotifyState.CurrentPausedPosition and SpotifyState.CurrentPausedPosition > 0 then
+                        SpotifyState.CurrentSound.TimePosition = math.max(0, SpotifyState.CurrentPausedPosition)
+                    end
+                    SpotifyState.CurrentSound:Play()
+                    task.defer(function()
+                        if SpotifyState.CurrentSound and SpotifyState.IsPlaying and SpotifyState.CurrentPausedPosition and SpotifyState.CurrentPausedPosition > 0 then
+                            pcall(function()
+                                SpotifyState.CurrentSound.TimePosition = math.max(0, SpotifyState.CurrentPausedPosition)
+                            end)
+                        end
+                    end)
+                end)
+                PlayerMeta.Text = GetText("Reproducción activa", "Playback active")
+            end
+            syncPlaybackUI()
+            return
+        end
+
+        if SpotifyState.Catalog[SpotifyState.SelectedIndex] then
+            playTrack(SpotifyState.SelectedIndex)
+        end
+    end)
+
+    NextBtn.MouseButton1Click:Connect(function()
+        if #SpotifyState.Catalog == 0 then
+            return
+        end
+
+        local nextIndex = SpotifyState.SelectedIndex + 1
+        if nextIndex > #SpotifyState.Catalog then
+            nextIndex = 1
+        end
+        playTrack(nextIndex)
+    end)
+
+    MoreBtn.MouseButton1Click:Connect(function()
+        PlayerMeta.Text = "Menú de opciones abierto"
+    end)
+    end
+
+    function Window:CreateFanArtTab()
+        local TabFanArt = Window:CreateTab("Fan Art", "Fan Art", "rbxassetid://91504176503119")
+        local FanArtPage = TabFanArt.Page
+
+        local FanArt_Items = {
+            { name = "YYFanArt1.png", url = "https://raw.githubusercontent.com/yinyangGPX/Beta/main/file_000000001704820a8cdf28c046004a14.png" },
+        }
+
+        local fanArtExecutorOk = type(game.HttpGet) == "function"
+            and type(writefile) == "function"
+            and type(isfile) == "function"
+            and type(getcustomasset) == "function"
+
+        local function fanArtLooksLikeImage(data)
+            if type(data) ~= "string" or #data < 10 then return false end
+            return data:sub(1, 4) == "\137PNG" or data:sub(1, 3) == "\255\216\255"
+        end
+
+        local FA = {}
+
+        -- Cabecera de la galeria
+        FA.hero = mk("Frame", {
+            Parent = FanArtPage,
+            Size = UDim2.new(1, 0, 0, 74),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.35,
+            BorderSizePixel = 0,
+            ZIndex = 9,
+        })
+        FA.hero:SetAttribute("ThemeRole", "Secondary")
+        corner(FA.hero, 16)
+        stroke(FA.hero, Theme.Stroke, 1, 0.55)
+        local heroIcon = mk("Frame", {
+            Parent = FA.hero, Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0, 14, 0.5, -23),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 10,
+        })
+        heroIcon:SetAttribute("ThemeRole", "Accent")
+        corner(heroIcon, 14)
+        RowKit.Icon(heroIcon, 118538685614420, 24, 11, "Accent")
+        local heroTitle = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 24), Position = UDim2.new(0, 72, 0, 14), BackgroundTransparency = 1,
+            Text = "Fan Art", TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 20,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+        })
+        heroTitle:SetAttribute("ThemeTextRole", "Text")
+        local heroSub = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 14), Position = UDim2.new(0, 72, 0, 40), BackgroundTransparency = 1,
+            Text = GetText("Arte de la comunidad de Yin Yang", "Art from the Yin Yang community"), TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 10,
+        })
+        heroSub:SetAttribute("ThemeTextRole", "TextDim")
+        heroSub:SetAttribute("TextSpanish", "Arte de la comunidad de Yin Yang")
+        heroSub:SetAttribute("TextEnglish", "Art from the Yin Yang community")
+        local countES = #FanArt_Items .. (#FanArt_Items == 1 and " obra" or " obras")
+        local countEN = #FanArt_Items .. (#FanArt_Items == 1 and " piece" or " pieces")
+        local heroCount = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(0, 0, 0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -14, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8,
+            Text = GetText(countES, countEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 10,
+        })
+        heroCount:SetAttribute("ThemeRole", "Accent")
+        heroCount:SetAttribute("ThemeTextRole", "Accent")
+        heroCount:SetAttribute("TextSpanish", countES)
+        heroCount:SetAttribute("TextEnglish", countEN)
+        heroCount:SetAttribute("IgnoreTextEffect", true)
+        corner(heroCount, 999)
+        mk("UIPadding", {Parent = heroCount, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        -- Visor a pantalla completa (se crea una sola vez)
+        FA.viewer = mk("Frame", {
+            Parent = Main,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            Active = true,
+            Visible = false,
+            ZIndex = 400,
+        })
+        corner(FA.viewer, 10)
+        FA.viewerImage = mk("ImageButton", {
+            Parent = FA.viewer, Size = UDim2.new(1, -40, 1, -90), Position = UDim2.new(0, 20, 0, 50),
+            BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 401,
+        })
+        corner(FA.viewerImage, 10)
+        FA.viewerTitle = mk("TextLabel", {
+            Parent = FA.viewer, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1,
+            Text = "", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 402,
+        })
+        FA.viewerTitle:SetAttribute("IgnoreTextEffect", true)
+        FA.viewerHint = mk("TextLabel", {
+            Parent = FA.viewer, Size = UDim2.new(1, -40, 0, 20), Position = UDim2.new(0, 20, 1, -32), BackgroundTransparency = 1,
+            Text = GetText("Tocá la imagen para acercar / alejar", "Tap the image to zoom in / out"), TextColor3 = Color3.fromRGB(190, 190, 190),
+            Font = Enum.Font.GothamMedium, TextSize = 11, ZIndex = 402,
+        })
+        FA.viewerHint:SetAttribute("TextSpanish", "Tocá la imagen para acercar / alejar")
+        FA.viewerHint:SetAttribute("TextEnglish", "Tap the image to zoom in / out")
+        FA.viewerHint:SetAttribute("IgnoreTextEffect", true)
+        FA.viewerClose = mk("TextButton", {
+            Parent = FA.viewer, Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 46), Text = "×", TextColor3 = Color3.new(1, 1, 1),
+            Font = Enum.Font.GothamBold, TextSize = 20, AutoButtonColor = false, ZIndex = 403,
+        })
+        corner(FA.viewerClose, 999)
+        FA.viewerScale = mk("UIScale", {Parent = FA.viewerImage, Scale = 1})
+        FA.viewerClose.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            FA.viewer.Visible = false
+        end)
+        FA.viewerImage.MouseButton1Click:Connect(function()
+            local zoomed = FA.viewerImage.ScaleType == Enum.ScaleType.Fit
+            FA.viewerImage.ScaleType = zoomed and Enum.ScaleType.Crop or Enum.ScaleType.Fit
+            FA.viewerScale.Scale = 0.96
+            TweenService:Create(FA.viewerScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+        function FA.open(image, titleText)
+            FA.viewerImage.Image = image
+            FA.viewerImage.ScaleType = Enum.ScaleType.Fit
+            FA.viewerTitle.Text = titleText
+            FA.viewer.Visible = true
+            FA.viewer.BackgroundTransparency = 1
+            TweenService:Create(FA.viewer, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.12}):Play()
+            FA.viewerScale.Scale = 0.9
+            TweenService:Create(FA.viewerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
+
+        for artIndex, art in ipairs(FanArt_Items) do
+            local Card = mk("Frame", {
+                Parent = FanArtPage,
+                Size = UDim2.new(1, 0, 0, 320),
+                BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+                BackgroundTransparency = 0,
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+                ZIndex = 9,
+            })
+            corner(Card, 16)
+            local cardStroke = stroke(Card, Theme.Accent, 1.5, 0.45)
+            cardStroke:SetAttribute("ThemeRole", "Accent")
+
+            local Ambient = mk("ImageLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Image = "",
+                ImageTransparency = 0.78,
+                ScaleType = Enum.ScaleType.Crop,
+                ZIndex = 9,
+            })
+            corner(Ambient, 16)
+
+            local Skeleton = mk("Frame", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
+                Position = UDim2.new(0, 14, 0, 14),
+                BackgroundColor3 = Color3.fromRGB(40, 40, 46),
+                BorderSizePixel = 0,
+                ZIndex = 10,
+            })
+            corner(Skeleton, 12)
+            local shimmer = mk("UIGradient", {
+                Parent = Skeleton,
+                Rotation = 20,
+                Offset = Vector2.new(-1, 0),
+                Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0.6),
+                    NumberSequenceKeypoint.new(0.5, 0),
+                    NumberSequenceKeypoint.new(1, 0.6),
+                }),
+            })
+            local shimmerTween = TweenService:Create(shimmer, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Offset = Vector2.new(1, 0)})
+            shimmerTween:Play()
+
+            local ArtImage = mk("ImageLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
+                Position = UDim2.new(0, 14, 0, 14),
+                BackgroundTransparency = 1,
+                Image = "",
+                ScaleType = Enum.ScaleType.Fit,
+                Visible = false,
+                ZIndex = 11,
+            })
+            corner(ArtImage, 12)
+
+            local ArtStatus = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
+                Position = UDim2.new(0, 14, 0, 14),
+                BackgroundTransparency = 1,
+                Text = GetText("Cargando imagen...", "Loading image..."),
+                TextColor3 = Color3.fromRGB(220, 220, 225),
+                TextSize = 13,
+                Font = Enum.Font.GothamMedium,
+                TextWrapped = true,
+                ZIndex = 12,
+            })
+            ArtStatus:SetAttribute("TextSpanish", "Cargando imagen...")
+            ArtStatus:SetAttribute("TextEnglish", "Loading image...")
+            ArtStatus:SetAttribute("IgnoreTextEffect", true)
+
+            local bar = mk("Frame", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 0, 40),
+                Position = UDim2.new(0, 14, 1, -50),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.35,
+                BorderSizePixel = 0,
+                ZIndex = 12,
+            })
+            corner(bar, 12)
+            local artTitle = mk("TextLabel", {
+                Parent = bar, Size = UDim2.new(1, -150, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1,
+                Text = "Fan Art #" .. artIndex, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+            })
+            artTitle:SetAttribute("IgnoreTextEffect", true)
+            local viewBtn = mk("TextButton", {
+                Parent = bar, Size = UDim2.fromOffset(128, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0),
+                BackgroundColor3 = Theme.Accent, Text = GetText("Ver en grande", "View large"), TextColor3 = Theme.AccentText,
+                Font = Enum.Font.GothamBlack, TextSize = 11, AutoButtonColor = false, Visible = false, ZIndex = 13,
+            })
+            viewBtn:SetAttribute("ThemeRole", "Accent")
+            viewBtn:SetAttribute("ThemeTextRole", "AccentText")
+            viewBtn:SetAttribute("TextSpanish", "Ver en grande")
+            viewBtn:SetAttribute("TextEnglish", "View large")
+            mk("UIPadding", {Parent = viewBtn, PaddingLeft = UDim.new(0, 18)})
+            RowKit.IconAt(viewBtn, 100435796827759, 13, UDim2.new(0, -6, 0.5, -6), 14, "AccentText")
+            viewBtn:SetAttribute("IgnoreTextEffect", true)
+            corner(viewBtn, 999)
+            RowKit.Control(viewBtn, true)
+            viewBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                FA.open(ArtImage.Image, artTitle.Text)
+            end)
+
+            local function setArtStatus(es, en)
+                ArtStatus.Text = GetText(es, en)
+                ArtStatus:SetAttribute("TextSpanish", es)
+                ArtStatus:SetAttribute("TextEnglish", en)
+            end
+
+            task.spawn(function()
+                if not fanArtExecutorOk then
+                    shimmerTween:Cancel()
+                    setArtStatus("Tu ejecutor no soporta la descarga de imágenes", "Your executor does not support image downloads")
+                    return
+                end
+
+                local assetId = nil
+                pcall(function()
+                    local needDownload = true
+                    local cachedOk, cachedExists = pcall(isfile, art.name)
+                    if cachedOk and cachedExists then
+                        needDownload = false
+                        if type(readfile) == "function" then
+                            local readOk, cachedData = pcall(readfile, art.name)
+                            if not (readOk and fanArtLooksLikeImage(cachedData)) then
+                                needDownload = true
+                            end
+                        end
+                    end
+
+                    if needDownload then
+                        local dlOk, data = pcall(game.HttpGet, game, art.url, true)
+                        if not dlOk or not fanArtLooksLikeImage(data) then return end
+                        local writeOk = pcall(writefile, art.name, data)
+                        if not writeOk then return end
+                    end
+
+                    local assetOk, result = pcall(getcustomasset, art.name)
+                    if assetOk and type(result) == "string" and result ~= "" then
+                        assetId = result
+                    end
+                end)
+
+                shimmerTween:Cancel()
+                if assetId then
+                    ArtImage.Image = assetId
+                    Ambient.Image = assetId
+                    ArtImage.Visible = true
+                    ArtStatus.Visible = false
+                    Skeleton.Visible = false
+                    viewBtn.Visible = true
+                else
+                    setArtStatus("No se pudo cargar la imagen", "Could not load the image")
+                end
+            end)
+        end
+    end
+    Window:CreateFanArtTab()
+
+    return Window
+
+end
+
+
+print(" Yin Yang v24 CON TEMA CAT V1  - ¡Librería cargada y lista para usar!")
+
+
+local _ZeroAI = (function()
+    local Players     = game:GetService("Players")
+    local HttpService = game:GetService("HttpService")
+    local StarterGui  = game:GetService("StarterGui")
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then return end
+
+    local AI_BACKEND_URL = "https://yin-chat.onrender.com"
+    local PLAYER_NAME = LocalPlayer.Name
+
+    local SYSTEM_PROMPT = [[
+Eres Zero, una IA integrada dentro de la librería UI llamada Yin Yang, específicamente dentro del script EVADE v5.2 Beta para el juego Roblox "Evade".
+
+Estás sirviendo al jugador ]] .. PLAYER_NAME .. [[, quien es el desarrollador del script.
+
+SOBRE QUIÉN ERES:
+- Tu nombre es Zero
+- Eres parte de la librería Yin Yang UI v28
+- Fuiste diseñada para asistir a quien usa el script EVADE v5.2 Beta
+- Hablas de forma directa, casual y concisa — nunca eres robótica ni formal
+- Eres inteligente, sabes exactamente lo que hace cada opción del script
+
+CONOCIMIENTO COMPLETO DEL SCRIPT EVADE v5.2 Beta:
+
+PESTAÑA MOVEMENT:
+1. Teleport Walk (FloatingToggle)
+   - Mueve al jugador hacia adelante teletransportándolo en lugar de caminar normalmente
+   - Velocidad ajustable con slider de 1 a 50
+   - Se desactiva automáticamente si se activa Jump Frontal
+
+2. Enhanced Jump (FloatingToggle)
+   - Aumenta la altura del salto modificando JumpPower y UseJumpPower en el Humanoid
+   - Altura ajustable con slider de 20 a 300
+   - Se desactiva automáticamente si se activa Jump Frontal
+
+3. Auto Jump (FloatingToggle)
+   - Hace que el jugador salte automáticamente cuando está corriendo (estado Running)
+   - Cambia el HumanoidState a Jumping cada Heartbeat
+
+4. Jump Frontal - Beta (FloatingToggle)
+   - Sistema de movimiento frontal complejo que propulsa al jugador hacia adelante
+   - Al activarse: desactiva Teleport Walk, Enhanced Jump y Gravity Mod para evitar conflictos
+   - Al desactivarse: restaura las opciones que estaban activas antes
+   - Usa BodyVelocity con MaxForce (4e5, 4e5, 4e5) para el impulso
+   - Raycast frontal (lookDir * 8-10) para detectar estructuras y rampas adelante
+   - En el suelo: saltos cada 0.65 segundos con aceleración suave
+   - En el aire: si detecta estructura aplica impulso con componente vertical (impactForce * 1.2)
+   - Variables globales: getgenv().FrontalJumpSpeed (defecto 42), getgenv().RampMultiplier (defecto 1.55)
+   - Speed Movement: slider 50-110
+   - Ramp Multiplier: slider 1.0-5.0
+
+5. Gravity Mod (FloatingToggle)
+   - Reduce el efecto de la gravedad en el jugador
+   - Gravity Scale: slider 0.1-2
+
+PESTAÑA MAP FEATURES:
+6. FullBright (FloatingToggle)
+   - Ilumina completamente el mapa modificando propiedades de Lighting
+   - Restaura la iluminación original al desactivarse
+
+7. Auto Ticket (FloatingToggle)
+   - Teleporta automáticamente al jugador a los tickets/coleccionables del mapa
+   - Usa getgc(true) para encontrar CollectableIDs en memoria
+
+SOBRE LA LIBRERÍA YIN YANG v28:
+- Librería UI custom para Roblox con FloatingToggles, Sliders, Labels, Dividers y Tabs
+- Los FloatingToggles son ventanas flotantes arrastrables
+- Bug crítico ya corregido: pcall(cb, state) en el click de la pill flotante
+
+REGLAS DE RESPUESTA:
+- Máximo 2 oraciones por respuesta — apareces en el chat del juego
+- Habla en español siempre, de forma casual
+- Si no sabes algo con certeza, dilo — no inventes
+]]
+
+    local history = {
+        { role = "system", content = SYSTEM_PROMPT }
+    }
+    local waiting = false
+
+    local function chatMsg(text, color)
+        pcall(function()
+            StarterGui:SetCore("ChatMakeSystemMessage", {
+                Text     = text,
+                Color    = color or Color3.fromRGB(140, 120, 255),
+                Font     = Enum.Font.GothamBold,
+                TextSize = 14,
+            })
+        end)
+    end
+
+    local function ask(userText)
+        if waiting then
+            chatMsg("[⚡ Zero]: Espera, ya estoy procesando algo...", Color3.fromRGB(160, 140, 255))
+            return
+        end
+        waiting = true
+
+        table.insert(history, { role = "user", content = userText })
+
+        task.spawn(function()
+            local ok, reply, aiName = pcall(function()
+                local body = HttpService:JSONEncode({ messages = history })
+
+                local aiRequest = (syn and syn.request)
+                    or (http and http.request)
+                    or fluxus_request
+                    or http_request
+                    or request
+
+                if not aiRequest then
+                    error("No HTTP request function available")
+                end
+
+                local res = aiRequest({
+                    Url     = AI_BACKEND_URL .. "/api/ai/chat",
+                    Method  = "POST",
+                    Headers = { ["Content-Type"] = "application/json" },
+                    Body    = body,
+                })
+
+                if not res or res.Success == false then
+                    error("Backend AI unavailable")
+                end
+
+                local data = HttpService:JSONDecode(res.Body)
+                if not data.success or not data.reply then
+                    error(data.error or "AI returned no response")
+                end
+
+                return data.reply, data.name or "Yin AI"
+            end)
+
+            waiting = false
+
+            if ok and reply then
+                table.insert(history, { role = "assistant", content = reply })
+                chatMsg("[" .. tostring(aiName or "Yin AI") .. "]: " .. reply, Color3.fromRGB(140, 120, 255))
+            else
+                chatMsg("[Yin AI]: Error de conexión con la IA.", Color3.fromRGB(220, 80, 80))
+            end
+        end)
+    end
+
+    LocalPlayer.Chatted:Connect(function(msg)
+        local text = tostring(msg):match("^[/]IA%s+(.+)$")
+        if not text then return end
+        text = text:match("^%s*(.-)%s*$")
+        if text == "" then return end
+        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
+        ask(text)
+    end)
+
+    task.delay(1.5, function()
+        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
+    end)
+
+    print("Yin AI integrada — usa /IA mensaje en el chat")
+end)()
+
+
+local DEMO_ACTIVO = false
+
+if DEMO_ACTIVO then
+    task.wait(0.5)
+    
+    print("\n" .. string.rep("=", 60))
+    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
+    print(string.rep("=", 60))
+    
+    local ConfigCargada = LoadConfig()
+    local TemaInicial = "Dark"
+    if ConfigCargada and ConfigCargada.theme then
+        TemaInicial = ConfigCargada.theme
+    end
+
+    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
+    
+    DemoUI:SetTheme(TemaInicial)
+    
+    local TabFeatures = DemoUI:CreateTab("Features")
+    
+    TabFeatures:CreateLabel("Toggles", 14)
+    TabFeatures:CreateDivider()
+
+    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
+        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
+    end
+
+
+    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
+        print("Aimbot: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
+        print("ESP: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
+        print("GodMode: " .. (state and "ON" or "OFF"))
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Botones Flotantes 🔘", 14)
+    TabFeatures:CreateDivider()
+
+    TabFeatures:CreateFloatingButton("Teleport Here", "Teleport Here", function()
+        print("[FloatingButton] Teleport Here → ejecutado")
+    end)
+
+    TabFeatures:CreateFloatingButton("Noclip", "Noclip", 3, function()
+        print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
+    end)
+
+    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill Entity", 5, function()
+        print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
+    TabFeatures:CreateDivider()
+
+    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
+        print("🚀 Teleport Speed: " .. string.format("%.2f", val))
+    end)
+
+    local SliderJumpHeight = TabFeatures:CreateSlider("Jump Height", 10.0, 300.0, 139.24, function(val)
+        print("⬆️  Jump Height: " .. string.format("%.2f", val))
+    end)
+
+    local SliderSpeed = TabFeatures:CreateSlider("Speed Multiplier", 0.5, 3.0, 1.5, function(val)
+        print("💨 Speed: " .. string.format("%.2f", val) .. "x")
+    end)
+
+    local SliderFOV = TabFeatures:CreateSlider("FOV", 30, 120, 70, function(val)
+        print("👁️  FOV: " .. string.format("%.0f", val))
+    end)
+
+    local SliderVolume = TabFeatures:CreateSlider("Volume", 0, 1.0, 0.5, function(val)
+        print("🔊 Volume: " .. string.format("%.1f%%", val * 100))
+    end)
+
+
+    
+    DemoUI:CreateSpotifyTab()
+
+    print("\n DEMO v24 INICIADA")
+    print("TABS: Inicio (Protegida) | Temas (16 colores sin duplicados) | Features | Dropdowns | Efectos")
+    print(" MEJORAS: Sin duplicados, Pestañas permanentes, Efectos de texto mejorados")
+    print("Para desactivar la demo, cambia DEMO_ACTIVO a false\n")
+    print(string.rep("=", 60) .. "\n")
+    
+    task.wait(0.2)
+    local efectoGuardado = ConfigCargada and ConfigCargada.effect
+    if efectoGuardado and efectoGuardado ~= "" and efectoGuardado ~= "Normal" then
+        DemoUI:SetTextEffect(efectoGuardado)
+        print(" Efecto cargado desde config: " .. efectoGuardado)
+    else
+        local autoEffect = ThemeAutoEffects and ThemeAutoEffects[TemaInicial]
+        if autoEffect and autoEffect ~= "Off" then
+            DemoUI:SetTextEffect(autoEffect)
+            print(" Efecto: " .. TemaInicial .. " + " .. autoEffect)
+        else
+            DemoUI:SetTextEffect("Off")
+            print(" Sin efecto de texto (tema: " .. TemaInicial .. ")")
+        end
+    end
+else
+    print("Yin Yang v24 - DEMO DESACTIVADA (DEMO_ACTIVO = false)")
+    print("Solo la librería está cargada y lista para usar")
+end
+

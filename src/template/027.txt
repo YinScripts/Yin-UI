@@ -1,0 +1,928 @@
+ated in pairs(self.Created) do
+                if created and self.Instances[id] and self.Instances[id].Parent then
+                    pcall(function() self.Instances[id]:Destroy() end)
+                end
+                self.Instances[id] = nil
+                self.Created[id] = nil
+            end
+        end
+        self.ActivePreset = nil
+        return report
+    end
+
+    function ShaderCore:Destroy()
+        if self.Destroyed then return end
+        self:Restore({destroyCreated = true})
+        self.Destroyed = true
+    end
+
+    function ShaderCore:GetCatalog()
+        return shaderCopy(ShaderPropertyCatalog)
+    end
+
+    local ShaderManager = ShaderCore.new()
+
+    local ShaderQualityProfiles = {
+        Lite = {reflectionRadius = 56, reflectionLimit = 60, shadowRadius = 34, shadowLimit = 8, rainRate = 42, rainRadius = 25, mirrorRadius = 40, mirrorLimit = 52, rainDrops = 36, rainSplashes = 10},
+        Balanced = {reflectionRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
+        Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
+        Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
+    }
+    local ShaderSceneQuality = "Balanced"
+
+    local function shaderQualityProfile()
+        return ShaderQualityProfiles[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
+    end
+
+    local ShaderReflections = {
+        Enabled = false,
+        Intensity = 0.28,
+        Wetness = 0.82,
+        SurfaceMode = "All",
+        SceneCoverage = true,
+        SceneQueue = {},
+        SceneCursor = 1,
+        SceneElapsed = 0,
+        SceneBuilding = false,
+        SceneComplete = false,
+        ContactEnabled = false,
+        ContactStrength = 0.24,
+        ContactRig = nil,
+        ContactParts = {},
+        ContactCore = nil,
+        ContactElapsed = 0,
+        ModelDetailEnabled = true,
+        ModelApplied = {},
+        CharacterSpecularEnabled = false,
+        CharacterApplied = {},
+        ExcludeLocalAvatar = false,
+        SkyMirrorEnabled = true,
+        SkyMirrorStrength = 0.78,
+        SkyMirrorOriginal = {},
+        SkyMirrorApplied = {},
+        StripTextures = false,
+        OilSheen = false,
+        ObjectMirrorEnabled = false,
+        MirrorRig = nil,
+        MirrorProxies = {},
+        MirrorFloors = {},
+        MirrorPlanePos = nil,
+        MirrorPlaneNormal = nil,
+        MirrorScanElapsed = 0,
+        MirrorStepElapsed = 0,
+        MirrorFloorTransparency = 0.38,
+        MirrorBacking = nil,
+        MirrorLostAt = nil,
+        MirrorLast = {},
+        TextureOriginal = {},
+        ShadowEnabled = false,
+        ShadowStrength = 0.30,
+        ShadowRig = nil,
+        ShadowParts = {},
+        ShadowElapsed = 0,
+        ShadowConnection = nil,
+        Original = {},
+        Applied = {},
+        Connection = nil,
+        CharacterConn = nil,
+        SceneAnchor = nil,
+        Elapsed = 0,
+    }
+
+    function ShaderReflections:_root()
+        local character = LocalPlayer and LocalPlayer.Character
+        return character, character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    end
+
+    function ShaderReflections:_scan(origin, radius, character)
+        local ok, parts = pcall(function()
+            local params = OverlapParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = character and {character} or {}
+            return workspace:GetPartBoundsInRadius(origin, radius, params)
+        end)
+        if ok and type(parts) == "table" then return parts end
+        return {}
+    end
+
+    function ShaderReflections:_surfaceMultiplier(part)
+        local material = part.Material
+        if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
+        if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
+        if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
+        if material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
+        if material == Enum.Material.Water then return 0.96 end
+        if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
+        return 0.72
+    end
+
+    function ShaderReflections:_isSkyMirrorFloor(part, inModel)
+        return self.SkyMirrorEnabled
+            and not inModel
+            and math.abs(part.CFrame.UpVector.Y) >= 0.75
+            and part.Size.X >= 4
+            and part.Size.Z >= 4
+    end
+
+    function ShaderReflections:_applySkyMirrorSurface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+    function ShaderReflections:_stripPartTextures(part)
+        if self.TextureOriginal[part] ~= nil then return end
+        local owner = part:FindFirstAncestorOfClass("Model")
+        if owner and owner:FindFirstChildOfClass("Humanoid") then return end
+        local record = {children = {}}
+        local touched = false
+        local okVariant, variant = pcall(function() return part.MaterialVariant end)
+        if okVariant and variant ~= "" then
+            record.variant = variant
+            pcall(function() part.MaterialVariant = "" end)
+            touched = true
+        end
+        if part:IsA("MeshPart") then
+            local okTexture, textureId = pcall(function() return part.TextureID end)
+            if okTexture and textureId ~= "" then
+                record.textureId = textureId
+                pcall(function() part.TextureID = "" end)
+                touched = true
+            end
+        end
+        for _, child in ipairs(part:GetChildren()) do
+            if child:IsA("SurfaceAppearance") then
+                table.insert(record.children, {kind = "appearance", instance = child})
+                pcall(function() child.Parent = nil end)
+                touched = true
+            elseif child:IsA("Texture") or child:IsA("Decal") then
+                local okAlpha, alpha = pcall(function() return child.Transparency end)
+                if okAlpha and alpha < 1 then
+                    table.insert(record.children, {kind = "decal", instance = child, transparency = alpha})
+                    pcall(function() child.Transparency = 1 end)
+                    touched = true
+                end
+            end
+        end
+        if touched then self.TextureOriginal[part] = record end
+    end
+
+    function ShaderReflections:_restoreTextures()
+        for part, record in pairs(self.TextureOriginal) do
+            if part and part.Parent then
+                if record.variant ~= nil then pcall(function() part.MaterialVariant = record.variant end) end
+                if record.textureId ~= nil then pcall(function() part.TextureID = record.textureId end) end
+            end
+            for _, item in ipairs(record.children) do
+                if item.kind == "appearance" then
+                    if part and part.Parent and item.instance then pcall(function() item.instance.Parent = part end) end
+                elseif item.instance and item.instance.Parent then
+                    pcall(function() item.instance.Transparency = item.transparency end)
+                end
+            end
+        end
+        self.TextureOriginal = {}
+    end
+
+    function ShaderReflections:_applyWetPart(part)
+        if not part or not part.Parent or not part:IsA("BasePart") then return false end
+        if part.Transparency >= 0.96 or part.Size.Magnitude < 1.2 then return false end
+        local ancestor = part
+        while ancestor do
+            if string.sub(ancestor.Name or "", 1, 14) == "YinYangShader_" then return false end
+            ancestor = ancestor.Parent
+        end
+        local ownerModel = part:FindFirstAncestorOfClass("Model")
+        local isLocalCharacter = ownerModel == (LocalPlayer and LocalPlayer.Character)
+        if isLocalCharacter and (self.ExcludeLocalAvatar or not self.CharacterSpecularEnabled) then return false end
+        local inModel = ownerModel ~= nil
+        if inModel and not self.ModelDetailEnabled then return false end
+        local floorOnly = self.SurfaceMode == "Floors"
+        if floorOnly and math.abs(part.CFrame.UpVector.Y) < 0.42 then return false end
+        local multiplier = self:_surfaceMultiplier(part)
+        if not multiplier then return false end
+        if self.StripTextures then self:_stripPartTextures(part) end
+        local ok, current = pcall(function() return part.Reflectance end)
+        if not ok then return false end
+        if self.Original[part] == nil then self.Original[part] = current end
+        if inModel then multiplier = multiplier * 0.92 end
+        local skyMirrorFloor = self:_isSkyMirrorFloor(part, inModel)
+        if skyMirrorFloor then self:_applySkyMirrorSurface(part) end
+        local applied = pcall(function()
+            local wetReflectance = self.Original[part] + self.Intensity * self.Wetness * multiplier
+            if skyMirrorFloor then wetReflectance = math.max(wetReflectance, self.SkyMirrorStrength) end
+            part.Reflectance = math.clamp(wetReflectance, 0, 0.90)
+        end)
+        if applied then
+            self.Applied[part] = true
+            if inModel then self.ModelApplied[part] = true end
+            if isLocalCharacter then self.CharacterApplied[part] = true end
+        end
+        return applied
+    end
+
+    function ShaderReflections:QueueSceneCoverage()
+        if self.SceneBuilding or self.SceneComplete or not self.SceneCoverage then return end
+        self.SceneBuilding, self.SceneQueue, self.SceneCursor = true, {}, 1
+        task.spawn(function()
+            local descendants = workspace:GetDescendants()
+            for index, instance in ipairs(descendants) do
+                if self.Enabled and instance:IsA("BasePart") then table.insert(self.SceneQueue, instance) end
+                if index % 240 == 0 then task.wait() end
+            end
+            self.SceneBuilding = false
+            self.SceneComplete = true
+        end)
+    end
+
+    function ShaderReflections:_processSceneCoverage(limit)
+        if not self.SceneCoverage then return end
+        if self.SceneCursor > #self.SceneQueue then
+            return
+        end
+        local processed = 0
+        while processed < limit and self.SceneCursor <= #self.SceneQueue do
+            self:_applyWetPart(self.SceneQueue[self.SceneCursor])
+            self.SceneCursor = self.SceneCursor + 1
+            processed = processed + 1
+        end
+    end
+
+    function ShaderReflections:_clearContact()
+        if self.ContactRig and self.ContactRig.Parent then pcall(function() self.ContactRig:Destroy() end) end
+        self.ContactRig, self.ContactParts, self.ContactCore = nil, {}, nil
+    end
+
+    function ShaderReflections:_clearSceneShadows()
+        if self.ShadowConnection then self.ShadowConnection:Disconnect(); self.ShadowConnection = nil end
+        if self.ShadowRig and self.ShadowRig.Parent then pcall(function() self.ShadowRig:Destroy() end) end
+        self.ShadowRig, self.ShadowParts = nil, {}
+    end
+
+    function ShaderReflections:_refreshSceneShadows()
+        if not self.ShadowEnabled then
+            self:_clearSceneShadows()
+            return
+        end
+        local character, root = self:_root()
+        if not character or not root then return end
+        if not self.ShadowRig or not self.ShadowRig.Parent then
+            local rig = Instance.new("Folder")
+            rig.Name = "YinYangShader_ModelShadows"
+            rig.Parent = workspace
+            self.ShadowRig, self.ShadowParts = rig, {}
+        end
+
+        local profile = shaderQualityProfile()
+        local models, active, count = {}, {}, 0
+        for _, part in ipairs((self:_sortedScan(root.Position, profile.shadowRadius, character))) do
+            if count >= profile.shadowLimit then break end
+            local model = part:FindFirstAncestorOfClass("Model")
+            if model and model ~= character and model.Parent and not models[model] then
+                models[model] = true
+                local okBounds, bounds, size = pcall(function() return model:GetBoundingBox() end)
+                if okBounds and size and size.Magnitude >= 1.2 then
+                    local params = RaycastParams.new()
+                    params.FilterType = Enum.RaycastFilterType.Exclude
+                    params.FilterDescendantsInstances = {character, self.ShadowRig, model}
+                    params.IgnoreWater = false
+                    local origin = bounds.Position + Vector3.new(0, math.max(2, size.Y * 0.55), 0)
+                    local hit = workspace:Raycast(origin, Vector3.new(0, -(math.max(10, size.Y + 16)), 0), params)
+                    if hit and hit.Instance and math.abs(hit.Normal.Y) >= 0.34 then
+                        count = count + 1
+                        local proxy = self.ShadowParts[model]
+                        if not proxy or not proxy.Parent then
+                            proxy = Instance.new("Part")
+                            proxy.Name = "YinYangShader_ModelShadow"
+                            proxy.Shape = Enum.PartType.Ball
+                            proxy.Anchored, proxy.CanCollide, proxy.CanQuery, proxy.CanTouch, proxy.CastShadow = true, false, false, false, false
+                            proxy.Material = Enum.Material.SmoothPlastic
+                            proxy.Color = Color3.fromRGB(5, 7, 12)
+                            proxy.Parent = self.ShadowRig
+                            self.ShadowParts[model] = proxy
+                        end
+                        local right = Vector3.new(1, 0, 0)
+                        if math.abs(right:Dot(hit.Normal)) > 0.92 then right = Vector3.new(0, 0, 1) end
+                        local back = hit.Normal:Cross(right).Unit
+                        right = back:Cross(hit.Normal).Unit
+                        proxy.Size = Vector3.new(
+                            math.clamp(size.X * 0.70, 1.0, 18),
+                            0.055,
+                            math.clamp(size.Z * 0.70, 1.0, 18)
+                        )
+                        proxy.CFrame = CFrame.fromMatrix(hit.Position + hit.Normal * (0.018 + count * 0.0002), right, hit.Normal, back)
+                        proxy.Transparency = math.clamp(0.93 - self.ShadowStrength * 0.38, 0.64, 0.89)
+                        active[model] = true
+                    end
+                end
+            end
+        end
+        for model, proxy in pairs(self.ShadowParts) do
+            if not active[model] then
+                if proxy and proxy.Parent then proxy:Destroy() end
+                self.ShadowParts[model] = nil
+            end
+        end
+    end
+
+    function ShaderReflections:_refreshContact()
+        if self.ExcludeLocalAvatar or not self.ContactEnabled or not self.Enabled then
+            self:_clearContact()
+            return
+        end
+        local character, root = self:_root()
+        if not character or not root then return end
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {character, self.ContactRig}
+        params.IgnoreWater = false
+        local hit = workspace:Raycast(root.Position + Vector3.new(0, 2, 0), Vector3.new(0, -12, 0), params)
+        if not hit or not hit.Instance or math.abs(hit.Normal.Y) < 0.28 then
+            self:_clearContact()
+            return
+        end
+        if not self.ContactRig or not self.ContactRig.Parent then
+            local rig = Instance.new("Folder")
+            rig.Name = "YinYangShader_ContactReflection"
+            rig.Parent = workspace
+            self.ContactRig, self.ContactParts = rig, {}
+        end
+
+        local normal = hit.Normal
+        local right = root.CFrame.RightVector
+        if math.abs(right:Dot(normal)) > 0.92 then right = root.CFrame.LookVector end
+        local back = normal:Cross(right).Unit
+        right = back:Cross(normal).Unit
+        local groundDistance = (root.Position - hit.Position).Magnitude
+        local distanceFade = math.clamp(1 - math.max(0, groundDistance - 2.4) / 8.5, 0.18, 1)
+        local wetFactor = math.clamp((self.Intensity * self.Wetness) / 0.34, 0.42, 1)
+
+        if not self.ContactCore or not self.ContactCore.Parent then
+            local core = Instance.new("Part")
+            core.Name = "ContactReflectionCore"
+            core.Shape = Enum.PartType.Ball
+            core.Anchored, core.CanCollide, core.CanQuery, core.CanTouch, core.CastShadow = true, false, false, false, false
+            core.Material = Enum.Material.Glass
+            core.Parent = self.ContactRig
+            self.ContactCore = core
+        end
+        local extents = Vector3.new(3, 5, 2)
+        pcall(function() extents = character:GetExtentsSize() end)
+        self.ContactCore.Size = Vector3.new(
+            math.clamp(extents.X * 0.52, 0.90, 4.8),
+            0.026,
+            math.clamp(extents.Z * 0.52, 0.90, 4.8)
+        )
+        self.ContactCore.CFrame = CFrame.fromMatrix(hit.Position + normal * 0.019, right, normal, back)
+        if self.OilSheen then
+            self.ContactCore.Color = root.Color:Lerp(Color3.fromHSV((os.clock() * 0.07) % 1, 0.62, 1), 0.55)
+        else
+            self.ContactCore.Color = root.Color:Lerp(Color3.fromRGB(158, 198, 246), 0.46)
+        end
+        self.ContactCore.Transparency = math.clamp(0.95 - self.ContactStrength * 0.18 * wetFactor * distanceFade, 0.76, 0.93)
+
+        local active, index = {}, 0
+        for _, sourcePart in ipairs(character:GetDescendants()) do
+            if sourcePart:IsA("BasePart") and sourcePart.Transparency < 0.95 and sourcePart.Name ~= "HumanoidRootPart" then
+                if index >= 18 then break end
+                local sourceHit = workspace:Raycast(sourcePart.Position + normal * 0.14, -normal * 9, params)
+                if sourceHit and sourceHit.Instance and math.abs(sourceHit.Normal.Y) >= 0.28 then
+                    index = index + 1
+                    local proxy = self.ContactParts[sourcePart]
+                    if not proxy or not proxy.Parent then
+                        proxy = Instance.new("Part")
+                        proxy.Name = "ContactReflection"
+                        proxy.Anchored, proxy.CanCollide, proxy.CanQuery, proxy.CanTouch, proxy.CastShadow = true, false, false, false, false
+                        proxy.Material = Enum.Material.Glass
+                        proxy.Parent = self.ContactRig
+                        self.ContactParts[sourcePart] = proxy
+                    end
+                    local sourceNormal = sourceHit.Normal
+                    local sourceRight = right
+                    if math.abs(sourceRight:Dot(sourceNormal)) > 0.92 then sourceRight = back end
+                    local sourceBack = sourceNormal:Cross(sourceRight).Unit
+                    sourceRight = sourceBack:Cross(sourceNormal).Unit
+                    local size = sourcePart.Size
+                    local partDistance = math.clamp((sourcePart.Position - sourceHit.Position).Magnitude, 0, 9)
+                    local partFade = math.clamp(1 - math.max(0, partDistance - 2) / 7, 0.20, 1)
+                    proxy.Size = Vector3.new(math.max(0.13, size.X * 0.78), 0.024, math.max(0.13, size.Z * 0.78))
+                    proxy.CFrame = CFrame.fromMatrix(sourceHit.Position + sourceNormal * (0.024 + index * 0.00014), sourceRight, sourceNormal, sourceBack)
+                    if self.OilSheen then
+                        proxy.Color = sourcePart.Color:Lerp(Color3.fromHSV((os.clock() * 0.07 + index * 0.09) % 1, 0.62, 1), 0.55)
+                    else
+                        proxy.Color = sourcePart.Color:Lerp(Color3.fromRGB(174, 211, 255), 0.42)
+                    end
+                    proxy.Transparency = math.clamp(0.93 - self.ContactStrength * 0.50 * wetFactor * partFade * distanceFade, 0.58, 0.89)
+                    active[sourcePart] = true
+                end
+            end
+        end
+        for sourcePart, proxy in pairs(self.ContactParts) do
+            if not active[sourcePart] then
+                if proxy and proxy.Parent then proxy:Destroy() end
+                self.ContactParts[sourcePart] = nil
+            end
+        end
+    end
+
+    -- Espejo de objetos: copias reflejadas (hacia abajo) de lo que hay sobre el suelo, vistas a traves del suelo
+    -- semitransparente. Es opt-in y reversible: al apagarlo se restauran Transparency y Color de los suelos y se borran las copias.
+    function ShaderReflections:_mirrorReflectVector(vector, normal)
+        return vector - normal * (2 * vector:Dot(normal))
+    end
+
+    function ShaderReflections:_restoreMirrorFloor(part, record)
+        if part and part.Parent and record then
+            pcall(function()
+                part.Transparency = record.transparency
+                part.Color = record.color
+                if record.castShadow ~= nil then part.CastShadow = record.castShadow end
+            end)
+        end
+    end
+
+    function ShaderReflections:_clearMirror()
+        if self.MirrorRig and self.MirrorRig.Parent then pcall(function() self.MirrorRig:Destroy() end) end
+        self.MirrorRig, self.MirrorProxies, self.MirrorBacking = nil, {}, nil
+        self.MirrorPlanePos, self.MirrorPlaneNormal, self.MirrorLostAt = nil, nil, nil
+        self.MirrorLast = {}
+        for part, record in pairs(self.MirrorFloors) do
+            self:_restoreMirrorFloor(part, record)
+        end
+        self.MirrorFloors = {}
+    end
+
+    function ShaderReflections:_mirrorPlane(character, root)
+        local excluded = {character}
+        if self.MirrorRig then table.insert(excluded, self.MirrorRig) end
+        local origin = root.Position + Vector3.new(0, 2, 0)
+        for _ = 1, 4 do
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = excluded
+            params.IgnoreWater = true
+            -- 40 studs: un salto normal no "pierde" el suelo (antes 16 y el reflejo se borraba al saltar)
+            local hit = workspace:Raycast(origin, Vector3.new(0, -40, 0), params)
+            if not hit or not hit.Instance or hit.Instance:IsA("Terrain") then return nil end
+            if hit.Instance.Transparency >= 0.9 and not self.MirrorFloors[hit.Instance] then
+                table.insert(excluded, hit.Instance)
+            else
+                if hit.Normal.Y < 0.9 then return nil end
+                return hit.Position, hit.Normal, hit.Instance
+            end
+        end
+        return nil
+    end
+
+    -- Copia reflejada: mantiene material, malla, texturas y calcos del original (antes era Neon y se veía fantasma)
+    function ShaderReflections:_createMirrorProxy(source)
+        local ok, proxy = pcall(function()
+            local copy = source:Clone()
+            if not copy then return nil end
+            copy:ClearAllChildren()
+            for _, child in ipairs(source:GetChildren()) do
+                if child:IsA("SpecialMesh") or child:IsA("BlockMesh") or child:IsA("CylinderMesh")
+                    or child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                    local okChild, childCopy = pcall(function() return child:Clone() end)
+                    if okChild and childCopy then childCopy.Parent = copy end
+                end
+            end
+            return copy
+        end)
+        if not ok or not proxy then
+            local okFallback, fallback = pcall(function()
+                local block = Instance.new("Part")
+                if source:IsA("Part") then block.Shape = source.Shape end
+                block.Size = source.Size
+                block.Material = source.Material
+                return block
+            end)
+            if not okFallback or not fallback then return nil end
+            proxy = fallback
+        end
+        proxy.Name = "MirrorCopy"
+        if proxy.Material == Enum.Material.ForceField then proxy.Material = Enum.Material.SmoothPlastic end
+        proxy.Anchored, proxy.CanCollide, proxy.CanQuery, proxy.CanTouch, proxy.CastShadow = true, false, false, false, false
+        pcall(function() proxy.Massless = true end)
+        proxy.Parent = self.MirrorRig
+        return proxy
+    end
+
+    -- Color aproximado del cielo (para el fondo del espejo): atmósfera > niebla > ambiente exterior
+    function ShaderReflections:_mirrorSkyColor()
+        local lighting = game:GetService("Lighting")
+        local color = lighting.OutdoorAmbient
+        pcall(function()
+            local atmosphere = lighting:FindFirstChildOfClass("Atmosphere")
+            if atmosphere then
+                color = atmosphere.Color:Lerp(atmosphere.Decay, 0.35)
+            else
+                color = lighting.FogColor:Lerp(lighting.OutdoorAmbient, 0.4)
+            end
+        end)
+        return color:Lerp(Color3.new(0, 0, 0), 0.3)
+    end
+
+    function ShaderReflections:_updateMirror(force)
+        local planePos, normal = self.MirrorPlanePos, self.MirrorPlaneNormal
+        if not planePos or not normal or not self.MirrorRig then return end
+        self.MirrorLast = self.MirrorLast or {}
+        local deepest = 4
+        for source, proxy in pairs(self.MirrorProxies) do
+            if source and source.Parent and proxy and proxy.Parent then
+                local cf = source.CFrame
+                local height = (cf.Position - planePos):Dot(normal)
+                local reach = height + source.Size.Magnitude * 0.5
+                if reach > deepest then deepest = reach end
+                -- solo se reubica si el original se movió (lo estático no cuesta nada por frame)
+                if force or self.OilSheen or self.MirrorLast[source] ~= cf then
+                    self.MirrorLast[source] = cf
+                    local position = cf.Position - normal * (2 * height)
+                    local rx = self:_mirrorReflectVector(cf.RightVector, normal)
+                    local ry = self:_mirrorReflectVector(cf.UpVector, normal)
+                    local rz = self:_mirrorReflectVector(-cf.LookVector, normal)
+                    -- se desvanece apenas con la altura (como un piso pulido real), pero es sólido cerca del suelo
+                    local fade = math.clamp((math.max(height, 0) - 10) / 36, 0, 1) * 0.55
+                    pcall(function()
+                        proxy.CFrame = CFrame.fromMatrix(position, -rx, ry, rz)
+                        if proxy.Size ~= source.Size then proxy.Size = source.Size end
+                        local tinted = source.Color:Lerp(Color3.new(0, 0, 0), 0.08)
+                        if self.OilSheen then
+                            tinted = tinted:Lerp(Color3.fromHSV((os.clock() * 0.05 + height * 0.03) % 1, 0.5, 1), 0.14)
+                        end
+                        proxy.Color = tinted
+                        proxy.Transparency = math.clamp(source.Transparency + fade, 0, 0.9)
+                    end)
+                end
+            end
+        end
+        -- (quitado) el panel de color de cielo que aparecia como un cuadrado bajo el jugador.
+        -- Ahora el cielo y la luz se reflejan con el Reflectance real del piso (SkyMirror), no con un panel pintado.
+        if self.MirrorBacking and self.MirrorBacking.Parent then pcall(function() self.MirrorBacking:Destroy() end) end
+        self.MirrorBacking = nil
+    end
+
+    -- Partes de la zona ordenadas por distancia: así el límite elige siempre las mismas (antes el orden
+    -- cambiaba en cada escaneo y los reflejos se apagaban y prendían solos cada ~1 s)
+    function ShaderReflections:_sortedScan(origin, radius, character)
+        local parts = self:_scan(origin, radius, character)
+        local distance = {}
+        for _, part in ipairs(parts) do
+            distance[part] = (part.Position - origin).Magnitude
+        end
+        table.sort(parts, function(a, b) return distance[a] < distance[b] end)
+        return parts, distance
+    end
+
+    function ShaderReflections:_refreshMirror()
+        if not self.ObjectMirrorEnabled or not self.Enabled then
+            self:_clearMirror()
+            return
+        end
+        local character, root = self:_root()
+        if not character or not root then return end
+        local planePos, normal, hitPart = self:_mirrorPlane(character, root)
+        if not planePos then
+            -- se perdió el suelo un instante (salto, escalón, respawn): se espera antes de borrar todo
+            self.MirrorLostAt = self.MirrorLostAt or os.clock()
+            if os.clock() - self.MirrorLostAt > 1.6 then self:_clearMirror() end
+            return
+        end
+        self.MirrorLostAt = nil
+        -- pisar algo chico (un escalón, una mesa) no cambia el plano del espejo grande
+        if self.MirrorPlanePos and hitPart and (hitPart.Size.X < 6 or hitPart.Size.Z < 6)
+            and math.abs((planePos - self.MirrorPlanePos):Dot(normal)) < 8 then
+            planePos, normal, hitPart = self.MirrorPlanePos, self.MirrorPlaneNormal, nil
+        end
+        local planeChanged = not self.MirrorPlanePos or math.abs((planePos - self.MirrorPlanePos):Dot(normal)) > 0.01
+        self.MirrorPlanePos, self.MirrorPlaneNormal = planePos, normal
+        if not self.MirrorRig or not self.MirrorRig.Parent then
+            local rig = Instance.new("Folder")
+            rig.Name = "YinYangShader_ObjectMirror"
+            rig.Parent = workspace
+            self.MirrorRig, self.MirrorProxies, self.MirrorBacking, self.MirrorLast = rig, {}, nil, {}
+        end
+
+        local profile = shaderQualityProfile()
+        local factor = math.clamp(self.Intensity * self.Wetness / 0.45, 0.25, 1)
+        local floorTransparency = math.clamp(self.MirrorFloorTransparency + 0.24 * factor, 0.36, 0.66)
+        local floors, candidates, floorCount = {}, {}, 0
+        local parts, distance = self:_sortedScan(root.Position, profile.mirrorRadius, nil)
+        for _, part in ipairs(parts) do
+            if part:IsA("BasePart") and not part:IsA("Terrain") and (part.Transparency < 0.9 or self.MirrorFloors[part]) then
+                local parent = part.Parent
+                local parentName = parent and parent.Name or ""
+                if string.sub(parentName, 1, 14) ~= "YinYangShader_" then
+                    local relative = part.Position - planePos
+                    local height = relative:Dot(normal)
+                    local floorLike = math.abs(part.CFrame.UpVector:Dot(normal)) >= 0.97
+                        and part.Size.X >= 4 and part.Size.Z >= 4 and part.Size.Y <= 5
+                        and math.abs(height + part.Size.Y * 0.5) <= 0.35
+                    if part == hitPart or floorLike then
+                        if floorCount < 80 then
+                            floors[part] = true
+                            floorCount = floorCount + 1
+                        end
+                    elseif part.Size.Magnitude <= 360 and part.Size.Magnitude >= 0.5 and height > -0.2 then
+                        table.insert(candidates, {part = part, distance = distance[part] or relative.Magnitude})
+                    end
+                end
+            end
+        end
+        if hitPart and hitPart:IsA("BasePart") then floors[hitPart] = true end
+
+        for part in pairs(floors) do
+            if not self.MirrorFloors[part] then
+                self.MirrorFloors[part] = {transparency = part.Transparency, color = part.Color, castShadow = part.CastShadow}
+            end
+            local record = self.MirrorFloors[part]
+            pcall(function()
+                part.Transparency = math.max(record.transparency, floorTransparency)
+                part.Color = record.color:Lerp(Color3.new(0, 0, 0), 0.12)
+                -- sin la sombra del piso, las copias de abajo reciben la luz del sol como el original
+                part.CastShadow = false
+            end)
+        end
+        for part, record in pairs(self.MirrorFloors) do
+            if not floors[part] then
+                self:_restoreMirrorFloor(part, record)
+                self.MirrorFloors[part] = nil
+            end
+        end
+
+        local wanted = {}
+        for index = 1, math.min(#candidates, profile.mirrorLimit) do
+            wanted[candidates[index].part] = true
+        end
+        for source, proxy in pairs(self.MirrorProxies) do
+            if not wanted[source] or not source.Parent then
+                if proxy and proxy.Parent then proxy:Destroy() end
+                self.MirrorProxies[source] = nil
+                self.MirrorLast[source] = nil
+            end
+        end
+        -- primera vez: se arma todo de una (antes 24 por escaneo = 2-3 s sin reflejo al aplicar)
+        local budget = next(self.MirrorProxies) == nil and profile.mirrorLimit or 48
+        local created = 0
+        for index = 1, math.min(#candidates, profile.mirrorLimit) do
+            if created >= budget then break end
+            local source = candidates[index].part
+            if not self.MirrorProxies[source] then
+                local proxy = self:_createMirrorProxy(source)
+                if proxy then
+                    self.MirrorProxies[source] = proxy
+                    created = created + 1
+                end
+            end
+        end
+        self:_updateMirror(planeChanged)
+    end
+
+    function ShaderReflections:_recover()
+        -- al cambiar de ronda el mapa se rehace: limpiamos refs muertas y volvemos a cubrir el mapa nuevo
+        for part in pairs(self.Original) do
+            if not (part and part.Parent) then
+                self.Original[part] = nil; self.Applied[part] = nil
+                self.ModelApplied[part] = nil; self.CharacterApplied[part] = nil
+            end
+        end
+        self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+        self:_clearMirror()
+        local _, root = self:_root()
+        self.SceneAnchor = root and root.Position or self.SceneAnchor
+        self:Refresh()
+        self:QueueSceneCoverage()
+    end
+
+    function ShaderReflections:Refresh()
+        if not self.Enabled then return end
+        local character, root = self:_root()
+        if not root then return end
+        if self.SceneAnchor and (root.Position - self.SceneAnchor).Magnitude > 600 then
+            self.SceneAnchor = root.Position
+            for part in pairs(self.Original) do
+                if not (part and part.Parent) then self.Original[part] = nil; self.Applied[part] = nil end
+            end
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:QueueSceneCoverage()
+        elseif not self.SceneAnchor then
+            self.SceneAnchor = root.Position
+        end
+        local profile = shaderQualityProfile()
+        local active, count = {}, 0
+        local parts, distance = self:_sortedScan(root.Position, profile.reflectionRadius, character)
+        for _, part in ipairs(parts) do
+            if count >= profile.reflectionLimit then break end
+            if not part:IsDescendantOf(character) and self:_applyWetPart(part) then
+                active[part] = true
+                count = count + 1
+            end
+        end
+        if self.CharacterSpecularEnabled and character then
+            local characterCount = 0
+            for _, part in ipairs(character:GetDescendants()) do
+                if characterCount >= 28 then break end
+                if part:IsA("BasePart") and self:_applyWetPart(part) then
+                    active[part] = true
+                    characterCount = characterCount + 1
+                end
+            end
+        end
+        if not self.SceneCoverage then
+            -- histéresis: lo que ya brillaba se queda mientras siga dentro del radio (sin parpadeo en el borde del límite)
+            local keepRadius = profile.reflectionRadius * 1.15
+            for part in pairs(self.Applied) do
+                local near = part and part.Parent and distance[part] ~= nil and distance[part] <= keepRadius
+                if not active[part] and not near and not self.CharacterApplied[part] then
+                    local original = self.Original[part]
+                    if original ~= nil and part and part.Parent then pcall(function() part.Reflectance = original end) end
+                    self.Original[part] = nil
+                    self.Applied[part] = nil
+                end
+            end
+        end
+        if self.SceneCoverage and #self.SceneQueue == 0 then self:QueueSceneCoverage() end
+        self:_refreshContact()
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:Restore()
+        for part, original in pairs(self.Original) do
+            if part and part.Parent then pcall(function() part.Reflectance = original end) end
+        end
+        self.Original, self.Applied, self.ModelApplied, self.CharacterApplied = {}, {}, {}, {}
+        self:_restoreSkyMirror()
+        self:_restoreTextures()
+        self:_clearContact()
+        self:_clearMirror()
+    end
+
+    function ShaderReflections:SetIntensity(value)
+        local newValue = math.clamp(tonumber(value) or self.Intensity, 0.05, 0.60)
+        if newValue == self.Intensity then
+            if self.Enabled then self:Refresh() end
+            return
+        end
+        self.Intensity = newValue
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetWetness(value)
+        local newValue = math.clamp(tonumber(value) or self.Wetness, 0.10, 1)
+        if newValue == self.Wetness then
+            if self.Enabled then self:Refresh() end
+            return
+        end
+        self.Wetness = newValue
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSurfaceMode(mode)
+        local newMode = mode == "Floors" and "Floors" or "All"
+        -- mismo valor: no se restaura nada (antes cada preset hacía Restore y el efecto se apagaba un momento)
+        if newMode == self.SurfaceMode then return end
+        self.SurfaceMode = newMode
+        if self.Enabled then
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSceneCoverage(enabled)
+        enabled = enabled == true
+        if enabled == self.SceneCoverage then return end
+        self.SceneCoverage = enabled
+        if self.Enabled then
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSkyMirrorEnabled(enabled)
+        self.SkyMirrorEnabled = enabled == true
+        if not self.SkyMirrorEnabled then
+            self:_restoreSkyMirror()
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetStripTexturesEnabled(enabled)
+        self.StripTextures = enabled == true
+        if not self.StripTextures then
+            self:_restoreTextures()
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetObjectMirrorEnabled(enabled)
+        self.ObjectMirrorEnabled = enabled == true
+        if not self.ObjectMirrorEnabled then
+            self:_clearMirror()
+        elseif self.Enabled then
+            self.MirrorScanElapsed = 0
+            self:_refreshMirror()
+        end
+    end
+
+    function ShaderReflections:SetContactStrength(value)
+        self.ContactStrength = math.clamp(tonumber(value) or self.ContactStrength, 0.05, 0.60)
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetContactEnabled(enabled)
+        self.ContactEnabled = enabled == true
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetModelDetailEnabled(enabled)
+        self.ModelDetailEnabled = enabled == true
+        if not self.ModelDetailEnabled then
+            for part in pairs(self.ModelApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+            end
+            self.ModelApplied = {}
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetCharacterSpecularEnabled(enabled)
+        self.CharacterSpecularEnabled = enabled == true
+        if not self.CharacterSpecularEnabled then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetExcludeLocalAvatar(enabled)
+        self.ExcludeLocalAvatar = enabled == true
+        if self.ExcludeLocalAvatar then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        self:_refreshContact()
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetShadowEnabled(enabled)
+        enabled = enabled == true
+        if self.ShadowEnabled == enabled then
+            if enabled then self:_refreshSceneShadows() else self:_clearSceneShadows() end
+            return
+        end
+        self.ShadowEnabled = enabled
+        if not enabled then
+            self:_clearSceneShadows()
+            return
+        end
+        self.ShadowElapsed = 0
+        self.ShadowConnection = RunService.Heartbeat:Connect(fu

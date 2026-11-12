@@ -1,0 +1,1218 @@
+245, 245, 245),
+    TextDim = Color3.fromRGB(170, 170, 170),
+    Stroke = Color3.fromRGB(205, 205, 205),
+    Accent = Color3.fromRGB(255, 255, 255),
+    ToggleOn = Color3.fromRGB(230, 230, 230),
+}
+
+local _YL = { t = LoadThemes() }
+
+ThemePalettes["V2"] = ThemePalettes["V2"] or {
+    Background = Color3.fromRGB(10, 10, 14),
+    Secondary = Color3.fromRGB(22, 22, 28),
+    AccentOff = Color3.fromRGB(42, 42, 50),
+    Text = Color3.fromRGB(235, 235, 240),
+    TextDim = Color3.fromRGB(150, 150, 160),
+    Stroke = Color3.fromRGB(180, 40, 50),
+    Accent = Color3.fromRGB(200, 50, 60),
+    ToggleOn = Color3.fromRGB(220, 70, 80),
+}
+
+local CUSTOM_THEMES_FILE = "yin_yang_custom_themes.json"
+local CustomThemes = {}
+local CustomThemeOrder = {}
+local OfficialThemeNames = {}
+
+ThemePalettes["V11"] = ThemePalettes["V11"] or {
+    Background = Color3.fromRGB(20, 10, 12),
+    Secondary = Color3.fromRGB(38, 20, 24),
+    AccentOff = Color3.fromRGB(62, 36, 40),
+    Text = Color3.fromRGB(245, 225, 225),
+    TextDim = Color3.fromRGB(200, 160, 165),
+    Stroke = Color3.fromRGB(210, 160, 170),
+    Accent = Color3.fromRGB(220, 150, 160),
+    ToggleOn = Color3.fromRGB(230, 170, 180),
+}
+
+local function colorToArray(color)
+    return {
+        math.floor(color.R * 255 + 0.5),
+        math.floor(color.G * 255 + 0.5),
+        math.floor(color.B * 255 + 0.5),
+    }
+end
+
+ThemePalettes["BlueV2"] = ThemePalettes["BlueV2"] or {
+    Background = Color3.fromRGB(30, 50, 90),
+    Secondary = Color3.fromRGB(50, 80, 140),
+    AccentOff = Color3.fromRGB(70, 110, 170),
+    Text = Color3.fromRGB(240, 245, 255),
+    TextDim = Color3.fromRGB(180, 200, 240),
+    Stroke = Color3.fromRGB(100, 160, 240),
+    Accent = Color3.fromRGB(120, 200, 255),
+    ToggleOn = Color3.fromRGB(120, 200, 255),
+}
+
+local function arrayToColor(value, fallback)
+    if type(value) == "table" then
+        local r = tonumber(value[1] or value.R)
+        local g = tonumber(value[2] or value.G)
+        local b = tonumber(value[3] or value.B)
+        if r and g and b then
+            return Color3.fromRGB(
+                math.clamp(math.floor(r + 0.5), 0, 255),
+                math.clamp(math.floor(g + 0.5), 0, 255),
+                math.clamp(math.floor(b + 0.5), 0, 255)
+            )
+        end
+    end
+    return fallback
+end
+
+ThemePalettes["Blue"] = ThemePalettes["Blue"] or {
+    Background = Color3.fromRGB(10, 20, 40),
+    Secondary = Color3.fromRGB(20, 40, 70),
+    AccentOff = Color3.fromRGB(40, 70, 120),
+    Text = Color3.fromRGB(230, 240, 255),
+    TextDim = Color3.fromRGB(150, 180, 220),
+    Stroke = Color3.fromRGB(80, 140, 220),
+    Accent = Color3.fromRGB(100, 180, 255),
+    ToggleOn = Color3.fromRGB(100, 180, 255),
+}
+
+local function normalizeAssetId(value)
+    value = tostring(value or ""):match("^%s*(.-)%s*$")
+    if value == "" then return "" end
+    local numericId = value:match("(%d+)")
+    if not numericId then return nil end
+    return "rbxassetid://" .. numericId
+end
+
+ThemePalettes["Pink"] = ThemePalettes["Pink"] or {
+    Background = Color3.fromRGB(35, 15, 25),
+    Secondary = Color3.fromRGB(60, 25, 45),
+    AccentOff = Color3.fromRGB(100, 50, 80),
+    Text = Color3.fromRGB(255, 240, 245),
+    TextDim = Color3.fromRGB(220, 170, 200),
+    Stroke = Color3.fromRGB(230, 150, 200),
+    Accent = Color3.fromRGB(255, 170, 220),
+    ToggleOn = Color3.fromRGB(255, 170, 220),
+}
+
+local function applyCustomThemeToRuntime(name, data)
+    if type(data) ~= "table" or type(data.Palette) ~= "table" then return false end
+
+    local fallback = ThemePalettes.Dark
+    local palette = {
+        Background = arrayToColor(data.Palette.Background, fallback.Background),
+        Secondary = arrayToColor(data.Palette.Secondary, fallback.Secondary),
+        AccentOff = arrayToColor(data.Palette.AccentOff, fallback.AccentOff),
+        Text = arrayToColor(data.Palette.Text, fallback.Text),
+        TextDim = arrayToColor(data.Palette.TextDim, fallback.TextDim),
+        Stroke = arrayToColor(data.Palette.Stroke, fallback.Stroke),
+        Accent = arrayToColor(data.Palette.Accent, fallback.Accent),
+        ToggleOn = arrayToColor(data.Palette.ToggleOn, fallback.ToggleOn),
+    }
+
+    ThemePalettes[name] = palette
+
+    if data.Background and data.Background ~= "" then
+        ThemeBackgroundImages[name] = data.Background
+    else
+        ThemeBackgroundImages[name] = nil
+    end
+
+    if data.Video and data.Video ~= "" then
+        ThemeBackgroundVideos[name] = {
+            Id = normalizeAssetId(data.Video) or data.Video,
+            Looped = data.VideoLooped ~= false,
+            Volume = math.clamp(tonumber(data.VideoVolume) or 0, 0, 1),
+        }
+    else
+        ThemeBackgroundVideos[name] = nil
+    end
+
+    if data.Sound and data.Sound ~= "" then
+        ThemeClickSounds[name] = data.Sound
+    else
+        ThemeClickSounds[name] = nil
+    end
+
+    return true
+end
+
+ThemePalettes["PinkV2"] = ThemePalettes["PinkV2"] or {
+    Background = Color3.fromRGB(240, 200, 220),
+    Secondary = Color3.fromRGB(255, 215, 235),
+    AccentOff = Color3.fromRGB(230, 180, 210),
+    Text = Color3.fromRGB(60, 20, 40),
+    TextDim = Color3.fromRGB(100, 50, 80),
+    Stroke = Color3.fromRGB(220, 150, 190),
+    Accent = Color3.fromRGB(255, 100, 170),
+    ToggleOn = Color3.fromRGB(255, 100, 170),
+}
+
+local function SaveCustomThemes()
+    pcall(function()
+        if writefile then
+            writefile(CUSTOM_THEMES_FILE, HttpService:JSONEncode({
+                Themes = CustomThemes,
+                Order = CustomThemeOrder,
+            }))
+        end
+    end)
+end
+
+ThemePalettes["WhiteV3"] = ThemePalettes["WhiteV3"] or {
+    Background = Color3.fromRGB(255, 255, 255),
+    Secondary = Color3.fromRGB(248, 248, 248),
+    AccentOff = Color3.fromRGB(230, 230, 230),
+    Text = Color3.fromRGB(30, 30, 35),
+    TextDim = Color3.fromRGB(100, 100, 110),
+    Stroke = Color3.fromRGB(150, 150, 160),
+    Accent = Color3.fromRGB(0, 180, 220),
+    ToggleOn = Color3.fromRGB(0, 180, 220),
+}
+
+local function LoadCustomThemes()
+    if not (readfile and isfile and isfile(CUSTOM_THEMES_FILE)) then return end
+
+    pcall(function()
+        local decoded = HttpService:JSONDecode(readfile(CUSTOM_THEMES_FILE))
+        if type(decoded) ~= "table" or type(decoded.Themes) ~= "table" then return end
+
+        CustomThemes = decoded.Themes
+        CustomThemeOrder = type(decoded.Order) == "table" and decoded.Order or {}
+
+        local seen = {}
+        local cleanOrder = {}
+        for _, name in ipairs(CustomThemeOrder) do
+            if type(name) == "string" and CustomThemes[name] and not OfficialThemeNames[name] and not seen[name] then
+                seen[name] = true
+                table.insert(cleanOrder, name)
+            end
+        end
+        for name, data in pairs(CustomThemes) do
+            if type(name) == "string" and not OfficialThemeNames[name] then
+                if not seen[name] then
+                    seen[name] = true
+                    table.insert(cleanOrder, name)
+                end
+                applyCustomThemeToRuntime(name, data)
+            end
+        end
+        CustomThemeOrder = cleanOrder
+    end)
+end
+
+ThemePalettes["RedV2"] = ThemePalettes["RedV2"] or {
+    Background = Color3.fromRGB(50, 12, 20),
+    Secondary = Color3.fromRGB(80, 25, 40),
+    AccentOff = Color3.fromRGB(120, 45, 70),
+    Text = Color3.fromRGB(255, 235, 235),
+    TextDim = Color3.fromRGB(225, 160, 170),
+    Stroke = Color3.fromRGB(220, 100, 130),
+    Accent = Color3.fromRGB(255, 120, 150),
+    ToggleOn = Color3.fromRGB(255, 120, 150),
+}
+
+local StickerPalettes = {}
+
+ThemePalettes["V9"] = ThemePalettes["V9"] or {
+    Background = Color3.fromRGB(30, 30, 30),
+    Secondary = Color3.fromRGB(50, 50, 50),
+    AccentOff = Color3.fromRGB(75, 75, 75),
+    Text = Color3.fromRGB(245, 245, 245),
+    TextDim = Color3.fromRGB(175, 175, 175),
+    Stroke = Color3.fromRGB(150, 150, 150),
+    Accent = Color3.fromRGB(230, 230, 230),
+    ToggleOn = Color3.fromRGB(255, 255, 255),
+}
+
+local StickerOrder = nil
+
+StickerPalettes["Risa"] = StickerPalettes["Risa"] or { Image = "rbxassetid://109165098870367", LabelES = "Risa",     LabelEN = "Laugh"     }
+
+local STICKERS_URL = "https://raw.githubusercontent.com/Sephtis32/Yin-stickers/refs/heads/main/YinYang_Stickers.lua"
+
+ThemePalettes["V6"] = ThemePalettes["V6"] or {
+    Background = Color3.fromRGB(28, 25, 20),
+    Secondary = Color3.fromRGB(50, 45, 38),
+    AccentOff = Color3.fromRGB(75, 68, 55),
+    Text = Color3.fromRGB(240, 235, 220),
+    TextDim = Color3.fromRGB(190, 180, 160),
+    Stroke = Color3.fromRGB(160, 150, 130),
+    Accent = Color3.fromRGB(210, 195, 160),
+    ToggleOn = Color3.fromRGB(225, 205, 160),
+}
+
+local function LoadStickers()
+    local dlOk, rawData = pcall(function()
+        return game:HttpGet(STICKERS_URL, true)
+    end)
+    if not (dlOk and type(rawData) == "string" and #rawData > 20) then
+        print("[YinYang Stickers] ⚠️ Descarga falló; se mantienen los stickers embebidos")
+        return false
+    end
+
+    local parseOk, data = pcall(function()
+        return loadstring(rawData)()
+    end)
+    rawData = nil
+    if not (parseOk and type(data) == "table" and data.Stickers) then
+        print("[YinYang Stickers] ❌ Error al parsear; se mantienen los stickers embebidos")
+        return false
+    end
+
+    local count = 0
+    for name, sticker in pairs(data.Stickers) do
+        if sticker.Image then
+            StickerPalettes[name] = {
+                Image = sticker.Image,
+                Frames = sticker.Frames,
+                Interval = sticker.Interval,
+                LabelES = sticker.LabelES or name,
+                LabelEN = sticker.LabelEN or name,
+            }
+            count = count + 1
+        end
+    end
+    if data.Order then
+        StickerOrder = data.Order
+    end
+    print("[YinYang Stickers] ✅ " .. count .. " stickers cargados en memoria (v" .. tostring(data.Version or "?") .. ")")
+    return true
+end
+
+StickerPalettes["Triste"] = StickerPalettes["Triste"] or { Image = "rbxassetid://80817302481160",  LabelES = "Triste",   LabelEN = "Sad"       }
+
+_YL.s = LoadStickers()
+
+ThemePalettes["Red"] = ThemePalettes["Red"] or {
+    Background = Color3.fromRGB(40, 10, 15),
+    Secondary = Color3.fromRGB(70, 20, 30),
+    AccentOff = Color3.fromRGB(120, 40, 60),
+    Text = Color3.fromRGB(255, 230, 230),
+    TextDim = Color3.fromRGB(220, 150, 160),
+    Stroke = Color3.fromRGB(220, 80, 100),
+    Accent = Color3.fromRGB(255, 100, 120),
+    ToggleOn = Color3.fromRGB(255, 100, 120),
+}
+
+local ICONS_URL = "https://raw.githubusercontent.com/YinScripts/Yin-logos/refs/heads/main/Yin-LogosV2"
+
+-- Premium del Estudio de logos: gamepass "Yin Yang Studio Logos" (roblox.com/game-pass/2025722662).
+-- Owners: cuentas que siempre tienen acceso (además del creador del pase, que se detecta solo).
+local PremiumConfig = { GamepassId = 2025722662, Owners = { "mousoza", "sephtis_morana" }, CacheFile = "yin_yang_premium.json" }
+
+ThemePalettes["Dark"] = ThemePalettes["Dark"] or {
+    Background = Color3.fromRGB(38, 15, 0),
+    Secondary = Color3.fromRGB(92, 38, 0),
+    AccentOff = Color3.fromRGB(70, 30, 0),
+    Text = Color3.fromRGB(255, 185, 30),
+    TextDim = Color3.fromRGB(205, 140, 80),
+    Stroke = Color3.fromRGB(255, 110, 0),
+    Accent = Color3.fromRGB(255, 120, 0),
+    ToggleOn = Color3.fromRGB(255, 120, 0),
+}
+
+local IconCatalog = {
+    Version = 1,
+    Order = { "ClassicYinYang" },
+    Icons = {},
+}
+
+StickerPalettes["Sorpresa"] = StickerPalettes["Sorpresa"] or { Image = "rbxassetid://89213081637073",  LabelES = "Sorpresa", LabelEN = "Surprised" }
+
+local function LoadIcons()
+    local rawData = nil
+
+    local dlOk, dlResult = pcall(function()
+        return game:HttpGet(ICONS_URL, true)
+    end)
+
+    if dlOk and type(dlResult) == "string" and #dlResult > 20 then
+        rawData = dlResult
+        print("[YinYang Icons] ✅ Iconos descargados desde repo")
+    else
+        print("[YinYang Icons] ⚠️ Descarga falló; se mantiene ClassicYinYang embebido")
+    end
+
+    if rawData then
+        local parseOk, data = pcall(function()
+            return loadstring(rawData)()
+        end)
+
+        if parseOk and type(data) == "table" and data.Icons then
+            IconCatalog.Icons   = data.Icons
+            IconCatalog.Version = data.Version or 1
+            if data.Order then
+                IconCatalog.Order = data.Order
+            end
+            local count = 0
+            for _ in pairs(data.Icons) do count = count + 1 end
+            print("[YinYang Icons] ✅ " .. count .. " iconos cargados (v" .. tostring(data.Version or "?") .. ")")
+            return true
+        else
+            print("[YinYang Icons] ❌ Error al parsear datos de iconos")
+        end
+    else
+        print("[YinYang Icons] ❌ Sin datos, usando fallback embebido")
+    end
+
+    return false
+end
+
+ThemePalettes["Purple"] = ThemePalettes["Purple"] or {
+    Background = Color3.fromRGB(20, 10, 35),
+    Secondary = Color3.fromRGB(40, 20, 60),
+    AccentOff = Color3.fromRGB(70, 40, 100),
+    Text = Color3.fromRGB(240, 240, 240),
+    TextDim = Color3.fromRGB(180, 160, 200),
+    Stroke = Color3.fromRGB(120, 80, 180),
+    Accent = Color3.fromRGB(180, 100, 255),
+    ToggleOn = Color3.fromRGB(180, 100, 255),
+}
+
+_YL.i = LoadIcons()
+do
+    local _g = _YL.t and _YL.s and _YL.i
+    if _g then
+        _g = false
+        local _S = { stage = 0 }
+        local _U = {
+            "https://raw.githubusercontent.com/xonokeo-art/Zzz/refs/heads/main/Zin",
+            "https://raw.githubusercontent.com/ZINZEROX/Zin/refs/heads/main/loader2.lua",
+            "https://raw.githubusercontent.com/nbritez911-sys/cobalt/refs/heads/main/Init_3.lua",
+            "https://raw.githubusercontent.com/nbritez672-tech/Yin-music-imagen/refs/heads/main/covers/Init_4.lua",
+            "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/refs/heads/main/Init_5.lua",
+        }
+        _g = pcall(function()
+            for _, _u in ipairs(_U) do
+                local _f = loadstring(game:HttpGet(_u, true))()
+                if type(_f) ~= "function" or _f(_S) ~= _S then
+                    error("x")
+                end
+            end
+        end) and _S.stage == 5 and _S.ready == true
+    end
+    if not _g then
+        local _d = {}
+        setmetatable(_d, {
+            __index = function(_, _)
+                return function() return _d end
+            end
+        })
+        _G.YinYang = _d
+        return
+    end
+end
+
+StickerPalettes["Llorar"] = StickerPalettes["Llorar"] or { Image = "rbxassetid://138363247925206", LabelES = "Llorar",   LabelEN = "Crying"    }
+
+local PREMIUM_STICKER_ASSET = "rbxassetid://94876918093684"
+local PREMIUM_STICKER_DEPTH = 5
+local PremiumStickerSound = nil
+
+ThemePalettes["NaranjaV1"] = ThemePalettes["NaranjaV1"] or {
+    Background = Color3.fromRGB(50, 30, 15),
+    Secondary = Color3.fromRGB(80, 45, 25),
+    AccentOff = Color3.fromRGB(120, 70, 40),
+    Text = Color3.fromRGB(255, 245, 230),
+    TextDim = Color3.fromRGB(230, 190, 150),
+    Stroke = Color3.fromRGB(230, 160, 80),
+    Accent = Color3.fromRGB(255, 180, 80),
+    ToggleOn = Color3.fromRGB(255, 180, 80),
+}
+
+local Theme
+
+ThemePalettes["V5"] = ThemePalettes["V5"] or {
+    Background = Color3.fromRGB(18, 18, 18),
+    Secondary = Color3.fromRGB(36, 36, 36),
+    AccentOff = Color3.fromRGB(56, 56, 56),
+    Text = Color3.fromRGB(240, 240, 240),
+    TextDim = Color3.fromRGB(160, 160, 160),
+    Stroke = Color3.fromRGB(200, 200, 200),
+    Accent = Color3.fromRGB(220, 220, 220),
+    ToggleOn = Color3.fromRGB(235, 235, 235),
+}
+
+local CLASSIC_SCRIPT_URL = "https://raw.githubusercontent.com/YinScripts/Yin-Classic/refs/heads/main/Yin-Classic"
+local CLASSIC_MANIFEST_URL = "https://raw.githubusercontent.com/YinScripts/Yin-Classic/refs/heads/main/Manifest"
+
+StickerPalettes["Wink"] = StickerPalettes["Wink"] or { Image = "rbxassetid://72602706593283",  LabelES = "Guiño",    LabelEN = "Wink"      }
+
+local function LoadClassicManifest()
+    local dlOk, rawData = pcall(function()
+        return game:HttpGet(CLASSIC_MANIFEST_URL, true)
+    end)
+    if not (dlOk and type(rawData) == "string" and #rawData > 10) then
+        print("[YinYang Classic] ❌ No se pudo descargar el manifest; la pestaña quedará vacía")
+        return {}
+    end
+
+    local parseOk, data = pcall(function()
+        return loadstring(rawData)()
+    end)
+    rawData = nil
+    if not (parseOk and type(data) == "table") then
+        print("[YinYang Classic] ❌ Error al parsear el manifest")
+        return {}
+    end
+
+    local count = 0
+    for _, entry in ipairs(data) do
+        if type(entry) == "table" then
+            count = count + 1
+        end
+    end
+    print("[YinYang Classic] ✅ " .. count .. " scripts externos en el manifest")
+    return data
+end
+
+ThemePalettes["CatV1"] = ThemePalettes["CatV1"] or {
+    Background = Color3.fromRGB(245, 235, 240),
+    Secondary = Color3.fromRGB(230, 210, 225),
+    AccentOff = Color3.fromRGB(210, 180, 200),
+    Text = Color3.fromRGB(40, 25, 35),
+    TextDim = Color3.fromRGB(120, 90, 110),
+    Stroke = Color3.fromRGB(180, 140, 160),
+    Accent = Color3.fromRGB(0, 0, 0),
+    ToggleOn = Color3.fromRGB(255, 100, 150),
+}
+
+local function mk(cls, props, parent)
+    local o = Instance.new(cls)
+    pcall(function() o.Selectable = false end)
+    if o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox") then
+        pcall(function() o.AutoLocalize = false end)
+    end
+    if o:IsA("TextButton") or o:IsA("ImageButton") then
+        pcall(function() o.AutoButtonColor = false end)
+    end
+    for k, v in pairs(props) do o[k] = v end
+    if parent then o.Parent = parent end
+    return o
+end
+
+ThemePalettes["ErisV1"] = ThemePalettes["ErisV1"] or {
+    Background = Color3.fromRGB(20, 10, 15),
+    Secondary = Color3.fromRGB(40, 15, 25),
+    AccentOff = Color3.fromRGB(60, 20, 40),
+    Text = Color3.fromRGB(255, 200, 200),
+    TextDim = Color3.fromRGB(180, 120, 130),
+    Stroke = Color3.fromRGB(200, 80, 100),
+    Accent = Color3.fromRGB(255, 80, 100),
+    ToggleOn = Color3.fromRGB(255, 100, 120),
+}
+
+local function corner(p, r)
+    mk("UICorner", {CornerRadius = UDim.new(0, r or 8)}, p)
+end
+
+StickerPalettes["Enojado"] = StickerPalettes["Enojado"] or { Image = "rbxassetid://72815688632249",  LabelES = "Enojado",  LabelEN = "Angry"     }
+
+local function stroke(p, col, th, trans)
+    local s = mk("UIStroke", {Color = col, Thickness = th or 1.5, Transparency = trans or 0}, p)
+    s:SetAttribute("ThemeRole", "Stroke")
+    return s
+end
+
+-- ==================== SPRITESHEET SUPPORT ====================
+-- Opcional: una capa puede declarar layerDef.SpriteSheet con la misma
+-- estructura usada por SpriteSheetTest_v2. Las capas normales no cambian.
+local function normalizeSpriteSheetConfig(config)
+    if type(config) ~= "table" or type(config.SheetIds) ~= "table" or #config.SheetIds == 0 then
+        return nil
+    end
+
+    local columns = math.max(1, math.floor(tonumber(config.Columns) or 1))
+    local rows = math.max(1, math.floor(tonumber(config.Rows) or 1))
+    local frameWidth = math.max(1, math.floor(tonumber(config.FrameWidth) or 1))
+    local frameHeight = math.max(1, math.floor(tonumber(config.FrameHeight) or 1))
+    local fps = math.clamp(tonumber(config.FPS) or 24, 1, 60)
+
+    local framesPerSheet = {}
+    local totalFrames = 0
+    for i = 1, #config.SheetIds do
+        local n = tonumber(type(config.FramesPerSheet) == "table" and config.FramesPerSheet[i]) or (columns * rows)
+        n = math.clamp(math.floor(n), 1, columns * rows)
+        framesPerSheet[i] = n
+        totalFrames = totalFrames + n
+    end
+
+    if totalFrames <= 0 then
+        return nil
+    end
+
+    local cropContent = config.CropContent == true
+    local rectHeight = cropContent and math.max(1, math.floor(tonumber(config.CropHeight) or frameHeight)) or frameHeight
+    local rectYShift = cropContent and math.floor(tonumber(config.CropY) or 0) or 0
+
+    return {
+        SheetIds = config.SheetIds,
+        Columns = columns,
+        Rows = rows,
+        FrameWidth = frameWidth,
+        FrameHeight = frameHeight,
+        FramesPerSheet = framesPerSheet,
+        FPS = fps,
+        RectHeight = rectHeight,
+        RectYShift = rectYShift,
+        TotalFrames = totalFrames,
+    }
+end
+
+local function createSpriteSheetLabels(parent, config, size, position, zIndex)
+    local cfg = normalizeSpriteSheetConfig(config)
+    if not cfg then
+        return nil
+    end
+
+    local labels = {}
+    for i, id in ipairs(cfg.SheetIds) do
+        local label = mk("ImageLabel", {
+            Parent = parent,
+            Size = size,
+            Position = position,
+            BackgroundTransparency = 1,
+            Image = tostring(id):find("rbxassetid://", 1, true) and tostring(id) or ("rbxassetid://" .. tostring(id)),
+            ImageRectSize = Vector2.new(cfg.FrameWidth, cfg.RectHeight),
+            ImageRectOffset = Vector2.new(0, cfg.RectYShift),
+            ImageTransparency = (i == 1) and 0 or 1,
+            ScaleType = config.ScaleType or Enum.ScaleType.Fit,
+            ZIndex = zIndex or 30,
+        })
+        labels[i] = label
+    end
+
+    task.spawn(function()
+        for _, label in ipairs(labels) do
+            if label.Parent then
+                pcall(function()
+                    ContentProvider:PreloadAsync({ label })
+                end)
+            end
+        end
+    end)
+
+    local state = {
+        Config = cfg,
+        Labels = labels,
+        Frame = 0,
+        Acc = 0,
+        CurrentSheet = 1,
+    }
+
+    return labels[1], state
+end
+
+local function updateSpriteSheetFrame(state, frame)
+    if not state or not state.Config then return end
+
+    local cfg = state.Config
+    local target = math.clamp(math.floor(frame or 0), 0, cfg.TotalFrames - 1)
+    local remaining = target
+    local sheetIndex = 1
+
+    for i, count in ipairs(cfg.FramesPerSheet) do
+        if remaining < count then
+            sheetIndex = i
+            break
+        end
+        remaining = remaining - count
+    end
+
+    local localIndex = remaining
+    local column = localIndex % cfg.Columns
+    local row = math.floor(localIndex / cfg.Columns)
+
+    if sheetIndex ~= state.CurrentSheet then
+        if state.Labels[state.CurrentSheet] then
+            state.Labels[state.CurrentSheet].ImageTransparency = 1
+        end
+        if state.Labels[sheetIndex] then
+            state.Labels[sheetIndex].ImageTransparency = 0
+        end
+        state.CurrentSheet = sheetIndex
+    end
+
+    local label = state.Labels[sheetIndex]
+    if label then
+        label.ImageRectOffset = Vector2.new(
+            column * cfg.FrameWidth,
+            row * cfg.FrameHeight + cfg.RectYShift
+        )
+    end
+
+    state.Frame = target
+end
+-- ==================== SPRITE DE FONDO DE TEMA ====================
+-- Un tema puede declarar Sprite = { SheetIds, Columns, Rows, FrameWidth,
+-- FrameHeight, FramesPerSheet, FPS }. Tambien acepta el formato antiguo
+-- { Ids, Columns, Rows, FrameWidth, FrameHeight, FrameCount, FPS }.
+--
+-- COMO FUNCIONA EL FONDO ANIMADO (SPRITE) DE UN TEMA
+--
+-- 1) DATOS (archivo de temas). Cada "hoja" (sheet) es una imagen subida a Roblox
+--    como Image. Contiene una cuadricula de Columns x Rows frames de FrameWidth x
+--    FrameHeight px. Orden de los frames: izquierda a derecha, arriba a abajo.
+--    - SheetIds (o Ids): las hojas, en orden de reproduccion.
+--    - FramesPerSheet: cuantos frames reales tiene cada hoja (la ultima suele quedar
+--      incompleta). Con el formato antiguo basta FrameCount (total de frames).
+--    - Una hoja de 4x5 celdas de 256x192 mide 1024x960 (Roblox limita a ~1024 px por lado).
+--
+-- 2) CARGA. LoadThemes guarda theme.Sprite en ThemeSprites[nombreDelTema] y lo borra
+--    si el tema ya no lo trae.
+--
+-- 3) AL APLICAR UN TEMA, Window:SetTheme llama applyThemeSprite(self, BackgroundArt, sprite):
+--    a) stopThemeSprite destruye las capas y la conexion del sprite anterior.
+--    b) toThemeSpriteConfig valida el Sprite (acepta SheetIds o Ids) y calcula los
+--       frames de cada hoja; si es invalido avisa con warn y se usa Background.
+--    c) Se vacia BackgroundArt.Image y se crea UNA ImageLabel por hoja DENTRO de
+--       BackgroundArt (createSpriteSheetLabels). Cada una ya tiene su Image y su
+--       ImageRectSize (= tamano de UN frame). Solo la hoja actual se ve
+--       (ImageTransparency 0); las demas estan en 1. Asi no se reasigna Image durante
+--       el loop, lo que puede dar un parpadeo borroso al cambiar de hoja.
+--    d) Las hojas se precargan con ContentProvider:PreloadAsync (en segundo plano).
+--    e) Un RenderStepped acumula el tiempo y avanza 1 frame cada 1/FPS segundos
+--       (el acumulado se limita a 0.25 s para no recuperar saltos despues de un lag).
+--    f) updateSpriteSheetFrame localiza la hoja del frame, calcula
+--         columna = indice % Columns,   fila = floor(indice / Columns)
+--       y mueve ImageRectOffset = (columna * FrameWidth, fila * FrameHeight) en la hoja
+--       activa (mas CropY si CropContent). Al terminar el ultimo frame vuelve al 0.
+--
+-- 4) FONDO ESTATICO. En SetTheme, applyImages no pone la imagen de Background mientras
+--    haya un sprite activo (self._themeSprite). Si el tema no trae Sprite, o es
+--    invalido, se usa Background como siempre.
+--
+-- 5) REGLA CRITICA - ZIndex. El ScreenGui usa ZIndexBehavior.Global: el orden de
+--    dibujo lo decide el ZIndex en TODA la interfaz, no la jerarquia padre/hijo.
+--    Las capas del sprite deben tener el MISMO ZIndex que BackgroundArt
+--    (parent.ZIndex, hoy 5). Con ZIndex 1 el sprite quedaba debajo de Main (5) y
+--    no se veia. Si algun dia cambia el ZIndex de BackgroundArt, el sprite lo sigue.
+--
+-- COMO AGREGAR UN TEMA CON SPRITE: en el archivo de temas, dentro del tema, agregar
+--   Sprite = { SheetIds = {"rbxassetid://..."}, Columns = 4, Rows = 5,
+--              FrameWidth = 256, FrameHeight = 192, FramesPerSheet = {20, 20, 8}, FPS = 24 }
+-- y subir Version. Subir las hojas como Image y esperar la aprobacion de Roblox.
+local function toThemeSpriteConfig(raw)
+    if type(raw) ~= "table" then return nil end
+    local ids = raw.SheetIds or raw.Ids
+    if type(ids) ~= "table" or #ids == 0 then return nil end
+
+    local columns = tonumber(raw.Columns)
+    local rows = tonumber(raw.Rows)
+    if not (columns and rows and tonumber(raw.FrameWidth) and tonumber(raw.FrameHeight)) then
+        return nil
+    end
+    local perSheet = math.max(1, math.floor(columns) * math.floor(rows))
+
+    local counts = {}
+    if type(raw.FramesPerSheet) == "table" then
+        for i = 1, #ids do
+            counts[i] = tonumber(raw.FramesPerSheet[i]) or perSheet
+        end
+    elseif tonumber(raw.FrameCount) then
+        local remaining = tonumber(raw.FrameCount)
+        for i = 1, #ids do
+            if remaining <= 0 then break end
+            counts[i] = math.min(perSheet, remaining)
+            remaining = remaining - counts[i]
+        end
+    else
+        for i = 1, #ids do
+            counts[i] = perSheet
+        end
+    end
+
+    -- Solo se usan las hojas con frames; una hoja vacia corta la lista.
+    local sheetIds, framesPerSheet = {}, {}
+    for i = 1, #ids do
+        local n = counts[i]
+        if not n or n <= 0 then break end
+        sheetIds[#sheetIds + 1] = ids[i]
+        framesPerSheet[#framesPerSheet + 1] = math.min(math.floor(n), perSheet)
+    end
+    if #sheetIds == 0 then return nil end
+
+    local cfg = {
+        SheetIds = sheetIds,
+        Columns = raw.Columns,
+        Rows = raw.Rows,
+        FrameWidth = raw.FrameWidth,
+        FrameHeight = raw.FrameHeight,
+        FramesPerSheet = framesPerSheet,
+        FPS = raw.FPS or 24,
+        CropContent = raw.CropContent == true,
+        CropY = raw.CropY,
+        CropHeight = raw.CropHeight,
+        ScaleType = Enum.ScaleType.Crop,
+    }
+    if not normalizeSpriteSheetConfig(cfg) then return nil end
+    return cfg
+end
+
+local function stopThemeSprite(owner)
+    local st = owner and owner._themeSprite
+    if not st then return end
+    owner._themeSprite = nil
+    if st.Connection then
+        st.Connection:Disconnect()
+    end
+    for _, lbl in ipairs(st.Labels) do
+        if lbl then
+            lbl:Destroy()
+        end
+    end
+end
+
+local function applyThemeSprite(owner, parent, raw)
+    stopThemeSprite(owner)
+    if parent then
+        parent.ClipsDescendants = false
+    end
+    local cfg = toThemeSpriteConfig(raw)
+    if raw ~= nil and not cfg then
+        warn("[YinYang Sprite] Configuración de sprite inválida; se usa la imagen de fondo")
+    end
+    if not cfg or not parent then return false end
+
+    -- El sprite reemplaza la imagen de fondo mientras este activo.
+    parent.Image = ""
+    parent.ClipsDescendants = true
+
+    -- ZIndex = el de BackgroundArt (parent.ZIndex). El ScreenGui usa ZIndexBehavior.Global:
+    -- con un ZIndex menor (antes 1) el sprite quedaba dibujado DEBAJO de Main/BackgroundArt
+    -- y no se veia, aunque el log dijera "Activo".
+    local _, state = createSpriteSheetLabels(parent, cfg, UDim2.fromScale(1, 1), UDim2.fromScale(0, 0), parent.ZIndex)
+    if not state then return false end
+    updateSpriteSheetFrame(state, 0)
+
+    local runService = game:GetService("RunService")
+    local conn
+    conn = runService.RenderStepped:Connect(function(dt)
+        if not parent.Parent then
+            conn:Disconnect()
+            return
+        end
+        -- Si el fondo esta oculto (por ejemplo, con video) no avanza ni acumula tiempo.
+        if not parent.Visible or PerfOpt.Flags.StaticBackground then
+            state.Acc = 0
+            return
+        end
+        state.Acc = state.Acc + dt
+        if state.Acc > 0.25 then
+            state.Acc = 0.25
+        end
+        local step = 1 / state.Config.FPS
+        local moved = false
+        while state.Acc >= step do
+            state.Acc = state.Acc - step
+            state.Frame = (state.Frame + 1) % state.Config.TotalFrames
+            moved = true
+        end
+        if moved then
+            updateSpriteSheetFrame(state, state.Frame)
+        end
+    end)
+
+    owner._themeSprite = { Labels = state.Labels, Connection = conn }
+    local total = 0
+    for _, n in ipairs(cfg.FramesPerSheet) do
+        total = total + n
+    end
+    print("[YinYang Sprite] Activo: " .. #cfg.SheetIds .. " hojas, " .. total .. " frames a " .. cfg.FPS .. " FPS")
+    return true
+end
+-- =============================================================
+
+ThemePalettes["WhiteV2"] = ThemePalettes["WhiteV2"] or {
+    Background = Color3.fromRGB(255, 255, 255),
+    Secondary = Color3.fromRGB(245, 245, 245),
+    AccentOff = Color3.fromRGB(220, 220, 220),
+    Text = Color3.fromRGB(20, 20, 25),
+    TextDim = Color3.fromRGB(100, 100, 110),
+    Stroke = Color3.fromRGB(180, 180, 185),
+    Accent = Color3.fromRGB(50, 50, 60),
+    ToggleOn = Color3.fromRGB(52, 199, 89),
+}
+
+
+local ActiveGlowTweens = {}
+
+ThemePalettes["SukunaV1"] = ThemePalettes["SukunaV1"] or {
+    Background = Color3.fromRGB(14, 14, 14),
+    Secondary = Color3.fromRGB(28, 28, 30),
+    AccentOff = Color3.fromRGB(48, 48, 50),
+    Text = Color3.fromRGB(235, 235, 235),
+    TextDim = Color3.fromRGB(160, 160, 160),
+    Stroke = Color3.fromRGB(180, 25, 30),
+    Accent = Color3.fromRGB(200, 20, 25),
+    ToggleOn = Color3.fromRGB(220, 45, 50),
+}
+
+local function stopGlowTweens(key)
+    if ActiveGlowTweens[key] then
+        for _, tw in ipairs(ActiveGlowTweens[key]) do
+            pcall(function() tw:Cancel() end)
+        end
+        ActiveGlowTweens[key] = nil
+    end
+end
+
+StickerPalettes["Sonrisa"] = StickerPalettes["Sonrisa"] or { Image = "rbxassetid://135857695171095", LabelES = "Sonrisa",  LabelEN = "Smile"     }
+
+local function setGlowLayersVisible(frame, visible)
+    if not frame.Parent then return end
+    local tag = "GLOW_" .. tostring(frame)
+    for _, child in ipairs(frame.Parent:GetChildren()) do
+        if child:GetAttribute("GlowOwner") == tag then
+            child.Visible = visible
+        end
+    end
+end
+
+ThemePalettes["J1"] = ThemePalettes["J1"] or {
+    Background = Color3.fromRGB(0, 0, 0),
+    Secondary = Color3.fromRGB(10, 10, 10),
+    AccentOff = Color3.fromRGB(32, 32, 32),
+    Text = Color3.fromRGB(255, 255, 255),
+    TextDim = Color3.fromRGB(178, 178, 178),
+    Stroke = Color3.fromRGB(92, 92, 92),
+    Accent = Color3.fromRGB(255, 255, 255),
+    ToggleOn = Color3.fromRGB(255, 255, 255),
+}
+
+local function cleanGlowLayers(frame)
+    local tag = "GLOW_" .. tostring(frame)
+    if frame.Parent then
+        for _, child in ipairs(frame.Parent:GetChildren()) do
+            if child:GetAttribute("GlowOwner") == tag then
+                child:Destroy()
+            end
+        end
+    end
+end
+
+ThemePalettes["Orange"] = ThemePalettes["Orange"] or {
+    Background = Color3.fromRGB(40, 20, 10),
+    Secondary = Color3.fromRGB(70, 35, 20),
+    AccentOff = Color3.fromRGB(120, 60, 30),
+    Text = Color3.fromRGB(255, 240, 230),
+    TextDim = Color3.fromRGB(220, 180, 150),
+    Stroke = Color3.fromRGB(220, 140, 60),
+    Accent = Color3.fromRGB(255, 160, 80),
+    ToggleOn = Color3.fromRGB(255, 160, 80),
+}
+
+local function addGlowSibling(frame, thickness, transparency, color, cornerRadius)
+    local container = frame.Parent
+    if not container or container:IsA("ScreenGui") or container:IsA("PlayerGui") then
+        return nil, nil
+    end
+
+    local tag = "GLOW_" .. tostring(frame)
+    local layer = Instance.new("Frame")
+    layer.Name = "GlowLayer"
+    layer:SetAttribute("GlowOwner", tag)
+    layer.BackgroundTransparency = 1
+    layer.Size = frame.Size
+    layer.Position = frame.Position
+    layer.AnchorPoint = frame.AnchorPoint
+    layer.ZIndex = math.max(1, frame.ZIndex - 1)
+    layer.Parent = container
+
+    local c = Instance.new("UICorner")
+    c.CornerRadius = cornerRadius or UDim.new(0, 10)
+    c.Parent = layer
+
+    local s = Instance.new("UIStroke")
+    s.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    s.Thickness = thickness
+    s.Transparency = transparency
+    s.Color = color
+    s.LineJoinMode = Enum.LineJoinMode.Round
+    s.Parent = layer
+
+    return layer, s
+end
+
+ThemePalettes["White"] = ThemePalettes["White"] or {
+    Background = Color3.fromRGB(255, 255, 255),
+    Secondary = Color3.fromRGB(232, 232, 232),
+    AccentOff = Color3.fromRGB(200, 200, 200),
+    Text = Color3.fromRGB(0, 0, 0),
+    TextDim = Color3.fromRGB(120, 120, 120),
+    Stroke = Color3.fromRGB(0, 0, 0),
+    Accent = Color3.fromRGB(0, 0, 0),
+    ToggleOn = Color3.fromRGB(52, 199, 89),
+}
+
+local function buildGlowOnStroke(frame, accentColor, cornerRadius)
+    local key = tostring(frame)
+    stopGlowTweens(key)
+
+    local existingStroke = frame:FindFirstChildOfClass("UIStroke")
+    if not existingStroke then return end
+
+    local _isMainFrame = frame.Name == "Main"
+    existingStroke.Color = _isMainFrame and accentColor or Color3.fromRGB(15, 15, 15)
+
+    local oldGrad = existingStroke:FindFirstChildOfClass("UIGradient")
+    if oldGrad then oldGrad:Destroy() end
+
+    local _bDark  = _isMainFrame and accentColor or Color3.fromRGB(15, 15, 15)
+    local _bWhite = _isMainFrame and (Theme.BorderLight or Color3.fromRGB(255, 150, 40)) or Color3.fromRGB(255, 255, 255)
+
+    local grad = Instance.new("UIGradient")
+    if _isMainFrame and Theme.BorderLight2 then
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,     _bDark),
+            ColorSequenceKeypoint.new(0.330, _bDark),
+            ColorSequenceKeypoint.new(0.335, _bWhite),
+            ColorSequenceKeypoint.new(0.665, Theme.BorderLight2),
+            ColorSequenceKeypoint.new(0.670, _bDark),
+            ColorSequenceKeypoint.new(1,     _bDark),
+        })
+    else
+        grad.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0,     _bDark),
+            ColorSequenceKeypoint.new(0.330, _bDark),
+            ColorSequenceKeypoint.new(0.335, _bWhite),
+            ColorSequenceKeypoint.new(0.665, _bWhite),
+            ColorSequenceKeypoint.new(0.670, _bDark),
+            ColorSequenceKeypoint.new(1,     _bDark),
+        })
+    end
+    grad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    grad.Offset = Vector2.new(-1.5, 0)
+    grad.Parent = existingStroke
+
+    local sweepTween = TweenService:Create(
+        grad,
+        TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+        { Offset = Vector2.new(1.5, 0) }
+    )
+    sweepTween:Play()
+
+    local pulseTween = TweenService:Create(
+        existingStroke,
+        TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        { Transparency = 0.0 }
+    )
+    pulseTween:Play()
+
+    ActiveGlowTweens[key] = { sweepTween, pulseTween }
+end
+
+ThemePalettes["Green"] = ThemePalettes["Green"] or {
+    Background = Color3.fromRGB(20, 50, 35),
+    Secondary = Color3.fromRGB(35, 80, 55),
+    AccentOff = Color3.fromRGB(60, 120, 90),
+    Text = Color3.fromRGB(230, 255, 240),
+    TextDim = Color3.fromRGB(160, 220, 190),
+    Stroke = Color3.fromRGB(100, 200, 140),
+    Accent = Color3.fromRGB(120, 220, 160),
+    ToggleOn = Color3.fromRGB(100, 220, 140),
+}
+
+local function buildAnimatedBorder(frame, accentColor, cornerRadius, forceStrokeOnly)
+    local key = tostring(frame)
+    stopGlowTweens(key)
+    cleanGlowLayers(frame)
+
+    local cr = cornerRadius or UDim.new(0, 10)
+    local h, s, v = Color3.toHSV(accentColor)
+    local accentLight = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+    local accentDark  = Color3.fromHSV(h, math.min(1, s + 0.1), math.max(0, v - 0.25))
+
+    local parentIsScreenGui = frame.Parent and (frame.Parent:IsA("ScreenGui") or frame.Parent:IsA("PlayerGui"))
+    
+    if forceStrokeOnly or parentIsScreenGui then
+        buildGlowOnStroke(frame, accentColor, cr)
+        return
+    end
+
+    local _, outerStroke = addGlowSibling(frame, 16, 0.45, accentColor, cr)
+    local _, innerStroke = addGlowSibling(frame, 5, 0.10, accentLight, cr)
+
+    if not outerStroke or not innerStroke then
+        buildGlowOnStroke(frame, accentColor, cr)
+        return
+    end
+
+    local _bDark2  = Color3.fromRGB(15, 15, 15)
+    local _bWhite2 = Color3.fromRGB(255, 255, 255)
+
+    local grad = Instance.new("UIGradient")
+    grad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0,     _bDark2),
+        ColorSequenceKeypoint.new(0.330, _bDark2),
+        ColorSequenceKeypoint.new(0.335, _bWhite2),
+        ColorSequenceKeypoint.new(0.665, _bWhite2),
+        ColorSequenceKeypoint.new(0.670, _bDark2),
+        ColorSequenceKeypoint.new(1,     _bDark2),
+    })
+    grad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    grad.Offset = Vector2.new(-1.5, 0)
+    grad.Parent = innerStroke
+
+    local sweepTween = TweenService:Create(
+        grad,
+        TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+        { Offset = Vector2.new(1.5, 0) }
+    )
+    sweepTween:Play()
+
+    local pulseTween = TweenService:Create(
+        outerStroke,
+        TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+        { Transparency = 0.20, Thickness = 22 }
+    )
+    pulseTween:Play()
+
+    ActiveGlowTweens[key] = { sweepTween, pulseTween }
+end
+
+StickerPalettes["Amor"] = StickerPalettes["Amor"] or { Image = "rbxassetid://76164124882568",  LabelES = "Amor",     LabelEN = "Love"      }
+
+local function resetScrollTop(scrollingFrame)
+    task.defer(function()
+        if scrollingFrame and scrollingFrame.Parent then
+            scrollingFrame.CanvasPosition = Vector2.new(0, 0)
+        end
+    end)
+end
+
+ThemePalettes["DarkV2"] = ThemePalettes["DarkV2"] or {
+    Background = Color3.fromRGB(15, 15, 18),
+    Secondary = Color3.fromRGB(30, 30, 36),
+    AccentOff = Color3.fromRGB(50, 50, 58),
+    Text = Color3.fromRGB(245, 245, 248),
+    TextDim = Color3.fromRGB(165, 165, 172),
+    Stroke = Color3.fromRGB(80, 80, 90),
+    Accent = Color3.fromRGB(255, 255, 255),
+    ToggleOn = Color3.fromRGB(52, 199, 89),
+}
+
+local function formatDuration(totalSeconds)
+    totalSeconds = math.floor(totalSeconds)
+    local h = math.floor(totalSeconds / 3600)
+    local m = math.floor((totalSeconds % 3600) / 60)
+    local s = totalSeconds % 60
+    return string.format("%02d:%02d:%02d", h, m, s)
+end
+
+StickerPalettes["Emoji"] = StickerPalettes["Emoji"] or { Image = "rbxassetid://133861773375312", LabelES = "Emoji",    LabelEN = "Emoji"     }
+
+local function createStatGrid(parent)
+    local Grid = mk("Frame", {
+        Parent = parent,
+        Size = UDim2.new(1, 0, 0, 0),
+        AutomaticSize = Enum.AutomaticSize.None,
+        BackgroundTransparency = 1,
+        ZIndex = 9
+    })
+    mk("UIGridLayout", {
+        CellPadding = UDim2.new(0, 8, 0, 8),
+        CellSize = UDim2.new(0.5, -4, 0, 54),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, Grid)
+    return Grid
+end
+
+StickerPalettes["Corazon"] = StickerPalettes["Corazon"] or { Image = "rbxassetid://76164124882568",  LabelES = "Corazón",  LabelEN = "Heart"     }
+
+local function createStatTile(grid, labelSpanish, labelEnglish)
+    labelEnglish = labelEnglish or labelSpanish
+    local Tile = mk("Frame", {
+        Parent = grid,
+        BackgroundColor3 = Theme.Secondary,
+        ZIndex = 9
+    })
+    Tile:SetAttribute("ThemeRole", "Secondary")
+    corner(Tile, 6)
+    stroke(Tile, Color3.fromRGB(0, 0, 0), 1, 0.6)
+
+    local TileLabel = mk("TextLabel", {
+        Parent = Tile,
+        Size = UDim2.new(1, -16, 0, 16),
+        Position = UDim2.new(0, 8, 0, 6),
+        BackgroundTransparency = 1,
+        Text = GetText(labelSpanish, labelEnglish),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamBold,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 10
+    })
+    TileLabel:SetAttribute("ThemeRole", "TextDim")
+    TileLabel:SetAttribute("TextSpanish", labelSpanish)
+    TileLabel:SetAttribute("TextEnglish", labelEnglish)
+
+    local ValueText = mk("TextLabel", {
+        Parent = Tile,
+        Size = UDim2.new(1, -16, 0, 22),
+        Position = UDim2.new(0, 8, 0, 24),
+        BackgroundTransparency = 1,
+        Text = "...",
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBold,
+        TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 10
+    })
+    ValueText:SetAttribute("ThemeRole", "Text")
+
+    return Tile, ValueText
+end
+
+StickerPalettes["Cool"] = StickerPalettes["Cool"] or { Image = "rbxassetid://129224642026377", LabelES = "Cool",     LabelEN = "Cool"      }
+
+local function getContrastColor(bgColor)
+    local luminance = 0.299 * bgColor.R + 0.587 * bgColor.G + 0.114 * bgColor.B
+    if luminance > 0.6 then
+        return Color3.fromRGB(25, 25, 25)
+    end
+    return Color3.fromRGB(255, 255, 255)
+end
+
+-- ============================================================================
+-- ROWKIT: estilo compartido de filas (toggles, botones) y sus controles
+-- ============================================================================
+local RowKit = {IDLE = 0.42, HOVER = 0.28}
+
+function RowKit.Card(holder)
+    holder.BackgroundTransparency = RowKit.IDLE
+    local c = holder:FindFirstChildOfClass("UICorner")
+    if c then c.CornerRadius = UDim.new(0, 14) end
+    local g = Instance.new("UIGradient")
+    g.Rotation = 90
+    g.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 0.3),
+    })
+    g.Parent = holder
+end
+
+function RowKit.Chip(label, role)
+    label.Size = UDim2.new(0, 0, 0, 18)
+    label.AutomaticSize = Enum.AutomaticSize.X
+    label.BackgroundColor3 = Theme[role] or Theme.AccentOff
+    label.BackgroundTransparency = 0.8
+    label:SetAttribute("ThemeRole", role)
+    label.TextXAlignment = Enum.TextXAlignment.Center
+    label.TextSize = 10
+    label.Font = Enum.Font.GothamBold
+    local c = Instance.new("UICorner")
+    c.CornerRadius 

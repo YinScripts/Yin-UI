@@ -1,0 +1,1051 @@
+          if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    capture.Capturing = false
+                    Window._keybindCapture = nil
+                    updateKeybindButton(capture)
+                elseif input.KeyCode ~= Enum.KeyCode.Unknown then
+                    capture.SetKey(input.KeyCode.Name)
+                end
+            end
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        if input.KeyCode == Enum.KeyCode.Unknown then return end
+
+        local focusedTextBox = nil
+        pcall(function()
+            focusedTextBox = UserInputService:GetFocusedTextBox()
+        end)
+        if focusedTextBox then return end
+
+        local keyName = input.KeyCode.Name
+        for _, entry in pairs(Window.Keybinds) do
+            if entry.KeyName == keyName and type(entry.Activate) == "function" then
+                task.spawn(function()
+                    pcall(entry.Activate)
+                end)
+                break
+            end
+        end
+    end))
+
+    pcall(function()
+        Window.BackgroundVideo = mk("VideoFrame", {
+            Name = "BackgroundVideo",
+            Parent = ContentArea,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            Size = UDim2.new(1, 15, 1, 30),
+            BackgroundTransparency = 1,
+            Video = "",
+            Looped = true,
+            Playing = false,
+            Volume = 0,
+            Visible = false,
+            Active = false,
+            ZIndex = 5,
+        })
+        corner(Window.BackgroundVideo, 8)
+    end)
+    Window.VideoBackgroundSupported = Window.BackgroundVideo ~= nil
+
+    Window.ApplyFloatingStyle = function()
+        local isCircleStyle = (SavedConfig.FloatingToggleStyle or "Pill") == "Circle"
+        local floatW = isCircleStyle and 64 or 200
+        local floatH = isCircleStyle and 64 or 36
+
+        for _, floatData in ipairs(Window.FloatingToggles or {}) do
+            local win = floatData and floatData.Window
+            if win and win.Parent and win:GetAttribute("SupportsFloatStyle") and not win:GetAttribute("YYPillV5") then
+                local winHasLinkedSlider = win:GetAttribute("HasLinkedSlider")
+                local thisFloatW = winHasLinkedSlider and 200 or floatW
+                local thisFloatH = winHasLinkedSlider and (36 + 40) or floatH
+                local thisIsCircle = isCircleStyle and not winHasLinkedSlider
+
+                local curCenterX = win.Position.X.Offset + win.Size.X.Offset / 2
+                local curCenterY = win.Position.Y.Offset + win.Size.Y.Offset / 2
+
+                win.Size = UDim2.fromOffset(thisFloatW, thisFloatH)
+                win.Position = UDim2.new(
+                    win.Position.X.Scale, curCenterX - thisFloatW / 2,
+                    win.Position.Y.Scale, curCenterY - thisFloatH / 2
+                )
+                win.BackgroundTransparency = thisIsCircle and 0.55 or 0.30
+
+                local existingGradient = win:FindFirstChildOfClass("UIGradient")
+                if thisIsCircle then
+                    if existingGradient then existingGradient:Destroy() end
+                elseif not existingGradient then
+                    mk("UIGradient", {
+                        Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0,   Color3.fromRGB(180, 185, 200)),
+                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
+                            ColorSequenceKeypoint.new(1,   Color3.fromRGB(180, 185, 200)),
+                        }),
+                        Transparency = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0,   0.45),
+                            NumberSequenceKeypoint.new(0.5, 0.15),
+                            NumberSequenceKeypoint.new(1,   0.45),
+                        }),
+                        Rotation = 90,
+                    }, win)
+                end
+
+                local existingStroke = win:FindFirstChildOfClass("UIStroke")
+                if existingStroke then
+                    existingStroke.Thickness = thisIsCircle and 3 or 2.5
+                end
+
+                local label = win:FindFirstChildOfClass("TextLabel")
+                if label and not winHasLinkedSlider then
+                    label.Size = thisIsCircle and UDim2.new(1, -24, 1, -24) or UDim2.new(1, -24, 1, 0)
+                    label.Position = thisIsCircle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0)
+                    label.TextSize = thisIsCircle and 11 or 21
+                    label.TextWrapped = thisIsCircle
+                    label.TextTruncate = thisIsCircle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd
+                end
+                if floatData.ClampPosition then
+                    pcall(floatData.ClampPosition)
+                end
+            end
+        end
+    end
+    Window.TopBarArt     = TopBarArt
+    Window.TabListArt    = TabListArt
+
+    local LibrarySizePresets = {
+        Small  = { Width = 500,  Height = 430 },
+        Large  = { Width = 760,  Height = 720 },
+        PC     = { Width = 920,  Height = 620 },
+    }
+
+    local LibrarySizeMode = ((SavedConfig.LibrarySizeMode or "Small") == "Large") and "Large" or "Small"
+
+    local function getCurrentLibraryPreset()
+        return LibrarySizePresets[LibrarySizeMode] or LibrarySizePresets.Small
+    end
+
+    Window.DetectPlatformType = function()
+        local preferredInput = nil
+        pcall(function()
+            local preferred = UserInputService.PreferredInput
+            if preferred == Enum.PreferredInput.KeyboardAndMouse then
+                preferredInput = "PC"
+            elseif preferred == Enum.PreferredInput.Touch then
+                preferredInput = "Mobile"
+            end
+        end)
+        if preferredInput then return preferredInput end
+
+        local hasKeyboard, hasMouse, hasTouch = false, false, false
+        pcall(function() hasKeyboard = UserInputService.KeyboardEnabled end)
+        pcall(function() hasMouse    = UserInputService.MouseEnabled    end)
+        pcall(function() hasTouch    = UserInputService.TouchEnabled    end)
+
+        local screenX = 0
+        pcall(function()
+            screenX = workspace.CurrentCamera.ViewportSize.X
+        end)
+
+        if hasKeyboard and hasMouse and not hasTouch then return "PC"     end
+        if hasTouch and not hasMouse and not hasKeyboard then return "Mobile" end
+        return (screenX >= 1080) and "PC" or "Mobile"
+    end
+
+    Window.UpdateWindowSize = function()
+        local effectiveMode = LibrarySizeMode
+
+        local platformMode = SavedConfig.PlatformMode or "Auto"
+        if platformMode == "Auto" then
+            if Window.DetectPlatformType() == "PC" then
+                effectiveMode = "PC"
+            end
+        elseif platformMode == "PC" then
+            effectiveMode = "PC"
+        end
+
+        local preset = LibrarySizePresets[effectiveMode] or LibrarySizePresets.Small
+        local screen  = ScreenGui.AbsoluteSize
+        local width   = preset.Width
+        local height  = preset.Height
+
+        if screen.X > 0 and screen.Y > 0 then
+            width  = math.min(width,  math.floor(screen.X * 0.92))
+            height = math.min(height, math.floor(screen.Y * 0.92))
+        end
+
+        shownSize = UDim2.new(0, width, 0, height)
+        if Main and not isMaximized then
+            Main.Size        = shownSize
+            normalWindowSize = shownSize
+        end
+    end
+
+    Window.UpdateWindowSize()
+    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(Window.UpdateWindowSize)
+
+    function Window:SetLibraryVersion(isLarge)
+        LibrarySizeMode = isLarge and "Large" or "Small"
+        self.LibrarySizeMode = LibrarySizeMode
+        self.LibraryHeight = getCurrentLibraryPreset().Height
+        SavedConfig.LibrarySizeMode = LibrarySizeMode
+        SavedConfig.LibraryHeight = self.LibraryHeight
+        SaveConfig()
+        Window.UpdateWindowSize()
+    end
+
+    Window.LibrarySizeMode = LibrarySizeMode
+    Window.LibraryHeight = getCurrentLibraryPreset().Height
+
+    -- Opcional: reutiliza la mecanica de iconos de TestUI_sprite_v7 sin cambiar
+    -- la navegacion original por defecto. Solo se activa desde Ajustes.
+    local TabIconCarousel = {
+        Enabled = false,
+        Items = {},
+        Offset = 0,
+        Velocity = 0,
+        ViewW = 0,
+        Anim = nil,
+        ActiveTab = nil,
+        Spin = 0,
+        LastOffset = 0,
+    }
+
+    local TAB_ICON_SIZE = 42
+    local TAB_ICON_GAP = 6
+    local TAB_ICON_STEP = TAB_ICON_SIZE + TAB_ICON_GAP
+    local TAB_DRAG_THRESHOLD = 7
+    local TAB_FRICTION = 4.2
+    local TAB_SPIN_GAIN = 0.6
+    local TAB_SPIN_MAX = 24
+    local TAB_SPIN_DECAY = 9
+
+    local function tabCarouselScale()
+        local s = MainScale.Scale
+        if type(s) ~= "number" or s < 0.05 then return 1 end
+        return s
+    end
+
+    local function applyTabCarouselSpin()
+        local spin = TabIconCarousel.Spin
+        for _, item in ipairs(TabIconCarousel.Items) do
+            local rotor = item.Tab and item.Tab.IconLabel
+            if rotor then
+                rotor.Rotation = spin * (0.6 + 0.8 * (item.Dist or 0))
+            end
+        end
+    end
+
+    local function renderTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        local count = #TabIconCarousel.Items
+        local viewW = TabIconCarousel.ViewW
+        if count == 0 or viewW <= 0 then return end
+
+        local length = count * TAB_ICON_STEP
+        TabIconCarousel.Offset = TabIconCarousel.Offset % length
+        local moved = ((TabIconCarousel.Offset - (TabIconCarousel.LastOffset or TabIconCarousel.Offset) + length / 2) % length) - length / 2
+        TabIconCarousel.LastOffset = TabIconCarousel.Offset
+        TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
+
+        for index, item in ipairs(TabIconCarousel.Items) do
+            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
+            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
+            local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
+            local edge = math.clamp((d - 0.6) / 0.4, 0, 1)
+            item.Scale.Scale = 1 - 0.2 * edge
+            item.Dist = math.clamp(d, 0, 1)
+        end
+        applyTabCarouselSpin()
+    end
+
+    local function focusTabCarousel(tab, animate)
+        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
+        local index
+        for i, item in ipairs(TabIconCarousel.Items) do
+            if item.Tab == tab then
+                index = i
+                break
+            end
+        end
+        if not index then return end
+
+        local length = #TabIconCarousel.Items * TAB_ICON_STEP
+        local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
+        local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
+        TabIconCarousel.Velocity = 0
+
+        if animate then
+            TabIconCarousel.Anim = {
+                From = TabIconCarousel.Offset,
+                To = TabIconCarousel.Offset + delta,
+                T0 = os.clock(),
+                Dur = 0.35,
+            }
+        else
+            TabIconCarousel.Anim = nil
+            TabIconCarousel.Offset = TabIconCarousel.Offset + delta
+            renderTabCarousel()
+            TabIconCarousel.Spin = 0
+            applyTabCarouselSpin()
+        end
+    end
+
+    local function relayoutTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
+        TabIconCarousel.Anim = nil
+        TabIconCarousel.Velocity = 0
+        renderTabCarousel()
+        if TabIconCarousel.ActiveTab then
+            focusTabCarousel(TabIconCarousel.ActiveTab, false)
+        end
+    end
+
+    local carouselPress = nil
+
+    local function onTabCarouselPress(input, item)
+        local inputType = input.UserInputType
+        if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+        if carouselPress then return end
+
+        TabIconCarousel.Anim = nil
+        TabIconCarousel.Velocity = 0
+        carouselPress = {
+            Input = input,
+            StartX = input.Position.X,
+            LastX = input.Position.X,
+            LastT = os.clock(),
+            Moved = false,
+            Item = item,
+        }
+    end
+
+    function Window._RegisterCarouselTab(tab, button, onSelect)
+        for _, existing in ipairs(TabIconCarousel.Items) do
+            if existing.Tab == tab then return end
+        end
+
+        local item = {
+            Tab = tab,
+            Button = button,
+            Select = onSelect,
+            Scale = mk("UIScale", {Scale = 1}, button),
+        }
+        table.insert(TabIconCarousel.Items, item)
+
+        button.InputBegan:Connect(function(input)
+            if TabIconCarousel.Enabled then
+                onTabCarouselPress(input, item)
+            end
+        end)
+    end
+
+    function Window._RefreshTabIconLayout()
+        local useCarousel = (SavedConfig.TabIconLayout or "Original") == "Carousel"
+        TabIconCarousel.Enabled = useCarousel
+
+        if useCarousel then
+            if Window.CompactNavigation and Window.SetCompactNavigation then
+                Window:SetCompactNavigation(false)
+            end
+            local navOpenBtn = Body:FindFirstChild("CompactNavigationOpen")
+            local navCloseBtn = Body:FindFirstChild("CompactNavigationClose")
+            if navOpenBtn then navOpenBtn.Visible = false end
+            if navCloseBtn then navCloseBtn.Visible = false end
+            ContentArea.Size = UDim2.new(1, 0, 1, -48)
+            ContentArea.Position = UDim2.new(0, 0, 0, 0)
+            TabList.Visible = false
+            TabListArt.Visible = false
+            TabListDivider.Visible = false
+            TabListDividerGlow.Visible = false
+            CatImage.Visible = false
+            TabCarousel.Visible = true
+
+            for _, tab in ipairs(Window.Tabs) do
+                if tab.Button and tab.Button.Parent ~= TabCarouselViewport then
+                    tab.Button.Parent = TabCarouselViewport
+                end
+                if tab.Button then
+                    tab.Button.Size = UDim2.fromOffset(TAB_ICON_SIZE, TAB_ICON_SIZE)
+                    tab.Button.AnchorPoint = Vector2.new(0.5, 0.5)
+                    tab.Button.Rotation = 0
+                    tab.Button.Text = ""
+                    tab.Button.TextXAlignment = Enum.TextXAlignment.Center
+                    tab.Button.Position = UDim2.new(0, TAB_ICON_SIZE / 2, 0.5, 0)
+                    tab.Button.ZIndex = 18
+                    tab.Button.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
+                end
+                if tab.IconLabel then
+                    local iconSize = math.clamp((tonumber((Theme.IconSizes or {}).Tab) or 24) + 3, 12, 35)
+                    tab.IconLabel.Size = UDim2.fromOffset(iconSize, iconSize)
+                    tab.IconLabel.Position = UDim2.new(0.5, -(iconSize / 2), 0.5, -(iconSize / 2))
+                    tab.IconLabel.ZIndex = 19
+                    tab.IconLabel.Visible = true
+                end
+                if tab.NameLabel then
+                    tab.NameLabel.Visible = false
+                end
+                if tab.SpotifyMark then
+                    tab.SpotifyMark.Visible = false
+                end
+            end
+
+            TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
+            renderTabCarousel()
+            if TabIconCarousel.ActiveTab then
+                focusTabCarousel(TabIconCarousel.ActiveTab, false)
+            end
+        else
+            local navOpenBtn = Body:FindFirstChild("CompactNavigationOpen")
+            local navCloseBtn = Body:FindFirstChild("CompactNavigationClose")
+            if navOpenBtn then navOpenBtn.Visible = not Window.CompactNavigation end
+            if navCloseBtn then navCloseBtn.Visible = Window.CompactNavigation == true end
+            ContentArea.Size = UDim2.new(1, -118, 1, 0)
+            ContentArea.Position = UDim2.new(0, 118, 0, 0)
+            TabCarousel.Visible = false
+            TabList.Visible = true
+            TabListArt.Visible = true
+            TabListDivider.Visible = false -- v15: sin línea divisoria
+            TabListDividerGlow.Visible = false
+
+            for _, tab in ipairs(Window.Tabs) do
+                if tab.Button then
+                    tab.Button.Parent = TabList
+                    tab.Button.Size = UDim2.new(1, 0, 0, 32)
+                    tab.Button.AnchorPoint = Vector2.new(0, 0)
+                    tab.Button.Rotation = -3
+                    tab.Button.Text = ""
+                    tab.Button.TextXAlignment = Enum.TextXAlignment.Left
+                    tab.Button.ZIndex = 8
+                    tab.Button.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
+                end
+                if tab.IconLabel then
+                    local iconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
+                    tab.IconLabel.Size = UDim2.fromOffset(iconSize, iconSize)
+                    tab.IconLabel.Position = UDim2.new(0, 7, 0.5, -(iconSize / 2))
+                    tab.IconLabel.ZIndex = 9
+                    tab.IconLabel.Rotation = 0
+                    tab.IconLabel.Visible = true
+                end
+                if tab.NameLabel then
+                    tab.NameLabel.Visible = true
+                end
+                if tab.SpotifyMark then
+                    tab.SpotifyMark.Visible = (tab.NameSpanish == "Spotify")
+                end
+            end
+            for _, item in ipairs(TabIconCarousel.Items) do
+                if item.Scale then item.Scale.Scale = 1 end
+            end
+            resetScrollTop(TabList)
+            TabIconCarousel.Offset = 0
+            TabIconCarousel.Velocity = 0
+            TabIconCarousel.Anim = nil
+            TabIconCarousel.Spin = 0
+            applyTabCarouselSpin()
+        end
+    end
+
+    function Window:SetTabIconLayout(layout)
+        local mode = layout == "Carousel" and "Carousel" or "Original"
+        SavedConfig.TabIconLayout = mode
+        self.TabIconLayout = mode
+        SaveConfig()
+        self._RefreshTabIconLayout()
+    end
+
+    TabCarouselViewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayoutTabCarousel)
+
+    track(UserInputService.InputChanged:Connect(function(input)
+        if not TabIconCarousel.Enabled or not carouselPress then return end
+
+        local pressType = carouselPress.Input.UserInputType
+        local inputType = input.UserInputType
+        local matches = (inputType == Enum.UserInputType.MouseMovement and pressType == Enum.UserInputType.MouseButton1)
+            or (inputType == Enum.UserInputType.Touch and pressType == Enum.UserInputType.Touch)
+        if not matches then return end
+
+        local x = input.Position.X
+        local dxScreen = x - carouselPress.LastX
+        if not carouselPress.Moved and math.abs(x - carouselPress.StartX) > TAB_DRAG_THRESHOLD * tabCarouselScale() then
+            carouselPress.Moved = true
+        end
+
+        if carouselPress.Moved then
+            local now = os.clock()
+            local dt = math.max(now - carouselPress.LastT, 1 / 240)
+            local dx = dxScreen / tabCarouselScale()
+            TabIconCarousel.Offset = TabIconCarousel.Offset - dx
+            TabIconCarousel.Velocity = TabIconCarousel.Velocity * 0.5 + (-dx / dt) * 0.5
+            carouselPress.LastT = now
+            renderTabCarousel()
+        end
+        carouselPress.LastX = x
+    end))
+
+    track(UserInputService.InputEnded:Connect(function(input)
+        if not TabIconCarousel.Enabled or not carouselPress then return end
+        if input.UserInputType ~= carouselPress.Input.UserInputType then return end
+
+        local finished = carouselPress
+        carouselPress = nil
+
+        if finished.Moved then
+            if os.clock() - finished.LastT > 0.08 then
+                TabIconCarousel.Velocity = 0
+            end
+        elseif finished.Item and finished.Item.Select then
+            finished.Item.Select()
+        end
+    end))
+
+    track(RunService.Heartbeat:Connect(function(dt)
+        if not TabIconCarousel.Enabled then return end
+
+        if TabIconCarousel.Spin ~= 0 then
+            TabIconCarousel.Spin = TabIconCarousel.Spin * math.exp(-TAB_SPIN_DECAY * dt)
+            if math.abs(TabIconCarousel.Spin) < 0.05 then TabIconCarousel.Spin = 0 end
+            applyTabCarouselSpin()
+        end
+
+        if carouselPress and carouselPress.Moved then return end
+
+        local anim = TabIconCarousel.Anim
+        if anim then
+            local t = math.min((os.clock() - anim.T0) / anim.Dur, 1)
+            local eased = 1 - (1 - t) ^ 3
+            TabIconCarousel.Offset = anim.From + (anim.To - anim.From) * eased
+            if t >= 1 then TabIconCarousel.Anim = nil end
+            renderTabCarousel()
+        elseif math.abs(TabIconCarousel.Velocity) > 8 then
+            TabIconCarousel.Offset = TabIconCarousel.Offset + TabIconCarousel.Velocity * dt
+            TabIconCarousel.Velocity = TabIconCarousel.Velocity * math.exp(-TAB_FRICTION * dt)
+            renderTabCarousel()
+        elseif TabIconCarousel.Velocity ~= 0 then
+            TabIconCarousel.Velocity = 0
+        end
+    end))
+
+    function Window:CreateTab(nameSpanish, nameEnglishOrIcon, iconAsset)
+        local nameEnglish = nameSpanish
+        if nameEnglishOrIcon and string.find(nameEnglishOrIcon, "rbxassetid") then
+            iconAsset = nameEnglishOrIcon
+            nameEnglish = nameSpanish
+        elseif nameEnglishOrIcon then
+            nameEnglish = nameEnglishOrIcon
+        end
+        
+        local displayName = GetText(nameSpanish, nameEnglish)
+
+        local defaultIconAsset = iconAsset
+        local themedTabIcons = ThemeTabIcons[Theme.ThemeName]
+        if themedTabIcons then
+            iconAsset = themedTabIcons[nameEnglish] or themedTabIcons[nameSpanish] or iconAsset
+        end
+        
+        local TabButton = mk("TextButton", {
+            Size = UDim2.new(1, 0, 0, 32),
+            BackgroundColor3 = Theme.Background,
+            Text = "",
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 15,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.None,
+            ClipsDescendants = false,
+            Rotation = -3,
+            ZIndex = 8
+        }, TabList)
+        TabButton:SetAttribute("ThemeRole", "Background")
+        TabButton.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
+        corner(TabButton, 6)
+
+        local textStart = 38
+        local TabIconLabel = nil
+        local SpotifyMark = nil
+        if iconAsset then
+            local iconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
+            local iconPos = 7
+            TabIconLabel = mk("ImageLabel", {
+                Parent = TabButton,
+                Size = UDim2.new(0, iconSize, 0, iconSize),
+                Position = UDim2.new(0, iconPos, 0.5, -(iconSize / 2)),
+                BackgroundTransparency = 1,
+                Image = iconAsset,
+                ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255),
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 9
+            })
+            textStart = 14 + iconSize
+        end
+
+        if nameSpanish == "Spotify" then
+            SpotifyMark = mk("ImageLabel", {
+                Parent = TabButton,
+                Size = UDim2.new(0, 32, 0, 10),
+                Position = UDim2.new(0, textStart, 0, 18),
+                BackgroundTransparency = 1,
+                Image = "rbxassetid://74630849553567",
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 9
+            })
+        end
+
+        local TabNameLabel = mk("TextLabel", {
+            Parent = TabButton,
+            Size = UDim2.new(1, -(textStart + 10), 1, 0),
+            Position = UDim2.new(0, textStart, 0, 0),
+            BackgroundTransparency = 1,
+            Text = displayName,
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 15,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Center,
+            TextTruncate = Enum.TextTruncate.None,
+            ClipsDescendants = false,
+            ZIndex = 9
+        })
+        TabNameLabel:SetAttribute("TextSpanish", nameSpanish)
+        TabNameLabel:SetAttribute("TextEnglish", nameEnglish)
+
+        resetScrollTop(TabList)
+
+        local TabPage = mk("ScrollingFrame", {
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 2,
+            ElasticBehavior = Enum.ElasticBehavior.Never,
+            CanvasPosition = Vector2.new(0, 0),
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            Visible = false,
+            ZIndex = 8,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        }, ContentArea)
+        mk("UIListLayout", {
+            Padding = UDim.new(0, 6),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Top,
+        }, TabPage)
+
+        local function clampTabScroll()
+            task.defer(function()
+                if not TabPage.Parent then return end
+                local maxY = math.max(0, TabPage.AbsoluteCanvasSize.Y - TabPage.AbsoluteWindowSize.Y)
+                if TabPage.CanvasPosition.Y > maxY then
+                    TabPage.CanvasPosition = Vector2.new(TabPage.CanvasPosition.X, maxY)
+                end
+            end)
+        end
+        TabPage:GetPropertyChangedSignal("AbsoluteCanvasSize"):Connect(clampTabScroll)
+        TabPage:GetPropertyChangedSignal("AbsoluteWindowSize"):Connect(clampTabScroll)
+
+        local Tab = {Button = TabButton, Page = TabPage, NameSpanish = nameSpanish, NameEnglish = nameEnglish, IconAsset = iconAsset, IconLabel = TabIconLabel, DefaultIconAsset = defaultIconAsset, NameLabel = TabNameLabel, SpotifyMark = SpotifyMark}
+
+        Tab._ContentParent = TabPage
+
+        function Tab:CreateContentContainer(name)
+            local container = mk("Frame", {
+                Name = name or "ContentContainer",
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 8,
+            }, TabPage)
+            mk("UIListLayout", {
+                Parent = container,
+                Padding = UDim.new(0, 6),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Top,
+            })
+            return container
+        end
+
+        function Tab:SetContentContainer(container)
+            self._ContentParent = container or TabPage
+            return self._ContentParent
+        end
+
+        function Tab:GetContentContainer()
+            return self._ContentParent or TabPage
+        end
+
+        function Tab:ResetContentContainer()
+            self._ContentParent = TabPage
+            return TabPage
+        end
+
+        local function Select()
+            TabIconCarousel.ActiveTab = Tab
+            for _, t in pairs(Window.Tabs) do
+                t.Page.Visible = false
+                t.Button.TextColor3 = Theme.Text
+                t.Button.BackgroundColor3 = Theme.Background
+                t.Button.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
+            end
+            TabButton.BackgroundTransparency = 0
+            TabPage.Visible = true
+            TabPage.CanvasPosition = Vector2.new(0, 0)
+            task.defer(function()
+                if TabPage and TabPage.Parent then
+                    TabPage.CanvasPosition = Vector2.new(0, 0)
+                end
+            end)
+            TabButton.TextColor3 = Color3.fromRGB(255, 255, 255)
+            TabButton.BackgroundColor3 = Theme.TabActive
+            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
+        end
+
+        TabButton.MouseButton1Click:Connect(function()
+            if not TabIconCarousel.Enabled then
+                Select()
+            end
+        end)
+
+        TabButton.MouseEnter:Connect(function()
+            local isActive = (TabPage.Visible)
+            if not isActive then
+                TweenService:Create(TabButton, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0.30}):Play()
+            end
+        end)
+        TabButton.MouseLeave:Connect(function()
+            local isActive = (TabPage.Visible)
+            if not isActive then
+                TweenService:Create(TabButton, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = Theme.TransparentTabs and 1 or 0}):Play()
+            end
+        end)
+        TabButton.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.Touch then
+                local isActive = (TabPage.Visible)
+                if not isActive then
+                    TweenService:Create(TabButton, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {BackgroundTransparency = 0.35}):Play()
+                end
+            end
+        end)
+        TabButton.InputEnded:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.Touch then
+                local isActive = (TabPage.Visible)
+                if not isActive then
+                    TweenService:Create(TabButton, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        {BackgroundTransparency = Theme.TransparentTabs and 1 or 0}):Play()
+                end
+            end
+        end)
+
+        table.insert(Window.Tabs, Tab)
+        Tab.Select = Select
+        if Window._RegisterCompactTab then Window._RegisterCompactTab(Tab) end
+        Window._RegisterCarouselTab(Tab, TabButton, Select)
+        if #Window.Tabs == 1 then Select() end
+        if SavedConfig.TabIconLayout == "Carousel" then
+            Window._RefreshTabIconLayout()
+        end
+
+
+        function Tab:CreateFloatingToggle(textSpanish, textEnglishOrDefault, defaultOrCallback, callback, creditInfo)
+            local textEnglish = textSpanish
+            local default, cb
+
+            if type(textEnglishOrDefault) == "string" then
+                textEnglish = textEnglishOrDefault
+                default = defaultOrCallback
+                cb = callback
+            else
+                default = textEnglishOrDefault
+                cb = defaultOrCallback
+            end
+
+            local displayText = GetText(textSpanish, textEnglish)
+            local state = default or false
+            local isFloating = false
+            local isLocked = false
+
+
+            local tog = self:CreateToggle(textSpanish, textEnglish, state, function(newState)
+                state = newState
+                pcall(cb, state)
+            end, nil, creditInfo)
+
+            local Holder     = tog.Holder
+            local HolderSwitch = tog.Switch
+            local HolderClick  = tog.Click
+
+            local credHasBadge = type(creditInfo) == "table" and (creditInfo.imageId or creditInfo.name) and true or false
+            local credHasDesc  = type(creditInfo) == "table" and type(creditInfo.description) == "string" and #creditInfo.description > 0
+            local hasCredit    = credHasBadge or credHasDesc
+            local credZoneH    = (credHasBadge and credHasDesc) and 110 or 90
+            local credRowY     = credZoneH + 4
+
+            Holder.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH + 38) or UDim2.new(1, 0, 0, 92)
+            HolderSwitch.Position = hasCredit and UDim2.new(1, -66, 0, math.floor(credZoneH / 2) - 14) or UDim2.new(1, -66, 0, 18)
+
+            local DetachBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -130, 0, 18),
+                BackgroundColor3 = Theme.Accent,
+                Text = "↗",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                ZIndex = 15
+            })
+            corner(DetachBtn, 6)
+            RowKit.Control(DetachBtn, true)
+
+            local PinBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -98, 0, 18),
+                BackgroundColor3 = Theme.Secondary,
+                Image = "rbxassetid://83537941312438",
+                ImageColor3 = Theme.Text,
+                ScaleType = Enum.ScaleType.Stretch,
+                ZIndex = 15
+            })
+            corner(PinBtn, 6)
+            stroke(PinBtn, Theme.Stroke, 1, 0.5)
+            RowKit.Control(PinBtn)
+
+            local favId = nameSpanish .. "::" .. textSpanish
+            FloatingPillV5.Studio.Register(favId, textSpanish, textEnglish, nameSpanish, "Toggle")
+            local isFavorite = SavedFavoriteIds[favId] or false
+            local FavBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 30, 0, 30),
+                Position = UDim2.new(1, -164, 0, 17),
+                BackgroundTransparency = 1,
+                Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 15
+            })
+
+            local isInCombo = false
+            local ComboBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 24, 0, 24),
+                Position = UDim2.new(1, -194, 0, 20),
+                BackgroundColor3 = Theme.Secondary,
+                Image = "rbxassetid://114334068728895",
+                ImageColor3 = Theme.TextDim,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 15
+            })
+            corner(ComboBtn, 6)
+            stroke(ComboBtn, Theme.Stroke, 1, 0.5)
+            ComboBtn:SetAttribute("ThemeImageRole", "TextDim")
+            RowKit.Control(ComboBtn)
+
+            local KeybindBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 150, 0, 20),
+                Position = UDim2.new(1, -164, 1, -27),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.12,
+                Text = GetText("Tecla: Sin tecla", "Key: No key"),
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                AutoButtonColor = false,
+                Active = true,
+                Selectable = false,
+                ZIndex = 15,
+            })
+            KeybindBtn:SetAttribute("ThemeRole", "Secondary")
+            KeybindBtn:SetAttribute("ThemeTextRole", "TextDim")
+            corner(KeybindBtn, 6)
+            stroke(KeybindBtn, Theme.Stroke, 1, 0.45)
+            RowKit.Control(KeybindBtn)
+            KeybindBtn.BackgroundTransparency = 0.35
+
+            if hasCredit then
+                ComboBtn.Position   = UDim2.new(0, 22,   0, credRowY + 2)
+                FavBtn.Position     = UDim2.new(0, 50,   0, credRowY - 3)
+                DetachBtn.Position  = UDim2.new(0, 88,   0, credRowY)
+                PinBtn.Position     = UDim2.new(0, 120,  0, credRowY)
+                KeybindBtn.Position = UDim2.new(1, -132, 0, credRowY + 3)
+                for _, child in ipairs(Holder:GetChildren()) do
+                    if child:IsA("Frame") and child.Size.X.Offset == 3 and child.Size.Y.Offset == 36 then
+                        child.Position = UDim2.new(0, 10, 0, math.floor(credZoneH / 2) - 18)
+                        break
+                    end
+                end
+            end
+
+            local _linkedSliderRef    = nil
+            local _linkedSliderFavRow = nil
+            local _dialList = nil -- sliders del tambor (LinkDial)
+            local favRow = nil
+            local toggleFloating
+            local toggleLock
+            local favoriteControlRefreshers = {}
+
+            local function syncFavoriteRow()
+                favoriteControlRefreshers = {}
+                if favRow then
+                    pcall(function() favRow.Holder:Destroy() end)
+                    favRow = nil
+                end
+                if _linkedSliderFavRow then
+                    pcall(function() _linkedSliderFavRow.Holder:Destroy() end)
+                    _linkedSliderFavRow = nil
+                end
+
+                if isFavorite and AutoTabFavoritosRef then
+                    favRow = AutoTabFavoritosRef:CreateToggle(textSpanish, textEnglish, state, function(newState)
+                        state = newState
+                        tog.SetValue(newState)
+                        pcall(cb, newState)
+                    end, true)
+                    Window._AddFavoriteFloatControls(
+                        favRow.Holder, toggleFloating, toggleLock,
+                        function() return isFloating end,
+                        function() return isLocked end,
+                        function(refresh) table.insert(favoriteControlRefreshers, refresh) end
+                    )
+
+                    if _linkedSliderRef then
+                        local liveValue = _linkedSliderRef._value or 50
+                        if type(_linkedSliderRef.Get) == "function" then
+                            local okGet, gotValue = pcall(_linkedSliderRef.Get)
+                            if okGet and type(gotValue) == "number" then liveValue = gotValue end
+                        end
+                        _linkedSliderFavRow = AutoTabFavoritosRef:CreateSlider(
+                            _linkedSliderRef._labelES or "Slider",
+                            _linkedSliderRef._min     or 0,
+                            _linkedSliderRef._max     or 100,
+                            liveValue,
+                            function(newVal)
+                                _linkedSliderRef._value = newVal
+                                if _linkedSliderRef._callback then
+                                    pcall(_linkedSliderRef._callback, newVal)
+                                end
+                            end,
+                            true
+                        )
+                    end
+                end
+            end
+
+            FavBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                isFavorite = not isFavorite
+                FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                SavedFavoriteIds[favId] = isFavorite or nil
+                syncFavoriteRow()
+                SyncFavoritesToConfig()
+            end)
+
+            local comboMember = {
+                Initial = displayText:sub(1, 1):upper(),
+                DisplayName = displayText,
+                GetState = function() return state end,
+                SetState = function(newState)
+                    state = newState
+                    tog.SetValue(newState)
+                    pcall(cb, newState)
+                end,
+            }
+
+            ComboBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                isInCombo = not isInCombo
+                ComboBtn.ImageColor3 = isInCombo and Theme.Accent or Theme.TextDim
+                ComboBtn:SetAttribute("ThemeImageRole", isInCombo and "Accent" or "TextDim")
+                if isInCombo then
+                    Window.AddComboMember(comboMember)
+                else
+                    Window.RemoveComboMember(comboMember)
+                end
+            end)
+
+            Window.RegisterKeybind(favId, KeybindBtn, function()
+                state = not state
+                tog.SetValue(state)
+                if favRow and favRow.SetValue then
+                    favRow.SetValue(state)
+                end
+                pcall(cb, state)
+            end)
+            KeybindBtn.MouseButton1Click:Connect(function()
+                Window.BeginKeybindCapture(Window.Keybinds[favId])
+            end)
+
+            tog.LinkSlider = function(self, sliderObj)
+                _linkedSliderRef = sliderObj
+                if isFavorite then
+                    syncFavoriteRow()
+                end
+            end
+
+            HolderClick.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH) or UDim2.new(1, -206, 1, 0)
+            HolderClick.ZIndex = 14
+            
+            
+            local FloatingWindow = nil
+            local FloatingGlow = nil
+            local animationConnection = nil
+            
+            local function createFloatingWindow()
+
+                local floatStyle    = SavedConfig.FloatingToggleStyle or "Pill"
+                local isCircleStyle = (floatStyle == "Circle")
+                local hasLinkedSlider = (_linkedSliderRef ~= nil) and not isCircleStyle
+                local floatW = isCircleStyle and 64 or 200
+                local floatH = isCircleStyle and 64 or (hasLinkedSlider and 76 or 36)
+                local usePillV5 = not isCircleStyle
+                if usePillV5 and not hasLinkedSlider then
+                    floatW = FloatingPillV5.FitWidth(displayText, 21)
+                    floatH = 30
+                end
+                local hasDial = usePillV5 and not hasLinkedSlider and type(_dialList) == "table" and #_dialList > 0
+
+                FloatingGlow = mk("Frame", {
+                    Parent = Window.ScreenGui,
+                    Size = UDim2.fromOffset(216, 48),
+                    Position = UDim2.new(0.5, -108, 0.5, -24),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 3
+                })
+                corner(FloatingGlow, 999)
+
+                FloatingWindow = mk("Frame", {
+                    Parent = Window.ScreenGui,
+                    Size = UDim2.fromOffset(floatW, floatH),
+                    Position = UDim2.new(0.5, -floatW/2, 0.5, -floatH/2),
+                    BackgroundColor3 = isCircleStyle and Color3.fromRGB(20, 20, 26) or FloatingPillV5.OffColor(),
+                    BackgroundTransparency = isCircleStyle and 0.55 or 0.45,
+                    BorderSizePixel = 0,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex = 4
+                })
+                FloatPos.Apply(favId, FloatingWindow)
+                if FloatPos.IsLocked(favId) then
+                    isLocked = true
+                    PinBtn.Image = "rbxassetid://91959170037380"
+                end
+                if not usePillV5 then
+                    FloatingWindow:SetAttribute("ThemeRole", "Secondary")
+                else
+                    FloatingWindow:SetAttribute("YYPillV5", true)
+                end
+                FloatingWindow:SetAttribute("SupportsFloatStyle", true)
+                FloatingWindow:SetAttribute("HasLinkedSlider", hasLinkedSlider)
+                if hasDial then FloatingWindow:SetAttribute("YYDialExtraPad", 12) end
+                corner(FloatingWindow, 999)
+
+                local floatStroke
+                if usePillV5 then
+                    floatStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0

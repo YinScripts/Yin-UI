@@ -1,0 +1,856 @@
+Chat.inboxOk = false end
+            end
+        end)
+    end
+    local function sendText()
+        if sending then return end
+        local text = tostring(MessageBox.Text or ""):sub(1, CONFIG.MAX_CHAR)
+        text = text:match("^%s*(.-)%s*$") or ""
+        if text == "" then return end
+        sending = true
+        MessageBox.Text = ""
+        if Chat.editing then
+            Chat.submitEdit(text)
+        else
+            sendPayload(text)
+        end
+        task.delay(0.2, function() sending = false end)
+    end
+    Chat.sendText = sendText
+    Chat.isViewing = function(room)
+        return open and Chat.view == "chat" and Chat.room == room
+    end
+    Chat.setReactCounts = function(key, reacts)
+        if type(reacts) ~= "table" then localReactions[key] = nil return end
+        local counts = {}
+        for emoji, n in pairs(reacts) do
+            local v = tonumber(n)
+            if v and v > 0 then counts[tostring(emoji)] = math.floor(v) end
+        end
+        localReactions[key] = counts
+    end
+    Chat.applyServerReacts = function(meta, reacts)
+        if not meta then return end
+        local hold = Chat.reactHold[meta.key]
+        if hold and os.clock() < hold then return end
+        Chat.setReactCounts(meta.key, reacts)
+        refreshReactionChips(meta)
+    end
+    Chat.sendReaction = function(meta, emoji)
+        if not meta then return end
+        Chat.reactHold[meta.key] = os.clock() + 6
+        local room = Chat.room
+        task.spawn(function()
+            local t0 = os.clock()
+            while not meta.fbKey and os.clock() - t0 < 6 do task.wait(0.3) end
+            if not meta.fbKey then return end
+            local path = "chat/" .. room .. "/messages/" .. meta.fbKey .. "/reacts/" .. HttpService:UrlEncode(emoji)
+            local ok = Chat.fbCall("PUT", path, {[".sv"] = {increment = 1}})
+            if not ok then
+                local okGet, current = Chat.fbCall("GET", path)
+                Chat.fbCall("PUT", path, (okGet and tonumber(current) or 0) + 1)
+            end
+            Chat.reactHold[meta.key] = os.clock() + 1.5
+        end)
+    end
+    Chat.setStatus = function(meta, state)
+        if not meta or not meta.isMe or not meta.stamp then return end
+        local holder = meta.statusHolder
+        local ticks = holder and holder:FindFirstChild("Ticks")
+        local alert = holder and holder:FindFirstChild("Alert")
+        meta.stamp.Text = tostring(meta.timeText or "") .. (state == "pending" and " ·" or "")
+        if ticks then ticks.Visible = state ~= "pending" and state ~= "failed" end
+        if alert then alert.Visible = state == "failed" end
+        if state == "failed" then meta.stamp.TextColor3 = THEME.DANGER end
+        meta.state = state or "sent"
+    end
+    Chat.OWNER_AVATAR_NAMES = { v_orc = true, n_oqv = true }
+    Chat.avatarFor = function(uid, user)
+        if string.lower(tostring(user or "")) == "mousoza" then return UI.ICON.mousozaAvatar end
+        if Chat.OWNER_AVATAR_NAMES[string.lower(tostring(user or ""))] then return UI.ICON.ownerAvatar end
+        return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(tonumber(uid) or 0)
+    end
+    Chat.scriptTag = function(script)
+        script = tostring(script or "")
+        if script == "" or string.lower(script) == "yinyang" or string.lower(script) == "yin yang" then return nil end
+        return "[" .. script .. "]"
+    end
+    UI.relTime = function(ts)
+        ts = tonumber(ts)
+        if not ts then return "" end
+        local d = math.max(0, os.time() - math.floor(ts))
+        if d < 60 then return "ahora" end
+        if d < 3600 then return math.floor(d / 60) .. " min" end
+        if d < 86400 then return math.floor(d / 3600) .. " h" end
+        if d < 604800 then return math.floor(d / 86400) .. " d" end
+        return math.floor(d / 604800) .. " sem"
+    end
+    UI.sepText = function(ts)
+        local t = os.date("*t", ts)
+        local now = os.date("*t")
+        local h = t.hour % 12
+        if h == 0 then h = 12 end
+        local hour = string.format("%d:%02d %s", h, t.min, t.hour < 12 and "A. M." or "P. M.")
+        if t.year == now.year and t.yday == now.yday then return "Hoy " .. hour end
+        if t.year == now.year and t.yday == now.yday - 1 then return "Ayer " .. hour end
+        return UI.fullDate(ts)
+    end
+    Chat.richName = function(name, info)
+        local user = tostring(name or "Unknown")
+        local dn = tostring(info.dn or "")
+        local out
+        if dn ~= "" and dn ~= user then
+            out = Chat.esc(dn) .. ' <font transparency="0.45">@' .. Chat.esc(user) .. "</font>"
+        else
+            out = Chat.esc(user)
+        end
+        if type(info.ownerTag) == "string" and info.ownerTag ~= "" then
+            out ..= '  <font color="#FFD700">' .. Chat.esc(info.ownerTag) .. "</font>"
+        end
+        return out
+    end
+    Chat.mentionsMe = function(text)
+        if not Chat.settings.MentionsEnabled then return false end
+        local t = string.lower(tostring(text or ""))
+        local function hasFull(n)
+            if not n or n == "" or n == "@" then return false end
+            local pos = 1
+            while true do
+                local s, e = string.find(t, n, pos, true)
+                if not s then return false end
+                local before = s == 1 or string.sub(t, s - 1, s - 1):match("[%s%p]") ~= nil
+                local after = e == #t or string.sub(t, e + 1, e + 1):match("[%s%p]") ~= nil
+                if before and after then return true end
+                pos = e + 1
+            end
+        end
+        return hasFull("@" .. string.lower(LocalPlayer.Name)) or hasFull("@" .. string.lower(LocalPlayer.DisplayName))
+    end
+    Chat.isReplyToMe = function(reply)
+        if type(reply) ~= "table" then return false end
+        if tonumber(reply.uid) == LocalPlayer.UserId then return true end
+        local me1, me2 = string.lower(LocalPlayer.Name), string.lower(LocalPlayer.DisplayName)
+        local ru = string.lower(tostring(reply.user or ""))
+        local rd = string.lower(tostring(reply.dn or ""))
+        if ru ~= "" and (ru == me1 or ru == me2) then return true end
+        if rd ~= "" and (rd == me1 or rd == me2) then return true end
+        return false
+    end
+    Chat.previewText = function(m)
+        if type(m) ~= "table" then return "" end
+        if m.t == "invite" then return "Invitación al servidor" end
+        local text = tostring(m.text or "")
+        if text:match("^%[%[STICKER:") then return "Sticker" end
+        text = Chat.rainbowBody(text) or text
+        local _, body = Chat.mdLine(text)
+        text = Chat.mdStrip(body)
+        text = text:gsub("%s+", " ")
+        return Chat.clip(text, 60)
+    end
+    Chat.setPreview = function(room, m, onlyIfNewer)
+        if not room or type(m) ~= "table" then return end
+        local tsSec = tonumber(m.ts)
+        tsSec = tsSec and (tsSec > 1e11 and tsSec / 1000 or tsSec) or os.time()
+        local prev = Chat.previews[room]
+        if onlyIfNewer and prev and (prev.ts or 0) >= tsSec then return end
+        local kind = "text"
+        if m.t == "invite" then kind = "invite" elseif tostring(m.text or ""):match("^%[%[STICKER:") then kind = "sticker" end
+        Chat.previews[room] = {
+            name = tostring(m.dn or m.user or "?"), uid = tonumber(m.uid),
+            text = Chat.previewText(m), ts = tsSec, kind = kind,
+        }
+    end
+    Chat.removeRow = function(meta)
+        if not meta then return end
+        if meta.row and meta.row.Parent then meta.row:Destroy() end
+        if messageRows[meta.key] == meta then messageRows[meta.key] = nil end
+        if meta.fbKey and Chat.byFbKey[meta.fbKey] == meta then Chat.byFbKey[meta.fbKey] = nil end
+        if actionTarget == meta then hideMessageActions() end
+    end
+    Chat.ownerDelete = function(meta)
+        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
+        local room = Chat.room
+        task.spawn(function()
+            local ok, _, code = Chat.fbCall("DELETE", "chat/" .. room .. "/messages/" .. meta.fbKey)
+            if ok then
+                Chat.removeRow(meta)
+            else
+                Chat.flash("Firebase rechazó el borrado (código " .. tostring(code) .. ")")
+            end
+        end)
+    end
+    Chat.pinMessage = function(meta)
+        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
+        local room = Chat.room
+        local text = tostring(meta.text or "")
+        if text:match("^%[%[STICKER:") then text = "[Sticker]" end
+        local pin = {key = meta.fbKey, uid = meta.uid, user = meta.name, dn = meta.dn or meta.name, text = Chat.clip(text, 120)}
+        task.spawn(function()
+            local ok, _, code = Chat.fbCall("PUT", "chat/" .. room .. "/pin", pin)
+            if ok then
+                if room == Chat.room then
+                    Chat.pin = pin
+                    Chat.refreshPin()
+                end
+            else
+                Chat.flash("No se pudo fijar (código " .. tostring(code) .. ")")
+            end
+        end)
+    end
+    Chat.applySearch = function(meta)
+        if not meta or not meta.row then return end
+        local q = Chat.searchQuery
+        meta.row.Visible = q == "" or string.find(meta.searchText or "", q, 1, true) ~= nil
+    end
+    Chat.applySearchAll = function()
+        for _, meta in pairs(messageRows) do Chat.applySearch(meta) end
+    end
+    Chat.maskName = function(name)
+        name = tostring(name or "?"):gsub("[%c%z]", "")
+        local first = name:sub(1, 2)
+        if first == "" then first = "??" end
+        return first .. string.rep("*", math.clamp(#name - 2, 3, 8))
+    end
+    Chat.rememberDM = function(uid, name, user, bump)
+        uid = tonumber(uid)
+        if not uid or uid == LocalPlayer.UserId then return end
+        local list = Chat.settings.RecentDMs
+        local found
+        for i, e in ipairs(list) do
+            if type(e) == "table" and tonumber(e.uid) == uid then found = i break end
+        end
+        local entry = found and list[found] or {uid = uid}
+        local changed = not found
+        if name and tostring(name) ~= "" and entry.name ~= tostring(name) then entry.name = tostring(name) changed = true end
+        if user and tostring(user) ~= "" and entry.user ~= tostring(user) then entry.user = tostring(user) changed = true end
+        entry.name = entry.name or entry.user or tostring(uid)
+        if bump or not found then
+            if found then table.remove(list, found) end
+            table.insert(list, 1, entry)
+            entry.ts = os.time()
+            while #list > 12 do table.remove(list) end
+            changed = true
+        end
+        if changed then Chat.saveSettings() end
+    end
+    do
+        UI.BackButton = UI.iconButton(Header, UI.ICON.back, 34, 22, {Position = UDim2.fromOffset(8, 12), Visible = false, ZIndex = 3})
+        UI.BackCount = mk("TextLabel", {
+            Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0, 0),
+            Position = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
+            TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 11, Visible = false, ZIndex = 5,
+        }, UI.BackButton)
+        corner(UI.BackCount, 9)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)}, UI.BackCount)
+        UI.HeaderAvatar = mk("ImageLabel", {
+            Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(52, 9),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Image = "",
+            ScaleType = Enum.ScaleType.Crop, Visible = false, ZIndex = 3,
+        }, Header)
+        corner(UI.HeaderAvatar, 20)
+        UI.HeaderRing = UI.storyRing(UI.HeaderAvatar, 2)
+        UI.HeaderDot = mk("Frame", {
+            Size = UDim2.fromOffset(11, 11), Position = UDim2.fromOffset(30, 30),
+            BackgroundColor3 = UI.C.online, BorderSizePixel = 0, Visible = false, ZIndex = 4,
+        }, UI.HeaderAvatar)
+        corner(UI.HeaderDot, 6)
+        stroke(UI.HeaderDot, THEME.BG, 2, 0)
+        UI.SearchBtn = UI.iconButton(Header, UI.ICON.search, 34, 20, {Position = UDim2.new(1, -118, 0, 12), Visible = false, ZIndex = 3})
+        local muteImg
+        UI.MuteBtn, muteImg = UI.iconButton(Header, UI.ICON.bell, 34, 20, {Position = UDim2.new(1, -82, 0, 12), Visible = false, ZIndex = 3})
+        UI.MuteIcon = muteImg
+        UI.MoreBtn = UI.iconButton(Header, UI.ICON.more, 34, 20, {Position = UDim2.new(1, -46, 0, 12), Visible = false, ZIndex = 3})
+        UI.PencilBtn = UI.iconButton(Header, UI.ICON.pencil, 34, 20, {Position = UDim2.new(1, -46, 0, 12), Visible = false, ZIndex = 3})
+        UI.OnlineButton = mk("TextButton", {
+            Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 6,
+        }, OnlinePill)
+        UI.MoreMenu = mk("Frame", {
+            Size = UDim2.fromOffset(240, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 52),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Visible = false, ZIndex = 130,
+        }, Root)
+        corner(UI.MoreMenu, 14)
+        mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder}, UI.MoreMenu)
+        mk("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6)}, UI.MoreMenu)
+        UI.MoreOnline = makeActionButton(UI.MoreMenu, "Ver conectados", 240, UI.ICON.people)
+        UI.MoreMute = makeActionButton(UI.MoreMenu, "Silenciar", 240, UI.ICON.bellOff)
+        UI.MoreHome = makeActionButton(UI.MoreMenu, "Volver a chats", 240, UI.ICON.back)
+        UI.MoreDelete = makeActionButton(UI.MoreMenu, "Eliminar chat", 240, UI.ICON.trash)
+        UI.MoreDelete.TextColor3 = THEME.DANGER
+        UI.MoreDelete.Icon.ImageColor3 = THEME.DANGER
+        for i, b in ipairs({UI.MoreOnline, UI.MoreMute, UI.MoreHome, UI.MoreDelete}) do
+            b.LayoutOrder = i
+            b.ZIndex = 131 + ZB
+        end
+        UI.PinBar = mk("Frame", {
+            Size = UDim2.new(1, -28, 0, 40), Position = UDim2.fromOffset(14, 70),
+            BackgroundColor3 = THEME.PANEL, BackgroundTransparency = 0.05, BorderSizePixel = 0, Visible = false, ZIndex = 60,
+        }, Root)
+        corner(UI.PinBar, 14)
+        stroke(UI.PinBar, UI.C.line, 1, 0)
+        UI.icon(UI.PinBar, UI.ICON.pin, 18, UI.C.gold, {Position = UDim2.fromOffset(12, 11), ZIndex = 61})
+        UI.PinText = UI.noTr(mk("TextLabel", {
+            Size = UDim2.new(1, -80, 1, 0), Position = UDim2.fromOffset(40, 0),
+            BackgroundTransparency = 1, Text = "", TextColor3 = THEME.TXT,
+            Font = Enum.Font.GothamMedium, TextSize = 14, RichText = true,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 61,
+        }, UI.PinBar))
+        UI.PinClose = mk("TextButton", {
+            Size = UDim2.fromOffset(28, 28), Position = UDim2.new(1, -34, 0, 6),
+            BackgroundTransparency = 1, Text = "×", TextColor3 = THEME.DIM,
+            Font = Enum.Font.GothamBold, TextSize = 22, Visible = Chat.meIsOwner, ZIndex = 61,
+        }, UI.PinBar)
+        UI.SearchBar = mk("Frame", {
+            Size = UDim2.new(1, -28, 0, 36), Position = UDim2.fromOffset(14, 70),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Visible = false, ZIndex = 60,
+        }, Root)
+        corner(UI.SearchBar, 18)
+        UI.icon(UI.SearchBar, UI.ICON.search, 16, THEME.DIM, {Position = UDim2.fromOffset(14, 10), ZIndex = 61})
+        UI.SearchBox = mk("TextBox", {
+            Size = UDim2.new(1, -54, 1, 0), Position = UDim2.fromOffset(40, 0),
+            BackgroundTransparency = 1, Text = "", PlaceholderText = "Buscar en el chat",
+            PlaceholderColor3 = THEME.DIM, TextColor3 = THEME.TXT, Font = Enum.Font.GothamMedium,
+            TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, ZIndex = 61,
+        }, UI.SearchBar)
+        UI.NewChatBar = mk("Frame", {
+            Size = UDim2.new(1, -28, 0, 38), Position = UDim2.fromOffset(14, 68),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Visible = false,
+        }, Root)
+        corner(UI.NewChatBar, 19)
+        UI.icon(UI.NewChatBar, UI.ICON.search, 16, THEME.DIM, {Position = UDim2.fromOffset(14, 11)})
+        UI.NewChatBox = mk("TextBox", {
+            Size = UDim2.new(1, -120, 1, 0), Position = UDim2.fromOffset(40, 0),
+            BackgroundTransparency = 1, BorderSizePixel = 0, Text = "",
+            PlaceholderText = "Buscar o escribir un usuario", PlaceholderColor3 = THEME.DIM,
+            TextColor3 = THEME.TXT, Font = Enum.Font.GothamMedium, TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false,
+        }, UI.NewChatBar)
+        UI.NewChatGo = mk("TextButton", {
+            Size = UDim2.fromOffset(70, 28), Position = UDim2.new(1, -76, 0, 5),
+            BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "Abrir",
+            TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 13, Visible = false,
+        }, UI.NewChatBar)
+        corner(UI.NewChatGo, 14)
+        UI.HomeList = mk("ScrollingFrame", {
+            Size = UDim2.new(1, -16, 1, -120), Position = UDim2.fromOffset(8, 114),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+            ScrollBarImageColor3 = THEME.DIM, AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            CanvasSize = UDim2.new(), ScrollingDirection = Enum.ScrollingDirection.Y, Visible = false,
+        }, Root)
+        mk("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}, UI.HomeList)
+        mk("UIPadding", {PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10)}, UI.HomeList)
+        UI.InviteButton = UI.iconButton(Composer, UI.ICON.server, 34, 22, {Position = UDim2.new(1, -94, 0, 9), ZIndex = 6})
+        UI.Profile = mk("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(310, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = THEME.PANEL, BorderSizePixel = 0, Visible = false, ZIndex = 140,
+        }, Root)
+        corner(UI.Profile, 22)
+        stroke(UI.Profile, UI.C.line, 1, 0)
+        mk("UIListLayout", {
+            Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+            HorizontalAlignment = Enum.HorizontalAlignment.Center,
+        }, UI.Profile)
+        mk("UIPadding", {
+            PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14),
+            PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14),
+        }, UI.Profile)
+        UI.OnlinePanel = mk("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(320, 380), BackgroundColor3 = THEME.PANEL,
+            BorderSizePixel = 0, Visible = false, ZIndex = 140,
+        }, Root)
+        corner(UI.OnlinePanel, 22)
+        stroke(UI.OnlinePanel, UI.C.line, 1, 0)
+        UI.OnlineTitle = mk("TextLabel", {
+            Size = UDim2.new(1, -60, 0, 40), Position = UDim2.fromOffset(16, 4),
+            BackgroundTransparency = 1, Text = "En línea", TextColor3 = THEME.TXT,
+            Font = Enum.Font.GothamBold, TextSize = 16, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 141,
+        }, UI.OnlinePanel)
+        local onlineClose = mk("TextButton", {
+            Size = UDim2.fromOffset(30, 30), Position = UDim2.new(1, -38, 0, 8),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Text = "×",
+            TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 20, ZIndex = 141,
+        }, UI.OnlinePanel)
+        corner(onlineClose, 8)
+        onlineClose.MouseButton1Click:Connect(function() UI.OnlinePanel.Visible = false end)
+        UI.OnlineList = mk("ScrollingFrame", {
+            Size = UDim2.new(1, -24, 1, -56), Position = UDim2.fromOffset(12, 46),
+            BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+            AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = 141,
+        }, UI.OnlinePanel)
+        mk("UIListLayout", {Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder}, UI.OnlineList)
+        UI.Flash = mk("TextLabel", {
+            AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -96),
+            Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X,
+            BackgroundColor3 = THEME.PANEL, BorderSizePixel = 0, Text = "", TextColor3 = THEME.TXT,
+            Font = Enum.Font.GothamBold, TextSize = 14, Visible = false, ZIndex = 150,
+        }, Root)
+        corner(UI.Flash, 10)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, UI.Flash)
+        UI.SideHolder = mk("Frame", {
+            AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 60),
+            Size = UDim2.fromOffset(270, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1, ZIndex = 200,
+        }, ScreenGui)
+        mk("UIListLayout", {
+            Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+            HorizontalAlignment = Enum.HorizontalAlignment.Right,
+        }, UI.SideHolder)
+    end
+    Chat.flashToken = 0
+    Chat.flash = function(text)
+        Chat.flashToken += 1
+        local tok = Chat.flashToken
+        UI.Flash.Text = tostring(text)
+        UI.Flash.Visible = true
+        task.delay(2.4, function()
+            if Chat.flashToken == tok then UI.Flash.Visible = false end
+        end)
+    end
+    Chat.hideOverlays = function()
+        UI.Profile.Visible = false
+        UI.OnlinePanel.Visible = false
+        if UI.Confirm then UI.Confirm.Visible = false end
+    end
+    Chat.showProfile = function(p)
+        if type(p) ~= "table" then return end
+        Chat.hideOverlays()
+        hideMessageActions()
+        for _, c in ipairs(UI.Profile:GetChildren()) do
+            if c:IsA("GuiObject") then c:Destroy() end
+        end
+        local uid = tonumber(p.uid) or 0
+        local function line(order, props)
+            props.LayoutOrder = order
+            props.BackgroundTransparency = 1
+            props.ZIndex = 141
+            props.Size = props.Size or UDim2.new(1, 0, 0, 20)
+            props.TextXAlignment = Enum.TextXAlignment.Center
+            props.TextTruncate = Enum.TextTruncate.AtEnd
+            return mk("TextLabel", props, UI.Profile)
+        end
+        local pic = mk("ImageLabel", {
+            Size = UDim2.fromOffset(86, 86), BackgroundColor3 = THEME.PANEL2,
+            BorderSizePixel = 0, Image = Chat.avatarFor(uid, p.name), ScaleType = Enum.ScaleType.Crop,
+            LayoutOrder = 1, ZIndex = 141,
+        }, UI.Profile)
+        corner(pic, 43)
+        UI.storyRing(pic, 3)
+        if Chat.onlineMap[tostring(uid)] then
+            local dot = mk("Frame", {
+                Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(64, 64),
+                BackgroundColor3 = UI.C.online, BorderSizePixel = 0, ZIndex = 142,
+            }, pic)
+            corner(dot, 9)
+            stroke(dot, THEME.PANEL, 3, 0)
+        end
+        local nameRow = mk("Frame", {
+            Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 141,
+        }, UI.Profile)
+        mk("UIListLayout", {
+            FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Center,
+            VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+        }, nameRow)
+        UI.noTr(mk("TextLabel", {
+            Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+            Text = tostring(p.dn or p.name or "?"), TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold,
+            TextSize = 19, LayoutOrder = 1, ZIndex = 141,
+        }, nameRow))
+        if Chat.isOwner(uid, p.name) then
+            UI.icon(nameRow, UI.ICON.crown, 18, UI.C.gold, {LayoutOrder = 2, ZIndex = 141})
+        end
+        UI.noTr(line(3, {Text = "@" .. tostring(p.name or "?"), TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 14}))
+        local tag = Chat.scriptTag(p.script)
+        local extra = {}
+        if tag then extra[#extra + 1] = "Usa " .. tag end
+        if Chat.onlineMap[tostring(uid)] then extra[#extra + 1] = "En línea" end
+        if #extra > 0 then
+            line(4, {Text = table.concat(extra, "  ·  "), TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 13})
+        end
+        mk("Frame", {Size = UDim2.new(1, 0, 0, 6), BackgroundTransparency = 1, LayoutOrder = 5}, UI.Profile)
+        if uid ~= 0 and uid ~= LocalPlayer.UserId then
+            local dm = mk("TextButton", {
+                Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0,
+                Text = "Enviar mensaje", TextColor3 = Color3.new(1, 1, 1),
+                Font = Enum.Font.GothamBold, TextSize = 15, LayoutOrder = 7, ZIndex = 141,
+            }, UI.Profile)
+            corner(dm, 12)
+            dm.MouseButton1Click:Connect(function()
+                Chat.hideOverlays()
+                Chat.openChat("private", uid, p.dn or p.name, p.name)
+            end)
+        end
+        local close = mk("TextButton", {
+            Size = UDim2.new(1, 0, 0, 38), BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0,
+            Text = "Cerrar", TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 14,
+            LayoutOrder = 8, ZIndex = 141,
+        }, UI.Profile)
+        corner(close, 12)
+        close.MouseButton1Click:Connect(Chat.hideOverlays)
+        UI.Profile.Visible = true
+    end
+    Chat.showOnline = function()
+        Chat.hideOverlays()
+        hideMessageActions()
+        for _, c in ipairs(UI.OnlineList:GetChildren()) do
+            if c:IsA("GuiObject") then c:Destroy() end
+        end
+        local names = {}
+        for _, n in pairs(Chat.onlineMap) do names[#names + 1] = Chat.maskName(n) end
+        table.sort(names)
+        UI.OnlineTitle.Text = "En línea con el script (" .. tostring(#names) .. ")"
+        for i, n in ipairs(names) do
+            local row = mk("Frame", {
+                Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = 142,
+            }, UI.OnlineList)
+            local dot = mk("Frame", {
+                Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(6, 12),
+                BackgroundColor3 = UI.C.online, BorderSizePixel = 0, ZIndex = 143,
+            }, row)
+            corner(dot, 5)
+            UI.noTr(mk("TextLabel", {
+                Size = UDim2.new(1, -28, 1, 0), Position = UDim2.fromOffset(26, 0), BackgroundTransparency = 1,
+                Text = n, TextColor3 = THEME.TXT, Font = Enum.Font.GothamMedium, TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 143,
+            }, row))
+        end
+        if #names == 0 then
+            mk("TextLabel", {
+                Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "Sin datos de presencia todavía",
+                TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 14, ZIndex = 142,
+            }, UI.OnlineList)
+        end
+        UI.OnlinePanel.Visible = true
+    end
+    Chat.refreshPresence = function()
+        local ok, data = Chat.fbCall("GET", "presence")
+        if not ok or type(data) ~= "table" then return end
+        local newest = 0
+        for _, v in pairs(data) do
+            if type(v) == "table" and tonumber(v.t) and v.t > newest then newest = v.t end
+        end
+        local map, n = {}, 0
+        for uid, v in pairs(data) do
+            if type(v) == "table" and tonumber(v.t) and newest - v.t < 60000 then
+                n += 1
+                map[tostring(uid)] = tostring(v.n or uid)
+            end
+        end
+        Chat.onlineMap = map
+        Chat.fbOnline = math.max(n, 1)
+        Chat.updateOnline()
+    end
+    Chat.RAILWAY_URL = "https://yin-chatt.up.railway.app"
+    Chat.rwOnline = 0
+    Chat.fbOnline = 0
+    Chat.rwLastId = 0
+    Chat.updateOnline = function()
+        Chat.onlineCount = (Chat.rwOnline or 0) + (Chat.fbOnline or 0)
+        OnlineLabel.Text = tostring(Chat.onlineCount)
+        if ctx.OnlineLabel then pcall(function() ctx.OnlineLabel.Text = tostring(Chat.onlineCount) end) end
+        if Chat.view == "chat" then Chat.updateHeader() end
+        if Chat.view == "home" then Chat.refreshHome() end
+    end
+    Chat.refreshRailwayOnline = function()
+        local ok, response = pcall(function()
+            return request({Url = Chat.RAILWAY_URL .. "/api/chat/messages?after=" .. tostring(Chat.rwLastId), Method = "GET"})
+        end)
+        local data = nil
+        if ok and type(response) == "table" and type(response.Body) == "string" and response.Body ~= "" then
+            local okD, d = pcall(HttpService.JSONDecode, HttpService, response.Body)
+            if okD and type(d) == "table" then data = d end
+        end
+        if data and type(data.messages) == "table" then
+            for _, msg in ipairs(data.messages) do
+                if type(msg) == "table" and type(msg.id) == "number" and msg.id > Chat.rwLastId then Chat.rwLastId = msg.id end
+            end
+            if data.onlineCount then
+                Chat.rwOnline = tonumber(data.onlineCount) or 0
+            else
+                local ids, count = {}, 0
+                for _, msg in ipairs(data.messages) do
+                    if type(msg) == "table" and msg.playerId and not ids[tostring(msg.playerId)] then
+                        ids[tostring(msg.playerId)] = true
+                        count += 1
+                    end
+                end
+                Chat.rwOnline = count
+            end
+        else
+            Chat.rwOnline = 0
+        end
+        Chat.updateOnline()
+    end
+    Chat.sideNotif = function(msg, room)
+        local isDM = string.sub(room, 1, 3) == "dm_"
+        local card = mk("TextButton", {
+            Size = UDim2.fromOffset(280, 64),
+            BackgroundColor3 = THEME.PANEL2, BackgroundTransparency = 0.04,
+            BorderSizePixel = 0, Text = "", AutoButtonColor = true, ZIndex = 201, LayoutOrder = Chat.nextOrder(),
+        }, UI.SideHolder)
+        corner(card, 18)
+        stroke(card, UI.C.line, 1, 0)
+        local pic = mk("ImageLabel", {
+            Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(11, 11), BackgroundColor3 = THEME.PANEL,
+            BorderSizePixel = 0, Image = isDM and Chat.avatarFor(msg.uid, msg.user) or UI.ICON.group,
+            ScaleType = Enum.ScaleType.Crop, ZIndex = 202,
+        }, card)
+        corner(pic, 21)
+        mk("TextLabel", {
+            Size = UDim2.new(1, -70, 0, 18), Position = UDim2.fromOffset(62, 12), BackgroundTransparency = 1,
+            Text = isDM and tostring(msg.dn or msg.user or "Alguien") or ("Chat Global · " .. tostring(msg.dn or msg.user or "Alguien")),
+            TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 202,
+        }, card)
+        mk("TextLabel", {
+            Size = UDim2.new(1, -70, 0, 18), Position = UDim2.fromOffset(62, 32), BackgroundTransparency = 1,
+            Text = Chat.previewText(msg), TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 202,
+        }, card)
+        card.MouseButton1Click:Connect(function()
+            card:Destroy()
+            Chat.openFromNotif(room, msg)
+        end)
+        task.delay(4, function()
+            if card.Parent then card:Destroy() end
+        end)
+    end
+    Chat.updateBadge = function()
+        local total = 0
+        for room, n in pairs(Chat.unread) do
+            if not Chat.isViewing(room) then total += n end
+        end
+        if UI.ReopenBadge then
+            UI.ReopenBadge.Visible = total > 0
+            UI.ReopenBadge.Text = total > 99 and "99+" or tostring(total)
+            if total > (Chat.lastBadgeTotal or 0) and UI.ReopenBadgeScale then
+                UI.ReopenBadgeScale.Scale = 1.35
+                pcall(function()
+                    TweenService:Create(UI.ReopenBadgeScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                end)
+            end
+        end
+        Chat.lastBadgeTotal = total
+        if ctx.SetBadge then pcall(ctx.SetBadge, open and 0 or total) end
+        if Chat.view == "chat" then Chat.updateHeader() end
+    end
+    Chat.onNewMessage = function(room, msg, viewingNow, quiet)
+        if type(msg) ~= "table" or tonumber(msg.uid) == LocalPlayer.UserId then return end
+        if viewingNow then return end
+        if Chat.settings.MutedRooms[room] then return end
+        Chat.unread[room] = (Chat.unread[room] or 0) + 1
+        local isDM = string.sub(room, 1, 3) == "dm_"
+        if not quiet and Chat.settings.SideNotifs and (isDM or Chat.mentionsMe(msg.text) or Chat.isReplyToMe(msg.reply)) then
+            Chat.sideNotif(msg, room)
+        end
+        Chat.updateBadge()
+        if Chat.view == "home" then Chat.refreshHome() end
+    end
+    Chat.relayout = function()
+        local inChat = Chat.view == "chat"
+        local y = 68
+        if not inChat then UI.PinBar.Visible = false end
+        if UI.PinBar.Visible then
+            UI.PinBar.Position = UDim2.fromOffset(14, y)
+            y += 46
+        end
+        UI.SearchBar.Visible = inChat and Chat.searchOpen
+        if UI.SearchBar.Visible then
+            UI.SearchBar.Position = UDim2.fromOffset(14, y)
+            y += 42
+        end
+        MessageScroll.Position = UDim2.fromOffset(14, y)
+        MessageScroll.Size = UDim2.new(1, -28, 1, -(y + 72))
+    end
+    Chat.refreshPin = function()
+        local pin = Chat.pin
+        if Chat.view == "chat" and type(pin) == "table" and pin.text then
+            local t = tostring(pin.text)
+            if t:match("^%[%[STICKER:") then t = "Sticker" end
+            UI.PinText.Text = "<b>" .. Chat.esc(tostring(pin.dn or pin.user or "")) .. "</b>  " .. Chat.esc(t)
+            UI.PinBar.Visible = true
+        else
+            UI.PinBar.Visible = false
+        end
+        Chat.relayout()
+    end
+    Chat.updateHeader = function()
+        local inChat = Chat.view == "chat"
+        UI.BackButton.Visible = inChat
+        UI.HeaderAvatar.Visible = inChat
+        UI.SearchBtn.Visible = inChat
+        UI.MuteBtn.Visible = inChat
+        UI.MoreBtn.Visible = inChat
+        UI.PencilBtn.Visible = not inChat
+        UI.ChatBg.Visible = inChat and Chat.kind == "global"
+        UI.Title.TextTruncate = Enum.TextTruncate.AtEnd
+        UI.Subtitle.TextTruncate = Enum.TextTruncate.AtEnd
+        if not inChat then
+            UI.Title.Position = UDim2.fromOffset(20, 7)
+            UI.Title.Size = UDim2.new(1, -100, 0, 26)
+            UI.Title.TextSize = 22
+            UI.Subtitle.Position = UDim2.fromOffset(20, 33)
+            UI.Subtitle.Size = UDim2.new(1, -100, 0, 16)
+            UI.Title:SetAttribute("NoTr", nil)
+            UI.Title.Text = "Chats"
+            UI.Subtitle.Text = "Yin Yang"
+            return
+        end
+        UI.Title.TextSize = 19
+        UI.Title.Position = UDim2.fromOffset(102, 8)
+        UI.Title.Size = UDim2.new(1, -232, 0, 22)
+        UI.Subtitle.Position = UDim2.fromOffset(102, 31)
+        UI.Subtitle.Size = UDim2.new(1, -232, 0, 16)
+        local muted = Chat.settings.MutedRooms[Chat.room] == true
+        UI.MuteIcon.Image = muted and UI.ICON.bellOff or UI.ICON.bell
+        UI.MoreMute.Text = muted and "Activar notificaciones" or "Silenciar"
+        UI.MoreMute.Icon.Image = muted and UI.ICON.bell or UI.ICON.bellOff
+        UI.MoreDelete.Visible = Chat.kind == "private"
+        if Chat.kind == "global" then
+            UI.HeaderAvatar.Image = UI.ICON.group
+            UI.HeaderRing.Enabled = true
+            UI.HeaderDot.Visible = false
+            UI.Title:SetAttribute("NoTr", nil)
+            UI.Title.Text = "Chat Global"
+            UI.Subtitle.Text = (Chat.typing and Chat.typingNames and #Chat.typingNames > 0) and Chat.typingText(Chat.typingNames)
+                or "Comunidad Yin Yang"
+        else
+            UI.HeaderAvatar.Image = Chat.avatarFor(Chat.target, Chat.targetUser)
+            UI.HeaderRing.Enabled = false
+            local online = Chat.onlineMap[tostring(Chat.target)] ~= nil
+            UI.HeaderDot.Visible = online
+            UI.Title:SetAttribute("NoTr", true)
+            UI.Title.Text = tostring(Chat.targetName or "Jugador")
+            if Chat.typing then
+                UI.Subtitle.Text = "escribiendo..."
+            elseif online then
+                UI.Subtitle.Text = "En línea"
+            else
+                UI.Subtitle.Text = Chat.targetUser and ("@" .. Chat.targetUser) or "Privado"
+            end
+        end
+        local others = 0
+        for room, n in pairs(Chat.unread) do
+            if room ~= Chat.room then others += n end
+        end
+        UI.BackCount.Visible = others > 0
+        UI.BackCount.Text = others > 99 and "99+" or tostring(others)
+    end
+    Chat.applyView = function()
+        local inChat = Chat.view == "chat"
+        UI.HomeList.Visible = not inChat
+        UI.NewChatBar.Visible = not inChat
+        MessageScroll.Visible = inChat
+        Composer.Visible = inChat
+        UI.MoreMenu.Visible = false
+        if not inChat then
+            EmptyLabel.Visible = false
+            ReplyBanner.Visible = false
+            StickerPanel.Visible = false
+        end
+        Chat.refreshPin()
+        Chat.updateHeader()
+    end
+    Chat.homeSection = function(order, text)
+        local l = mk("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, Text = text,
+            TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Bottom, LayoutOrder = order,
+        }, UI.HomeList)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingBottom = UDim.new(0, 4)}, l)
+    end
+    Chat.homeAvatar = function(parent, image, size, x, y, online, ring)
+        local pic = mk("ImageLabel", {
+            Size = UDim2.fromOffset(size, size), Position = UDim2.fromOffset(x, y),
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0,
+            Image = image or "", ScaleType = Enum.ScaleType.Crop, ZIndex = 2,
+        }, parent)
+        corner(pic, math.floor(size / 2))
+        if ring then UI.storyRing(pic, 2.5) end
+        if online then
+            local d = math.floor(size * 0.26)
+            local dot = mk("Frame", {
+                Size = UDim2.fromOffset(d, d), Position = UDim2.fromOffset(size - d + 1, size - d + 1),
+                BackgroundColor3 = UI.C.online, BorderSizePixel = 0, ZIndex = 3,
+            }, pic)
+            corner(dot, math.floor(d / 2))
+            stroke(dot, THEME.BG, 3, 0)
+        end
+        return pic
+    end
+    Chat.homeRow = function(order, e)
+        local unread = tonumber(e.unread) or 0
+        if e.pinned then
+            local card = mk("TextButton", {
+                Size = UDim2.new(1, 0, 0, 86), BackgroundColor3 = THEME.PANEL, BorderSizePixel = 0,
+                Text = "", AutoButtonColor = true, LayoutOrder = order,
+            }, UI.HomeList)
+            corner(card, 20)
+            stroke(card, UI.C.line, 1, 0)
+            mk("UIGradient", {
+                Rotation = 0,
+                Color = ColorSequence.new(Color3.fromRGB(40, 28, 64), Color3.fromRGB(18, 18, 18)),
+            }, card)
+            Chat.homeAvatar(card, e.image, 60, 13, 13, false, true)
+            local titleRow = mk("Frame", {
+                Size = UDim2.new(1, -170, 0, 22), Position = UDim2.fromOffset(88, 16), BackgroundTransparency = 1, ZIndex = 2,
+            }, card)
+            mk("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+                Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder,
+            }, titleRow)
+            mk("TextLabel", {
+                Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                Text = e.title, TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 17, LayoutOrder = 1, ZIndex = 2,
+            }, titleRow)
+            UI.icon(titleRow, UI.ICON.pin, 14, UI.C.gold, {LayoutOrder = 2, ZIndex = 2})
+            if e.muted then UI.icon(titleRow, UI.ICON.bellOff, 14, THEME.DIM, {LayoutOrder = 3, ZIndex = 2}) end
+            mk("TextLabel", {
+                Size = UDim2.new(1, -110, 0, 18), Position = UDim2.fromOffset(88, 40), BackgroundTransparency = 1,
+                Text = e.sub or "", TextColor3 = unread > 0 and THEME.TXT or THEME.DIM,
+                Font = unread > 0 and Enum.Font.GothamBold or Enum.Font.GothamMedium, TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 2,
+            }, card)
+            mk("TextLabel", {
+                Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(88, 59), BackgroundTransparency = 1,
+                Text = e.extra or "", TextColor3 = UI.C.online, Font = Enum.Font.GothamMedium, TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 2,
+            }, card)
+            if unread > 0 then
+                local b = mk("TextLabel", {
+                    AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -16, 0.5, 0),
+                    Size = UDim2.fromOffset(0, 24), AutomaticSize = Enum.AutomaticSize.X,
+                    BackgroundColor3 = UI.C.blue, BorderSizePixel = 0,
+                    Text = unread > 99 and "99+" or tostring(unread), TextColor3 = Color3.new(1, 1, 1),
+                    Font = Enum.Font.GothamBold, TextSize = 13, ZIndex = 3,
+                }, card)
+                corner(b, 12)
+                mk("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)}, b)
+                mk("UISizeConstraint", {MinSize = Vector2.new(24, 24)}, b)
+            end
+            if e.onClick then card.MouseButton1Click:Connect(e.onClick) end
+            return
+        end
+        local btn = mk("TextButton", {
+            Size = UDim2.new(1, 0, 0, 80), BackgroundColor3 = THEME.PANEL, BackgroundTransparency = 1,
+            BorderSizePixel = 0, Text = "", AutoButtonColor = false, LayoutOrder = order,
+        }, UI.HomeList)
+        corner(btn, 14)
+        btn.MouseEnter:Connect(function() btn.BackgroundTransparency = 0.4 end)
+        btn.MouseLeave:Connect(function() btn.BackgroundTransparency = 1 end)
+        Chat.homeAvatar(btn, e.image, 64, 8, 8, e.online, false)
+        UI.noTr(mk("TextLabel", {
+            Size = UDim2.new(1, -150, 0, 22), Position = UDim2.fromOffset(86, 17),
+            BackgroundTransparency = 1, Text = e.title or "", TextColor3 = THEME.TXT,
+            Font = unread > 0 and Enum.Font.GothamBold or Enum.Font.GothamMedium, TextSize = 19,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 2,
+        }, btn))
+        local sub = e.sub or ""
+        if e.time and e.time ~= "" then sub = sub .. " · " .. e.time end
+        mk("TextLabel", {
+            Size = UDim2.new(1, -150, 0, 20), Position = UDim2.fromOffset(86, 42),
+            BackgroundTransparency = 1, Text = sub, TextColor3 = unread > 0 and THEME.TXT or THEME.DIM,
+            Font = unread > 0 and Enum.Font.GothamBold or Enum.Font.GothamMedium, TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 2,
+        }, b

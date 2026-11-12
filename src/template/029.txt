@@ -1,0 +1,985 @@
+      self.Enabled, self.StormEnabled = false, false
+        self.StormToken = self.StormToken + 1
+        self:_endFlash(false)
+        self:_destroyRig()
+        -- cambio de preset: el preset nuevo ya puso su cielo, solo se descarta la foto
+        self:_restoreSky(false)
+    end
+
+    -- ==================== "Nivel 0": cámara de cinta perdida (found footage / VHS) ====================
+    -- Sin balanceo de cámara: solo cómo se ve y se siente. Lente abierto, grano, líneas de escaneo,
+    -- viñeta, parpadeo de exposición, auto-exposición al mirar las luces, desenfoque al girar rápido
+    -- y tirones de "tracking" de cinta cada tanto. Todo se restaura al cambiar de modo.
+    local ShaderFootage = {
+        Enabled = false,
+        Gui = nil,
+        Connection = nil,
+        SavedFov = nil,
+        TargetFov = 88,
+        BaseBlur = 2,
+        Grain = {},
+        Lines = nil,
+        Flicker = nil,
+        Band = nil,
+        LastLook = nil,
+        Blur = 2,
+        NextGlitch = 0,
+        GlitchT = nil,
+        Acc = 0,
+        Rng = Random.new(),
+        -- sonido de fondo propio: lo único que se escucha en "Nivel 0" (ID pendiente de Nick)
+        AmbientSoundId = "rbxassetid://120812539198119",
+        AmbientVolume = 0.7, -- 70 % (bajado un 30 %)
+        Ambient = nil,
+        Muted = {},
+        MuteConnections = {},
+        MuteToken = 0,
+    }
+
+    -- Silencio total: todos los sonidos del juego (y de la librería) a volumen 0, guardando el original.
+    -- Si el juego intenta subirles el volumen, se vuelven a silenciar al instante. Al salir, todo vuelve.
+    function ShaderFootage:_muteSound(sound)
+        if not self.Enabled or not sound or self.Muted[sound] ~= nil then return end
+        if PerfOpt.IsOwnInstance(sound) then return end
+        local ok = pcall(function()
+            self.Muted[sound] = sound.Volume
+            sound.Volume = 0
+        end)
+        if not ok then self.Muted[sound] = nil return end
+        local okSignal, connection = pcall(function()
+            return sound:GetPropertyChangedSignal("Volume"):Connect(function()
+                if self.Enabled and self.Muted[sound] ~= nil and sound.Volume > 0 then
+                    self.Muted[sound] = sound.Volume
+                    sound.Volume = 0
+                end
+            end)
+        end)
+        if okSignal and connection then table.insert(self.MuteConnections, connection) end
+    end
+
+    function ShaderFootage:_muteAll()
+        self.MuteToken = self.MuteToken + 1
+        local token = self.MuteToken
+        local okAdded, added = pcall(function()
+            return game.DescendantAdded:Connect(function(instance)
+                if instance:IsA("Sound") then task.defer(function() self:_muteSound(instance) end) end
+            end)
+        end)
+        if okAdded and added then table.insert(self.MuteConnections, added) end
+        task.spawn(function()
+            local okList, list = pcall(function() return game:GetDescendants() end)
+            if not okList then return end
+            for index, instance in ipairs(list) do
+                if token ~= self.MuteToken or not self.Enabled then return end
+                local isSound = false
+                pcall(function() isSound = instance:IsA("Sound") end)
+                if isSound then self:_muteSound(instance) end
+                if index % 500 == 0 then task.wait() end
+            end
+        end)
+    end
+
+    function ShaderFootage:_unmuteAll()
+        self.MuteToken = self.MuteToken + 1
+        for _, connection in ipairs(self.MuteConnections) do pcall(function() connection:Disconnect() end) end
+        self.MuteConnections = {}
+        for sound, volume in pairs(self.Muted) do
+            if sound.Parent then pcall(function() sound.Volume = volume end) end
+        end
+        self.Muted = {}
+    end
+
+    function ShaderFootage:_startAmbient()
+        if not self.AmbientSoundId then return end
+        local sound = Instance.new("Sound")
+        sound.Name = "YinYangShader_Level0Ambience"
+        sound.SoundId = self.AmbientSoundId
+        sound.Looped = true
+        sound.Volume = 0
+        sound.Parent = SoundService
+        pcall(function() sound:Play() end)
+        TweenService:Create(sound, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Volume = self.AmbientVolume}):Play()
+        self.Ambient = sound
+    end
+
+    function ShaderFootage:_stopAmbient()
+        local sound = self.Ambient
+        self.Ambient = nil
+        if not sound then return end
+        TweenService:Create(sound, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Volume = 0}):Play()
+        task.delay(0.9, function() pcall(function() sound:Destroy() end) end)
+    end
+
+    function ShaderFootage:_buildGui()
+        local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then return nil end
+        local old = playerGui:FindFirstChild("YinYangShader_Footage")
+        if old then old:Destroy() end
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "YinYangShader_Footage"
+        gui.IgnoreGuiInset = true
+        -- pantalla completa de verdad: sin esto quedaban sin cubrir las franjas de los costados
+        -- (zona segura del notch / cámara en celulares)
+        pcall(function() gui.ScreenInsets = Enum.ScreenInsets.None end)
+        pcall(function() gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None end)
+        gui.ResetOnSpawn = false
+        -- debajo de los menús del juego y de la librería: solo "ensucia" el mundo 3D
+        gui.DisplayOrder = -50
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        local function layer(name, props)
+            local frame = Instance.new("Frame")
+            frame.Name = name
+            frame.BorderSizePixel = 0
+            frame.Active = false
+            for key, value in pairs(props) do frame[key] = value end
+            frame.Parent = props.Parent or gui
+            return frame
+        end
+        -- viñeta: cuatro bordes con degradé hacia el centro
+        local edges = {
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0, 0), 90},
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0.74, 0), -90},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0.8, 0, 0, 0), 180},
+        }
+        for index, edge in ipairs(edges) do
+            local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
+            local gradient = Instance.new("UIGradient")
+            gradient.Rotation = edge[3]
+            gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(0.55, 0.86), NumberSequenceKeypoint.new(1, 1)})
+            gradient.Parent = frame
+        end
+        -- líneas de escaneo que bajan muy lento (rodado de la cinta)
+        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = false})
+        for index = 0, 119 do
+            layer("L", {Parent = lines, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, index / 120, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.9})
+        end
+        self.Lines = lines
+        -- grano: puntitos claros y oscuros que cambian de lugar cada cuadro
+        local lite = PerfOpt.Flags.LiteShaders
+        self.Grain = {}
+        for index = 1, lite and 40 or 110 do
+            local dark = index % 2 == 0
+            local size = self.Rng:NextInteger(1, 3)
+            table.insert(self.Grain, layer("G", {Size = UDim2.fromOffset(size, size), BackgroundColor3 = dark and Color3.new(0, 0, 0) or Color3.fromRGB(255, 250, 215), BackgroundTransparency = 0.75}))
+        end
+        -- parpadeo general de la imagen y banda de tracking
+        self.Flicker = layer("Flicker", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(20, 18, 6), BackgroundTransparency = 0.96})
+        local band = layer("Tracking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, -0.2, 0), BackgroundColor3 = Color3.fromRGB(235, 230, 200), BackgroundTransparency = 1})
+        local bandGradient = Instance.new("UIGradient")
+        bandGradient.Rotation = 90
+        bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
+        bandGradient.Parent = band
+        self.Band = band
+        gui.Parent = playerGui
+        return gui
+    end
+
+    function ShaderFootage:_step(delta)
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+        -- lente abierto (se acerca suave al FOV objetivo)
+        pcall(function() camera.FieldOfView = camera.FieldOfView + (self.TargetFov - camera.FieldOfView) * math.min(1, delta * 4) end)
+        -- desenfoque de movimiento: cuanto más rápido gira la cámara, más borroso
+        local look = camera.CFrame.LookVector
+        local turn = 0
+        if self.LastLook then
+            turn = math.acos(math.clamp(self.LastLook:Dot(look), -1, 1)) / math.max(delta, 1 / 240)
+        end
+        self.LastLook = look
+        local glitchBoost = self.GlitchT and 6 or 0
+        local targetBlur = PerfOpt.Flags.NoPostFX and 0 or (self.BaseBlur + math.min(14, turn * 2.6) + glitchBoost)
+        self.Blur = self.Blur + (targetBlur - self.Blur) * math.min(1, delta * (targetBlur > self.Blur and 18 or 6))
+        local blur = ShaderManager:GetTarget("BlurEffect", false)
+        if blur then pcall(function() blur.Enabled = self.Blur > 0.3; blur.Size = self.Blur end) end
+        -- auto-exposición: mirar hacia los tubos del techo baja la exposición, como una cámara barata
+        local base = self.BaseExposure or 0
+        local exposure = base - math.max(0, look.Y) * 0.55 + math.sin(os.clock() * 0.7) * 0.03
+        pcall(function()
+            ShaderLightingService.ExposureCompensation = ShaderLightingService.ExposureCompensation + (exposure - ShaderLightingService.ExposureCompensation) * math.min(1, delta * 2.2)
+        end)
+        -- la parte "de cinta" corre a ~24 cuadros por segundo, como el video
+        self.Acc = self.Acc + delta
+        if self.Acc < 1 / 24 then return end
+        self.Acc = 0
+        if not PerfOpt.Flags.NoAnimations then
+            for _, dot in ipairs(self.Grain) do
+                dot.Position = UDim2.fromScale(self.Rng:NextNumber(), self.Rng:NextNumber())
+                dot.BackgroundTransparency = self.Rng:NextNumber(0.62, 0.9)
+            end
+            if self.Lines then
+                self.Lines.Position = UDim2.new(0, 0, 0, -((os.clock() * 9) % 8))
+            end
+        end
+        if self.Flicker then self.Flicker.BackgroundTransparency = self.Rng:NextNumber(0.9, 0.985) end
+        -- tirón de tracking cada 6-14 s: una banda clara baja por la pantalla y todo se borronea un instante
+        local now = os.clock()
+        if not self.GlitchT and now >= self.NextGlitch then
+            self.GlitchT = now
+            self.NextGlitch = now + self.Rng:NextNumber(6, 14)
+        end
+        if self.GlitchT and self.Band then
+            local t = (now - self.GlitchT) / 0.45
+            if t >= 1 then
+                self.GlitchT = nil
+                self.Band.BackgroundTransparency = 1
+            else
+                self.Band.Position = UDim2.new(0, 0, -0.1 + t * 1.2, 0)
+                self.Band.BackgroundTransparency = 0.2 + t * 0.5
+            end
+        end
+    end
+
+    function ShaderFootage:SetEnabled(enabled)
+        enabled = enabled == true
+        if enabled == self.Enabled then return end
+        self.Enabled = enabled
+        local camera = workspace.CurrentCamera
+        if enabled then
+            if camera then self.SavedFov = camera.FieldOfView end
+            -- base propia (la del preset): así la auto-exposición no se "acumula" con otros ajustes
+            local preset = ShaderManager.Presets.Level0
+            self.BaseExposure = preset and preset.Lighting and preset.Lighting.ExposureCompensation or 0.25
+            self.LastLook, self.Blur, self.Acc, self.GlitchT = nil, self.BaseBlur, 0, nil
+            self.NextGlitch = os.clock() + 4
+            self.Gui = self:_buildGui()
+            self:_muteAll()
+            self:_startAmbient()
+            self.Connection = RunService.RenderStepped:Connect(function(delta)
+                local ok = pcall(self._step, self, delta)
+                if not ok then return end
+            end)
+            return
+        end
+        if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
+        self:_unmuteAll()
+        self:_stopAmbient()
+        if self.Gui then pcall(function() self.Gui:Destroy() end) end
+        self.Gui, self.Lines, self.Flicker, self.Band, self.Grain = nil, nil, nil, nil, {}
+        if camera and self.SavedFov then pcall(function() camera.FieldOfView = self.SavedFov end) end
+        self.SavedFov = nil
+        -- la exposición no se toca acá: la pone el modo siguiente (o "Restaurar original")
+    end
+
+    local shaderQueuePersistence = function() end
+
+    local function shaderSetQuality(name)
+        if not ShaderQualityProfiles[name] then return false end
+        ShaderSceneQuality = name
+        if ShaderReflections.Enabled then ShaderReflections:Refresh() end
+        ShaderRain:_syncVisuals()
+        shaderQueuePersistence()
+        return true
+    end
+
+    local function shaderRestoreImmersive()
+        ShaderFootage:SetEnabled(false)
+        ShaderSilhouette:SetEnabled(false)
+        ShaderRain:Destroy()
+        ShaderReflections.Enabled = false
+        if ShaderReflections.Connection then ShaderReflections.Connection:Disconnect(); ShaderReflections.Connection = nil end
+        ShaderReflections:Restore()
+    end
+
+
+    local ShaderCustomWindow = nil
+    local ShaderCustomBackdrop = nil
+    local ShaderCustomRefresh = function() end
+    local ShaderCustomControls = {}
+    local ShaderCustomOverrides = {}
+    local ShaderCustomActiveSlider = nil
+    local ShaderUISections = {}
+    local ShaderDemoEnabled = true
+    local ShaderDemoPreset = "Morning"
+    local ShaderModeLabel = nil
+    local ShaderModeCards = {}
+    local ShaderCustomConnections = {}
+    local ShaderPersistenceFile = "YinYang_Shader_Autosave.json"
+    local ShaderPersistenceToken = 0
+    local ShaderSavedState = nil
+
+    local function shaderWarn(report, context)
+        if report and not report.ok then
+            warn("[YinYang Shaders] " .. tostring(context) .. " tuvo errores", report.failed)
+        end
+    end
+
+    local function shaderClearCustomOverrides()
+        ShaderCustomOverrides = {}
+        ShaderCustomActiveSlider = nil
+    end
+
+    local function shaderSerializableOverrides()
+        local result = {}
+        for id, value in pairs(ShaderCustomOverrides) do
+            if type(id) == "string" and (type(value) == "number" or type(value) == "boolean") then
+                result[id] = value
+            end
+        end
+        return result
+    end
+
+    local function shaderCapturePersistence()
+        return {
+            version = 1,
+            demoEnabled = ShaderDemoEnabled == true,
+            preset = ShaderDemoPreset,
+            custom = shaderSerializableOverrides(),
+            customMode = next(ShaderCustomOverrides) ~= nil,
+            quality = ShaderSceneQuality,
+            overdrive = {
+                wetReflections = ShaderReflections.Enabled == true,
+                reflectionIntensity = ShaderReflections.Intensity,
+                wetness = ShaderReflections.Wetness,
+                surfaceMode = ShaderReflections.SurfaceMode,
+                sceneCoverage = ShaderReflections.SceneCoverage == true,
+                skyMirror = ShaderReflections.SkyMirrorEnabled == true,
+                stripTextures = ShaderReflections.StripTextures == true,
+                objectMirror = ShaderReflections.ObjectMirrorEnabled == true,
+                contact = ShaderReflections.ContactEnabled == true,
+                contactStrength = ShaderReflections.ContactStrength,
+                modelDetail = ShaderReflections.ModelDetailEnabled == true,
+                characterSpecular = ShaderReflections.CharacterSpecularEnabled == true,
+                excludeLocalAvatar = ShaderReflections.ExcludeLocalAvatar == true,
+                modelShadows = ShaderReflections.ShadowEnabled == true,
+                shadowStrength = ShaderReflections.ShadowStrength,
+                sunHue = ShaderSolarTone.Hue,
+                sunSaturation = ShaderSolarTone.Saturation,
+                sunStrength = ShaderSolarTone.Strength,
+                rain = ShaderRain.Enabled == true,
+                rainIntensity = ShaderRain.Intensity,
+                rainAudio = ShaderRain.SoundEnabled == true,
+                rainAudioVolume = ShaderRain.SoundVolume,
+                rainShelter = ShaderRain.RespectShelter == true,
+                storm = ShaderRain.StormEnabled == true,
+            },
+        }
+    end
+
+    shaderQueuePersistence = function()
+        if type(writefile) ~= "function" then return end
+        ShaderPersistenceToken = ShaderPersistenceToken + 1
+        local token = ShaderPersistenceToken
+        task.delay(0.35, function()
+            if token ~= ShaderPersistenceToken then return end
+            pcall(function()
+                game:GetService("HttpService"):JSONEncode(shaderCapturePersistence())
+            end)
+            pcall(function()
+                writefile(ShaderPersistenceFile, game:GetService("HttpService"):JSONEncode(shaderCapturePersistence()))
+            end)
+        end)
+    end
+
+    local function shaderLoadPersistence()
+        if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
+        local ok, state = pcall(function()
+            if not isfile(ShaderPersistenceFile) then return nil end
+            return game:GetService("HttpService"):JSONDecode(readfile(ShaderPersistenceFile))
+        end)
+        if ok and type(state) == "table" and state.version == 1 then return state end
+        return nil
+    end
+
+    local function shaderSyncImmersivePreset(name)
+        ShaderReflections.OilSheen = false
+        local mirrorPreset = name == "OilWet" or name == "NeonNight"
+        local rainPreset = ShaderRain.SkyPresets[name] == true
+        if not mirrorPreset then
+            if ShaderReflections.ObjectMirrorEnabled then ShaderReflections:SetObjectMirrorEnabled(false) end
+            if ShaderReflections.StripTextures then ShaderReflections:SetStripTexturesEnabled(false) end
+            if ShaderReflections.SkyMirrorEnabled then ShaderReflections:SetSkyMirrorEnabled(false) end
+        end
+        -- la cámara de cinta solo vive en "Nivel 0"
+        ShaderFootage:SetEnabled(name == "Level0")
+        -- la silueta negra solo vive en depthstyle (antes quedaba prendida al pasar a otro modo)
+        if name ~= "depthstyle" then ShaderSilhouette:SetEnabled(false) end
+        if name == "depthstyle" then
+            ShaderRain:Destroy()
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetContactEnabled(false)
+            ShaderReflections:SetShadowEnabled(false)
+            ShaderReflections:SetEnabled(false)
+            ShaderSilhouette:SetEnabled(true)
+        elseif rainPreset then
+            local heavy = name ~= "Rain"
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetWetness(name == "Monsoon" and 1 or 0.92)
+            ShaderReflections:SetIntensity(name == "Monsoon" and 0.42 or (heavy and 0.36 or 0.30))
+            ShaderReflections:SetEnabled(true)
+            ShaderReflections:SetContactEnabled(true)
+            ShaderReflections:SetShadowStrength(0.24)
+            ShaderReflections:SetShadowEnabled(true)
+            ShaderRain.StormGapMin, ShaderRain.StormGapMax = (name == "Monsoon" and 3 or 5), (name == "Monsoon" and 7 or 12)
+            ShaderRain:SetIntensity(name == "Monsoon" and 1 or (heavy and 0.95 or 0.72))
+            ShaderRain:SetEnabled(true)
+            ShaderRain:SetStormEnabled(heavy)
+        elseif name == "GoldenSpecular" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyGoldenFinish()
+        elseif name == "OilWet" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyOilFinish()
+        elseif name == "NeonNight" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyMirrorFinish()
+        elseif name == "Photoreal" then
+            ShaderRain:Destroy()
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetSurfaceMode("Floors")
+            ShaderReflections:SetSceneCoverage(true)
+            ShaderReflections:SetIntensity(0.12)
+            ShaderReflections:SetWetness(0.5)
+            ShaderReflections:SetEnabled(true)
+            ShaderReflections:SetContactEnabled(true)
+            ShaderReflections:SetShadowStrength(0.36)
+            ShaderReflections:SetShadowEnabled(true)
+        else
+            ShaderRain:Destroy()
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetContactEnabled(false)
+            ShaderReflections:SetEnabled(false)
+            -- profundidad extra (sombras de contacto en modelos) para los modos de día y de cine
+            local depthModes = {Morning = true, Midday = true, Sunset = true, Cinematic = true, Desert = true, BlueHour = true}
+            if depthModes[name] then
+                ShaderReflections:SetShadowStrength(0.30)
+                ShaderReflections:SetShadowEnabled(true)
+            end
+        end
+    end
+
+    local function shaderRestoreAll(options)
+        shaderRestoreImmersive()
+        local report = ShaderManager:Restore(options or {})
+        if report and report.ok then
+            shaderClearCustomOverrides()
+            shaderQueuePersistence()
+        end
+        return report
+    end
+
+    globalConnections.ShaderRestore = function()
+        ShaderPersistenceToken = ShaderPersistenceToken + 1
+        pcall(shaderRestoreImmersive)
+        pcall(function() ShaderManager:Restore({destroyCreated = true}) end)
+    end
+
+    local function shaderApplyPreset(name, tween)
+        local report = ShaderManager:ApplyPreset(name, {
+            tween = tween == true,
+            duration = 1,
+        })
+        if report.ok then
+            shaderClearCustomOverrides()
+            shaderSyncImmersivePreset(name)
+            pcall(PerfOpt.AfterShaders)
+            task.delay(tween and 1.05 or 0, function()
+                ShaderManualLighting.Brightness = ShaderLightingService.Brightness
+                ShaderManualLighting.ExposureCompensation = ShaderLightingService.ExposureCompensation
+                pcall(PerfOpt.AfterShaders)
+            end)
+        end
+        shaderWarn(report, "Preset " .. tostring(name))
+        if ShaderCustomRefresh then
+            task.defer(ShaderCustomRefresh)
+        end
+        if report and report.ok then shaderQueuePersistence() end
+        return report
+    end
+
+    local function shaderApplySingle(target, property, value)
+        if target == "Lighting" and (property == "Brightness" or property == "ExposureCompensation") then
+            ShaderManualLighting[property] = value
+        end
+        local report = ShaderManager:Apply({[target] = {[property] = value}}, {tween = false})
+        shaderWarn(report, target .. "." .. property)
+        if ShaderCustomRefresh then
+            task.defer(ShaderCustomRefresh)
+        end
+        if report and report.ok then shaderQueuePersistence() end
+        return report
+    end
+
+    local function shaderExistingNumber(target, property, fallback)
+        local values = ShaderManager:Read(target, {[property] = true})
+        if values and type(values[property]) == "number" then
+            return values[property]
+        end
+        return fallback
+    end
+
+    local function shaderExistingBool(target, property, fallback)
+        local values = ShaderManager:Read(target, {[property] = true})
+        if values and type(values[property]) == "boolean" then
+            return values[property]
+        end
+        return fallback
+    end
+
+    local function shaderReadCustomValue(spec, fallback, valueType)
+        local override = ShaderCustomOverrides[spec.id]
+        if type(override) == valueType then
+            return override
+        end
+
+        local current = fallback
+        if valueType == "boolean" then
+            current = shaderExistingBool(spec.target, spec.property, fallback)
+        else
+            current = shaderExistingNumber(spec.target, spec.property, fallback)
+        end
+
+        if type(spec.getValue) == "function" then
+            local ok, result = pcall(spec.getValue)
+            if ok and type(result) == valueType then
+                current = result
+            end
+        end
+        return current
+    end
+
+    local function shaderFormatValue(value)
+        if math.abs(value) >= 100 then
+            return string.format("%.0f", value)
+        elseif math.abs(value) >= 10 then
+            return string.format("%.1f", value):gsub("%.0$", "")
+        end
+        return string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", "")
+    end
+
+    local function shaderAddConnection(connection)
+        table.insert(ShaderCustomConnections, connection)
+        return connection
+    end
+
+    local function shaderDisconnectAll()
+        ShaderCustomActiveSlider = nil
+        for index = #ShaderCustomConnections, 1, -1 do
+            pcall(function() ShaderCustomConnections[index]:Disconnect() end)
+            ShaderCustomConnections[index] = nil
+        end
+    end
+
+    local function shaderSetModeLabel(name)
+        local modeKey = name
+        local labelES = tostring(name)
+        local labelEN = tostring(name)
+        for key, card in pairs(ShaderModeCards) do
+            if key == name or card.labelES == name or card.labelEN == name then
+                modeKey = key
+                labelES = card.labelES
+                labelEN = card.labelEN
+                break
+            end
+        end
+        if ShaderModeLabel then
+            local activeES = "Modo activo: " .. labelES
+            local activeEN = "Active mode: " .. labelEN
+            ShaderModeLabel.Text = GetText(activeES, activeEN)
+        end
+        for key, card in pairs(ShaderModeCards) do
+            if card.setSelected then
+                pcall(function() card.setSelected(key == modeKey) end)
+            end
+        end
+    end
+
+    local function shaderCreateModeCard(parent, spec)
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -8, 0, 156),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 9,
+        })
+        holder:SetAttribute("ThemeRole", "Secondary")
+        holder:SetAttribute("IsShaderModeCard", true)
+        corner(holder, 14)
+        local holderStroke = stroke(holder, Theme.Stroke, 1.2, 0.48)
+        local holderScale = mk("UIScale", {Parent = holder, Scale = 1})
+
+        local presetData = ShaderManager and ShaderManager.Presets and ShaderManager.Presets[spec.key]
+        local lighting = type(presetData) == "table" and type(presetData.Lighting) == "table" and presetData.Lighting or {}
+        local atmosphere = type(presetData) == "table" and type(presetData.Atmosphere) == "table" and presetData.Atmosphere or {}
+        local function col(v, fallback) return typeof(v) == "Color3" and v or fallback end
+
+        local skyTop, skyMid, skyLow
+        if spec.key == "Custom" then
+            skyTop, skyMid, skyLow = Theme.Background, Theme.Secondary, Theme.Accent
+        elseif spec.key == "Original" then
+            skyTop, skyMid, skyLow = Color3.fromRGB(40, 44, 52), Color3.fromRGB(96, 104, 118), Color3.fromRGB(170, 176, 186)
+        else
+            skyTop = col(atmosphere.Decay, Color3.fromRGB(40, 50, 90))
+            skyMid = col(atmosphere.Color, Color3.fromRGB(120, 140, 200))
+            skyLow = col(lighting.ColorShift_Top, Color3.fromRGB(255, 220, 180))
+        end
+
+        local banner = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -10, 0, 78),
+            Position = UDim2.new(0, 5, 0, 5),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 10,
+        })
+        corner(banner, 11)
+        mk("UIGradient", {
+            Parent = banner,
+            Rotation = 90,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, skyTop),
+                ColorSequenceKeypoint.new(0.6, skyMid),
+                ColorSequenceKeypoint.new(1, skyLow),
+            }),
+        })
+
+        local clock = tonumber(lighting.ClockTime)
+        if clock then
+            local isNight = clock < 5.5 or clock > 19
+            local dayPos = math.clamp((clock - 6) / 12, 0, 1)
+            local sunX = isNight and 0.78 or (0.12 + dayPos * 0.76)
+            local sunY = isNight and 0.28 or (0.78 - math.sin(math.pi * dayPos) * 0.55)
+            local sunSize = isNight and 14 or 20
+            local sun = mk("Frame", {
+                Parent = banner,
+                Size = UDim2.fromOffset(sunSize, sunSize),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(sunX, 0, sunY, 0),
+                BackgroundColor3 = isNight and Color3.fromRGB(235, 238, 255) or col(lighting.ColorShift_Top, Color3.fromRGB(255, 230, 170)),
+                BorderSizePixel = 0,
+                ZIndex = 11,
+            })
+            corner(sun, 999)
+            mk("UIStroke", {Parent = sun, Color = Color3.new(1, 1, 1), Thickness = isNight and 2 or 4, Transparency = 0.7})
+            if isNight then
+                local seeds = {{0.15, 0.2}, {0.3, 0.45}, {0.46, 0.18}, {0.6, 0.38}, {0.9, 0.55}, {0.22, 0.6}}
+                for _, p in ipairs(seeds) do
+                    local star = mk("Frame", {
+                        Parent = banner, Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
+                        BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 11,
+                    })
+                    corner(star, 999)
+                end
+            end
+            local chip = mk("TextLabel", {
+                Parent = banner,
+                Size = UDim2.new(0, 0, 0, 18),
+                AutomaticSize = Enum.AutomaticSize.X,
+                Position = UDim2.new(0, 6, 0, 6),
+                BackgroundColor3 = Color3.new(0, 0, 0),
+                BackgroundTransparency = 0.45,
+                Text = string.format("%02d:%02d", math.floor(clock) % 24, math.floor((clock % 1) * 60 + 0.5) % 60),
+                TextColor3 = Color3.new(1, 1, 1),
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                ZIndex = 14,
+            })
+            chip:SetAttribute("IgnoreTextEffect", true)
+            corner(chip, 999)
+            mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)})
+        end
+        if spec.key == "Level0" then
+            for i = 1, 12 do
+                mk("Frame", {
+                    Parent = banner, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, (i - 1) / 12, 0),
+                    BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 12,
+                })
+            end
+        end
+        if spec.key == "Rain" or spec.key == "Stormfront" or spec.key == "OilWet" or spec.key == "Monsoon" then
+            for i = 1, 9 do
+                mk("Frame", {
+                    Parent = banner, Size = UDim2.fromOffset(1, 12), Rotation = 18,
+                    Position = UDim2.new((i - 1) / 9 + 0.04, 0, (i % 3) * 0.22 + 0.05, 0),
+                    BackgroundColor3 = Color3.fromRGB(220, 230, 255), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 12,
+                })
+            end
+        end
+        local hills = mk("Frame", {
+            Parent = banner,
+            Size = UDim2.new(1.3, 0, 0, 34),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.45, 0, 1, -16),
+            BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.35,
+            BorderSizePixel = 0,
+            ZIndex = 12,
+        })
+        corner(hills, 999)
+        local hills2 = mk("Frame", {
+            Parent = banner,
+            Size = UDim2.new(0.9, 0, 0, 30),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.85, 0, 1, -11),
+            BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.15,
+            BorderSizePixel = 0,
+            ZIndex = 13,
+        })
+        corner(hills2, 999)
+
+        local glow = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -10, 0, 3),
+            Position = UDim2.new(0, 5, 0, 84),
+            BackgroundColor3 = Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 10,
+        })
+        glow:SetAttribute("ThemeRole", "AccentOff")
+        corner(glow, 99)
+
+        local title = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -20, 0, 20),
+            Position = UDim2.new(0, 10, 0, 92),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.labelES, spec.labelEN),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        title:SetAttribute("ThemeTextRole", "Text")
+        title:SetAttribute("TextSpanish", spec.labelES)
+        title:SetAttribute("TextEnglish", spec.labelEN)
+
+        local subtitle = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -20, 0, 30),
+            Position = UDim2.new(0, 10, 0, 114),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.descES, spec.descEN),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        subtitle:SetAttribute("ThemeTextRole", "TextDim")
+        subtitle:SetAttribute("TextSpanish", spec.descES)
+        subtitle:SetAttribute("TextEnglish", spec.descEN)
+
+        local badge = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 0, 0, 20),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -11, 0, 11),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.1,
+            Text = GetText("APLICAR", "APPLY"),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 15,
+        })
+        badge:SetAttribute("ThemeRole", "AccentOff")
+        badge:SetAttribute("TextSpanish", "APLICAR")
+        badge:SetAttribute("TextEnglish", "APPLY")
+        corner(badge, 999)
+        mk("UIPadding", {Parent = badge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+
+        local click = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 16,
+        })
+
+        local selected = false
+        local function setSelected(value)
+            selected = value == true
+            local backgroundTransparency = selected and 0.04 or 0.2
+            local accentColor = selected and Theme.Accent or Theme.AccentOff
+            local textColor = selected and Theme.AccentText or Theme.Text
+            TweenService:Create(holder, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = backgroundTransparency,
+            }):Play()
+            TweenService:Create(glow, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = accentColor,
+            }):Play()
+            TweenService:Create(badge, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = accentColor,
+                TextColor3 = textColor,
+            }):Play()
+            holderStroke.Transparency = selected and 0.05 or 0.48
+            holderStroke.Thickness = selected and 2 or 1.2
+            holderStroke:SetAttribute("ThemeRole", selected and "Accent" or "Stroke")
+            holderStroke.Color = selected and Theme.Accent or Theme.Stroke
+            holder:SetAttribute("ThemeRole", "Secondary")
+            glow:SetAttribute("ThemeRole", selected and "Accent" or "AccentOff")
+            badge:SetAttribute("ThemeRole", selected and "Accent" or "AccentOff")
+            badge:SetAttribute("TextSpanish", selected and "✓ ACTIVO" or "APLICAR")
+            badge:SetAttribute("TextEnglish", selected and "✓ ACTIVE" or "APPLY")
+            badge.Text = GetText(selected and "✓ ACTIVO" or "APLICAR", selected and "✓ ACTIVE" or "APPLY")
+        end
+
+        click.MouseEnter:Connect(function()
+            TweenService:Create(holderScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
+            if not selected then
+                TweenService:Create(holderStroke, TweenInfo.new(0.12), {Transparency = 0.25}):Play()
+            end
+        end)
+        click.MouseLeave:Connect(function()
+            TweenService:Create(holderScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            if not selected then
+                TweenService:Create(holderStroke, TweenInfo.new(0.18), {Transparency = 0.48}):Play()
+            end
+        end)
+        click.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.55)
+            holderScale.Scale = 0.96
+            TweenService:Create(holderScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            if spec.callback then spec.callback() end
+        end)
+
+        ShaderModeCards[spec.key] = {
+            labelES = spec.labelES,
+            labelEN = spec.labelEN,
+            setSelected = setSelected,
+        }
+        setSelected(false)
+        return holder
+    end
+
+    local function shaderCreateSection(parent, titleES, titleEN, descriptionES, descriptionEN)
+        local SECTION_ICONS = {
+            Lighting = 100212473103391, Atmosphere = 119344776018521, Clouds = 112291901900440, ColorCorrection = 118538685614420,
+            ["Bloom y Blur"] = 81463911885004, DepthOfField = 93221074040832, SunRays = 82603845614781, ["Overdrive local"] = 98854559186277, Acciones = 100875301344852,
+        }
+        local section = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -8, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.24,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            LayoutOrder = #ShaderUISections + 1,
+            ZIndex = 312,
+        })
+        section:SetAttribute("ThemeRole", "Secondary")
+        corner(section, 14)
+        stroke(section, Theme.Stroke, 1.2, 0.55)
+
+        mk("UIPadding", {
+            Parent = section,
+            PaddingTop = UDim.new(0, 10),
+            PaddingBottom = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 10),
+            PaddingRight = UDim.new(0, 10),
+        })
+        mk("UIListLayout", {
+            Parent = section,
+            Padding = UDim.new(0, 8),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+
+        local head = mk("TextButton", {
+            Parent = section,
+            Size = UDim2.new(1, 0, 0, 34),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            LayoutOrder = 0,
+            ZIndex = 313,
+        })
+        local icon = mk("Frame", {
+            Parent = head,
+            Size = UDim2.fromOffset(34, 34),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.82,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        icon:SetAttribute("ThemeRole", "Accent")
+        corner(icon, 10)
+        RowKit.Icon(icon, SECTION_ICONS[titleES] or "◆", 18, 315, "Accent")
+        local title = mk("TextLabel", {
+            Parent = head,
+            Size = UDim2.new(1, -110, 0, 18),
+            Position = UDim2.new(0, 44, 0, 0),
+            BackgroundTransparency = 1,
+            Text = GetText(titleES, titleEN),
+            TextColor3 = Theme.Accent,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 314,
+        })
+        title:SetAttribute("ThemeTextRole", "Accent")
+        title:SetAttribute("TextSpanish", titleES)
+        title:SetAttribute("TextEnglish", titleEN)
+        local count = mk("TextLabel", {
+            Parent = head,
+            Size = UDim2.new(1, -110, 0, 14),
+            Position = UDim2.new(0, 44, 0, 19),
+            BackgroundTransparency = 1,
+            Text = "",
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        count:SetAttribute("ThemeTextRole", "TextDim")
+        local chevron = mk("TextLabel", {
+            Parent = head,
+            Size = UDim2.fromOffset(30, 30),
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, 0, 0.5, 0),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.3,
+            Text = "▾",
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            ZIndex = 314,
+        })
+        chevron:SetAttribute("ThemeRole", "Background")
+        chevron:SetAttribute("ThemeTextRole", "Text")
+        corner(chevron, 999)
+
+        local body = mk("Frame", {
+            Parent = section,
+            Size = UDim2.new(1, 0, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = 1,
+            LayoutOrder = 2,
+            ZIndex = 312,
+        })
+        mk("UIListLayout", {
+            Parent = body,
+            Padding = UDim.new(0, 8),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+
+        if descriptionES and descriptionEN then
+            local description = mk("TextLabel", {
+                Parent = body,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Text = GetText(descriptionES, descriptionEN),
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 10,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+ 

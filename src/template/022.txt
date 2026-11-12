@@ -1,0 +1,877 @@
+xt = "",
+                            AutoButtonColor = false,
+                            ZIndex = 13,
+                        })
+                        local function project(p)
+                            local abs, aspect, tanV = camInfo()
+                            local cp = Camera.CFrame:PointToObjectSpace(p)
+                            local d = -cp.Z
+                            if d <= 0.01 then return nil end
+                            return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
+                        end
+                        -- punto de la pantalla -> punto en el plano donde está el owner (z de su lugar)
+                        local function unproject(screen)
+                            local abs, aspect, tanV = camInfo()
+                            if abs.X <= 0 or abs.Y <= 0 then return nil end
+                            local rel = screen - Viewport.AbsolutePosition
+                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
+                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
+                            local camPos = Camera.CFrame.Position
+                            if math.abs(dir.Z) < 1e-4 then return nil end
+                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
+                            if tt <= 0 then return nil end
+                            return camPos + dir * tt
+                        end
+                        local function updateGrab()
+                            local piv = env.model:GetPivot()
+                            local sitting = ctl.state == "sit"
+                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
+                            local sp, d, abs, tanV = project(center)
+                            if not sp then return end
+                            local hPx = env.H / (2 * d * tanV) * abs.Y
+                            local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
+                            Grab.Size = UDim2.fromOffset(w, h)
+                            Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
+                        end
+                        HomeAnim.OwnerAfterStep = updateGrab
+                        updateGrab()
+                        function HomeAnim.OwnerHit(pos)
+                            local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
+                            return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
+                        end
+                        local holdInput, prevScroll = nil, true
+                        local function screenOf(input) return Vector2.new(input.Position.X, input.Position.Y) end
+                        Grab.InputBegan:Connect(function(input)
+                            if holdInput then return end
+                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                                holdInput = input
+                                prevScroll = TabPage.ScrollingEnabled
+                                TabPage.ScrollingEnabled = false -- que la página no se mueva mientras lo arrastran
+                                ctl.Grab()
+                                local p = unproject(screenOf(input))
+                                if p then ctl.MoveTo(p) end
+                            end
+                        end)
+                        track(UserInputService.InputChanged:Connect(function(input)
+                            if not holdInput then return end
+                            local mouseDrag = holdInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseMovement
+                            if input == holdInput or mouseDrag then
+                                local p = unproject(screenOf(input))
+                                if p then ctl.MoveTo(p) end
+                            end
+                        end))
+                        track(UserInputService.InputEnded:Connect(function(input)
+                            if not holdInput then return end
+                            if input == holdInput or (holdInput.UserInputType == Enum.UserInputType.MouseButton1 and input.UserInputType == Enum.UserInputType.MouseButton1) then
+                                holdInput = nil
+                                TabPage.ScrollingEnabled = prevScroll
+                                ctl.Release()
+                            end
+                        end))
+                    end
+
+                    -- Owner (mousoza) sentado en el piso, al fondo y a un costado, mirando de un lado a otro
+                    task.spawn(function()
+                        local okId, ownerId = pcall(function()
+                            return Players:GetUserIdFromNameAsync("mousoza")
+                        end)
+                        if not okId or type(ownerId) ~= "number" then return end
+                        local okM, owner = pcall(function()
+                            return Players:CreateHumanoidModelFromUserId(ownerId)
+                        end)
+                        if not okM or not owner or not World.Parent then return end
+                        owner.Name = "HomeOwnerModel"
+                        cleanModel(owner)
+                        owner.Parent = World
+                        local oRoot = owner:FindFirstChild("HumanoidRootPart") or owner:FindFirstChild("UpperTorso") or owner:FindFirstChild("Torso")
+                        if oRoot and owner.PrimaryPart == nil then
+                            pcall(function() owner.PrimaryPart = oRoot end)
+                        end
+                        pcall(function()
+                            local H = (okBox and size) and size.Y or 5
+                            local floorY = (okBox and cf) and (cf.Position.Y - size.Y / 2) or -2.5
+                            owner:PivotTo(CFrame.new())
+                            local oCf, oSize = owner:GetBoundingBox()
+                            local feetFromPivot = oCf.Position.Y - oSize.Y / 2
+                            local z = -H * 1.8
+                            local shadow = Instance.new("Part")
+                            shadow.Name = "OwnerShadow"
+                            shadow.Shape = Enum.PartType.Cylinder
+                            shadow.Anchored = true
+                            shadow.CanCollide = false
+                            shadow.CastShadow = false
+                            shadow.Material = Enum.Material.SmoothPlastic
+                            shadow.Color = Color3.new(0, 0, 0)
+                            shadow.Transparency = 0.62
+                            shadow.Size = Vector3.new(0.05, H * 0.85, H * 0.85)
+                            shadow.Parent = World
+                            -- Ubicación según el ancho REAL de la vista: el centro del owner queda al 38% del medio
+                            -- hacia la derecha, así no se sale del hueco entre las tarjetas (en celular la vista es
+                            -- más ancha que ese hueco). Se recalcula si la ventana cambia de tamaño.
+                            HomeAnim.OwnerEnv = { model = owner, shadow = shadow, floorY = floorY, H = H, standY = floorY - feetFromPivot }
+                            local function placeOwner()
+                                local abs = Viewport.AbsoluteSize
+                                local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
+                                local camPos = Camera.CFrame.Position
+                                local fov = (tonumber(Camera.FieldOfView) or 70)
+                                local d = camPos.Z - z
+                                local x = camPos.X + 0.38 * d * math.tan(math.rad(fov / 2)) * aspect
+                                local pos = Vector3.new(x, floorY - feetFromPivot, z)
+                                -- mira hacia la cámara
+                                local place = CFrame.new(pos, Vector3.new(camPos.X, pos.Y, camPos.Z))
+                                HomeAnim.OwnerEnv.home = place
+                                if HomeAnim.OwnerCtl then
+                                    HomeAnim.OwnerCtl.SetHome(place) -- si lo están moviendo, solo cambia a dónde vuelve
+                                    return
+                                end
+                                owner:PivotTo(place)
+                                -- sombra en el piso (un disco oscuro), corrida hacia donde quedan las piernas
+                                local legsAhead = place.LookVector * (H * 0.18)
+                                shadow.CFrame = CFrame.new(Vector3.new(x + legsAhead.X, floorY + 0.03, z + legsAhead.Z)) * CFrame.Angles(0, 0, math.rad(90))
+                            end
+                            placeOwner()
+                            track(Viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+                                if owner.Parent then pcall(placeOwner) end
+                            end))
+                        end)
+                        local okRig, rig = pcall(HomeAnim.Rig, owner)
+                        if okRig and rig and rig.count >= 4 then
+                            local env = HomeAnim.OwnerEnv
+                            local ctl = HomeAnim.Owner(rig, env and env.home and env or nil)
+                            HomeAnim.OwnerCtl = ctl
+                            ctl.Step(0)
+                            startAnimLoop()
+                            if env and env.home then
+                                pcall(HomeAnim.SetupOwnerGrab, ctl, env)
+                            end
+                        end
+                    end)
+
+                    task.defer(function()
+                        -- animación propia; si el modelo no tiene las articulaciones, queda el idle de Roblox de antes
+                        local okRig, rig = pcall(HomeAnim.Rig, model)
+                        if okRig and rig and rig.count >= 4 then
+                            HomeAnim.PlayerCtl = HomeAnim.Player(rig)
+                            startAnimLoop()
+                            return
+                        end
+                        pcall(function()
+                            local humanoid = model:FindFirstChildOfClass("Humanoid")
+                            if not humanoid then return end
+                            local animator = humanoid:FindFirstChildOfClass("Animator")
+                            if not animator then
+                                animator = Instance.new("Animator")
+                                animator.Parent = humanoid
+                            end
+                            local animIds = {
+                                "rbxassetid://616010382",
+                                "rbxassetid://507766388",
+                                "rbxassetid://180435571",
+                            }
+                            local loaded = false
+                            for _, animId in ipairs(animIds) do
+                                if loaded then break end
+                                local ok, result = pcall(function()
+                                    local anim = Instance.new("Animation")
+                                    anim.AnimationId = animId
+                                    local track = animator:LoadAnimation(anim)
+                                    track.Priority = Enum.AnimationPriority.Action4
+                                    track.Looped = true
+                                    track:Play()
+                                    loaded = true
+                                end)
+                                if not ok then
+                                    warn("[YinYang Home] Animación no cargó: " .. animId .. " | " .. tostring(result))
+                                end
+                            end
+                        end)
+                    end)
+                else
+                    local fallback = mk("TextLabel", {
+                        Parent = ViewportWrap,
+                        Size = UDim2.new(1, 0, 1, 0),
+                        BackgroundTransparency = 1,
+                        Text = GetText("Cargando avatar...", "Loading avatar..."),
+                        Font = Enum.Font.GothamBold,
+                        TextSize = 14,
+                        TextColor3 = Theme.TextDim,
+                        ZIndex = 12,
+                    })
+                    fallback:SetAttribute("ThemeTextRole", "TextDim")
+                end
+
+                if model then
+                    local Spin = mk("TextButton", {
+                        Parent = ViewportWrap,
+                        Size = UDim2.new(0.7, 0, 0.75, 0),
+                        AnchorPoint = Vector2.new(0.5, 0),
+                        Position = UDim2.new(0.5, 0, 0.2, 0),
+                        BackgroundTransparency = 1,
+                        Text = "",
+                        AutoButtonColor = false,
+                        ZIndex = 12,
+                    })
+                    local spinInput, spinLastX, spinAngle = nil, nil, 0
+                    local spinMoved = 0
+                    Spin.InputBegan:Connect(function(input)
+                        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                            if HomeAnim.OwnerHit and HomeAnim.OwnerHit(input.Position) then return end -- es el owner
+                            spinInput, spinLastX = input, input.Position.X
+                            spinMoved = 0
+                        end
+                    end)
+                    track(UserInputService.InputChanged:Connect(function(input)
+                        if not spinInput or not spinLastX then return end
+                        if input ~= spinInput and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
+                        local dx = input.Position.X - spinLastX
+                        spinLastX = input.Position.X
+                        spinMoved += math.abs(dx)
+                        if dx ~= 0 and model.Parent then
+                            spinAngle = spinAngle + dx * 0.012
+                            pcall(function()
+                                model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(180) + spinAngle, 0))
+                            end)
+                        end
+                    end))
+                    track(UserInputService.InputEnded:Connect(function(input)
+                        if spinInput and (input == spinInput or input.UserInputType == Enum.UserInputType.MouseButton1) then
+                            spinInput, spinLastX = nil, nil
+                            -- un toque (sin arrastrar) hace que tu personaje salude
+                            if spinMoved < 6 and HomeAnim.PlayerCtl then
+                                HomeAnim.PlayerCtl.Trigger("wave")
+                            end
+                        end
+                    end))
+                end
+
+                return ViewportWrap
+            end
+
+            local function shorten(text)
+                text = tostring(text or "")
+                if #text <= 14 then
+                    return text
+                end
+                return text:sub(1, 10) .. "..."
+            end
+
+            local hourNow = tonumber(os.date("%H")) or 12
+            local greetES = (hourNow >= 5 and hourNow < 12) and "Buenos días," or ((hourNow >= 12 and hourNow < 20) and "Buenas tardes," or "Buenas noches,")
+            local greetEN = (hourNow >= 5 and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
+            local NameLabel = mk("TextLabel", {
+                Parent = HomeRoot,
+                Size = UDim2.new(0.38, 0, 0, 24),
+                Position = UDim2.new(0.31, 0, 0, 12),
+                BackgroundTransparency = 1,
+                Text = GetText(greetES, greetEN),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                TextColor3 = Theme.Accent,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                ZIndex = 11,
+            })
+            NameLabel:SetAttribute("ThemeTextRole", "Text")
+            NameLabel:SetAttribute("TextSpanish", greetES)
+            NameLabel:SetAttribute("TextEnglish", greetEN)
+
+            local UserLabel = mk("TextLabel", {
+                Parent = HomeRoot,
+                Size = UDim2.new(0.38, 0, 0, 30),
+                Position = UDim2.new(0.31, 0, 0, 34),
+                BackgroundTransparency = 1,
+                Text = LocalPlayer.DisplayName or LocalPlayer.Name,
+                Font = Enum.Font.GothamBold,
+                TextSize = 24,
+                TextColor3 = Theme.Text,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 11,
+            })
+            UserLabel:SetAttribute("ThemeTextRole", "Text")
+            UserLabel.Font = Enum.Font.GothamBlack
+            UserLabel.TextSize = 26
+
+            local Handle = mk("TextLabel", {
+                Parent = HomeRoot,
+                Size = UDim2.new(0, 0, 0, 20),
+                AutomaticSize = Enum.AutomaticSize.X,
+                AnchorPoint = Vector2.new(0.5, 0),
+                Position = UDim2.new(0.5, 0, 0, 66),
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.86,
+                Text = "@" .. tostring(LocalPlayer.Name),
+                Font = Enum.Font.GothamBold,
+                TextSize = 11,
+                TextColor3 = Theme.Text,
+                ZIndex = 13,
+            })
+            Handle:SetAttribute("ThemeRole", "Accent")
+            Handle:SetAttribute("ThemeTextRole", "Text")
+            corner(Handle, 999)
+            mk("UIPadding", {Parent = Handle, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+            createViewport(HomeRoot)
+
+            local cardH = 92
+            local row1 = 4
+            local row2 = 100
+            local row3 = 196
+            local leftColX = 0.03
+            local rightColX = 0.71
+            local cardW = 0.26
+
+            local _, playersVal, playersSub = makeStatCard(HomeRoot, leftColX, row1, cardW, cardH, 90955646581059, "Jugadores", "Players", "1", "Conectado", "Connected")
+            local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, leftColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
+            local _, idVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
+
+            local _, timeVal = makeStatCard(HomeRoot, rightColX, row1, cardW, cardH, 128054256171328, "Tiempo", "Time", "00:00:00", "Servidor en vivo", "Server live")
+            local _, regionVal = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 84609306530754, "Región", "Region", "ES-ES", "Detectado automáticamente", "Automatically detected")
+            local _, statusVal, statusSub, statusDot = makeStatCard(HomeRoot, rightColX, row3, cardW, cardH, 88363727246005, "Estado", "Status", "Healthy", "Todo funcionando", "All systems operational")
+
+            for _, dynamic in ipairs({playersSub, pingSub, statusSub}) do
+                dynamic:SetAttribute("TextSpanish", nil)
+                dynamic:SetAttribute("TextEnglish", nil)
+            end
+            statusDot.Visible = true
+            statusSub.Position = UDim2.new(0, 22, 1, -26)
+            statusSub.Size = UDim2.new(1, -32, 0, 24)
+            local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
+            pcall(function()
+                TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
+            end)
+
+            local pingBars = {}
+            local BarsHolder = mk("Frame", {
+                Parent = pingCard,
+                Size = UDim2.fromOffset(22, 16),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -10, 0, 48),
+                BackgroundTransparency = 1,
+                ZIndex = 11,
+            })
+            for b = 1, 4 do
+                local bar = mk("Frame", {
+                    Parent = BarsHolder,
+                    Size = UDim2.new(0, 4, b / 4, 0),
+                    AnchorPoint = Vector2.new(0, 1),
+                    Position = UDim2.new(0, (b - 1) * 6, 1, 0),
+                    BackgroundColor3 = Theme.TextDim,
+                    BorderSizePixel = 0,
+                    ZIndex = 11,
+                })
+                corner(bar, 2)
+                pingBars[b] = bar
+            end
+
+            idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
+
+            local copyButton = mk("TextButton", {
+                Parent = HomeRoot,
+                Size = UDim2.new(cardW, 0, 0, cardH),
+                Position = UDim2.new(leftColX, 0, 0, row3),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 12,
+            })
+            copyButton.MouseButton1Click:Connect(function()
+                local snippet = string.format(
+                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
+                    game.PlaceId, game.JobId
+                )
+                local ok = pcall(function() setclipboard(snippet) end)
+                if ok then
+                    idVal.Text = GetText("¡Copiado!", "Copied!")
+                end
+                task.delay(1.8, function()
+                    if idVal and idVal.Parent then
+                        idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
+                    end
+                end)
+            end)
+
+            local startClock = os.clock()
+            local StatsService = game:GetService("Stats")
+            local localizationService = game:GetService("LocalizationService")
+            local cachedRegion = "ES-ES"
+            task.spawn(function()
+                pcall(function()
+                    local region = localizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
+                    if type(region) == "string" and region ~= "" then
+                        cachedRegion = region
+                    end
+                end)
+            end)
+
+            local GOOD = Color3.fromRGB(46, 213, 115)
+            local WARN = Color3.fromRGB(255, 196, 0)
+            local BAD = Color3.fromRGB(255, 82, 82)
+            local frames = 0
+            local frameConn = track(RunService.Heartbeat:Connect(function()
+                frames = frames + 1
+            end))
+
+            local function refreshHome(fps)
+                playersVal.Text = tostring(#Players:GetPlayers()) .. " / " .. tostring(Players.MaxPlayers)
+                playersSub.Text = GetText("Conectados en el servidor", "Connected in this server")
+                local okPing, ping = pcall(function()
+                    return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+                end)
+                ping = (okPing and tonumber(ping)) and math.floor(ping) or nil
+                local level = not ping and 0 or (ping < 90 and 4 or (ping < 160 and 3 or (ping < 260 and 2 or 1)))
+                local color = level >= 4 and GOOD or (level >= 3 and WARN or (level >= 1 and BAD or Theme.TextDim))
+                pingVal.Text = ping and (ping .. " ms") or "N/A"
+                pingVal.TextColor3 = ping and color or Theme.Text
+                pingSub.Text = not ping and GetText("Sin datos", "No data")
+                    or (level >= 4 and GetText("Conexión excelente", "Excellent connection")
+                    or (level >= 3 and GetText("Conexión buena", "Good connection")
+                    or GetText("Conexión inestable", "Unstable connection")))
+                for b, bar in ipairs(pingBars) do
+                    bar.BackgroundColor3 = b <= level and color or Theme.TextDim
+                    bar.BackgroundTransparency = b <= level and 0 or 0.7
+                end
+                timeVal.Text = formatDuration(os.clock() - startClock)
+                regionVal.Text = cachedRegion
+                local healthy = fps >= 40 and (not ping or ping < 200)
+                local okay = fps >= 25 and (not ping or ping < 350)
+                statusVal.Text = healthy and GetText("Excelente", "Excellent") or (okay and GetText("Estable", "Stable") or GetText("Con lag", "Laggy"))
+                statusDot.BackgroundColor3 = healthy and GOOD or (okay and WARN or BAD)
+                statusHalo.Color = statusDot.BackgroundColor3
+                statusSub.Text = tostring(fps) .. " FPS"
+            end
+
+            task.spawn(function()
+                local last = os.clock()
+                refreshHome(60)
+                while HomeRoot.Parent do
+                    task.wait(1)
+                    local now = os.clock()
+                    local fps = math.floor(frames / math.max(now - last, 0.001) + 0.5)
+                    frames = 0
+                    last = now
+                    if TabPage.Visible then
+                        pcall(refreshHome, fps)
+                    end
+                end
+                pcall(function() frameConn:Disconnect() end)
+            end)
+
+            resetScrollTop(TabPage)
+            return HomeRoot
+        end
+
+        function Tab:CreateServerInfoCard()
+            if self._homeBuilt then
+                return nil
+            end
+            local Card = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                ZIndex = 9
+            })
+            mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, Card)
+
+            local ServerLabel = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, 0, 0, 18),
+                BackgroundTransparency = 1,
+                Text = GetText("Servidor", "Server"),
+                Font = Enum.Font.GothamBold,
+                TextSize = 15,
+                TextColor3 = Theme.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 9
+            })
+            ServerLabel:SetAttribute("ThemeRole", "Text")
+            ServerLabel:SetAttribute("TextSpanish", "Servidor")
+            ServerLabel:SetAttribute("TextEnglish", "Server")
+
+            local Grid = createStatGrid(Card)
+            local _, playersVal = createStatTile(Grid, "Jugadores", "Players")
+            local _, maxVal = createStatTile(Grid, "Máximo de jugadores", "Max players")
+            local _, pingVal = createStatTile(Grid, "Latencia", "Latency")
+            local _, idVal = createStatTile(Grid, "ID del servidor", "Server ID")
+            local joinTile, joinVal = createStatTile(Grid, "Script de unión", "Join script")
+            local _, timeVal = createStatTile(Grid, "Tiempo en el servidor", "Server time")
+
+            idVal.Text = (game.JobId ~= "" and game.JobId) or "N/A (Studio)"
+            joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
+
+            local JoinClick = mk("TextButton", {
+                Parent = joinTile,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 11
+            })
+            JoinClick.MouseButton1Click:Connect(function()
+                local snippet = string.format(
+                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
+                    game.PlaceId, game.JobId
+                )
+                local ok = pcall(function() setclipboard(snippet) end)
+                joinVal.Text = ok and GetText("¡Copiado!", "Copied!") or GetText("No disponible", "Not available")
+                task.delay(2, function()
+                    if joinVal and joinVal.Parent then
+                        joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
+                    end
+                end)
+            end)
+
+            local startClock = os.clock()
+            local StatsService = game:GetService("Stats")
+
+            task.spawn(function()
+                while Card.Parent do
+                    playersVal.Text = tostring(#Players:GetPlayers())
+                    maxVal.Text = tostring(Players.MaxPlayers)
+
+                    local ok, ping = pcall(function()
+                        return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+                    end)
+                    pingVal.Text = (ok and ping) and (math.floor(ping) .. " ms") or "N/A"
+
+                    timeVal.Text = formatDuration(os.clock() - startClock)
+                    task.wait(1)
+                end
+            end)
+
+            resetScrollTop(TabPage)
+            return Card
+        end
+
+        return Tab
+    end
+
+    local textEffectConnection = nil
+    Window.CurrentTextEffect = "Off"
+
+    -- v15: la lista de textos se guarda y solo se rehace cuando aparece/desaparece un texto (antes se recorría todo
+    -- Main en cada frame con los efectos de texto). El chat global queda afuera: tiene sus propios colores.
+    local TextObjs = { dirty = true, list = nil }
+    function TextObjs.isText(o)
+        return o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox")
+    end
+    function TextObjs.mark(o)
+        if TextObjs.dirty or not TextObjs.isText(o) then return end
+        local iso = Window and Window._ThemeIsolatedRoot
+        if iso and o:IsDescendantOf(iso) then return end
+        TextObjs.dirty = true
+    end
+    track(Main.DescendantAdded:Connect(TextObjs.mark))
+    track(Main.DescendantRemoving:Connect(TextObjs.mark))
+    Window._InvalidateTextObjects = function() TextObjs.dirty = true end
+    -- v16: lista de Main sin el chat global. GetDescendants devuelve cada rama seguida, así que al encontrar el chat
+    -- se saltean sus objetos con un solo chequeo cada uno (si el orden fuera otro, solo se revisaría de más: no rompe)
+    function TextObjs.mainList()
+        local iso = Window and Window._ThemeIsolatedRoot
+        local all = Main:GetDescendants()
+        if not iso then return all end
+        local out, skipping = {}, false
+        for _, obj in ipairs(all) do
+            if obj == iso then
+                skipping = true
+            elseif not (skipping and obj:IsDescendantOf(iso)) then
+                skipping = false
+                out[#out + 1] = obj
+            end
+        end
+        return out
+    end
+    local function getAllTextObjects()
+        if TextObjs.dirty or not TextObjs.list then
+            local list = {}
+            local iso = Window and Window._ThemeIsolatedRoot
+            for _, obj in ipairs(TextObjs.mainList()) do
+                if TextObjs.isText(obj) and not (iso and obj:IsDescendantOf(iso)) then -- chequeo estricto: el chat nunca recibe colores
+                    list[#list + 1] = obj
+                end
+            end
+            TextObjs.list, TextObjs.dirty = list, false
+        end
+        return TextObjs.list
+    end
+
+    local function applyTextColorToAll(color)
+        for _, obj in ipairs(getAllTextObjects()) do
+            if not obj:GetAttribute("IgnoreTextEffect") then
+                pcall(function()
+                    obj.TextColor3 = color
+                end)
+            end
+        end
+    end
+
+    local function stopTextEffect()
+        if textEffectConnection then
+            textEffectConnection:Disconnect()
+            textEffectConnection = nil
+        end
+    end
+
+
+    function Window:SetTheme(themeName)
+        if themeName == "Dark" then
+            warn("Tema bloqueado: Dark (Halloween)")
+            return
+        end
+        local BackgroundVideo = self.BackgroundVideo
+        if not setActiveTheme(themeName) then
+            warn("Tema no encontrado: " .. tostring(themeName))
+            return
+        end
+        
+        self.CurrentTheme = themeName
+        CurrentTheme = themeName
+
+        -- Se aplica al inicio y protegido: un error en pasos posteriores no lo puede cortar.
+        local spriteOk, spriteErr = pcall(applyThemeSprite, self, BackgroundArt, ThemeSprites[themeName])
+        if not spriteOk then
+            warn("[YinYang Sprite] Error al aplicar el sprite del tema: " .. tostring(spriteErr))
+        end
+
+        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
+            swapThemeColor(obj, Theme)
+        end
+
+        for _, floatData in ipairs(self.FloatingToggles or {}) do
+            local fw = floatData.Window
+            if fw and fw.Parent then
+                for _, obj in ipairs(fw:GetDescendants()) do
+                    swapThemeColor(obj, Theme)
+                end
+                swapThemeColor(fw, Theme)
+                if floatData.RefreshVisual then
+                    pcall(floatData.RefreshVisual)
+                end
+            end
+        end
+        -- ventanas del script hechas con el kit (YinYang.Kit)
+        if YinYang.Kit and YinYang.Kit._Repaint then pcall(YinYang.Kit._Repaint, Theme) end
+
+        applyTextColorToAll(Theme.Text)
+        if self._RefreshCompactNavigation then self._RefreshCompactNavigation() end
+        for _, t in pairs(self.Tabs or {}) do
+            if t.Page and t.Page.Visible and t.Button then
+                t.Button.BackgroundColor3 = Theme.TabActive
+                t.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+
+        applyThemeExtras()
+        if self._ApplyFullBackground then self._ApplyFullBackground() end
+        local themedTabIcons = ThemeTabIcons[themeName]
+        local tabIconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
+        for _, t in pairs(self.Tabs or {}) do
+            local newIcon = nil
+            if themedTabIcons then
+                newIcon = themedTabIcons[t.NameEnglish] or themedTabIcons[t.NameSpanish]
+            end
+            t.IconAsset = newIcon or t.DefaultIconAsset
+            if t.IconLabel then
+                t.IconLabel.Image = t.IconAsset or ""
+                t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
+                t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
+                t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
+                if t.NameLabel then
+                    t.NameLabel.Position = UDim2.new(0, 14 + tabIconSize, 0, 0)
+                    t.NameLabel.Size = UDim2.new(1, -(24 + tabIconSize), 1, 0)
+                end
+            end
+            if t.CompactButton then
+                local compactIcon = t.CompactButton:FindFirstChild("Icon")
+                if compactIcon then
+                    compactIcon.Image = t.IconAsset or ""
+                    compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
+                end
+            end
+        end
+
+        self._slideshowToken = (self._slideshowToken or 0) + 1
+        self._videoToken = (self._videoToken or 0) + 1
+        local mediaToken = self._videoToken
+        self._videoFailureCache = self._videoFailureCache or {}
+
+        if self._videoConnection then
+            pcall(function() self._videoConnection:Disconnect() end)
+            self._videoConnection = nil
+        end
+
+        if BackgroundVideo then
+            pcall(function()
+                BackgroundVideo:Pause()
+                BackgroundVideo.Playing = false
+                BackgroundVideo.Visible = false
+                BackgroundVideo.Video = ""
+            end)
+        end
+        if self._RefreshTabIconLayout then
+            self._RefreshTabIconLayout()
+        end
+
+        if BackgroundArt then
+            BackgroundArt.Visible = true
+        end
+
+        if BackgroundArt then
+            pcall(function()
+                local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
+                local videoData = ThemeBackgroundVideos[themeName]
+                if themeData and themeData.Video and themeData.Video ~= "" then
+                    local rawVideoId = tostring(themeData.Video):match("^%s*(.-)%s*$")
+                    local numericVideoId = rawVideoId and rawVideoId:match("(%d+)")
+                    local normalizedVideoId = numericVideoId and ("rbxassetid://" .. numericVideoId) or rawVideoId
+                    videoData = {
+                        Id = normalizedVideoId,
+                        Ids = {normalizedVideoId},
+                        Looped = themeData.VideoLooped ~= false,
+                        Volume = math.clamp(tonumber(themeData.VideoVolume) or 0, 0, 1),
+                    }
+                end
+
+                local function applyImages()
+                    if not BackgroundArt or not BackgroundArt.Parent then return end
+                    BackgroundArt.Visible = true
+                    if self._themeSprite then return end
+                    if not (themeData and themeData.Images and #themeData.Images > 1) then
+                        BackgroundArt.Image = (themeData and themeData.Background) or ThemeBackgroundImages[themeName] or ""
+                        return
+                    end
+
+                    local token = self._slideshowToken
+                    local images = themeData.Images
+                    local interval = tonumber(themeData.ImageInterval) or 5
+                    BackgroundArt.Image = images[1]
+                    task.spawn(function()
+                        local i = 1
+                        while self._slideshowToken == token and self._videoToken == mediaToken do
+                            task.wait(interval)
+                            if self._slideshowToken ~= token or self._videoToken ~= mediaToken then break end
+                            i = (i % #images) + 1
+                            if BackgroundArt and BackgroundArt.Parent and BackgroundArt.Visible then
+                                BackgroundArt.Image = images[i]
+                            end
+                        end
+                    end)
+                end
+
+                if videoData and videoData.Id and BackgroundVideo then
+                    local candidates = videoData.Ids or {videoData.Id}
+                    local candidateIndex = 1
+                    local activated = false
+                    local finished = false
+
+                    local function markFailure(videoId)
+                        self._videoFailureCache[videoId] = true
+                    end
+
+                    local function activateVideo()
+                        if activated or self._videoToken ~= mediaToken then return end
+                        activated = true
+                        finished = true
+                        BackgroundArt.Visible = false
+                        BackgroundVideo.Visible = true
+                        if not PerfOpt.Flags.StaticBackground then
+                            pcall(function() BackgroundVideo:Play() end)
+                        end
+                        print("Video de fondo reproduciendo: " .. tostring(BackgroundVideo.Video))
+                    end
+
+                    local function tryNextVideo()
+                        if activated or finished or self._videoToken ~= mediaToken then return end
+                        while candidateIndex <= #candidates and self._videoFailureCache[candidates[candidateIndex]] do
+                            candidateIndex = candidateIndex + 1
+                        end
+                        if candidateIndex > #candidates then
+                            finished = true
+                            BackgroundVideo.Visible = false
+                            BackgroundArt.Visible = true
+                            print("Videos de J1 no disponibles; se mantiene el fondo de imagen")
+                            return
+                        end
+
+                        local videoId = candidates[candidateIndex]
+                        candidateIndex = candidateIndex + 1
+                        local loaded = false
+                        pcall(function()
+                            BackgroundVideo:Pause()
+                            BackgroundVideo.Playing = false
+                            BackgroundVideo.Visible = false
+                            BackgroundVideo.Looped = videoData.Looped ~= false
+                            BackgroundVideo.Volume = math.clamp(tonumber(videoData.Volume) or 0, 0, 1)
+                            BackgroundVideo.Video = videoId
+                            self._videoConnection = BackgroundVideo.Loaded:Connect(function()
+                                loaded = true
+                                activateVideo()
+                            end)
+                        end)
+                        print("Video de fondo solicitado: " .. tostring(videoId))
+
+                        task.spawn(function()
+                            local deadline = tick() + 6
+                            while self._videoToken == mediaToken and BackgroundVideo.Parent and not loaded and not BackgroundVideo.IsLoaded and tick() < deadline do
+                                task.wait(0.15)
+                            end
+                            if self._videoToken ~= mediaToken or activated then return end
+                            if BackgroundVideo.IsLoaded then
+                                activateVideo()
+                            else
+                                markFailure(videoId)
+                                if self._videoConnection then
+                                    pcall(function() self._videoConnection:Disconnect() end)
+                                    self._videoConnection = nil
+                                end
+                                tryNextVideo()
+                            end
+                        end)
+                    end
+
+                    tryNextVideo()
+                else
+                    applyImages()
+                    print("Imagen de fondo actualizada")
+                end
+            end)
+        end
+
+        SavedConfig.CurrentTheme = themeName
+        SaveConfig()
+
+        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
+        if themeData and themeData.Sound then
+            CurrentClickSound = themeData.Sound
+        elseif ThemeClickSounds[themeName] then
+            CurrentClickSound = ThemeClickSounds[themeName]
+            print("Tema " .. themeName .. " - Sonido de click personalizado activado")
+        else
+            CurrentClickSound = Sounds.Click
+        end
+
+        local autoEffect = (themeData and themeData.Effect) or ThemeAutoEffects[themeName]
+        if autoEffect and autoEffect ~= "Off" then
+            self:SetTextEffect(autoEffect)
+        else
+            self:SetTextEffect("Off")
+        end
+
+        if TopBarArt then
+            pcall(function()
+                local img = (themeData and themeData.TitleBarImage) or ThemeTitleBarImages[themeName] or ""
+                TopBarArt.Image = img
+            end)
+        end
+
+        if TabListArt then
+            pcall(function()
+                local img = (themeData and themeData.TabListImage) or ThemeTabListImages[themeName] or ""
+                TabListArt.Image = img
+                TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or (img ~= "" and 0.5 or 0)
+            end)
+        end
+
+        CurrentTheme = themeName
+
+        buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+
+        for _, floatData in ipairs(Window.F

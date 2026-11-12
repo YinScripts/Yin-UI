@@ -1,0 +1,1160 @@
+e })
+        end
+
+        logoRenderConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+            if PerfOpt.Flags.NoLogoAnim then return end
+            for _, entry in ipairs(logoLayers) do
+                local lbl = entry.label
+                local def = entry.def
+                local st  = entry.state
+                if not lbl or not lbl.Parent then continue end
+
+                local mv  = def.Movement  or "None"
+                local spd = def.Speed     or 60
+                local amt = def.Amount    or 0
+                local dir = def.Direction or 1
+
+                st.time = st.time + dt
+
+                if st.sprite then
+                    local sprite = st.sprite
+                    sprite.Acc = sprite.Acc + dt
+                    local step = 1 / sprite.Config.FPS
+                    if sprite.Acc > 0.25 then
+                        sprite.Acc = 0.25
+                    end
+                    local moved = false
+                    while sprite.Acc >= step do
+                        sprite.Acc = sprite.Acc - step
+                        sprite.Frame = (sprite.Frame + 1) % sprite.Config.TotalFrames
+                        moved = true
+                    end
+                    if moved then
+                        updateSpriteSheetFrame(sprite, sprite.Frame)
+                    end
+                end
+
+                if mv == "Spin" then
+                    local now    = os.clock()
+                    local inTurbo = st.turboEndTime > 0 and now < st.turboEndTime
+
+                    if inTurbo then
+                        st.speed  = st.turboSpeed
+                        st.tSpeed = st.turboSpeed
+                    else
+                        if (def.Style or "Constant") == "Organic" then
+                            st.tSpeed = spd + math.sin(st.time * 0.8) * (spd * 0.33)
+                            st.speed  = lerpN(st.speed, st.tSpeed, 0.08)
+                        else
+                            st.speed = spd
+                        end
+                    end
+                    st.angle = st.angle + st.speed * dir * dt
+                    lbl.Rotation = st.angle
+
+                elseif mv == "Pulse" then
+                    local sc    = def.Scale or 1.6
+                    local off   = -((sc - 1) / 2)
+                    local scale = 1 + math.sin(st.time * (2 * math.pi / spd)) * ((amt ~= 0 and amt or 12) / 100)
+                    lbl.Size     = UDim2.new(sc * scale, 0, sc * scale, 0)
+                    lbl.Position = UDim2.new(off * scale, 0, off * scale, 0)
+
+                elseif mv == "Orbit" then
+                    local sc     = def.Scale or 1.6
+                    local off    = -((sc - 1) / 2)
+                    local radius = amt ~= 0 and amt or 6
+                    local angle  = st.time * math.rad(spd) * dir
+                    lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
+
+                elseif mv == "Float" then
+                    local sc  = def.Scale or 1.6
+                    local off = -((sc - 1) / 2)
+                    local oy  = math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4)
+                    lbl.Position = UDim2.new(off, 0, off, oy)
+
+                elseif mv == "Shake" then
+                    local sc        = def.Scale or 1.6
+                    local off       = -((sc - 1) / 2)
+                    local intensity = amt ~= 0 and amt or 2
+                    local ox = math.sin(st.time * spd * math.pi * 2 + 0.3) * intensity
+                    local oy = math.cos(st.time * spd * math.pi * 2) * intensity
+                    lbl.Position = UDim2.new(off, ox, off, oy)
+
+                elseif mv == "Fade" then
+                    local maxAlpha = math.clamp(amt ~= 0 and amt or 0.6, 0, 1)
+                    lbl.ImageTransparency = ((math.sin(st.time * (2 * math.pi / spd)) + 1) / 2) * maxAlpha
+                end
+            end
+        end)
+
+        local idleS = iconData.IdleSound
+        if idleS and type(idleS.Id) == "string" and idleS.Id ~= "" then
+            local interval = idleS.Interval or 15
+            local elapsed  = 0
+            logoIdleConn = game:GetService("RunService").Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                if elapsed >= interval then
+                    elapsed = 0
+                    if not Main or not Main.Visible then
+                        playSound(idleS.Id, idleS.Volume or 0.15)
+                    end
+                end
+            end)
+        end
+
+        if iconData.Eyes then
+            local eyeData  = iconData.Eyes
+            local eyeSize  = eyeData.Size  or 0.09
+            local eyeColor = Color3.fromRGB(255, 255, 255)
+            local eyeZIndex = 38
+
+            local function makeEye(xRel, yRel)
+                local eye = mk("Frame", {
+                    Parent = ToggleButton,
+                    Size = UDim2.new(eyeSize, 0, eyeSize, 0),
+                    Position = UDim2.new(xRel - eyeSize/2, 0, yRel - eyeSize/2, 0),
+                    BackgroundColor3 = eyeColor,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = eyeZIndex,
+                })
+                local uc = Instance.new("UICorner")
+                uc.CornerRadius = UDim.new(1, 0)
+                uc.Parent = eye
+
+                local glow = Instance.new("UIStroke")
+                glow.Color = Color3.fromRGB(220, 220, 255)
+                glow.Thickness = 1.5
+                glow.Transparency = 1
+                glow.Parent = eye
+
+                local inner = mk("Frame", {
+                    Parent = eye,
+                    Size = UDim2.new(0.35, 0, 0.35, 0),
+                    Position = UDim2.new(0.12, 0, 0.10, 0),
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = eyeZIndex + 1,
+                })
+                local uc2 = Instance.new("UICorner")
+                uc2.CornerRadius = UDim.new(1, 0)
+                uc2.Parent = inner
+
+                return eye, glow, inner
+            end
+
+            local eyeL, glowL, innerL = makeEye(eyeData.X1 or 0.36, eyeData.Y1 or 0.47)
+            local eyeR, glowR, innerR = makeEye(eyeData.X2 or 0.64, eyeData.Y2 or 0.47)
+
+            table.insert(logoLayers, {
+                label = eyeL,
+                def   = { Movement = "None" },
+                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
+            })
+            table.insert(logoLayers, {
+                label = eyeR,
+                def   = { Movement = "None" },
+                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
+            })
+
+            local function setEyes(alpha, duration)
+                local dur = duration or 0.12
+                local neonAlpha = alpha > 0.5 and 1 or 0.55
+                TweenService:Create(eyeL,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(eyeR,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(glowL, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
+                TweenService:Create(glowR, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
+                TweenService:Create(innerL,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(innerR,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+            end
+
+            local eyesOpen = false
+            local function openEyesCycle(holdTime, onDone)
+                if not eyeL.Parent then if onDone then onDone() end return end
+                if eyesOpen then if onDone then onDone() end return end
+                eyesOpen = true
+                setEyes(0, 2.0)
+                task.delay(2.0 + holdTime, function()
+                    if not eyeL.Parent then eyesOpen = false if onDone then onDone() end return end
+                    setEyes(1, 0.25)
+                    task.delay(0.25, function()
+                        eyesOpen = false
+                        if onDone then onDone() end
+                    end)
+                end)
+            end
+
+            local looping = true
+            local function eyeLoop()
+                if not eyeL.Parent or not looping then return end
+                task.delay(6, function()
+                    if not eyeL.Parent or not looping then return end
+                    openEyesCycle(2.0, function()
+                        task.delay(6, function()
+                            eyeLoop()
+                        end)
+                    end)
+                end)
+            end
+
+            eyeLoop()
+
+            toggleEyesOnClick = function()
+                openEyesCycle(3.0, nil)
+            end
+
+            local eyeConn
+            eyeConn = game:GetService("RunService").Heartbeat:Connect(function()
+                if not eyeL.Parent then
+                    looping = false
+                    toggleEyesOnClick = nil
+                    eyeConn:Disconnect()
+                end
+            end)
+        end
+    end
+
+    ApplyLogoIcon(SavedConfig.SelectedLogoIcon or "ClassicYinYang")
+
+    local ToggleScale = mk("UIScale", {Scale = 1}, ToggleButton)
+
+    local capsuleLastRelX = 0
+
+    ToggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            capsuleLastRelX = input.Position.X - ToggleButton.AbsolutePosition.X
+            if not ToggleButton:GetAttribute("IsCapsule") then
+                TweenService:Create(ToggleScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.88}):Play()
+            end
+        end
+    end)
+    ToggleButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if not ToggleButton:GetAttribute("IsCapsule") then
+                TweenService:Create(ToggleScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            end
+        end
+    end)
+
+    local shownSize = UDim2.new(0, 420, 0, 340)
+    local ShadowFrame = mk("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.98,
+        BorderSizePixel = 0,
+        ZIndex = 4,
+        Parent = ScreenGui
+    })
+    corner(ShadowFrame, 10)
+    ShadowFrame:SetAttribute("ThemeRole", "Stroke")
+
+    local Main = mk("Frame", {
+        Name = "Main",
+        Size = shownSize,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = true,
+        ZIndex = 5
+    }, ScreenGui)
+    Main:SetAttribute("ThemeRole", "Background")
+    corner(Main, 10)
+    stroke(Main, Theme.Border, 1.5)
+
+    local MainScale = mk("UIScale", {
+        Scale = 1,
+    }, Main)
+
+    buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+
+    local BackgroundArt
+    local TopBarArt
+    local TabListArt
+
+    local function updateShadowPos()
+        ShadowFrame.Size = UDim2.new(Main.Size.X.Scale, Main.Size.X.Offset + 4, Main.Size.Y.Scale, Main.Size.Y.Offset + 4)
+        ShadowFrame.Position = UDim2.new(Main.Position.X.Scale, Main.Position.X.Offset - 2, Main.Position.Y.Scale, Main.Position.Y.Offset - 2)
+    end
+    Main:GetPropertyChangedSignal("Size"):Connect(updateShadowPos)
+    Main:GetPropertyChangedSignal("Position"):Connect(updateShadowPos)
+    updateShadowPos()
+
+    local uiVisible = true
+    local windowTweenBusy = false
+    local activeWindowTween = nil
+
+    local function pauseMainGlowOnly(key)
+        local tweens = ActiveGlowTweens[key]
+        if tweens then
+            for _, tw in ipairs(tweens) do
+                pcall(function() tw:Cancel() end)
+            end
+        end
+    end
+
+    local function setMainGlowEnabled(enabled)
+        local key = tostring(Main)
+        if enabled then
+            local tweens = ActiveGlowTweens[key]
+            if tweens then
+                for _, tw in ipairs(tweens) do
+                    pcall(function() tw:Play() end)
+                end
+            else
+                buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+            end
+        else
+            pauseMainGlowOnly(key)
+        end
+    end
+
+    local function showMainWindow()
+        if windowTweenBusy or uiVisible then
+            return
+        end
+
+        windowTweenBusy = true
+        uiVisible = true
+
+        if activeWindowTween then
+            pcall(function()
+                activeWindowTween:Cancel()
+            end)
+            activeWindowTween = nil
+        end
+
+        setMainGlowEnabled(true)
+        ShadowFrame.Visible = false
+        Main.Visible = true
+        MainScale.Scale = 0.82
+        Main.BackgroundTransparency = 0
+
+        local tw = TweenService:Create(
+            MainScale,
+            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Scale = 1 }
+        )
+        activeWindowTween = tw
+        tw:Play()
+        tw.Completed:Once(function()
+            if activeWindowTween == tw then
+                activeWindowTween = nil
+            end
+            ShadowFrame.Visible = true
+            windowTweenBusy = false
+        end)
+
+        local turboEnd = os.clock() + 4
+        for _, entry in ipairs(logoLayers) do
+            if entry.def.Movement == "Spin" then
+                entry.state.turboEndTime = entry.def.TurboSeconds and (os.clock() + entry.def.TurboSeconds) or turboEnd
+            end
+        end
+    end
+
+    local function hideMainWindow()
+        if windowTweenBusy or not uiVisible then
+            return
+        end
+
+        windowTweenBusy = true
+        uiVisible = false
+
+        if activeWindowTween then
+            pcall(function() activeWindowTween:Cancel() end)
+            activeWindowTween = nil
+        end
+
+        ShadowFrame.Visible = false
+
+        local tw1 = TweenService:Create(
+            MainScale,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+            { Scale = 0.85 }
+        )
+        local tw2 = TweenService:Create(
+            Main,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+            { BackgroundTransparency = 1 }
+        )
+
+        activeWindowTween = tw1
+        tw1:Play()
+        tw2:Play()
+
+        tw1.Completed:Once(function()
+            if activeWindowTween == tw1 then
+                activeWindowTween = nil
+            end
+            setMainGlowEnabled(false)
+            task.defer(function()
+                Main.Visible = false
+            end)
+            MainScale.Scale = 1
+            Main.BackgroundTransparency = 0
+            windowTweenBusy = false
+        end)
+    end
+
+    ToggleButton.MouseButton1Click:Connect(function()
+        if ToggleButton:GetAttribute("IsCapsule") and capsuleLastRelX < 42 then
+            return
+        end
+
+        if toggleEyesOnClick then
+            toggleEyesOnClick()
+        end
+
+        for _, entry in ipairs(logoLayers) do
+            if entry.onClick then pcall(entry.onClick) end
+        end
+
+        if uiVisible then
+            hideMainWindow()
+        else
+            local _iconD  = IconCatalog.Icons[SavedConfig.SelectedLogoIcon or "ClassicYinYang"]
+            local _clickS = _iconD and _iconD.ClickSound
+            local _urlAsset = _clickS and resolveLogoClickSound(SavedConfig.SelectedLogoIcon or "ClassicYinYang", _clickS, false)
+            if _urlAsset then
+                playSound(_urlAsset, _clickS.Volume or 0.6)
+            elseif _clickS and type(_clickS.Id) == "string" and _clickS.Id ~= "" then
+                playSound(_clickS.Id, _clickS.Volume or 0.6)
+            else
+                playSound(Sounds.Click, 0.6)
+            end
+            showMainWindow()
+        end
+    end)
+
+    do
+        local drag = false
+        local dragStart, startPos
+        ToggleButton.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if ToggleButton:GetAttribute("IsCapsule") then
+                    local _relX = input.Position.X - ToggleButton.AbsolutePosition.X
+                    if _relX >= 42 then return end
+                end
+                if not IconoCongelado then
+                    drag = true
+                    dragStart = input.Position
+                    startPos = ToggleButton.Position
+                end
+            end
+        end)
+        track(UserInputService.InputChanged:Connect(function(input)
+            if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                ToggleButton.Position = UDim2.new(0, startPos.X.Offset + delta.X, 0, startPos.Y.Offset + delta.Y)
+            end
+        end))
+        track(UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                drag = false
+            end
+        end))
+    end
+
+    local TopBar = mk("Frame", {
+        Size = UDim2.new(1, 0, 0, 56),
+        BackgroundColor3 = Theme.Background,
+        ZIndex = 6,
+    }, Main)
+    TopBar:SetAttribute("ThemeRole", "Background")
+    corner(TopBar, 10)
+    TopBarArt = mk("ImageLabel", {
+        Name = "TopBarArt",
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Image = ThemeTitleBarImages[startTheme] or "",
+        ImageTransparency = 0.12,
+        ScaleType = Enum.ScaleType.Crop,
+        ZIndex = 6,
+        ClipsDescendants = true,
+    }, TopBar)
+    corner(TopBarArt, 10)
+    local TitleDivider = mk("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, -1), BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 7}, TopBar)
+    TitleDivider.Visible = true
+    TitleDivider:SetAttribute("ThemeRole", "Stroke")
+
+    local divStroke = Instance.new("UIStroke")
+    divStroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+    divStroke.Thickness = 1
+    divStroke.Transparency = 0.4
+    divStroke.Color = Theme.Accent
+    divStroke.LineJoinMode = Enum.LineJoinMode.Round
+    divStroke.Parent = TitleDivider
+
+    local divGrad = Instance.new("UIGradient")
+    divGrad.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromHSV(Color3.toHSV(Theme.Accent))),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1,1,1)),
+        ColorSequenceKeypoint.new(1, Color3.fromHSV(Color3.toHSV(Theme.Accent))),
+    })
+    divGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.7),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 0.7),
+    })
+    divGrad.Offset = Vector2.new(-1.5, 0)
+    divGrad.Parent = divStroke
+
+    TweenService:Create(
+        divGrad,
+        TweenInfo.new(2.0, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+        { Offset = Vector2.new(1.5, 0) }
+    ):Play()
+
+    local TitleLabel = mk("TextLabel", {
+        Size = UDim2.new(0.5, -150, 0, 26),
+        Position = UDim2.new(0, 16, 0, 5),
+        BackgroundTransparency = 1,
+        Text = title_text or "ZERO UI",
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 20,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 7
+    }, TopBar)
+    TitleLabel:SetAttribute("ThemeTextRole", "Text")
+    TitleLabel:SetAttribute("NavidadTextStroke", true)
+
+    local DaraHubLabel = mk("TextLabel", {
+        Name = "DaraHubLabel",
+        AnchorPoint = Vector2.new(0, 0),
+        Size = UDim2.new(0, 0, 1, 0),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Ultra",
+        TextColor3 = Theme.Accent,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 8
+    }, mk("Frame", {
+        Name = "NickBadge",
+        Position = UDim2.new(0, 16, 0, 34),
+        Size = UDim2.new(0, 0, 0, 17),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = Theme.Accent,
+        BackgroundTransparency = 0.84,
+        ZIndex = 7,
+    }, TopBar))
+    DaraHubLabel:SetAttribute("ThemeTextRole", "Accent")
+    DaraHubLabel:SetAttribute("IgnoreTextEffect", true)
+    DaraHubLabel:SetAttribute("NavidadTextStroke", true)
+    DaraHubLabel.Parent:SetAttribute("ThemeRole", "Accent")
+    corner(DaraHubLabel.Parent, 999)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)}, DaraHubLabel.Parent)
+    stroke(DaraHubLabel.Parent, Theme.Accent, 1, 0.45):SetAttribute("ThemeRole", "Accent")
+
+    local function centerDaraHub()
+        DaraHubLabel.Parent.Position = UDim2.new(0, 16, 0, 34)
+    end
+    TitleLabel:GetPropertyChangedSignal("TextBounds"):Connect(centerDaraHub)
+    centerDaraHub()
+
+    local daraGrad = Instance.new("UIGradient")
+    daraGrad.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.65),
+        NumberSequenceKeypoint.new(0.5, 0),
+        NumberSequenceKeypoint.new(1, 0.65),
+    })
+    daraGrad.Offset = Vector2.new(-1, 0)
+    daraGrad.Parent = DaraHubLabel
+
+    TweenService:Create(
+        daraGrad,
+        TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.6),
+        { Offset = Vector2.new(1, 0) }
+    ):Play()
+
+
+    local BannerSlideshow_Images = {
+        { name = "YYBannerCat1.png", url = "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/main/BackgroundEraser_20260924_191300955.png" },
+        { name = "YYBannerCat2.png", url = "https://raw.githubusercontent.com/Yinyangzx/Yin-Imag/main/BackgroundEraser_20260924_190941541.png" },
+    }
+    local BannerSlideshow_Interval = 3
+
+    local BannerFrame = mk("Frame", {
+        Name            = "BannerSlideshow",
+        AnchorPoint     = Vector2.new(1, 0.5),
+        Position        = UDim2.new(0.5, -83, 0.5, 0),
+        Size            = UDim2.fromOffset(30, 30),
+        BackgroundTransparency = 1,
+        ZIndex          = 8,
+    }, TopBar)
+    corner(BannerFrame, 6)
+
+    local BannerImageA = mk("ImageLabel", {
+        Size                   = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Image                  = "",
+        ScaleType              = Enum.ScaleType.Fit,
+        Visible                = false,
+        ZIndex                 = 9,
+    }, BannerFrame)
+    corner(BannerImageA, 6)
+
+    local BannerImageB = mk("ImageLabel", {
+        Size                   = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Image                  = "",
+        ScaleType              = Enum.ScaleType.Fit,
+        Visible                = false,
+        ZIndex                 = 8,
+    }, BannerFrame)
+    corner(BannerImageB, 6)
+
+    task.spawn(function()
+        if type(game.HttpGet) ~= "function"
+        or type(writefile) ~= "function"
+        or type(isfile) ~= "function"
+        or type(getcustomasset) ~= "function" then return end
+
+        local assetCache = {}
+        for _, banner in ipairs(BannerSlideshow_Images) do
+            task.spawn(function()
+                pcall(function()
+                    local cachedOk, cachedExists = pcall(isfile, banner.name)
+                    if not (cachedOk and cachedExists) then
+                        local dlOk, data = pcall(game.HttpGet, game, banner.url, true)
+                        if not dlOk or type(data) ~= "string" or #data < 10 then return end
+                        pcall(writefile, banner.name, data)
+                    end
+                    local assetOk, assetId = pcall(getcustomasset, banner.name)
+                    if assetOk and type(assetId) == "string" then
+                        assetCache[banner.name] = assetId
+                    end
+                end)
+            end)
+        end
+
+        local waited = 0
+        while waited < 10 and not assetCache[BannerSlideshow_Images[1].name] do
+            task.wait(0.25)
+            waited = waited + 0.25
+        end
+        if not assetCache[BannerSlideshow_Images[1].name] then return end
+
+        local function getAsset(i)
+            local b = BannerSlideshow_Images[((i - 1) % #BannerSlideshow_Images) + 1]
+            return assetCache[b.name] or ""
+        end
+
+        BannerImageA.Image = getAsset(1)
+        BannerImageB.Image = getAsset(2)
+        task.wait(0.05)
+
+        local front = BannerImageA
+        local back  = BannerImageB
+        front.Visible = true
+        back.Visible  = false
+
+        local idx = 1
+        while BannerFrame and BannerFrame.Parent do
+            task.wait(BannerSlideshow_Interval)
+            if PerfOpt.Flags.NoDecorAnim then continue end
+
+            back.Visible  = true
+            front.Visible = false
+            front, back = back, front
+
+            idx = (idx % #BannerSlideshow_Images) + 1
+            local nextIdx = (idx % #BannerSlideshow_Images) + 1
+            back.Image = getAsset(nextIdx)
+        end
+    end)
+
+    local BoomboxSound = nil
+
+    local BoomboxPill = mk("Frame", {
+        Size = UDim2.new(0, 155, 0, 28),
+        Position = UDim2.new(0.5, -77, 0.5, -18),
+        BackgroundColor3 = Theme.PillBackground,
+        BackgroundTransparency = 0.12,
+        ZIndex = 10,
+    }, TopBar)
+    BoomboxPill:SetAttribute("ThemeRole", "PillBackground")
+    corner(BoomboxPill, 999)
+
+    -- Boombox: capsula de vidrio con borde de luz que orbita (1 solo tween nativo) y disco con el icono
+    local Boom = {}
+    Boom.Stroke = mk("UIStroke", {
+        ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        Thickness = 1.5,
+        Transparency = 0,
+        Color = Color3.new(1, 1, 1),
+        LineJoinMode = Enum.LineJoinMode.Round,
+    }, BoomboxPill)
+    Boom.Ring = mk("UIGradient", {Rotation = 0}, Boom.Stroke)
+    TweenService:Create(Boom.Ring,
+        TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false),
+        { Rotation = 360 }
+    ):Play()
+
+    Boom.Disc = mk("Frame", {
+        Size = UDim2.fromOffset(22, 22),
+        AnchorPoint = Vector2.new(0, 0.5),
+        Position = UDim2.new(0, 3, 0.5, 0),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 11,
+    }, BoomboxPill)
+    corner(Boom.Disc, 999)
+    mk("UIGradient", {
+        Rotation = 45,
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(165, 165, 165)),
+    }, Boom.Disc)
+    Boom.DiscRing = mk("UIStroke", {Thickness = 1, Transparency = 0.35, Color = Color3.new(1, 1, 1)}, Boom.Disc)
+    Boom.Icon = mk("ImageLabel", {
+        Size = UDim2.new(0, 14, 0, 14),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://99086270459218",
+        ScaleType = Enum.ScaleType.Fit,
+        ImageColor3 = getContrastColor(Theme.Accent),
+        ZIndex = 12,
+    }, Boom.Disc)
+
+    function Boom.Paint()
+        local base = Theme.PillBorder or Theme.Accent
+        local alt = Theme.PillBorderAlt or base
+        Boom.Ring.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, base),
+            ColorSequenceKeypoint.new(0.34, base),
+            ColorSequenceKeypoint.new(0.46, alt),
+            ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+            ColorSequenceKeypoint.new(0.54, alt),
+            ColorSequenceKeypoint.new(0.66, base),
+            ColorSequenceKeypoint.new(1, base),
+        })
+        Boom.Disc.BackgroundColor3 = Theme.Accent
+        Boom.Icon.ImageColor3 = getContrastColor(Theme.Accent)
+    end
+    Boom.Paint()
+
+    local BoomboxPlaceholder = mk("TextLabel", {
+        Size = UDim2.new(1, -32, 1, 0),
+        Position = UDim2.new(0, 28, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "boombox",
+        TextColor3 = Color3.new(1, 1, 1),
+        TextTransparency = 0.25,
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 11,
+    }, BoomboxPill)
+
+    local BoomboxInput = mk("TextBox", {
+        Size = UDim2.new(1, -32, 1, 0),
+        Position = UDim2.new(0, 28, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = "",
+        TextColor3 = Color3.new(1, 1, 1),
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ClearTextOnFocus = false,
+        ZIndex = 13,
+    }, BoomboxPill)
+
+    BoomboxInput:GetPropertyChangedSignal("Text"):Connect(function()
+        BoomboxPlaceholder.Visible = BoomboxInput.Text == ""
+    end)
+    BoomboxInput.Focused:Connect(function()
+        Boom.Stroke.Thickness = 2.2
+        BoomboxPlaceholder.TextTransparency = 0.6
+    end)
+    BoomboxInput.FocusLost:Connect(function()
+        Boom.Stroke.Thickness = 1.5
+        BoomboxPlaceholder.TextTransparency = 0.25
+    end)
+
+    do
+        mk("UIGradient", {
+            Rotation = 90,
+            Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(170, 170, 170)),
+        }, BoomboxPill)
+        local eq = mk("Frame", {
+            Name = "BoomboxEq",
+            AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -10, 0.5, 0),
+            Size = UDim2.fromOffset(14, 12),
+            BackgroundTransparency = 1,
+            Visible = false,
+            ZIndex = 12,
+        }, BoomboxPill)
+        local bars = {}
+        for i = 1, 3 do
+            local bar = mk("Frame", {
+                AnchorPoint = Vector2.new(0, 1),
+                Position = UDim2.new(0, (i - 1) * 5, 1, 0),
+                Size = UDim2.new(0, 3, 0.4, 0),
+                BackgroundColor3 = Theme.Accent,
+                BorderSizePixel = 0,
+                ZIndex = 12,
+            }, eq)
+            bar:SetAttribute("ThemeRole", "Accent")
+            corner(bar, 2)
+            bars[i] = bar
+        end
+        task.spawn(function()
+            while BoomboxPill and BoomboxPill.Parent do
+                local playing = BoomboxSound ~= nil and BoomboxSound.Parent ~= nil and BoomboxSound.IsPlaying
+                eq.Visible = playing
+                Boom.DiscRing.Transparency = playing and 0 or 0.35
+                if playing and not PerfOpt.Flags.NoDecorAnim then
+                    for _, bar in ipairs(bars) do
+                        TweenService:Create(bar, TweenInfo.new(0.16, Enum.EasingStyle.Sine), {Size = UDim2.new(0, 3, math.random(25, 100) / 100, 0)}):Play()
+                    end
+                end
+                task.wait(playing and 0.18 or 0.5)
+            end
+        end)
+    end
+
+    local function playBoombox(id)
+        if BoomboxSound then
+            pcall(function() BoomboxSound:Stop() BoomboxSound:Destroy() end)
+            BoomboxSound = nil
+        end
+        if not id or id == "" then return end
+        local cleanId = id:match("%d+")
+        if not cleanId then return end
+        pcall(function()
+            local s = Instance.new("Sound")
+            s.SoundId = "rbxassetid://" .. cleanId
+            s.Volume = 0.8
+            s.Looped = true
+            s.Parent = workspace
+            s:Play()
+            BoomboxSound = s
+            print("Boombox: reproduciendo " .. cleanId)
+        end)
+    end
+
+    BoomboxInput.FocusLost:Connect(function()
+        local text = BoomboxInput.Text:gsub("%s+", "")
+        if text == "" then
+            if BoomboxSound then
+                pcall(function() BoomboxSound:Stop() BoomboxSound:Destroy() end)
+                BoomboxSound = nil
+            end
+            BoomboxPlaceholder.Visible = true
+        else
+            playBoombox(text)
+        end
+    end)
+
+    do
+        local SUBTEXT_MESSAGES = {
+            "Yin Yang Creator Nick",
+            "Report any bugs",
+            "Remember to join the discord",
+            "Thanks for using Yin Yang",
+        }
+
+        local SubText = mk("TextLabel", {
+            Parent = Main,
+            AnchorPoint = Vector2.new(0.5, 0),
+            Size = UDim2.new(0.72, 0, 0, 17),
+            Position = UDim2.new(0.5, 0, 0, 38),
+            BackgroundTransparency = 1,
+            Text = SUBTEXT_MESSAGES[1],
+            TextColor3 = Color3.new(0, 0, 0),
+            TextTransparency = 0,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 11,
+        })
+
+        SubText.TextColor3 = Theme.SubText or Theme.Accent
+        SubText.Font = Enum.Font.GothamMedium
+        SubText.TextSize = 11
+        SubText:SetAttribute("NavidadTextStroke", true)
+        local subShine = mk("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.35),
+                NumberSequenceKeypoint.new(0.5, 0),
+                NumberSequenceKeypoint.new(1, 0.35),
+            }),
+            Offset = Vector2.new(-1, 0),
+        }, SubText)
+        TweenService:Create(subShine,
+            TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 1),
+            { Offset = Vector2.new(1, 0) }
+        ):Play()
+        task.spawn(function()
+            while SubText and SubText.Parent do
+                SubText.TextColor3 = Theme.SubText or Theme.Accent
+                task.wait(1)
+            end
+        end)
+
+        local subtextIdx = 1
+        task.spawn(function()
+            while SubText and SubText.Parent do
+                task.wait(10)
+                if not SubText or not SubText.Parent then break end
+                TweenService:Create(SubText,
+                    TweenInfo.new(0.3, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                    { TextTransparency = 1, Position = UDim2.new(0.5, 0, 0, 34) }
+                ):Play()
+                task.wait(0.32)
+                if not SubText or not SubText.Parent then break end
+                subtextIdx = (subtextIdx % #SUBTEXT_MESSAGES) + 1
+                SubText.Text = SUBTEXT_MESSAGES[subtextIdx]
+                SubText.Position = UDim2.new(0.5, 0, 0, 42)
+                TweenService:Create(SubText,
+                    TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { TextTransparency = 0, Position = UDim2.new(0.5, 0, 0, 38) }
+                ):Play()
+            end
+        end)
+    end
+
+    local TopBarCounter = mk("Frame", {
+        Parent = TopBar,
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -27, 0, 31),
+        Size = UDim2.fromOffset(66, 24),
+        BackgroundTransparency = 1,
+        ZIndex = 9,
+    })
+    mk("ImageLabel", {
+        Name = "CounterIcon",
+        Parent = TopBarCounter,
+        Size = UDim2.fromOffset(24, 24),
+        Position = UDim2.new(0, 0, 0.5, -12),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://74246983577629",
+        ImageColor3 = Theme.Counter,
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 10,
+    })
+    TopBarCounter.CounterIcon:SetAttribute("ThemeImageRole", "Counter")
+    local TopBarOnlineLabel = mk("TextLabel", {
+        Parent = TopBarCounter,
+        Size = UDim2.fromOffset(36, 18),
+        Position = UDim2.new(0, 28, 0.5, -9),
+        BackgroundTransparency = 1,
+        Text = "0",
+        Font = Enum.Font.GothamBold,
+        TextSize = 14,
+        TextColor3 = Theme.Counter,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 10,
+    })
+    TopBarOnlineLabel:SetAttribute("ThemeTextRole", "Counter")
+    do
+        TopBarCounter.Size = UDim2.fromOffset(82, 22)
+        TopBarCounter.Position = UDim2.new(1, -12, 0, 33)
+        TopBarCounter.BackgroundColor3 = Theme.Secondary
+        TopBarCounter.BackgroundTransparency = 0.45
+        TopBarCounter:SetAttribute("ThemeRole", "Secondary")
+        corner(TopBarCounter, 999)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 16)}, TopBarCounter)
+        local live = mk("Frame", {
+            Name = "LiveDot",
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0, -8, 0.5, 0),
+            Size = UDim2.fromOffset(6, 6),
+            BackgroundColor3 = Color3.fromRGB(46, 213, 115),
+            BorderSizePixel = 0,
+            ZIndex = 11,
+        }, TopBarCounter)
+        corner(live, 999)
+        local halo = mk("UIStroke", {Color = Color3.fromRGB(46, 213, 115), Thickness = 0, Transparency = 0.2}, live)
+        TweenService:Create(halo,
+            TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.3),
+            { Thickness = 4, Transparency = 1 }
+        ):Play()
+    end
+
+    local isMaximized = false
+    local normalWindowSize = Main.Size
+    local normalWindowPosition = Main.Position
+    local normalWindowAnchorPoint = Main.AnchorPoint
+    local hiddenSiblingStates = {}
+    local closingUI = false
+
+    local function setRobloxCoreVisible(visible)
+        local coreTypes = {
+            Enum.CoreGuiType.Backpack,
+            Enum.CoreGuiType.Chat,
+            Enum.CoreGuiType.Health,
+            Enum.CoreGuiType.PlayerList,
+            Enum.CoreGuiType.EmotesMenu,
+        }
+        for _, coreType in ipairs(coreTypes) do
+            pcall(function()
+                StarterGui:SetCoreGuiEnabled(coreType, visible)
+            end)
+        end
+        pcall(function()
+            StarterGui:SetCore("TopbarEnabled", visible)
+        end)
+    end
+
+    local function setOtherScreenObjectsVisible(visible)
+        if not visible then
+            hiddenSiblingStates = {}
+            for _, child in ipairs(ScreenGui:GetChildren()) do
+                if child:IsA("GuiObject") and child ~= Main and child ~= ShadowFrame then
+                    hiddenSiblingStates[child] = child.Visible
+                    child.Visible = false
+                end
+            end
+        else
+            for child, wasVisible in pairs(hiddenSiblingStates) do
+                if child and child.Parent then
+                    child.Visible = wasVisible
+                end
+            end
+            hiddenSiblingStates = {}
+        end
+    end
+
+    local function applyMaximizedState(maximized)
+        if closingUI or isMaximized == maximized then return end
+        isMaximized = maximized
+
+        if maximized then
+            normalWindowSize = Main.Size
+            normalWindowPosition = Main.Position
+            normalWindowAnchorPoint = Main.AnchorPoint
+
+            ShadowFrame.Visible = false
+            setOtherScreenObjectsVisible(false)
+            setRobloxCoreVisible(false)
+
+            Main.AnchorPoint = Vector2.new(0, 0)
+            Main.Position = UDim2.fromOffset(-3, -3)
+            Main.Size = UDim2.new(1, 6, 1, 6)
+            MainScale.Scale = 1
+
+            local mainCorner = Main:FindFirstChildOfClass("UICorner")
+            if mainCorner then mainCorner.CornerRadius = UDim.new(0, 0) end
+            local topCorner = TopBar:FindFirstChildOfClass("UICorner")
+            if topCorner then topCorner.CornerRadius = UDim.new(0, 0) end
+        else
+            setRobloxCoreVisible(true)
+            setOtherScreenObjectsVisible(true)
+
+            Main.AnchorPoint = normalWindowAnchorPoint
+            Main.Position = normalWindowPosition
+            Main.Size = normalWindowSize
+
+            local mainCorner = Main:FindFirstChildOfClass("UICorner")
+            if mainCorner then mainCorner.CornerRadius = UDim.new(0, 10) end
+            local topCorner = TopBar:FindFirstChildOfClass("UICorner")
+            if topCorner then topCorner.CornerRadius = UDim.new(0, 10) end
+            ShadowFrame.Visible = uiVisible
+        end
+    end
+
+    local uiHidden = false
+    local function hideUI()
+        if uiHidden then
+            uiHidden = false
+            uiVisible = true
+            Main.Visible = true
+            ShadowFrame.Visible = true
+            setRobloxCoreVisible(false)
+            return
+        end
+        uiHidden = true
+        uiVisible = false
+        Main.Visible = false
+        ShadowFrame.Visible = false
+        setRobloxCoreVisible(true)
+    end
+
+    local function shutdownUI()
+        if closingUI then return end
+        closingUI = true
+
+        setRobloxCoreVisible(true)
+        if globalConnections.ShaderRestore then pcall(globalConnections.ShaderRestore) end
+        if BoomboxSound then
+            pcall(function() BoomboxSound:Stop() BoomboxSound:Destroy() end)
+            BoomboxSound = nil
+        end
+        for _, conn in ipairs(globalConnections) do
+            pcall(function() conn:Disconnect() end)
+        end
+        pcall(function() dragonConnection:Disconnect() end)
+        pcall(function() ScreenGui:Destroy() end)
+        if Window and type(Window.OnClose) == "function" then
+            pcall(Window.OnClose)
+        end
+    end
+
+    local WindowControls = mk("Frame", {
+        Name = "WindowControls",
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -8, 0, 17),
+        Size = UDim2.fromOffset(0, 30),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.45,
+        ZIndex = 50,
+    }, TopBar)
+    WindowControls:SetAttribute("ThemeRole", "Secondary")
+    corner(WindowControls, 999)
+    stroke(WindowControls, Theme.Stroke, 1, 0.7)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6)}, WindowControls)
+
+    local ControlsLayout = mk("UIListLayout", {
+        FillDirection = Enum.FillDirection.Horizontal,
+        HorizontalAlignment = Enum.HorizontalAlignment.Right,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, WindowControls)
+
+    local function createWindowControl(name, imageId, order, tooltip)
+        local button = mk("ImageButton", {
+            Name = name,
+            Size = UDim2.fromOffset(28, 28),
+            BackgroundTransparency = 1,
+            Image = "rbxassetid://" .. tostring(imageId),
+            ImageColor3 = Theme.WindowIcon,
+            ScaleType = Enum.ScaleType.Fit,
+            AutoButtonColor = false,
+            LayoutOrder = order,
+            ZIndex = 51,
+        }, WindowControls)
+        button:SetAttribute("ThemeImageRole", "WindowIcon")
+        button:SetAttribute("DefaultImage", "rbxassetid://" .. tostring(imageId))
+        button:SetAttribute("Tooltip", tooltip)
+
+        local scale = mk("UIScale", {Scale = 1}, button)
+        corner(button, 999)
+        button.BackgroundColor3 = name == "Close" and Color3.fromRGB(232, 17, 35) or Color3.new(1, 1, 1)
+        button.MouseEnter:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.12), {BackgroundTransparency = name == "Close" and 0.15 or 0.86}):Play()
+        end)
+        button.MouseLeave:Connect(function()
+            TweenService:Create(button, TweenInfo.new(0.18), {BackgroundTransparency = 1}):Play()
+        end)
+        button.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                TweenService:Create(scale, TweenInfo.new(0.08), {Scale = 0.82}):Play()
+            end
+        end)
+      

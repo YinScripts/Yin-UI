@@ -1,0 +1,949 @@
+gle exceptions · Premium")
+                end
+            end
+        end
+        function K.SetScope(id)
+            K.ED.scope = id
+            local e = id and FS.RegById[id]
+            local name = e and GetText(e.ES, e.EN) or GetText("Vuelo", "Fly")
+            if K.samples[1] then K.samples[1].SetText(name) end
+            if K.samples[2] then K.samples[2].SetText(name) end
+            K.RefreshAll()
+            K.changed()
+            if id then
+                K.setStatus("Editando la excepción de \"" .. (e and e.ES or id) .. "\": lo que cambies pisa al global solo ahí", "Editing \"" .. (e and e.EN or id) .. "\": changes override the global design only there", Theme.Accent)
+            end
+        end
+        K.globalBtn.MouseButton1Click:Connect(function() K.SetScope(nil) end)
+        K.scopeBtn.MouseButton1Click:Connect(function()
+            if not FS.HasPremium() then K.showPremium() return end
+            K.openScopeSheet()
+        end)
+        K.dropBtn.MouseButton1Click:Connect(function()
+            local id = K.ED.scope
+            if not id then return end
+            K.ED.O[id] = nil
+            K.SetScope(nil)
+            K.setStatus("Excepción quitada: ese toggle vuelve a usar el diseño global", "Exception removed: that toggle uses the global design again", Theme.Accent)
+        end)
+
+        local UI = {}
+        local function close()
+            K.open = false
+            K.flip = false
+            K.activeSlider = nil
+            if K.closePicker then pcall(K.closePicker, false) end
+            if K.liveReal then
+                K.liveReal = false
+                FS.LiveResolver = nil
+                FS.ApplyAll()
+            end
+            TweenService:Create(PanelScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.94 }):Play()
+            task.delay(0.15, function() Overlay.Visible = false end)
+        end
+        closeBtn.MouseButton1Click:Connect(close)
+        cancelBtn.MouseButton1Click:Connect(close)
+        saveBtn.MouseButton1Click:Connect(function()
+            FS.Data.Global = FS.Sanitize(K.ED.G, false)
+            local ov = {}
+            for id, t in pairs(K.ED.O) do
+                local s = FS.Sanitize(t, true)
+                if next(s) then ov[id] = s end
+            end
+            FS.Data.Overrides = ov
+            local ok = FS.Save()
+            playSound(Sounds.Click, 0.6)
+            K.liveReal = false
+            FS.LiveResolver = nil
+            FS.ApplyAll()
+            if FS.RefreshEntry then FS.RefreshEntry() end
+            if not ok then
+                warn("[YinYang Estudio de Toggles] Tu ejecutor no tiene writefile: el diseño dura hasta que cierres el juego")
+            end
+            close()
+        end)
+
+        function UI.Open()
+            K.ED = { G = FS.Copy(FS.Data.Global), O = FS.Copy(FS.Data.Overrides), scope = nil }
+            K.open = true
+            K.flip = false
+            Status.Text = ""
+            K.stateChips.Set("off")
+            K.backChips.Set(K.backdrop or "dark")
+            for _, S in ipairs(K.samples) do S.State = false end
+            K.setLive(false)
+            K.SetScope(nil)
+            Content.CanvasPosition = Vector2.new(0, 0)
+            Overlay.Visible = true
+            PanelScale.Scale = 0.94
+            TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        end
+        UI.Close = close
+        UI.K = K
+        return UI
+    end
+end
+
+ThemePalettes["PibbleV1"] = ThemePalettes["PibbleV1"] or {
+    Background = Color3.fromRGB(58, 63, 70),
+    Secondary = Color3.fromRGB(88, 93, 100),
+    AccentOff = Color3.fromRGB(118, 123, 128),
+    Text = Color3.fromRGB(250, 248, 245),
+    TextDim = Color3.fromRGB(200, 195, 190),
+    Stroke = Color3.fromRGB(228, 180, 190),
+    Accent = Color3.fromRGB(240, 200, 210),
+    ToggleOn = Color3.fromRGB(255, 210, 220),
+}
+
+local function swapThemeColor(obj, palette)
+    local bgRole = obj:GetAttribute("ThemeRole")
+    if bgRole and palette[bgRole] then
+        if obj:IsA("UIStroke") then
+            obj.Color = palette[bgRole]
+        elseif obj:IsA("GuiObject") then
+            pcall(function() obj.BackgroundColor3 = palette[bgRole] end)
+        end
+    end
+
+    local textRole = obj:GetAttribute("ThemeTextRole")
+    if textRole and palette[textRole] then
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            obj.TextColor3 = palette[textRole]
+        end
+    end
+
+    local textStrokeRole = obj:GetAttribute("ThemeTextStrokeRole")
+    if textStrokeRole and palette[textStrokeRole] then
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            pcall(function() obj.TextStrokeColor3 = palette[textStrokeRole] end)
+        end
+    end
+
+    local imageRole = obj:GetAttribute("ThemeImageRole")
+    if imageRole and palette[imageRole] then
+        if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+            obj.ImageColor3 = palette[imageRole]
+        end
+    end
+end
+
+ThemePalettes["ShylfieV1"] = ThemePalettes["ShylfieV1"] or {
+    Background = Color3.fromRGB(35, 40, 28),
+    Secondary = Color3.fromRGB(58, 65, 42),
+    AccentOff = Color3.fromRGB(85, 90, 58),
+    Text = Color3.fromRGB(250, 245, 230),
+    TextDim = Color3.fromRGB(200, 190, 155),
+    Stroke = Color3.fromRGB(180, 165, 115),
+    Accent = Color3.fromRGB(230, 195, 130),
+    ToggleOn = Color3.fromRGB(255, 215, 145),
+}
+
+local function setActiveTheme(name)
+    local palette = ThemePalettes[name]
+    if not palette then return false end
+    Theme = table.clone(palette)
+    Theme.AccentText = getContrastColor(Theme.Accent)
+    Theme.TextStroke = getContrastColor(Theme.Text)
+    Theme.ThemeName = name
+    Theme.SliderTrack = Theme.SliderTrack or Theme.AccentOff
+    Theme.SliderFill = Theme.SliderFill or Theme.Accent
+    Theme.SliderThumb = Theme.SliderThumb or Theme.Accent
+    Theme.Border = Theme.Border or Theme.Accent
+    Theme.TabActive = Theme.TabActive or Color3.fromRGB(225, 100, 0)
+    local function lighten(c)
+        local h, sat, val = Color3.toHSV(c)
+        return Color3.fromHSV(h, math.max(0, sat - 0.3), math.min(1, val + 0.25))
+    end
+    Theme.BorderLight = Theme.BorderLight or lighten(Theme.Border)
+    Theme.TitleText = Theme.TitleText or Theme.Accent
+    Theme.SubText = Theme.SubText or Theme.Accent
+    Theme.Counter = Theme.Counter or Theme.Accent
+    Theme.WindowIcon = Theme.WindowIcon or Theme.Text
+    Theme.PillBackground = Theme.PillBackground or Theme.AccentOff
+    Theme.PillBorder = Theme.PillBorder or Theme.Accent
+    Theme.PillBorderAlt = Theme.PillBorderAlt or lighten(Theme.PillBorder)
+    local extras = ThemeExtras[name]
+    Theme.WindowIcons = extras and extras.WindowIcons or {}
+    Theme.IconSizes = extras and extras.IconSizes or {}
+    Theme.TransparentTabs = extras and extras.TransparentTabs == true or false
+    Theme.FullBackground = (name == "Navidad") -- exclusivo de Navidad: el fondo cubre toda la ventana
+    return true
+end
+
+if next(IconCatalog.Icons) == nil then
+    IconCatalog.Icons["ClassicYinYang"] = {
+        LabelES = "Yin Yang Clásico",
+        LabelEN = "Classic Yin Yang",
+        Layers = {
+            { Image = "rbxassetid://106130066496682", Movement = "None" },
+            { Image = "rbxassetid://70721341917757",  Movement = "Spin", Speed = 60, Direction = 1, Style = "Organic" },
+        },
+        IdleSound = { Id = "", Interval = 15, Volume = 0.15 },
+    }
+end
+
+-- ==================== LOGOS PROPIOS (Estudio de logos, pestaña Logo) ====================
+-- Cada logo creado por el usuario se guarda en yin_yang_custom_logos.json y se registra en
+-- IconCatalog.Icons["Custom:<id>"] con el mismo formato del catálogo (Layers / sonidos / NoBackground),
+-- así ApplyLogoIcon lo dibuja con el mismo motor que los íconos oficiales.
+do
+    local C = { File = "yin_yang_custom_logos.json", Logos = {}, Order = {}, Max = 30, Prefix = "YYLOGO1:" }
+    IconCatalog.Custom = C
+    C.Moves = { None = true, Spin = true, Pulse = true, Orbit = true, Float = true, Shake = true, Fade = true }
+
+    local function num(v, lo, hi, def)
+        v = tonumber(v)
+        if not v or v ~= v then return def end
+        return math.clamp(v, lo, hi)
+    end
+    local function rgb(v)
+        if type(v) ~= "table" then return nil end
+        local c = arrayToColor(v, nil)
+        return c and colorToArray(c) or nil
+    end
+
+    -- Acepta un número, rbxassetid://N, un link de Roblox o rbxthumb:// (miniatura)
+    function C.CleanAsset(v)
+        v = tostring(v or ""):match("^%s*(.-)%s*$")
+        if v == "" then return "" end
+        if v:sub(1, 11) == "rbxthumb://" then return v end
+        local id = v:match("(%d+)")
+        return id and ("rbxassetid://" .. id) or ""
+    end
+
+    -- os.time + contador + azar: dos logos creados en el mismo segundo no comparten ID
+    C.Seq = 0
+    function C.NewId()
+        C.Seq += 1
+        local id
+        repeat
+            id = "L" .. tostring(os.time()) .. "_" .. C.Seq .. "_" .. tostring(math.random(100, 999))
+        until C.Logos[id] == nil
+        return id
+    end
+
+    -- Deja solo campos conocidos y valores dentro de rango (sirve para el archivo y para importar códigos)
+    function C.Sanitize(s)
+        if type(s) ~= "table" or type(s.Layers) ~= "table" then return nil end
+        local id = type(s.Id) == "string" and s.Id:match("^[%w_]+$") and s.Id or C.NewId()
+        local name = tostring(s.Name or ""):gsub("[%c]", ""):sub(1, 24)
+        if name:match("^%s*$") then name = "Mi logo" end
+        local out = {
+            Id = id,
+            Name = name,
+            NoBackground = s.NoBackground == true,
+            BgColor = rgb(s.BgColor),
+            BorderColor = rgb(s.BorderColor),
+            Created = tonumber(s.Created) or os.time(),
+            Layers = {},
+        }
+        for i = 1, math.min(#s.Layers, 3) do
+            local L = s.Layers[i]
+            if type(L) == "table" then
+                local img = C.CleanAsset(L.Image)
+                if img ~= "" then
+                    table.insert(out.Layers, {
+                        Image = img,
+                        Movement = C.Moves[L.Movement] and L.Movement or "None",
+                        Speed = num(L.Speed, 0.1, 2000, 60),
+                        Amount = num(L.Amount, 0, 100, 0),
+                        Direction = tonumber(L.Direction) == -1 and -1 or 1,
+                        Style = L.Style == "Constant" and "Constant" or "Organic",
+                        Scale = num(L.Scale, 0.3, 5, 1.6),
+                        Transparency = num(L.Transparency, 0, 0.95, 0),
+                        Color = rgb(L.Color),
+                    })
+                end
+            end
+        end
+        if #out.Layers == 0 then return nil end
+        if type(s.ClickSound) == "table" then
+            local sid = C.CleanAsset(s.ClickSound.Id)
+            if sid ~= "" then
+                out.ClickSound = { Id = sid, Volume = num(s.ClickSound.Volume, 0, 1, 0.6) }
+            end
+        end
+        if type(s.IdleSound) == "table" then
+            local sid = C.CleanAsset(s.IdleSound.Id)
+            if sid ~= "" then
+                out.IdleSound = { Id = sid, Interval = num(s.IdleSound.Interval, 3, 120, 15), Volume = num(s.IdleSound.Volume, 0, 1, 0.15) }
+            end
+        end
+        return out
+    end
+
+    function C.Key(id)
+        return "Custom:" .. tostring(id)
+    end
+
+    -- Registro guardado -> entrada del catálogo (colores como Color3, igual que lee ApplyLogoIcon)
+    function C.ToIcon(rec)
+        local icon = {
+            LabelES = rec.Name,
+            LabelEN = rec.Name,
+            Custom = true,
+            CustomId = rec.Id,
+            NoBackground = rec.NoBackground == true,
+            BgColor = rec.BgColor and arrayToColor(rec.BgColor, nil) or nil,
+            BorderColor = rec.BorderColor and arrayToColor(rec.BorderColor, nil) or nil,
+            Layers = {},
+        }
+        for i, L in ipairs(rec.Layers) do
+            local layer = table.clone(L)
+            layer.Color = L.Color and arrayToColor(L.Color, nil) or nil
+            icon.Layers[i] = layer
+        end
+        if rec.ClickSound then icon.ClickSound = table.clone(rec.ClickSound) end
+        if rec.IdleSound then icon.IdleSound = table.clone(rec.IdleSound) end
+        return icon
+    end
+
+    function C.Register(rec)
+        IconCatalog.Icons[C.Key(rec.Id)] = C.ToIcon(rec)
+    end
+
+    function C.Save()
+        local ok = false
+        pcall(function()
+            if writefile then
+                writefile(C.File, HttpService:JSONEncode({ Version = 1, Logos = C.Logos, Order = C.Order }))
+                ok = true
+            end
+        end)
+        return ok
+    end
+
+    function C.Load()
+        if not (readfile and isfile) then return end
+        pcall(function()
+            if not isfile(C.File) then return end
+            local decoded = HttpService:JSONDecode(readfile(C.File))
+            if type(decoded) ~= "table" or type(decoded.Logos) ~= "table" then return end
+            local seen = {}
+            local function take(id)
+                local rec = C.Sanitize(decoded.Logos[id])
+                if rec and not seen[rec.Id] then
+                    seen[rec.Id] = true
+                    C.Logos[rec.Id] = rec
+                    table.insert(C.Order, rec.Id)
+                    C.Register(rec)
+                end
+            end
+            for _, id in ipairs(type(decoded.Order) == "table" and decoded.Order or {}) do
+                if type(id) == "string" and decoded.Logos[id] then take(id) end
+            end
+            for id in pairs(decoded.Logos) do
+                if not seen[id] then take(id) end
+            end
+        end)
+    end
+
+    -- Guarda (crea o reemplaza) un logo ya saneado
+    function C.Put(rec)
+        local isNew = C.Logos[rec.Id] == nil
+        if isNew and #C.Order >= C.Max then return false, "max" end
+        C.Logos[rec.Id] = rec
+        if isNew then table.insert(C.Order, 1, rec.Id) end
+        C.Register(rec)
+        return C.Save(), nil
+    end
+
+    function C.Remove(id)
+        C.Logos[id] = nil
+        IconCatalog.Icons[C.Key(id)] = nil
+        for i = #C.Order, 1, -1 do
+            if C.Order[i] == id then table.remove(C.Order, i) end
+        end
+        C.Save()
+    end
+
+    -- Código para compartir: YYLOGO1:{json}
+    function C.Export(rec)
+        local copy = table.clone(rec)
+        copy.Id = nil
+        copy.Created = nil
+        return C.Prefix .. HttpService:JSONEncode(copy)
+    end
+
+    function C.Import(text)
+        local body = tostring(text or ""):match(C.Prefix .. "(.+)$")
+        if not body then return nil end
+        local ok, decoded = pcall(function() return HttpService:JSONDecode(body) end)
+        if not ok or type(decoded) ~= "table" then return nil end
+        decoded.Id = C.NewId()
+        decoded.Created = os.time()
+        return C.Sanitize(decoded)
+    end
+
+    C.Load()
+end
+
+if ThemePalettes.Dark then
+    -- Halloween: la paleta Dark se fuerza aqui para que el tema remoto no la pise
+    ThemePalettes.Dark.Background = Color3.fromRGB(38, 15, 0)
+    ThemePalettes.Dark.Secondary = Color3.fromRGB(92, 38, 0)
+    ThemePalettes.Dark.AccentOff = Color3.fromRGB(70, 30, 0)
+    ThemePalettes.Dark.Text = Color3.fromRGB(255, 185, 30)
+    ThemePalettes.Dark.TextDim = Color3.fromRGB(205, 140, 80)
+    ThemePalettes.Dark.Stroke = Color3.fromRGB(255, 110, 0)
+    ThemePalettes.Dark.Accent = Color3.fromRGB(255, 120, 0)
+    ThemePalettes.Dark.ToggleOn = Color3.fromRGB(255, 120, 0)
+    ThemePalettes.Dark.Border = Color3.fromRGB(225, 100, 0)
+    ThemePalettes.Dark.BorderLight = Color3.fromRGB(255, 150, 40)
+    ThemePalettes.Dark.TitleText = Color3.fromRGB(255, 110, 0)
+    ThemePalettes.Dark.SubText = Color3.fromRGB(255, 110, 0)
+    ThemePalettes.Dark.Counter = Color3.fromRGB(255, 110, 0)
+    ThemePalettes.Dark.PillBackground = Color3.fromRGB(58, 24, 0)
+    ThemePalettes.Dark.PillBorder = Color3.fromRGB(225, 100, 0)
+    ThemePalettes.Dark.PillBorderAlt = Color3.fromRGB(255, 25, 25)
+end
+ThemeBackgroundImages["Dark"] = ThemeBackgroundImages["Dark"] or "rbxassetid://97998238819608"
+for themeName in pairs(ThemePalettes) do
+    OfficialThemeNames[themeName] = true
+end
+LoadCustomThemes()
+
+if not setActiveTheme("Senju") then setActiveTheme("Dark") end
+
+local function BuildAjustesExtras(Window, AutoTabAjustes, getSlidersHidden, setSlidersHidden, getChatCornerMessagesEnabled, setChatCornerMessagesEnabled)
+    local page = AutoTabAjustes._ContentParent or AutoTabAjustes.Page
+
+    RowKit.SettingsHeader(page, 74530897423840, "Idioma", "Language", "Idioma de toda la interfaz", "Language of the whole interface")
+    RowKit.Segmented(page, {
+        { key = "auto", es = "Auto", en = "Auto" },
+        { key = "es", es = "Español", en = "Español" },
+        { key = "en", es = "English", en = "English" },
+    }, YLang.Mode or "auto", function(mode)
+        YLang.SetMode(mode)
+    end)
+
+    RowKit.SettingsHeader(page, 138141460046805, "Ícono flotante", "Floating icon", "Bloqueá el ícono para que no se mueva", "Lock the icon so it can't be moved")
+    AutoTabAjustes:CreateToggle("Freeze Icono", "Freeze Icon", false, function(state)
+        IconoCongelado = state
+        if Window.Dragon and Window.Dragon.Draggable then
+            Window.Dragon.Draggable = not state
+        end
+        if state then
+            AutoTabAjustes:CreateLabel("Icono congelado (No se puede mover)", "Icon frozen (Cannot be moved)", 11)
+        end
+    end)
+
+    RowKit.SettingsHeader(page, 110031536363644, "Chat", "Chat", "Avisos del chat en la esquina de la pantalla", "Chat notices in the screen corner")
+    AutoTabAjustes:CreateToggle(
+        "Mensajes del Chat en esquina",
+        "Chat Corner Messages",
+        getChatCornerMessagesEnabled(),
+        function(state)
+            setChatCornerMessagesEnabled(state)
+            SavedConfig.ChatCornerMessages = state
+            SaveConfig()
+        end
+    )
+
+    RowKit.SettingsHeader(page, 72126043741813, "Sonidos", "Sounds", "Sonidos de clic según el tema activo", "Click sounds based on the active theme")
+    AutoTabAjustes:CreateToggle("Sonidos Dinámicos", "Dynamic Sounds", DynamicClickSoundsEnabled, function(state)
+        DynamicClickSoundsEnabled = state
+        AutoTabAjustes:CreateLabel(
+            state and " Sonidos por tema activados" or " Sonidos desactivados",
+            state and " Theme sounds enabled"      or " Sounds disabled",
+            11
+        )
+    end)
+
+    RowKit.SettingsHeader(page, 76854672555792, "Sliders", "Sliders", "Mostrá u ocultá todos los sliders", "Show or hide every slider")
+    AutoTabAjustes:CreateToggle("Ocultar Sliders", "Hide Sliders", getSlidersHidden(), function(state)
+        setSlidersHidden(state)
+        for _, obj in ipairs(Window.ScreenGui:GetDescendants()) do
+            if obj:GetAttribute("IsSliderHolder") then
+                obj.Visible = not state
+            end
+        end
+        SavedConfig.HideSliders = state
+        SaveConfig()
+    end)
+
+    RowKit.SettingsHeader(page, 92038302677245, "Plataforma", "Platform", "Ajusta el tamaño de la ventana al dispositivo", "Fits the window size to your device")
+    RowKit.Segmented(page, {
+        { key = "Auto",   es = "Auto",  en = "Auto"   },
+        { key = "PC",     es = "PC",    en = "PC"     },
+        { key = "Mobile", es = "Móvil", en = "Mobile" },
+    }, SavedConfig.PlatformMode or "Auto", function(mode)
+        SavedConfig.PlatformMode = mode
+        SaveConfig()
+        Window.UpdateWindowSize()
+    end)
+
+    RowKit.SettingsHeader(page, 91328661401828, "Estilo de Toggle Flotante", "Floating Toggle Style",
+        "Se aplica al instante, incluso a los toggles que ya tenés flotando",
+        "Applies instantly, even to toggles you already have floating")
+    RowKit.Segmented(page, {
+        { key = "Pill",   es = "Píldora", en = "Pill"   },
+        { key = "Circle", es = "Círculo", en = "Circle" },
+    }, SavedConfig.FloatingToggleStyle or "Pill", function(styleValue)
+        SavedConfig.FloatingToggleStyle = styleValue
+        SaveConfig()
+        Window.ApplyFloatingStyle()
+    end)
+    FloatingPillV5.Studio.BuildEntry(page, Window)
+
+    RowKit.SettingsHeader(page, 131461432895733, "Estilo de pestañas", "Tab Style",
+        "Por defecto usa la pestaña original. El carrusel es opcional.",
+        "The original tab layout is the default. The carousel is optional.")
+    RowKit.Segmented(page, {
+        { key = "Original", es = "Originales", en = "Original" },
+        { key = "Carousel", es = "Carrusel",   en = "Carousel" },
+    }, SavedConfig.TabIconLayout or "Original", function(layoutValue)
+        if Window.SetTabIconLayout then
+            Window:SetTabIconLayout(layoutValue)
+        end
+    end)
+
+    RowKit.SettingsHeader(page, 81463911885004, "Apariencia", "Appearance")
+    RowKit.InfoCard(page, {
+        { "Versión", "Version", "v28 ULTRA MEJORADA", "v28 ULTRA IMPROVED" },
+        { "Chat Fullscreen", "Chat Fullscreen", "ACTIVO", "ACTIVE" },
+        { "Colores Dinámicos", "Dynamic Colors", "ACTIVO", "ACTIVE" },
+    })
+
+    -- ==================== OPTIMIZACIÓN ====================
+    RowKit.SettingsHeader(page, "⚡", "Optimización", "Optimization",
+        "Para equipos que no aguantan el script: apagá lo que da lag. Todo se guarda y se puede volver atrás.",
+        "For devices that can't handle the script: turn off what causes lag. Everything is saved and reversible.")
+
+    PerfOpt.Hooks.NoTextEffects = function()
+        if Window.SetTextEffect then Window:SetTextEffect(Window.CurrentTextEffect or "Off") end
+    end
+    PerfOpt.Hooks.StaticBackground = function(on)
+        local video = Window.BackgroundVideo
+        if video then
+            pcall(function()
+                if on then video:Pause() elseif video.Visible then video:Play() end
+            end)
+        end
+    end
+    PerfOpt.Hooks.LiteShaders = function(on)
+        local overdrive = Window.Shaders and Window.Shaders.Overdrive
+        if not overdrive then return end
+        if on then
+            local current = overdrive.GetQuality()
+            if current ~= "Lite" then PerfOpt.PrevQuality = current end
+            overdrive.SetQuality("Lite")
+        else
+            overdrive.SetQuality(PerfOpt.PrevQuality or "Balanced")
+            PerfOpt.PrevQuality = nil
+        end
+    end
+    PerfOpt.Hooks.NoShaders = function(on)
+        if on and Window.Shaders then Window.Shaders.Restore() end
+    end
+    -- al iniciar: shaders en Lite si quedó guardado (el resto ya se respeta solo)
+    if PerfOpt.Flags.LiteShaders and Window.Shaders and Window.Shaders.Overdrive.GetQuality() ~= "Lite" then
+        pcall(PerfOpt.Hooks.LiteShaders, true)
+    end
+
+    local perfToggles = {}
+    local perfOrder = {}
+    local function perfToggle(key, es, en)
+        table.insert(perfOrder, key)
+        perfToggles[key] = AutoTabAjustes:CreateToggle(es, en, PerfOpt.Flags[key], function(state)
+            PerfOpt.Set(key, state)
+        end)
+    end
+
+    AutoTabAjustes:CreateLabel("Interfaz", "Interface", 12)
+    perfToggle("NoAnimations", "Sin animaciones de interfaz", "No interface animations")
+    perfToggle("NoTextEffects", "Sin efectos de texto", "No text effects")
+    perfToggle("StaticBackground", "Fondo animado quieto", "Static animated background")
+    perfToggle("NoLogoAnim", "Logo flotante sin animación", "Floating logo without animation")
+    perfToggle("NoHomeAvatar", "Avatar de Inicio quieto", "Still Home avatar")
+    perfToggle("NoDecorAnim", "Título, banner y vistas previas quietos", "Still title, banner and previews")
+    perfToggle("NoUISounds", "Sin sonidos de clic", "No click sounds")
+
+    AutoTabAjustes:CreateLabel("Shaders", "Shaders", 12)
+    perfToggle("LiteShaders", "Shaders en modo ligero", "Shaders in lite mode")
+    perfToggle("NoPostFX", "Sin desenfoque, profundidad ni rayos", "No blur, depth of field or sun rays")
+    perfToggle("NoShaders", "Shaders apagados (también al iniciar)", "Shaders off (also on start)")
+
+    AutoTabAjustes:CreateLabel("Juego", "Game", 12)
+    perfToggle("NoShadows", "Sin sombras del juego", "No game shadows")
+    perfToggle("NoParticles", "Sin partículas, humo ni fuego", "No particles, smoke or fire")
+    perfToggle("MapBoost", "Mapa liviano (sin texturas ni materiales)", "Light map (no textures or materials)")
+    perfToggle("LowGraphics", "Gráficos al mínimo", "Lowest graphics")
+    perfToggle("FpsCap30", "Limitar a 30 FPS (ahorro de batería)", "Cap at 30 FPS (battery saver)")
+    AutoTabAjustes:CreateLabel(
+        "Gráficos al mínimo y el límite de FPS dependen de tu executor: si no los permite, no hacen nada.",
+        "Lowest graphics and the FPS cap depend on your executor: if it doesn't allow them, they do nothing.",
+        10
+    )
+
+    local function perfSetAll(value)
+        -- los sonidos se silencian primero y se devuelven al final, para no disparar 15 clics juntos
+        PerfOpt.Flags.NoUISounds = true
+        for _, key in ipairs(perfOrder) do
+            if key ~= "NoUISounds" and PerfOpt.Flags[key] ~= value then
+                PerfOpt.Set(key, value)
+            end
+            if perfToggles[key] then perfToggles[key].SetValue(value) end
+        end
+        PerfOpt.Set("NoUISounds", value)
+    end
+    AutoTabAjustes:CreateButton("⚡ Modo rendimiento máximo", "⚡ Maximum performance mode", function()
+        perfSetAll(true)
+    end)
+    AutoTabAjustes:CreateButton("Volver todo a la normalidad", "Restore everything to normal", function()
+        perfSetAll(false)
+    end)
+end
+
+_G.YinYang = {}
+local YinYang = _G.YinYang
+YinYang.__index = YinYang
+
+-- ===== KIT DE VENTANAS (para que el script no arme GUIs a mano) =====
+-- El script pide las piezas (pantalla, tarjeta, texto, chip, barra, gráfico, arrastre...) y la librería las crea
+-- con el tema activo. Cada pieza lleva su rol de color (atributos ThemeRole / ThemeTextRole / ThemeImageRole) y
+-- las pantallas creadas con Kit.Screen se vuelven a pintar solas cuando cambiás de tema (Window:SetTheme).
+-- Roles: Background, Secondary, AccentOff, Text, TextDim, Stroke, Accent, AccentText (texto sobre Accent).
+YinYang.Kit = {Roots = {}, ThemeCallbacks = {},
+    OK = Color3.fromRGB(95, 222, 145), ERR = Color3.fromRGB(255, 98, 98), WARN = Color3.fromRGB(240, 190, 60)}
+do
+    local Kit = YinYang.Kit
+    local FALLBACK = {
+        Background = Color3.fromRGB(16, 16, 18), Secondary = Color3.fromRGB(32, 32, 36), AccentOff = Color3.fromRGB(60, 60, 66),
+        Text = Color3.fromRGB(245, 245, 248), TextDim = Color3.fromRGB(165, 165, 175), Stroke = Color3.fromRGB(150, 150, 160),
+        Accent = Color3.fromRGB(235, 235, 240),
+    }
+    -- colores del tema activo (o los de reserva si todavía no hay ventana)
+    function Kit.Palette()
+        local active = Theme or ThemePalettes["Dark"] or FALLBACK
+        local out = {}
+        for key, value in pairs(FALLBACK) do
+            local themed = active[key]
+            out[key] = (typeof(themed) == "Color3") and themed or value
+        end
+        out.AccentText = (typeof(active.AccentText) == "Color3") and active.AccentText or getContrastColor(out.Accent)
+        return out
+    end
+    function Kit.Contrast(color) return getContrastColor(color) end
+    function Kit.Tween(obj, t, props, style, dir)
+        local tw = TweenService:Create(obj, TweenInfo.new(t, style or Enum.EasingStyle.Quint, dir or Enum.EasingDirection.Out), props)
+        tw:Play()
+        return tw
+    end
+    -- crea una instancia; roles = {bg = "Background", text = "Text", image = "Accent", stroke = "Stroke"}
+    -- le pone roles a algo que ya existe y lo pinta ya con el tema activo
+    function Kit.Role(obj, roles)
+        if not (obj and roles) then return obj end
+        local p = Kit.Palette()
+        if roles.bg then
+            obj:SetAttribute("ThemeRole", roles.bg)
+            if obj:IsA("UIStroke") then obj.Color = p[roles.bg] or obj.Color else pcall(function() obj.BackgroundColor3 = p[roles.bg] or obj.BackgroundColor3 end) end
+        end
+        if roles.text then
+            obj:SetAttribute("ThemeTextRole", roles.text)
+            pcall(function() obj.TextColor3 = p[roles.text] or obj.TextColor3 end)
+        end
+        if roles.image then
+            obj:SetAttribute("ThemeImageRole", roles.image)
+            pcall(function() obj.ImageColor3 = p[roles.image] or obj.ImageColor3 end)
+        end
+        return obj
+    end
+    function Kit.New(class, props, parent, roles)
+        local obj = mk(class, props or {}, nil)
+        if roles then Kit.Role(obj, roles) end
+        if parent then obj.Parent = parent end
+        return obj
+    end
+    function Kit.Corner(obj, radius) return mk("UICorner", {CornerRadius = UDim.new(0, radius or 8)}, obj) end
+    function Kit.Stroke(obj, role, thickness, transparency)
+        return Kit.New("UIStroke", {Thickness = thickness or 1.2, Transparency = transparency or 0.5, ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, obj, {bg = role or "Stroke"})
+    end
+    function Kit.Pad(obj, top, right, bottom, left)
+        return mk("UIPadding", {PaddingTop = UDim.new(0, top or 0), PaddingRight = UDim.new(0, right or top or 0),
+            PaddingBottom = UDim.new(0, bottom or top or 0), PaddingLeft = UDim.new(0, left or right or top or 0)}, obj)
+    end
+    function Kit.List(obj, padding, horizontal)
+        return mk("UIListLayout", {Padding = UDim.new(0, padding or 6), SortOrder = Enum.SortOrder.LayoutOrder,
+            FillDirection = horizontal and Enum.FillDirection.Horizontal or Enum.FillDirection.Vertical}, obj)
+    end
+    -- pantalla propia (se borra la anterior con el mismo nombre) que sigue el tema
+    function Kit.Screen(name, displayOrder, parentOverride)
+        local parent = parentOverride or LocalPlayer:WaitForChild("PlayerGui")
+        local old = parent:FindFirstChild(name)
+        if old then old:Destroy() end
+        local gui = mk("ScreenGui", {Name = name, ResetOnSpawn = false, DisplayOrder = displayOrder or 50}, parent)
+        Kit.Roots[#Kit.Roots + 1] = gui
+        return gui
+    end
+    -- tarjeta: fondo del tema, esquinas y borde
+    function Kit.Card(parent, props, strokeRole)
+        props = props or {}
+        if props.BackgroundTransparency == nil then props.BackgroundTransparency = 0.08 end
+        props.BorderSizePixel = 0
+        local radius, role = props.Radius or 16, props.Role or "Background"
+        props.Radius, props.Role = nil, nil
+        local card = Kit.New("Frame", props, parent, {bg = role})
+        Kit.Corner(card, radius)
+        Kit.Stroke(card, strokeRole or "Accent", 1.4, 0.5)
+        return card
+    end
+    -- texto con su rol de color
+    function Kit.Label(parent, props, role)
+        props = props or {}
+        if props.BackgroundTransparency == nil then props.BackgroundTransparency = 1 end
+        props.Font = props.Font or Enum.Font.GothamBold
+        props.TextSize = props.TextSize or 12
+        return Kit.New("TextLabel", props, parent, {text = role or "Text"})
+    end
+    -- chip redondeado (fondo AccentOff por defecto) con UIScale para el "pop"
+    function Kit.Chip(parent, props, bgRole, textRole)
+        props = props or {}
+        props.Size = props.Size or UDim2.fromOffset(0, 22)
+        if props.AutomaticSize == nil then props.AutomaticSize = Enum.AutomaticSize.X end
+        props.Font = props.Font or Enum.Font.GothamBlack
+        props.TextSize = props.TextSize or 11
+        props.BorderSizePixel = 0
+        local chip = Kit.New("TextLabel", props, parent, {bg = bgRole or "AccentOff", text = textRole or "Text"})
+        Kit.Corner(chip, 999)
+        Kit.Pad(chip, 0, 9, 0, 9)
+        local scale = mk("UIScale", {Scale = 1}, chip)
+        return chip, scale
+    end
+    function Kit.Pop(scale, from)
+        scale.Scale = from or 1.25
+        Kit.Tween(scale, 0.25, {Scale = 1}, Enum.EasingStyle.Back)
+    end
+    -- barra de progreso: devuelve el fondo y el relleno
+    function Kit.Bar(parent, props, fillRole, trackRole)
+        props = props or {}
+        props.BorderSizePixel = 0
+        local track = Kit.New("Frame", props, parent, {bg = trackRole or "Secondary"})
+        Kit.Corner(track, 99)
+        local fill = Kit.New("Frame", {Size = UDim2.fromScale(0, 1), BorderSizePixel = 0}, track, {bg = fillRole or "Accent"})
+        Kit.Corner(fill, 99)
+        return track, fill
+    end
+    -- gráfico de barras verticales (count barras); Kit.SetBars(bars, valores, máximo)
+    function Kit.Bars(parent, count, role)
+        local list = {}
+        for i = 1, count do
+            local b = Kit.New("Frame", {AnchorPoint = Vector2.new(0, 1), Position = UDim2.new((i - 1) / count, 0, 1, 0),
+                Size = UDim2.new(1 / count, -1, 0, 1), BackgroundTransparency = 0.5, BorderSizePixel = 0}, parent, {bg = role or "Accent"})
+            list[i] = b
+        end
+        return list
+    end
+    function Kit.SetBars(bars, samples, top)
+        local count = #bars
+        top = math.max(top or 1, 1)
+        for i, b in ipairs(bars) do
+            local s = samples[i - (count - #samples)]
+            local h = s and math.clamp(s / top, 0.05, 1) or 0.05
+            b.Size = UDim2.new(1 / count, -1, h, 0)
+            b.BackgroundTransparency = s and (0.55 - 0.45 * h) or 0.85
+        end
+    end
+    -- arrastrar target desde handle; devuelve una función para desconectar
+    function Kit.Drag(handle, target)
+        local dragging, startPos, startInput = false, nil, nil
+        handle.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging, startPos, startInput = true, target.Position, input.Position
+            end
+        end)
+        local c1 = UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local d = input.Position - startInput
+                target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end)
+        local c2 = UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+        end)
+        local function disconnect() c1:Disconnect() c2:Disconnect() end
+        handle.Destroying:Connect(disconnect)
+        return disconnect
+    end
+    -- aparece con un rebote chico
+    function Kit.Appear(obj, from)
+        local scale = obj:FindFirstChildOfClass("UIScale") or mk("UIScale", {Scale = from or 0.9}, obj)
+        scale.Scale = from or 0.9
+        Kit.Tween(scale, 0.3, {Scale = 1}, Enum.EasingStyle.Back)
+        return scale
+    end
+    -- algo que no es un color de rol (degradados, contrastes): se llama al cambiar de tema con la paleta nueva
+    function Kit.OnTheme(fn)
+        Kit.ThemeCallbacks[#Kit.ThemeCallbacks + 1] = fn
+        -- devuelve una función para sacarlo (cuando se cierra la ventana)
+        return function()
+            local i = table.find(Kit.ThemeCallbacks, fn)
+            if i then table.remove(Kit.ThemeCallbacks, i) end
+        end
+    end
+
+    -- ===== crear y pintar por rol automáticamente =====
+    -- Kit.Make(clase, props, parent): igual que Instance.new + props, pero lo crea la librería y, si un color es
+    -- uno del tema activo (fondo, texto, acento...), le pone ese rol para que siga al tema. Las ScreenGui quedan
+    -- registradas para repintarse. No cambia ningún otro valor por defecto.
+    local ORDER = {
+        bg = {"Background", "Secondary", "AccentOff", "Accent", "Stroke", "Text", "TextDim"},
+        text = {"Text", "TextDim", "Accent", "AccentText"},
+        stroke = {"Accent", "Stroke", "Text", "TextDim", "Secondary", "Background", "AccentOff"},
+        image = {"Accent", "Text", "TextDim"},
+    }
+    local function colorKey(c)
+        return math.floor(c.R * 255 + 0.5) * 65536 + math.floor(c.G * 255 + 0.5) * 256 + math.floor(c.B * 255 + 0.5)
+    end
+    local function roleFor(kind, color, p)
+        if typeof(color) ~= "Color3" then return nil end
+        local k = colorKey(color)
+        for _, role in ipairs(ORDER[kind]) do
+            local c = p[role]
+            if typeof(c) == "Color3" and colorKey(c) == k then return role end
+        end
+        return nil
+    end
+    function Kit.Tag(obj, p)
+        p = p or Kit.Palette()
+        if obj:IsA("UIStroke") then
+            if not obj:GetAttribute("ThemeRole") then
+                local r = roleFor("stroke", obj.Color, p)
+                if r then obj:SetAttribute("ThemeRole", r) end
+            end
+            return obj
+        end
+        if not obj:IsA("GuiObject") then return obj end
+        if not obj:GetAttribute("ThemeRole") and obj.BackgroundTransparency < 1 then
+            local r = roleFor("bg", obj.BackgroundColor3, p)
+            if r then obj:SetAttribute("ThemeRole", r) end
+        end
+        if (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) and not obj:GetAttribute("ThemeTextRole") then
+            local r = roleFor("text", obj.TextColor3, p)
+            if r then obj:SetAttribute("ThemeTextRole", r) end
+        end
+        if (obj:IsA("ImageLabel") or obj:IsA("ImageButton")) and not obj:GetAttribute("ThemeImageRole") and obj.Image ~= "" then
+            local r = roleFor("image", obj.ImageColor3, p)
+            if r then obj:SetAttribute("ThemeImageRole", r) end
+        end
+        return obj
+    end
+    function Kit.Make(class, props, parent)
+        local obj = Instance.new(class)
+        for k, v in pairs(props or {}) do obj[k] = v end
+        if class == "ScreenGui" then
+            Kit.Roots[#Kit.Roots + 1] = obj
+        elseif props then
+            -- sin props (se configura después) no se marca acá: lo hace Kit.Adopt al terminar la ventana
+            pcall(Kit.Tag, obj)
+        end
+        if parent then obj.Parent = parent end
+        return obj
+    end
+    -- una ventana ya armada (con Instance.new): le pone los roles a todo lo que tenga colores del tema y la registra
+    function Kit.Adopt(root, p)
+        p = p or Kit.Palette()
+        for _, obj in ipairs(root:GetDescendants()) do pcall(Kit.Tag, obj, p) end
+        pcall(Kit.Tag, root, p)
+        local gui = root:IsA("ScreenGui") and root or root:FindFirstAncestorOfClass("ScreenGui")
+        if gui and not table.find(Kit.Roots, gui) then Kit.Roots[#Kit.Roots + 1] = gui end
+        return root
+    end
+    -- lo llama Window:SetTheme
+    function Kit._Repaint(palette)
+        local alive = {}
+        for _, root in ipairs(Kit.Roots) do
+            if root.Parent then
+                alive[#alive + 1] = root
+                for _, obj in ipairs(root:GetDescendants()) do swapThemeColor(obj, palette) end
+            end
+        end
+        Kit.Roots = alive
+        local p = Kit.Palette()
+        for _, fn in ipairs(Kit.ThemeCallbacks) do pcall(fn, p) end
+    end
+end
+
+-- ===== COMPONENTES LISTOS (las ventanas que usa el script) =====
+-- El script ya no arma ventanas: pide una (Kit.Window, Kit.Meter, Kit.Hud, Kit.HostWindow, Kit.TopbarButton) y le
+-- agrega piezas (sección, texto, botones, grilla, lista, campos, mosaicos, barra...). Todo sigue el tema activo.
+do
+    local Kit = YinYang.Kit
+    local function Label(parent, props, role) return Kit.Label(parent, props, role) end
+    local function Btn(parent, props, bgRole, textRole)
+        props.AutoButtonColor = false
+        props.Font = props.Font or Enum.Font.GothamBold
+        props.TextSize = props.TextSize or 12
+        props.BorderSizePixel = 0
+        return Kit.New("TextButton", props, parent, {bg = bgRole or "Secondary", text = textRole or "Text"})
+    end
+    -- botón que se prende/apaga (prendido = acento)
+    local function onOff(button, on, offText)
+        Kit.Role(button, {bg = on and "Accent" or "Secondary", text = on and "AccentText" or (offText or "Text")})
+    end
+    Kit.SetOn = onOff
+
+    -- arrastre de una ventana desde su barra (con candado opcional)
+    local function dragFrom(handle, target, isLocked)
+        local dragging, startPos, startInput = false, nil, nil
+        handle.InputBegan:Connect(function(input)
+            if isLocked and isLocked() then return end
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging, startPos, startInput = true, target.Position, input.Position
+            end
+        end)
+        local c1 = UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local d = input.Position - startInput
+                target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + d.X, startPos.Y.Scale, startPos.Y.Offset + d.Y)
+            end
+        end)
+        local c2 = UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then dragging = false end
+        end)
+        target.Destroying:Connect(function() c1:Disconnect() c2:Disconnect() end)
+    end
+    Kit.DragFrom = dragFrom
+
+    -- ============ piezas que se agregan a un contenedor (ventana o caja) ============
+    local Widgets = {}
+    Widgets.__index = Widgets
+    local function container(frame, gap)
+        return setmetatable({Frame = frame, Order = 0, Gap = gap or 8}, Widgets)
+    end
+    function Widgets:_next() self.Order = self.Order + 1 return self.Order end
+    -- título chico de sección
+    function Widgets:Section(text)
+        return Label(self.Frame, {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 14), TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left, Text = text}, "TextDim")
+    end
+    -- texto (o = {Dim, Height, Wrap, Rich, Size, Font, Align})
+    function Widgets:Text(text, o)
+        o = o or {}
+        return Label(self.Frame, {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Height or 16), TextSize = o.Size or 12,
+            Font = o.Font or Enum.Font.GothamMedium, TextWrapped = o.Wrap == true, RichText = o.Rich == true,
+            TextXAlignment = o.Align or Enum.TextXAlignment.Left, TextYAlignment = o.Wrap and Enum.TextYAlignment.Top or Enum.TextYAlignment.Center,
+            Text = text or ""}, o.Dim and "TextDim" or "Text")
+    end
+    -- caja secundaria con sus propias piezas
+    function Widgets:Box(o)
+        o = o or {}
+        local box = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundTransparency = o.Transparency or 0.25, BorderSizePixel = 0}, self.Frame, {bg = "Secondary"})
+        Kit.Corner(box, o.Radius or 12)
+        Kit.Pad(box, o.PadY or 8, o.PadX or 10, o.PadY or 8, o.PadX or 10)
+        Kit.List(box, o.Gap or 6)
+        return container(box, o.Gap or 6)
+    end
+    -- fila "nombre ........ valor" (devuelve el valor)
+    function Widgets:Row(name, o)
+        o = o or {}
+        local r = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 16), BackgroundTransparency = 1}, self.Frame)
+        Label(r, {Size = UDim2.new(o.Split or 0.45, 0, 1, 0), Font = Enum.Font.GothamMedium, TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Left, Text = name}, "TextDim")
+        return Label(r, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1 - (o.Split or 0.45), 0, 1, 0),
+            TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Text = "-"}, "Text")
+    end
+    -- barra de progreso con textos a los costados (arriba) o abajo
+    function Widgets:Progress(o)
+        o = 

@@ -1,0 +1,1011 @@
+loatingToggles or {}) do
+            if floatData.Window and floatData.Window.Parent and not floatData.Window:GetAttribute("YYPillV5") then
+                buildAnimatedBorder(floatData.Window, Theme.Border, UDim.new(1, 0), true)
+            end
+        end
+
+        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
+            if obj:GetAttribute("IsSliderHolder") then
+                buildAnimatedBorder(obj, Theme.Border, UDim.new(0, 12), true)
+            end
+        end
+
+        if self._refreshEffectRows then
+            self._refreshEffectRows()
+        end
+        if self._refreshShaderCustomTheme then
+            self._refreshShaderCustomTheme()
+        end
+    end
+
+    function Window:SetTextEffect(mode)
+        stopTextEffect()
+        Window.CurrentTextEffect = mode
+        SavedConfig.CurrentEffect = mode
+        SaveConfig()
+        -- Optimización: el efecto elegido queda guardado, pero no corre su loop
+        if PerfOpt.Flags.NoTextEffects then mode = "Off" end
+
+        if mode == "Off" then
+            for _, obj in ipairs(getAllTextObjects()) do
+                local role = obj:GetAttribute("ThemeTextRole")
+                if role and Theme[role] then
+                    obj.TextColor3 = Theme[role]
+                elseif not role then
+                    obj.TextColor3 = Theme.Text
+                end
+            end
+            return
+        end
+
+        local elapsed = 0
+        local RunService = game:GetService("RunService")
+
+        if mode == "WhiteCyan" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(120, 225, 255)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "WhitePink" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(255, 130, 205)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "Rainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local hue = (elapsed * 0.12) % 1
+                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
+            end))
+
+        elseif mode == "CatRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 5) % 1
+                
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(100 + (255 - 100) * t),
+                        math.floor(150 + (255 - 150) * t)
+                    )
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(255 - (255 - 100) * t),
+                        math.floor(255 - (255 - 150) * t)
+                    )
+                end
+                
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "RainbowDarkWhite" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.25) % 1
+                
+                local color = Color3.fromRGB(
+                    math.floor(255 * cycle),
+                    math.floor(255 * cycle),
+                    math.floor(255 * cycle)
+                )
+                
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "ErisRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.167) % 1
+                
+                local color
+                if cycle < 0.333 then
+                    local t = cycle / 0.333
+                    color = Color3.fromRGB(
+                        math.floor(255 - 255 * t),
+                        0,
+                        0
+                    )
+                elseif cycle < 0.667 then
+                    local t = (cycle - 0.333) / 0.334
+                    color = Color3.fromRGB(
+                        math.floor(255 * t),
+                        math.floor(255 * t),
+                        math.floor(255 * t)
+                    )
+                else
+                    local t = (cycle - 0.667) / 0.333
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(255 - 255 * t),
+                        math.floor(255 - 255 * t)
+                    )
+                end
+                
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "ShylfieRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.4) % 1
+
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(215 + (255 - 215) * t),
+                        math.floor(0 + 255 * t)
+                    )
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(255 - (255 - 215) * t),
+                        math.floor(255 - 255 * t)
+                    )
+                end
+
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "SukunaRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.4) % 1
+
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(
+                        math.floor(200 * t),
+                        math.floor(20 * t),
+                        math.floor(25 * t)
+                    )
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(
+                        math.floor(200 - 200 * t),
+                        math.floor(20 - 20 * t),
+                        math.floor(25 - 25 * t)
+                    )
+                end
+
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "NeonPulse" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local pulse = (math.sin(elapsed * 3.5) + 1) / 2
+                local color = Color3.fromRGB(
+                    math.floor(0 + 100 * (1 - pulse)),
+                    math.floor(200 + 55 * pulse),
+                    math.floor(180 + 75 * pulse)
+                )
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "GoldenShine" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local shine = (math.sin(elapsed * 1.2) + 1) / 2
+                local color = Color3.fromRGB(
+                    255,
+                    math.floor(180 + 75 * shine),
+                    math.floor(0 + 120 * shine)
+                )
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "FireEffect" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 2.2) % 1
+                local color
+                if cycle < 0.33 then
+                    local t = cycle / 0.33
+                    color = Color3.fromRGB(255, math.floor(60 * t), 0)
+                elseif cycle < 0.66 then
+                    local t = (cycle - 0.33) / 0.33
+                    color = Color3.fromRGB(255, math.floor(60 + 120 * t), 0)
+                else
+                    local t = (cycle - 0.66) / 0.34
+                    color = Color3.fromRGB(255, math.floor(180 + 75 * t), math.floor(100 * t))
+                end
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "IceBlue" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local t = (math.sin(elapsed * 0.9) + 1) / 2
+                local color = Color3.fromRGB(
+                    math.floor(140 + 115 * t),
+                    math.floor(200 + 55 * t),
+                    255
+                )
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "PurpleGlow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local t = (math.sin(elapsed * 0.7) + 1) / 2
+                local color = Color3.fromRGB(
+                    math.floor(140 + 80 * t),
+                    math.floor(40 + 40 * t),
+                    math.floor(220 + 35 * t)
+                )
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "MatrixGreen" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local flicker = (math.sin(elapsed * 6.0) + 1) / 2
+                local bright = (math.sin(elapsed * 1.4) + 1) / 2
+                local color = Color3.fromRGB(
+                    math.floor(0 + 30 * flicker),
+                    math.floor(180 + 75 * bright),
+                    math.floor(30 + 50 * flicker)
+                )
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "RainbowFast" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local hue = (elapsed * 0.45) % 1
+                applyTextColorToAll(Color3.fromHSV(hue, 1, 1))
+            end))
+
+        elseif mode == "Sunset" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.28) % 1
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(255, math.floor(80 + 80 * t), math.floor(50 * (1 - t)))
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(255, math.floor(160 - 80 * t), math.floor(50 * t))
+                end
+                applyTextColorToAll(color)
+            end))
+
+        else
+            warn("Efecto de texto no reconocido: " .. tostring(mode))
+        end
+    end
+
+    function Window:Hide()
+        if not uiHidden then
+            hideUI()
+        end
+    end
+
+    function Window:Show()
+        if uiHidden then
+            hideUI()
+        end
+    end
+
+    function Window:Destroy()
+        shutdownUI()
+    end
+
+    function Window:CreateStatsSection(tab)
+        local TabPage = tab.Page
+
+        local function setBilingual(obj, es, en)
+            obj:SetAttribute("TextSpanish", es)
+            obj:SetAttribute("TextEnglish", en)
+        end
+
+        local function buildIdMap()
+            local seen, list = {}, {}
+            for _, entry in ipairs(Window._GlobalOptionRegistry) do
+                if entry.Kind == "Slider"
+                    and type(entry.GetValue) == "function"
+                    and type(entry.SetValue) == "function" then
+                    local base = tostring(entry.Id)
+                    seen[base] = (seen[base] or 0) + 1
+                    local id = base
+                    if seen[base] > 1 then id = base .. "#" .. seen[base] end
+                    table.insert(list, {
+                        id = id,
+                        tab = base:match("^(.-)::") or base,
+                        entry = entry,
+                    })
+                end
+            end
+            return list
+        end
+
+        local STATS_CHECK = 103456899356871
+        local STATS_COLORS = {
+            ok = Color3.fromRGB(70, 210, 120),
+            warn = Color3.fromRGB(240, 190, 60),
+            err = Color3.fromRGB(240, 85, 85),
+        }
+
+        local function openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
+            local Backdrop = mk("TextButton", {
+                Parent = Window.ScreenGui,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = true,
+                AutoButtonColor = false,
+                Text = "",
+                ZIndex = 500,
+            })
+            local Panel = mk("Frame", {
+                Parent = Window.ScreenGui,
+                Size = UDim2.new(0.92, 0, 0.9, 0),
+                Position = UDim2.fromScale(0.5, 0.5),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.04,
+                BorderSizePixel = 0,
+                ClipsDescendants = false,
+                ZIndex = 501,
+            })
+            Panel:SetAttribute("ThemeRole", "Background")
+            corner(Panel, 18)
+            mk("UISizeConstraint", {
+                Parent = Panel,
+                MinSize = Vector2.new(260, 220),
+                MaxSize = Vector2.new(maxW, maxH),
+            })
+            local PanelScale = mk("UIScale", {Parent = Panel, Scale = 0.9})
+
+            -- Borde con luz que gira (un solo tween nativo)
+            local ring = mk("UIStroke", {Parent = Panel, Thickness = 1.6, Color = Color3.new(1, 1, 1), Transparency = 0.05})
+            local ringGrad = mk("UIGradient", {Parent = ring, Rotation = 0})
+            do
+                local base = Theme.Stroke
+                local h, s, v = Color3.toHSV(Theme.Accent)
+                local light = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+                ringGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.35, base),
+                    ColorSequenceKeypoint.new(0.47, Theme.Accent), ColorSequenceKeypoint.new(0.5, light),
+                    ColorSequenceKeypoint.new(0.53, Theme.Accent), ColorSequenceKeypoint.new(0.65, base),
+                    ColorSequenceKeypoint.new(1, base),
+                })
+            end
+            local ringSpin = TweenService:Create(ringGrad, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Rotation = 360})
+            ringSpin:Play()
+
+            -- Brillo superior suave
+            local glow = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, 0, 0, 90),
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.86,
+                BorderSizePixel = 0,
+                ZIndex = 501,
+            })
+            glow:SetAttribute("ThemeRole", "Accent")
+            corner(glow, 18)
+            mk("UIGradient", {
+                Parent = glow,
+                Rotation = 90,
+                Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)}),
+            })
+
+            local IconTile = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.fromOffset(44, 44),
+                Position = UDim2.new(0, 16, 0, 16),
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.78,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            IconTile:SetAttribute("ThemeRole", "Accent")
+            corner(IconTile, 13)
+            local tileRing = stroke(IconTile, Theme.Accent, 1, 0.5)
+            tileRing:SetAttribute("ThemeRole", "Accent")
+            if iconImage then
+                RowKit.Icon(IconTile, iconImage, 24, 503, "Accent")
+            end
+
+            local Title = mk("TextLabel", {
+                Parent = Panel,
+                Size = UDim2.new(1, -130, 0, 22),
+                Position = UDim2.new(0, 72, 0, 17),
+                BackgroundTransparency = 1,
+                Text = GetText(titleES, titleEN),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 17,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 502,
+            })
+            Title:SetAttribute("ThemeTextRole", "Text")
+            setBilingual(Title, titleES, titleEN)
+
+            if subES then
+                local Sub = mk("TextLabel", {
+                    Parent = Panel,
+                    Size = UDim2.new(1, -130, 0, 16),
+                    Position = UDim2.new(0, 72, 0, 40),
+                    BackgroundTransparency = 1,
+                    Text = GetText(subES, subEN),
+                    TextColor3 = Theme.TextDim,
+                    Font = Enum.Font.GothamMedium,
+                    TextSize = 11,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 502,
+                })
+                Sub:SetAttribute("ThemeTextRole", "TextDim")
+                setBilingual(Sub, subES, subEN)
+            end
+
+            local CloseBtn = mk("TextButton", {
+                Parent = Panel,
+                Size = UDim2.fromOffset(32, 32),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -14, 0, 16),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.2,
+                BorderSizePixel = 0,
+                Text = "×",
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 20,
+                AutoButtonColor = false,
+                ZIndex = 503,
+            })
+            CloseBtn:SetAttribute("ThemeRole", "Secondary")
+            CloseBtn:SetAttribute("ThemeTextRole", "Text")
+            corner(CloseBtn, 999)
+            stroke(CloseBtn, Theme.Stroke, 1, 0.5)
+
+            local Divider = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 0, 1),
+                Position = UDim2.new(0, 16, 0, 72),
+                BackgroundColor3 = Theme.Stroke,
+                BackgroundTransparency = 0.55,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            Divider:SetAttribute("ThemeRole", "Stroke")
+
+            TweenService:Create(Backdrop, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.45}):Play()
+            TweenService:Create(PanelScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+
+            local closed = false
+            local function close()
+                if closed then return end
+                closed = true
+                playSound(Sounds.Click, 0.4)
+                TweenService:Create(Backdrop, TweenInfo.new(0.16), {BackgroundTransparency = 1}):Play()
+                local shrink = TweenService:Create(PanelScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.In), {Scale = 0.9})
+                shrink.Completed:Connect(function()
+                    pcall(function() ringSpin:Cancel() end)
+                    Panel:Destroy()
+                    Backdrop:Destroy()
+                end)
+                shrink:Play()
+            end
+            CloseBtn.MouseButton1Click:Connect(close)
+            Backdrop.MouseButton1Click:Connect(close)
+
+            return Panel, close
+        end
+
+        -- Pie: mensaje de estado en una pastilla de color + boton principal
+        local function addFooter(Panel, statusY, btnES, btnEN, btnW)
+            btnW = btnW or 150
+            local StatusPill = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -(btnW + 44), 0, 30),
+                Position = UDim2.new(0, 16, 1, -50),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            corner(StatusPill, 999)
+            local dot = mk("Frame", {
+                Parent = StatusPill,
+                Size = UDim2.fromOffset(8, 8),
+                Position = UDim2.new(0, 10, 0.5, -4),
+                BackgroundColor3 = Theme.Accent,
+                BorderSizePixel = 0,
+                Visible = false,
+                ZIndex = 503,
+            })
+            corner(dot, 999)
+            local Status = mk("TextLabel", {
+                Parent = StatusPill,
+                Size = UDim2.new(1, -28, 1, 0),
+                Position = UDim2.new(0, 24, 0, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 503,
+            })
+
+            local Btn = mk("TextButton", {
+                Parent = Panel,
+                Size = UDim2.fromOffset(btnW, 38),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -16, 1, -54),
+                BackgroundColor3 = Theme.Accent,
+                Text = GetText(btnES, btnEN),
+                TextColor3 = Theme.AccentText,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 13,
+                AutoButtonColor = false,
+                ZIndex = 503,
+            })
+            Btn:SetAttribute("ThemeRole", "Accent")
+            Btn:SetAttribute("ThemeTextRole", "AccentText")
+            setBilingual(Btn, btnES, btnEN)
+            corner(Btn, 12)
+            mk("UIGradient", {Parent = Btn, Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(215, 215, 215))})
+            local BtnScale = mk("UIScale", {Parent = Btn, Scale = 1})
+            Btn.MouseButton1Down:Connect(function()
+                TweenService:Create(BtnScale, TweenInfo.new(0.08), {Scale = 0.95}):Play()
+            end)
+            Btn.MouseButton1Up:Connect(function()
+                TweenService:Create(BtnScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            end)
+            Btn.MouseLeave:Connect(function()
+                TweenService:Create(BtnScale, TweenInfo.new(0.2), {Scale = 1}):Play()
+            end)
+
+            -- kind: "ok" | "warn" | "err" | nil (neutro)
+            local function setStatus(kind, es, en)
+                local color = STATS_COLORS[kind] or Theme.TextDim
+                Status.Text = GetText(es, en)
+                Status.TextColor3 = color
+                dot.Visible = true
+                dot.BackgroundColor3 = color
+                StatusPill.BackgroundColor3 = color
+                StatusPill.BackgroundTransparency = kind and 0.85 or 1
+            end
+            return Status, Btn, setStatus
+        end
+
+        local function openPlaceStats()
+            local Panel = openPanel("Place Stats", "Place Stats", 400, 360, "rbxassetid://98421914514000",
+                "Aplicá los ajustes de otro usuario", "Apply another user's settings")
+
+            local Steps = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 0, 24),
+                Position = UDim2.new(0, 16, 0, 84),
+                BackgroundTransparency = 1,
+                ZIndex = 502,
+            })
+            mk("UIListLayout", {Parent = Steps, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center})
+            local stepChips = {}
+            for i, st in ipairs({{"Copiá el código", "Copy the code"}, {"Pegalo acá", "Paste it here"}, {"Aplicá", "Apply"}}) do
+                local chip = mk("Frame", {
+                    Parent = Steps, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
+                    BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 503,
+                })
+                chip:SetAttribute("ThemeRole", "Secondary")
+                corner(chip, 999)
+                mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 10)})
+                mk("UIListLayout", {Parent = chip, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder})
+                local num = mk("TextLabel", {
+                    Parent = chip, Size = UDim2.fromOffset(18, 18), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.7,
+                    Text = tostring(i), TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 10, LayoutOrder = 0, ZIndex = 504,
+                })
+                num:SetAttribute("ThemeRole", "Accent")
+                num:SetAttribute("ThemeTextRole", "Text")
+                num:SetAttribute("IgnoreTextEffect", true)
+                corner(num, 999)
+                local lbl = mk("TextLabel", {
+                    Parent = chip, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                    Text = GetText(st[1], st[2]), TextColor3 = Theme.TextDim, Font = Enum.Font.GothamBold, TextSize = 10, LayoutOrder = 1, ZIndex = 504,
+                })
+                lbl:SetAttribute("ThemeTextRole", "TextDim")
+                setBilingual(lbl, st[1], st[2])
+                stepChips[i] = {chip = chip, num = num}
+            end
+            local function markStep(n)
+                for i, c in ipairs(stepChips) do
+                    local done = i <= n
+                    c.num.BackgroundTransparency = done and 0 or 0.7
+                    c.num.TextColor3 = done and Theme.AccentText or Theme.Text
+                    c.num:SetAttribute("ThemeTextRole", done and "AccentText" or "Text")
+                end
+            end
+            markStep(1)
+
+            local Field = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 1, -214),
+                Position = UDim2.new(0, 16, 0, 118),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.3,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            Field:SetAttribute("ThemeRole", "Secondary")
+            corner(Field, 12)
+            local fieldStroke = stroke(Field, Theme.Stroke, 1.2, 0.5)
+
+            local Input = mk("TextBox", {
+                Parent = Field,
+                Size = UDim2.new(1, -44, 1, -12),
+                Position = UDim2.new(0, 12, 0, 8),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Text = "",
+                PlaceholderText = GetText("Código copiado del Export Stats...", "Code copied from Export Stats..."),
+                TextColor3 = Theme.Text,
+                PlaceholderColor3 = Theme.TextDim,
+                Font = Enum.Font.Code,
+                TextSize = 12,
+                TextWrapped = true,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextYAlignment = Enum.TextYAlignment.Top,
+                ClearTextOnFocus = false,
+                MultiLine = true,
+                ZIndex = 503,
+            })
+            Input:SetAttribute("ThemeTextRole", "Text")
+            Input:SetAttribute("PlaceholderSpanish", "Código copiado del Export Stats...")
+            Input:SetAttribute("PlaceholderEnglish", "Code copied from Export Stats...")
+            Input:SetAttribute("IgnoreTextEffect", true)
+
+            local ClearBtn = mk("TextButton", {
+                Parent = Field,
+                Size = UDim2.fromOffset(24, 24),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -8, 0, 8),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.3,
+                Text = "×",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 15,
+                AutoButtonColor = false,
+                Visible = false,
+                ZIndex = 504,
+            })
+            ClearBtn:SetAttribute("ThemeRole", "Background")
+            ClearBtn:SetAttribute("ThemeTextRole", "TextDim")
+            corner(ClearBtn, 999)
+            ClearBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.4)
+                Input.Text = ""
+            end)
+
+            Input.Focused:Connect(function()
+                fieldStroke.Color = Theme.Accent
+                fieldStroke.Transparency = 0.05
+                fieldStroke.Thickness = 1.6
+            end)
+            Input.FocusLost:Connect(function()
+                fieldStroke.Color = Theme.Stroke
+                fieldStroke.Transparency = 0.5
+                fieldStroke.Thickness = 1.2
+            end)
+
+            -- Validacion en vivo
+            local Check = mk("TextLabel", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 0, 16),
+                Position = UDim2.new(0, 16, 1, -88),
+                BackgroundTransparency = 1,
+                Text = "",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 502,
+            })
+            Check:SetAttribute("IgnoreTextEffect", true)
+
+            local _, StartBtn, setStatus = addFooter(Panel, -48, "Aplicar ajustes", "Apply settings", 160)
+
+            local function parseCode(code)
+                if not code or code:match("^%s*$") then return nil, "empty" end
+                local ok, data = pcall(function()
+                    return HttpService:JSONDecode(code)
+                end)
+                if not ok or type(data) ~= "table" then return nil, "invalid" end
+                if data.version ~= 1 then return nil, "version" end
+                if type(data.sliders) ~= "table" then return nil, "nosliders" end
+                return data
+            end
+
+            local function refreshCheck()
+                local text = Input.Text
+                ClearBtn.Visible = text ~= ""
+                local data, why = parseCode(text)
+                if not data then
+                    markStep(text == "" and 1 or 2)
+                    if why == "empty" then
+                        Check.Text = GetText("● Esperando un código", "● Waiting for a code")
+                        Check.TextColor3 = Theme.TextDim
+                    else
+                        Check.Text = GetText("● El código no es válido", "● The code is not valid")
+                        Check.TextColor3 = STATS_COLORS.err
+                    end
+                    return
+                end
+                local byId = {}
+                for _, item in ipairs(buildIdMap()) do byId[item.id] = true end
+                local total, match = 0, 0
+                for id in pairs(data.sliders) do
+                    total = total + 1
+                    if byId[id] then match = match + 1 end
+                end
+                markStep(3)
+                Check.Text = GetText(
+                    "● Código válido · " .. total .. " ajustes · " .. match .. " coinciden con tus sliders",
+                    "● Valid code · " .. total .. " settings · " .. match .. " match your sliders")
+                Check.TextColor3 = match > 0 and STATS_COLORS.ok or STATS_COLORS.warn
+            end
+            Input:GetPropertyChangedSignal("Text"):Connect(refreshCheck)
+            refreshCheck()
+
+            StartBtn.MouseButton1Click:Connect(function()
+                local data, why = parseCode(Input.Text)
+                if not data then
+                    if why == "empty" then
+                        setStatus("err", "El campo está vacío", "The field is empty")
+                    elseif why == "version" then
+                        setStatus("err", "Versión de código no compatible", "Unsupported code version")
+                    elseif why == "nosliders" then
+                        setStatus("err", "El código no trae ajustes", "The code has no settings")
+                    else
+                        setStatus("err", "Código inválido", "Invalid code")
+                    end
+                    return
+                end
+
+                local byId = {}
+                for _, item in ipairs(buildIdMap()) do
+                    byId[item.id] = item.entry
+                end
+
+                local applied, skipped = 0, 0
+                for id, raw in pairs(data.sliders) do
+                    local entry = byId[id]
+                    local v = tonumber(raw)
+                    if entry and v and v == v and v ~= math.huge and v ~= -math.huge then
+                        local lo, hi = tonumber(entry.Min), tonumber(entry.Max)
+                        if lo and hi then v = math.clamp(v, lo, hi) end
+                        if pcall(entry.SetValue, v) then
+                            applied = applied + 1
+                        else
+                            skipped = skipped + 1
+                        end
+                    else
+                        skipped = skipped + 1
+                    end
+                end
+
+                playSound(Sounds.Click, 0.6)
+                if applied == 0 then
+                    setStatus("warn", "No se aplicó ningún ajuste", "No settings were applied")
+                elseif skipped > 0 then
+                    setStatus("ok",
+                        applied .. " aplicado(s) · " .. skipped .. " omitido(s)",
+                        applied .. " applied · " .. skipped .. " skipped")
+                else
+                    setStatus("ok",
+                        applied .. " ajuste(s) aplicados",
+                        applied .. " setting(s) applied")
+                end
+            end)
+        end
+
+        local function openExportStats()
+            local Panel = openPanel("Export Stats", "Export Stats", 400, 470, "rbxassetid://116421707362805",
+                "Elegí qué pestañas compartir", "Choose which tabs to share")
+
+            local items = buildIdMap()
+            local tabNames, tabSet, tabCount = {}, {}, {}
+            for _, item in ipairs(items) do
+                if not tabSet[item.tab] then
+                    tabSet[item.tab] = true
+                    table.insert(tabNames, item.tab)
+                end
+                tabCount[item.tab] = (tabCount[item.tab] or 0) + 1
+            end
+
+            local checked = {}
+            for _, name in ipairs(tabNames) do
+                checked[name] = true
+            end
+
+            -- Resumen
+            local Summary = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 0, 54),
+                Position = UDim2.new(0, 16, 0, 84),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.3,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            Summary:SetAttribute("ThemeRole", "Secondary")
+            corner(Summary, 12)
+            stroke(Summary, Theme.Stroke, 1, 0.6)
+            local BigNum = mk("TextLabel", {
+                Parent = Summary, Size = UDim2.new(0, 64, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1,
+                Text = "0", TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 26, ZIndex = 503,
+            })
+            BigNum:SetAttribute("ThemeTextRole", "Accent")
+            BigNum:SetAttribute("IgnoreTextEffect", true)
+            local SumText = mk("TextLabel", {
+                Parent = Summary, Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 78, 0, 10), BackgroundTransparency = 1,
+                Text = "", TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
+            })
+            SumText:SetAttribute("ThemeTextRole", "Text")
+            local SumSub = mk("TextLabel", {
+                Parent = Summary, Size = UDim2.new(1, -190, 0, 14), Position = UDim2.new(0, 78, 0, 28), BackgroundTransparency = 1,
+                Text = "", TextColor3 = Theme.TextDim, Font = Enum.Font.GothamMedium, TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
+            })
+            SumSub:SetAttribute("ThemeTextRole", "TextDim")
+
+            local function quickButton(es, en, xOffset)
+                local b = mk("TextButton", {
+                    Parent = Summary, Size = UDim2.fromOffset(52, 26), AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, xOffset, 0.5, 0), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25,
+                    Text = GetText(es, en), TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 10,
+                    AutoButtonColor = false, ZIndex = 504,
+                })
+                b:SetAttribute("ThemeRole", "Background")
+                b:SetAttribute("ThemeTextRole", "Text")
+                setBilingual(b, es, en)
+                corner(b, 999)
+                stroke(b, Theme.Stroke, 1, 0.55)
+                return b
+            end
+            local AllBtn = quickButton("Todas", "All", -66)
+            local NoneBtn = quickButton("Ninguna", "None", -8)
+
+            local ListScroll = mk("ScrollingFrame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 1, -216),
+                Position = UDim2.new(0, 16, 0, 148),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ScrollBarThickness = 3,
+                ScrollBarImageColor3 = Theme.Accent,
+                AutomaticCanvasSize = Enum.AutomaticSize.Y,
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                ZIndex = 502,
+            })
+            mk("UIListLayout", {
+                Parent = ListScroll,
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                Padding = UDim.new(0, 6),
+            })
+            mk("UIPadding", {Parent = ListScroll, PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 2)})
+
+            local _, ExportBtn, setStatus = addFooter(Panel, -52, "Exportar y copiar", "Export & copy", 160)
+
+            if #tabNames == 0 then
+                local Empty = mk("TextLabel", {
+                    Parent = ListScroll,
+                    Size = UDim2.new(1, 0, 0, 60),
+                    BackgroundTransparency = 1,
+                    Text = GetText("No hay sliders para exportar todavía.", "There are no sliders to export yet."),
+                    TextColor3 = Theme.TextDim,
+                    Font = Enum.Font.GothamMedium,
+                    TextSize = 12,
+                    TextWrapped = true,
+                    ZIndex = 503,
+                })
+                Empty:SetAttribute("ThemeTextRole", "TextDim")
+                setBilingual(Empty, "No hay sliders para exportar todavía.", "There are no sliders to export yet.")
+            end
+
+            local rowsUI = {}
+            local function refreshSummary()
+                local total, tabsOn = 0, 0
+                for _, name in ipairs(tabNames) do
+                    if checked[name] then
+                        total = total + (tabCount[name] or 0)
+                        tabsOn = tabsOn + 1
+                    end
+                end
+                BigNum.Text = tostring(total)
+                SumText.Text = GetText("ajustes para exportar", "settings to export")
+                SumSub.Text = GetText(tabsOn .. " de " .. #tabNames .. " pestañas", tabsOn .. " of " .. #tabNames .. " tabs")
+                ExportBtn.BackgroundTransparency = total > 0 and 0 or 0.5
+            end
+
+            local function paintRow(r, animate)
+                local on = checked[r.name]
+                local info = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+                TweenService:Create(r.box, info, {BackgroundColor3 = on and Theme.Accent or Theme.Background, BackgroundTransparency = on and 0 or 0.2}):Play()
+                r.box:SetAttribute("ThemeRole", on and "Accent" or "Background")
+                r.mark.Visible = on
+                r.stroke.Color = on and Theme.Accent or Theme.Stroke
+                r.stroke.Transparency = on and 0.25 or 0.6
+                r.stroke:SetAttribute("ThemeRole", on and "Accent" or "Stroke")
+                r.row.BackgroundTransparency = on and 0.2 or 0.5
+            end
+
+            for i, tabName in ipairs(tabNames) do
+                local Row = mk("Frame", {
+                    Parent = ListScroll,
+                    Size = UDim2.new(1, 0, 0, 46),
+                    BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.2,
+                    BorderSizePixel = 0,
+                    LayoutOrder = i,
+                    ZIndex = 503,
+                })
+                Row:SetAttribute("ThemeRole", "Secondary")
+                corner(Row, 12)
+                local rowStroke = stroke(Row, Theme.Accent, 1.2, 0.25)
+
+                local Box = mk("Frame", {
+                    Parent = Row,
+                    Size = UDim2.fromOffset(22, 22),
+                    Position = UDim2.new(0, 12, 0.5, -11),
+                    BackgroundColor3 = Theme.Accent,
+                    BorderSizePixel = 0,
+                    ZIndex = 504,
+                })
+                corner(Box, 7)
+                stroke(Box, Theme.Stroke, 1, 0.5)
+                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UDim2.new(0.5, -7, 0.5, -7), 505, "AccentText")
+
+                local Mono = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.fromOffset(28, 28),
+                    Position = UDim2.new(0, 44, 0.5, -14),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.25,
+                    Text = string.upper(string.sub(tabName, 1, 1)),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 13,
+                    ZIndex = 504,
+                })
+                Mono:SetAttribute("ThemeRole", "Background")
+                Mono:SetAttribute("ThemeTextRole", "Accent")
+                Mono:SetAttribute("IgnoreTextEffect", true)
+                corner(Mono, 9)
+
+                local RL = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(1, -170, 1, 0),
+                    Position = UDim2.new(0, 82, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = tabName,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 13,
+                    TextXAl

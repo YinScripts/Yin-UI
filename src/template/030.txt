@@ -1,0 +1,821 @@
+               LayoutOrder = 0,
+                ZIndex = 313,
+            })
+            description:SetAttribute("ThemeTextRole", "TextDim")
+            description:SetAttribute("TextSpanish", descriptionES)
+            description:SetAttribute("TextEnglish", descriptionEN)
+        end
+
+        local entry = {es = titleES, en = titleEN, frame = section, body = body, icon = SECTION_ICONS[titleES] or "◆"}
+        entry.setOpen = function(open)
+            entry.open = open == true
+            body.Visible = entry.open
+            chevron.Rotation = entry.open and 0 or -90
+        end
+        entry.updateCount = function()
+            local n = 0
+            for _, child in ipairs(body:GetChildren()) do
+                if child:IsA("Frame") or child:IsA("TextButton") then n = n + 1 end
+            end
+            count.Text = GetText(n .. " ajustes", n .. " settings")
+        end
+        head.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.4)
+            entry.setOpen(not entry.open)
+        end)
+        entry.setOpen(#ShaderUISections == 0 or titleES == "Acciones")
+        table.insert(ShaderUISections, entry)
+
+        return body
+    end
+
+    local function shaderCreateToggle(parent, spec)
+        local state = shaderReadCustomValue(spec, spec.default, "boolean")
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, 0, 0, 66),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            ZIndex = 313,
+        })
+        holder:SetAttribute("ThemeRole", "Background")
+        corner(holder, 12)
+        stroke(holder, Theme.Stroke, 1.1, 0.62)
+
+        local accent = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(0, 3, 0, 30),
+            Position = UDim2.new(0, 10, 0.5, -15),
+            BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+        corner(accent, 99)
+
+        local label = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -100, 0, 20),
+            Position = UDim2.new(0, 22, 0, 8),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.es, spec.en),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", spec.es)
+        label:SetAttribute("TextEnglish", spec.en)
+
+        local status = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -100, 0, 14),
+            Position = UDim2.new(0, 22, 0, 29),
+            BackgroundTransparency = 1,
+            Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"),
+            TextColor3 = state and Theme.ToggleOn or Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+
+        local switch = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(0, 48, 0, 25),
+            Position = UDim2.new(1, -62, 0.5, -12),
+            BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+        corner(switch, 99)
+
+        local knob = mk("Frame", {
+            Parent = switch,
+            Size = UDim2.new(0, 21, 0, 21),
+            Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        corner(knob, 99)
+
+        local click = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 316,
+        })
+
+        local function applyVisual(animate)
+            local tweenInfo = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local color = state and Theme.ToggleOn or Theme.AccentOff
+            local position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+            TweenService:Create(switch, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(accent, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(knob, tweenInfo, {Position = position}):Play()
+            switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            status.Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")
+            status.TextColor3 = state and Theme.ToggleOn or Theme.TextDim
+            status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+        end
+
+        local function setValue(newValue, invoke)
+            state = newValue == true
+            applyVisual(true)
+            if invoke then
+                ShaderCustomOverrides[spec.id] = state
+                if type(spec.onChange) == "function" then
+                    pcall(spec.onChange, state)
+                else
+                    shaderApplySingle(spec.target, spec.property, state)
+                end
+                shaderQueuePersistence()
+            end
+        end
+
+        click.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            setValue(not state, true)
+        end)
+
+        ShaderCustomControls[spec.id] = {
+            refresh = function()
+                local refreshed = shaderReadCustomValue(spec, state, "boolean")
+                state = refreshed
+                applyVisual(false)
+            end,
+            set = function(value)
+                setValue(value, false)
+            end,
+        }
+    end
+
+    local function shaderCreateSlider(parent, spec)
+        local value = shaderReadCustomValue(spec, spec.default, "number")
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, 0, 0, 78),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            ZIndex = 313,
+        })
+        holder:SetAttribute("ThemeRole", "Background")
+        holder:SetAttribute("IsShaderCustomSlider", true)
+        corner(holder, 12)
+        stroke(holder, Theme.Stroke, 1.1, 0.62)
+
+        local label = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -140, 0, 18),
+            Position = UDim2.new(0, 14, 0, 10),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.es, spec.en),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 314,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", spec.es)
+        label:SetAttribute("TextEnglish", spec.en)
+
+        local valueLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 0, 0, 22),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -46, 0, 8),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.82,
+            Text = shaderFormatValue(value),
+            TextColor3 = Theme.Accent,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 315,
+        })
+        valueLabel:SetAttribute("ThemeRole", "Accent")
+        valueLabel:SetAttribute("ThemeTextRole", "Accent")
+        valueLabel:SetAttribute("IgnoreTextEffect", true)
+        corner(valueLabel, 999)
+        mk("UIPadding", {Parent = valueLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        local resetButton = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.fromOffset(26, 22),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -12, 0, 8),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.2,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 315,
+        })
+        resetButton:SetAttribute("ThemeRole", "AccentOff")
+        corner(resetButton, 999)
+        RowKit.Icon(resetButton, 125802172782007, 13, 316, "Text")
+
+        local bar = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -36, 0, 8),
+            Position = UDim2.new(0, 18, 0, 44),
+            BackgroundColor3 = Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        bar:SetAttribute("ThemeRole", "AccentOff")
+        corner(bar, 99)
+
+        local fill = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.new(0, 0, 1, 0),
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        fill:SetAttribute("ThemeRole", "Accent")
+        corner(fill, 99)
+        mk("UIGradient", {
+            Parent = fill,
+            Color = ColorSequence.new(Color3.fromRGB(190, 190, 190), Color3.new(1, 1, 1)),
+        })
+
+        local defaultPercent = (spec.max - spec.min) == 0 and 0 or math.clamp((spec.default - spec.min) / (spec.max - spec.min), 0, 1)
+        local defaultTick = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.fromOffset(2, 14),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(defaultPercent, 0, 0.5, 0),
+            BackgroundColor3 = Theme.TextDim,
+            BackgroundTransparency = 0.3,
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        defaultTick:SetAttribute("ThemeRole", "TextDim")
+
+        local thumb = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ZIndex = 316,
+        })
+        corner(thumb, 99)
+        local thumbRing = stroke(thumb, Theme.Accent, 3, 0)
+        thumbRing:SetAttribute("ThemeRole", "Accent")
+
+        local minLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 60, 0, 12),
+            Position = UDim2.new(0, 14, 1, -18),
+            BackgroundTransparency = 1,
+            Text = shaderFormatValue(spec.min),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        minLabel:SetAttribute("ThemeTextRole", "TextDim")
+
+        local maxLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 60, 0, 12),
+            Position = UDim2.new(1, -74, 1, -18),
+            BackgroundTransparency = 1,
+            Text = shaderFormatValue(spec.max),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 314,
+        })
+        maxLabel:SetAttribute("ThemeTextRole", "TextDim")
+
+        local dragging = false
+
+        local function setValue(newValue, invoke)
+            local range = spec.max - spec.min
+            if spec.step and spec.step > 0 then
+                newValue = math.floor((newValue / spec.step) + 0.5) * spec.step
+            end
+            value = math.clamp(newValue, spec.min, spec.max)
+            local percent = range == 0 and 0 or math.clamp((value - spec.min) / range, 0, 1)
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            thumb.Position = UDim2.new(percent, 0, 0.5, 0)
+            valueLabel.Text = shaderFormatValue(value)
+            if invoke then
+                ShaderCustomOverrides[spec.id] = value
+                if type(spec.onChange) == "function" then
+                    pcall(spec.onChange, value)
+                else
+                    shaderApplySingle(spec.target, spec.property, value)
+                end
+                shaderQueuePersistence()
+            end
+        end
+
+        local function setFromInput(input)
+            local width = math.max(1, bar.AbsoluteSize.X)
+            local percent = math.clamp((input.Position.X - bar.AbsolutePosition.X) / width, 0, 1)
+            setValue(spec.min + (spec.max - spec.min) * percent, true)
+        end
+
+        local function beginDrag(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if ShaderCustomActiveSlider and ShaderCustomActiveSlider ~= spec.id then return end
+                ShaderCustomActiveSlider = spec.id
+                dragging = true
+                thumb.Size = UDim2.fromOffset(22, 22)
+                setFromInput(input)
+            end
+        end
+
+        shaderAddConnection(bar.InputBegan:Connect(beginDrag))
+        shaderAddConnection(thumb.InputBegan:Connect(beginDrag))
+        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
+            if dragging and ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                setFromInput(input)
+            end
+        end))
+        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
+            if ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                dragging = false
+                ShaderCustomActiveSlider = nil
+                thumb.Size = UDim2.fromOffset(18, 18)
+            end
+        end))
+        resetButton.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.4)
+            setValue(spec.default, true)
+        end)
+
+        setValue(value, false)
+
+        ShaderCustomControls[spec.id] = {
+            refresh = function()
+                local refreshed = shaderReadCustomValue(spec, value, "number")
+                setValue(refreshed, false)
+            end,
+            set = function(newValue)
+                setValue(newValue, false)
+            end,
+        }
+    end
+
+    local function shaderCustomSpecs()
+        return {
+            {section = {"Lighting", "Lighting", "Control global de luz, tiempo, sombras y exposición.", "Global light, time, shadows and exposure control."}},
+            {id = "ClockTime", es = "Hora del día", en = "Clock time", min = 0, max = 24, default = 12, step = 0.05, target = "Lighting", property = "ClockTime"},
+            {id = "Brightness", es = "Brillo global", en = "Global brightness", min = 0, max = 10, default = 2, step = 0.05, target = "Lighting", property = "Brightness"},
+            {id = "GeographicLatitude", es = "Latitud geográfica", en = "Geographic latitude", min = 0, max = 180, default = 35, step = 1, target = "Lighting", property = "GeographicLatitude"},
+            {id = "ExposureCompensation", es = "Compensación de exposición", en = "Exposure compensation", min = -5, max = 5, default = 0, step = 0.05, target = "Lighting", property = "ExposureCompensation"},
+            {id = "EnvironmentDiffuseScale", es = "Difusión ambiental", en = "Environment diffuse", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentDiffuseScale"},
+            {id = "EnvironmentSpecularScale", es = "Reflejo ambiental", en = "Environment specular", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale"},
+            {id = "ShadowSoftness", es = "Suavidad de sombras", en = "Shadow softness", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "ShadowSoftness"},
+            {id = "FogStart", es = "Inicio de niebla", en = "Fog start", min = 0, max = 1000, default = 0, step = 1, target = "Lighting", property = "FogStart"},
+            {id = "FogEnd", es = "Final de niebla", en = "Fog end", min = 1, max = 10000, default = 1000, step = 1, target = "Lighting", property = "FogEnd"},
+            {id = "GlobalShadows", es = "Sombras globales", en = "Global shadows", default = true, target = "Lighting", property = "GlobalShadows", toggle = true},
+
+            {section = {"Atmosphere", "Atmosphere", "Neblina, profundidad y dispersión de luz.", "Haze, depth and light scattering."}},
+            {id = "AtmosphereDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.2, step = 0.01, target = "Atmosphere", property = "Density"},
+            {id = "AtmosphereOffset", es = "Offset", en = "Offset", min = 0, max = 1, default = 0.1, step = 0.01, target = "Atmosphere", property = "Offset"},
+            {id = "AtmosphereGlare", es = "Brillo atmosférico", en = "Glare", min = 0, max = 10, default = 0.2, step = 0.01, target = "Atmosphere", property = "Glare"},
+            {id = "AtmosphereHaze", es = "Neblina", en = "Haze", min = 0, max = 10, default = 0.7, step = 0.01, target = "Atmosphere", property = "Haze"},
+
+            {section = {"Clouds", "Clouds", "Cantidad, densidad y presencia visual de las nubes.", "Cloud cover, density and visual presence."}},
+            {id = "CloudsCover", es = "Cobertura", en = "Cover", min = 0, max = 1, default = 0.25, step = 0.01, target = "Clouds", property = "Cover"},
+            {id = "CloudsDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.18, step = 0.01, target = "Clouds", property = "Density"},
+
+            {section = {"ColorCorrection", "ColorCorrection", "Ajuste fino del tono cinematográfico.", "Fine cinematic tone control."}},
+            {id = "ColorBrightness", es = "Brillo de color", en = "Color brightness", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Brightness"},
+            {id = "ColorContrast", es = "Contraste", en = "Contrast", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Contrast"},
+            {id = "ColorSaturation", es = "Saturación", en = "Saturation", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Saturation"},
+            {id = "ColorCorrectionEnabled", es = "ColorCorrection activo", en = "ColorCorrection enabled", default = true, target = "ColorCorrectionEffect", property = "Enabled", toggle = true},
+
+            {section = {"Bloom y Blur", "Bloom and Blur", "Resplandor y desenfoque global.", "Glow and global blur."}},
+            {id = "BloomIntensity", es = "Intensidad Bloom", en = "Bloom intensity", min = 0, max = 4, default = 0.1, step = 0.01, target = "BloomEffect", property = "Intensity"},
+            {id = "BloomSize", es = "Tamaño Bloom", en = "Bloom size", min = 0, max = 56, default = 18, step = 1, target = "BloomEffect", property = "Size"},
+            {id = "BloomThreshold", es = "Umbral Bloom", en = "Bloom threshold", min = 0, max = 4, default = 1.2, step = 0.01, target = "BloomEffect", property = "Threshold"},
+            {id = "BloomEnabled", es = "Bloom activo", en = "Bloom enabled", default = true, target = "BloomEffect", property = "Enabled", toggle = true},
+            {id = "BlurSize", es = "Tamaño Blur", en = "Blur size", min = 0, max = 56, default = 0, step = 1, target = "BlurEffect", property = "Size"},
+            {id = "BlurEnabled", es = "Blur activo", en = "Blur enabled", default = false, target = "BlurEffect", property = "Enabled", toggle = true},
+
+            {section = {"DepthOfField", "DepthOfField", "Enfoque de cámara para una apariencia más cinematográfica.", "Camera focus for a more cinematic look."}},
+            {id = "DepthFarIntensity", es = "Intensidad lejana", en = "Far intensity", min = 0, max = 1, default = 0.12, step = 0.01, target = "DepthOfFieldEffect", property = "FarIntensity"},
+            {id = "DepthFocusDistance", es = "Distancia de enfoque", en = "Focus distance", min = 0, max = 200, default = 80, step = 1, target = "DepthOfFieldEffect", property = "FocusDistance"},
+            {id = "DepthInFocusRadius", es = "Radio enfocado", en = "In-focus radius", min = 0, max = 50, default = 20, step = 0.5, target = "DepthOfFieldEffect", property = "InFocusRadius"},
+            {id = "DepthNearIntensity", es = "Intensidad cercana", en = "Near intensity", min = 0, max = 1, default = 0.06, step = 0.01, target = "DepthOfFieldEffect", property = "NearIntensity"},
+            {id = "DepthEnabled", es = "DepthOfField activo", en = "DepthOfField enabled", default = false, target = "DepthOfFieldEffect", property = "Enabled", toggle = true},
+
+            {section = {"SunRays", "SunRays", "Rayos solares, tono y atmósfera luminosa.", "Sun rays, tone and luminous atmosphere."}},
+            {id = "SunColorHue", es = "Color del sol · tono", en = "Sun color · hue", min = 0, max = 1, default = 0.10, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Hue end, onChange = function(value) ShaderSolarTone:SetHue(value) end},
+            {id = "SunColorSaturation", es = "Color del sol · saturación", en = "Sun color · saturation", min = 0, max = 1, default = 0.38, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Saturation end, onChange = function(value) ShaderSolarTone:SetSaturation(value) end},
+            {id = "SunColorStrength", es = "Color del sol · mezcla", en = "Sun color · blend", min = 0, max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Strength end, onChange = function(value) ShaderSolarTone:SetStrength(value) end},
+            {id = "SunRaysIntensity", es = "Intensidad", en = "Intensity", min = 0, max = 1, default = 0.08, step = 0.01, target = "SunRaysEffect", property = "Intensity"},
+            {id = "SunRaysSpread", es = "Extensión", en = "Spread", min = 0, max = 1, default = 0.65, step = 0.01, target = "SunRaysEffect", property = "Spread"},
+            {id = "SunRaysEnabled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
+
+            {section = {"Overdrive local", "Local overdrive", "Efectos visuales locales con límites de distancia, partes y tasa de partículas.", "Local visual effects with distance, part and particle-rate limits."}},
+            {id = "WetReflections", es = "Reflejos húmedos", en = "Wet reflections", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.Enabled end, onChange = function(value) ShaderReflections:SetEnabled(value) end},
+            {id = "ReflectionIntensity", es = "Intensidad de reflejo", en = "Reflection intensity", min = 0.05, max = 0.60, default = 0.28, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Intensity end, onChange = function(value) ShaderReflections:SetIntensity(value) end},
+            {id = "Wetness", es = "Acabado mojado", en = "Wet finish", min = 0.10, max = 1, default = 0.82, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Wetness end, onChange = function(value) ShaderReflections:SetWetness(value) end},
+            {id = "AllSurfaceCoverage", es = "Cubrir paredes y techos", en = "Cover walls and ceilings", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SurfaceMode == "All" end, onChange = function(value) ShaderReflections:SetSurfaceMode(value and "All" or "Floors") end},
+            {id = "SceneCoverage", es = "Cobertura de escena", en = "Scene coverage", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SceneCoverage end, onChange = function(value) ShaderReflections:SetSceneCoverage(value) end},
+            {id = "ContactReflection", es = "Contacto del personaje", en = "Character contact", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ContactEnabled end, onChange = function(value) ShaderReflections:SetContactEnabled(value) end},
+            {id = "ContactStrength", es = "Detalle de contacto", en = "Contact detail", min = 0.05, max = 0.60, default = 0.24, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.ContactStrength end, onChange = function(value) ShaderReflections:SetContactStrength(value) end},
+            {id = "ModelSurfaceDetail", es = "Detalle en modelos", en = "Model surface detail", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ModelDetailEnabled end, onChange = function(value) ShaderReflections:SetModelDetailEnabled(value) end},
+            {id = "ModelShadows", es = "Sombras de modelos", en = "Model contact shadows", default = false, target = "Lighting", property = "ShadowSoftness", toggle = true, getValue = function() return ShaderReflections.ShadowEnabled end, onChange = function(value) ShaderReflections:SetShadowEnabled(value) end},
+            {id = "ModelShadowStrength", es = "Intensidad de sombras", en = "Shadow intensity", min = 0.05, max = 0.70, default = 0.30, step = 0.01, target = "Lighting", property = "ShadowSoftness", getValue = function() return ShaderReflections.ShadowStrength end, onChange = function(value) ShaderReflections:SetShadowStrength(value) end},
+            {id = "PhysicalRain", es = "Lluvia física", en = "Physical rain", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
+            {id = "RainIntensity", es = "Densidad de lluvia", en = "Rain density", min = 0.20, max = 1, default = 0.72, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.Intensity end, onChange = function(value) ShaderRain:SetIntensity(value) end},
+            {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
+            {id = "RainAudioVolume", es = "Volumen de lluvia", en = "Rain volume", min = 0, max = 1, default = 0.34, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.SoundVolume end, onChange = function(value) ShaderRain:SetSoundVolume(value) end},
+            {id = "RainShelter", es = "Respetar techos", en = "Respect roofs", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.RespectShelter end, onChange = function(value) ShaderRain:SetRespectShelter(value) end},
+            {id = "StormMode", es = "Relámpagos dinámicos", en = "Dynamic lightning", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.StormEnabled end, onChange = function(value) ShaderRain:SetStormEnabled(value) end},
+        }
+    end
+
+    local function shaderOpenCustomWindow()
+        if ShaderCustomWindow and ShaderCustomWindow.Parent then
+            ShaderCustomWindow.Visible = true
+            if ShaderCustomBackdrop then ShaderCustomBackdrop.Visible = true end
+            ShaderCustomRefresh()
+            return
+        end
+
+        ShaderCustomControls = {}
+        ShaderUISections = {}
+        shaderDisconnectAll()
+
+        ShaderCustomBackdrop = mk("Frame", {
+            Parent = Window.ScreenGui,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Active = false,
+            ZIndex = 300,
+        })
+
+        ShaderCustomWindow = mk("Frame", {
+            Parent = Window.ScreenGui,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.52, 0),
+            Size = UDim2.fromOffset(460, 380),
+            Active = true,
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.04,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 301,
+        })
+        ShaderCustomWindow:SetAttribute("ThemeRole", "Background")
+        corner(ShaderCustomWindow, 16)
+        stroke(ShaderCustomWindow, Theme.Stroke, 1.5, 0.18)
+        buildAnimatedBorder(ShaderCustomWindow, Theme.Accent, UDim.new(0, 16), true)
+        mk("UISizeConstraint", {
+            Parent = ShaderCustomWindow,
+            MinSize = Vector2.new(360, 300),
+            MaxSize = Vector2.new(520, 430),
+        })
+
+        local header = mk("Frame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -8, 0, 72),
+            Position = UDim2.new(0, 4, 0, 4),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.22,
+            BorderSizePixel = 0,
+            ZIndex = 302,
+        })
+        header:SetAttribute("ThemeRole", "Secondary")
+        corner(header, 13)
+        stroke(header, Theme.Stroke, 1.1, 0.58)
+
+        local headerAccent = mk("Frame", {
+            Parent = header,
+            Size = UDim2.new(0, 4, 0, 38),
+            Position = UDim2.new(0, 16, 0.5, -19),
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            ZIndex = 303,
+        })
+        headerAccent:SetAttribute("ThemeRole", "Accent")
+        corner(headerAccent, 99)
+
+        local title = mk("TextLabel", {
+            Parent = header,
+            Size = UDim2.new(1, -150, 0, 24),
+            Position = UDim2.new(0, 30, 0, 10),
+            BackgroundTransparency = 1,
+            Text = GetText("Personalizado", "Custom"),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 18,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 303,
+        })
+        title:SetAttribute("ThemeTextRole", "Text")
+        title:SetAttribute("TextSpanish", "Personalizado")
+        title:SetAttribute("TextEnglish", "Custom")
+
+        local subtitle = mk("TextLabel", {
+            Parent = header,
+            Size = UDim2.new(1, -150, 0, 16),
+            Position = UDim2.new(0, 30, 0, 35),
+            BackgroundTransparency = 1,
+            Text = GetText("Ajustes propios de Shaders · aplicación en tiempo real", "Shader-only controls · live application"),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 303,
+        })
+        subtitle:SetAttribute("ThemeTextRole", "TextDim")
+        subtitle:SetAttribute("TextSpanish", "Ajustes propios de Shaders · aplicación en tiempo real")
+        subtitle:SetAttribute("TextEnglish", "Shader-only controls · live application")
+
+        local closeButton = mk("TextButton", {
+            Parent = header,
+            Size = UDim2.new(0, 38, 0, 38),
+            Position = UDim2.new(1, -52, 0.5, -19),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.12,
+            Text = "×",
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 24,
+            AutoButtonColor = false,
+            ZIndex = 304,
+        })
+        closeButton:SetAttribute("ThemeRole", "AccentOff")
+        corner(closeButton, 11)
+
+        local dragStrip = mk("Frame", {
+            Parent = header,
+            Size = UDim2.new(1, -92, 1, 0),
+            Position = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1,
+            Active = true,
+            ZIndex = 305,
+        })
+
+        local chipBar = mk("ScrollingFrame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -28, 0, 30),
+            Position = UDim2.new(0, 14, 0, 82),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 0,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.X,
+            ScrollingDirection = Enum.ScrollingDirection.X,
+            ZIndex = 303,
+        })
+        mk("UIListLayout", {
+            Parent = chipBar,
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0, 6),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+        })
+
+        local scroll = mk("ScrollingFrame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -28, 1, -124),
+            Position = UDim2.new(0, 14, 0, 118),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Theme.Accent,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            Active = true,
+            ScrollingEnabled = true,
+            ZIndex = 302,
+        })
+        scroll:SetAttribute("ThemeRole", "Background")
+
+        local scrollPadding = mk("UIPadding", {
+            Parent = scroll,
+            PaddingLeft = UDim.new(0, 2),
+            PaddingRight = UDim.new(0, 4),
+            PaddingTop = UDim.new(0, 4),
+            PaddingBottom = UDim.new(0, 18),
+        })
+        local scrollLayout = mk("UIListLayout", {
+            Parent = scroll,
+            Padding = UDim.new(0, 10),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+
+        local closeWindow
+        closeWindow = function()
+            shaderDisconnectAll()
+            ShaderCustomControls = {}
+            if ShaderCustomWindow then ShaderCustomWindow:Destroy() end
+            if ShaderCustomBackdrop then ShaderCustomBackdrop:Destroy() end
+            ShaderCustomWindow = nil
+            ShaderCustomBackdrop = nil
+            ShaderCustomRefresh = function() end
+        end
+
+        closeButton.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            closeWindow()
+        end)
+
+        local dragging = false
+        local dragStart = nil
+        local windowStart = nil
+        dragStrip.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                windowStart = ShaderCustomWindow.Position
+            end
+        end)
+        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                ShaderCustomWindow.Position = UDim2.new(
+                    windowStart.X.Scale, windowStart.X.Offset + delta.X,
+                    windowStart.Y.Scale, windowStart.Y.Offset + delta.Y
+                )
+            end
+        end))
+        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end))
+
+        local specs = shaderCustomSpecs()
+        local currentSection = nil
+        for _, spec in ipairs(specs) do
+            if spec.section then
+                currentSection = shaderCreateSection(scroll, spec.section[1], spec.section[2], spec.section[3], spec.section[4])
+            elseif currentSection then
+                if spec.toggle then
+                    shaderCreateToggle(currentSection, spec)
+                else
+                    shaderCreateSlider(currentSection, spec)
+                end
+            end
+        end
+
+        local footer = shaderCreateSection(scroll, "Acciones", "Actions", "Los controles se aplican en tiempo real.", "Controls apply in real time.")
+        local restore = mk("TextButton", {
+            Parent = footer,
+            Size = UDim2.new(1, 0, 0, 38),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.05,
+            Text = GetText("Restaurar valores originales", "Restore original values"),
+            TextColor3 = Theme.AccentText,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 12,
+            AutoButtonColor = false,
+            ZIndex = 314,
+        })
+        restore:SetAttribute("ThemeRole", "Accent")
+        restore:SetAttribute("TextSpanish", "Restaurar valores originales")
+        restore:SetAttribute("TextEnglish", "Restore original values")
+        corner(restore, 10)
+        restore.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            ShaderDemoEnabled = false
+            local report = shaderRestoreAll()
+            shaderWarn(report, "Restauración personalizada")
+            shaderSetModeLabel("Original")
+            ShaderCustomRefresh()
+        end)
+
+        for order, entry in ipairs(ShaderUISections) do
+            entry.updateCount()
+            local chip = mk("TextButton", {
+                Parent = chipBar,
+                Size = UDim2.new(0, 0, 0, 26),
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.15,
+                Text = GetText(entry.es, entry.en),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 11,
+                AutoButtonColor = false,
+                LayoutOrder = order,
+                ZIndex = 304,
+            })
+            chip:SetAttribute("ThemeRole", "Secondary")
+            chip:SetAttribute("ThemeTextRole", "Text")
+            chip:SetAttribute("IgnoreTextEffect", true)
+            corner(chip, 999)
+            stroke(chip, Theme.Stroke, 1, 0.6)
+            mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 30), PaddingRight = UDim.new(0, 10)})
+            RowKit.IconAt(chip, entry.icon, 14, UDim2.new(0, -21, 0.5, -7), 305, "Accent")
+            chip.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.4)
+                entry.setOpen(true)
+                task.defer(function()
+                    if not scroll.Parent then return end
+                    local y = entry.frame.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y - 4
+                    TweenService:Create(scroll, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {CanvasPosition = Vector2.new(0, math.max(0, y))}):Play()
+                end)
+            end)
+        end
+
+        ShaderCustomRefresh = function()
+            for _, control in pairs(ShaderCustomControls) do
+                if control.refresh then pcall(control.refresh) end
+            end
+        end
+        ShaderCustomRefresh()
+        shaderAddConnection(ShaderCustomWindow:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            task.defer(ShaderCustomRefresh)
+        end))
+        task.defer(function()
+            task.wait()
+            ShaderCustomRefresh()
+        end)
+        Window._refreshShaderCustomTheme()
+    end
+
+    Window._refreshShaderCustomTheme = function()
+        if not ShaderCustomWindow or not ShaderCustomWindow.Parent then return end
+        swapThemeColor(ShaderCustomWindow, Theme)
+        for _, obj in ipairs(ShaderCustomWindow:GetDescendants()) do
+            swapThemeColor(obj, Theme)
+        end
+        if ShaderCustomBackdrop then
+            ShaderCustomBackdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+        end
+    end
+
+    ShaderSavedState = shaderLoadPersistence()
+    if ShaderSavedState then
+        if type(ShaderSavedState.demoEnabled) == "boolean" then ShaderDemoEnabled = ShaderSavedState.demoEnabled end
+        if type(ShaderSavedState.preset) == "string" then
+            local savedPreset = ShaderSavedState.preset
+            if savedPreset == "BlackSilhouette" then savedPreset = "depthstyle" end
+            if ShaderManager.Presets[savedPreset] then
+                ShaderDemoPreset = savedPreset
+            end
+        end
+        if type(ShaderSavedState.quality) == "string" and ShaderQualityProfiles[ShaderSavedState.quality] then
+            ShaderSceneQuality = ShaderSavedState.quality
+        end
+    end
+
+    local initialDemoReport
+    -- Optimización > "Shaders apagados": no se aplica nada al iniciar
+    if ShaderDemoEnabled and not PerfOpt.Flags.NoShaders then
+        initialDemoReport = shaderApplyPreset(ShaderDemoPreset, false)
+    else
+        initialDemoReport = shaderRestoreAll()
+    end
+    shaderWarn(initialDemoReport, "Demo inicial")
+
+    if ShaderSavedState and not PerfOpt.Flags.NoShaders then
+        local restoreCustomOverrides = ShaderSavedState.customMode == true
+        if restoreCustomOverrides and type(ShaderSavedState.custom) == "table" then
+            ShaderCustomOverrides = ShaderSavedState.custom
+            for _, spec in ipairs(shaderCustomSpecs()) do
+                if spec.id then
+                    local value = ShaderCustomOverrides[spec.id]
+                    if type(value) == "number" or type(value) == "boolean" then
+                        if type(spec.onChange) == "function" then
+                            pcall(spec.onChange, value)
+                        else
+                            shaderApplySingle(spec.target, spec.property, value)
+                        end
+                    end
+                end
+            end
+        end
+        local overdrive = ShaderSavedState.overdrive
+        if type(overdrive) == "table" then
+            if type(overdrive.reflectionIntensity) == "number" then ShaderReflections:SetIntensity(overdrive.reflectionIntensity) end
+            if type(overdrive.wetness) == "number" then ShaderReflections:SetWetness(overdrive.wetness) end
+            if type(overdrive.surfaceMode) == "string" then ShaderReflections:SetSurfaceMode(overdrive.surfaceMode) end
+            if type(overdrive.sceneCoverage) == "boolean" then ShaderReflections:SetSceneCoverage(overdrive.sceneCoverage) end
+            if type(overdrive.skyMirror) == "boolean" then ShaderReflections:SetSkyMirrorEnabled(overdrive.skyMirror) end
+            if type(overdrive.stripTextures) == "boolean" then ShaderReflections:SetStripTexturesEnabled(overdrive.stripTextures) end
+            if type(overdrive.objectMirror) == "boolean" then ShaderReflections:SetObjectMirrorEnabled(overdrive.objectMirror) end
+            if type(overdrive.contactStrength) == "number" then ShaderReflections:SetContactStrength(overdrive.contactStrength) end
+       

@@ -1,0 +1,1015 @@
+nect(function()
+                state = not state
+                playSound(Sounds.Click, 0.5)
+                RowKit.Press(Holder)
+                applyVisual(state, true)
+                pcall(cb, state)
+            end)
+
+            resetScrollTop(TabPage)
+
+            if not isMirror then
+                Window._RegisterGlobalOption(self, {
+                    Id = nameSpanish .. "::" .. textSpanish,
+                    NameSpanish = textSpanish,
+                    NameEnglish = textEnglish,
+                    Holder = Holder,
+                    Kind = "Toggle",
+                })
+            end
+
+            return {
+                SetValue = function(value)
+                    state = value
+                    playSound(Sounds.Click, 0.3)
+                    applyVisual(state, true)
+                end,
+                GetValue = function()
+                    return state
+                end,
+                Holder = Holder,
+                Switch = Switch,
+                Click = Click
+            }
+        end
+
+        function Tab:CreateDropdown(textSpanish, textEnglish, options, default, callback)
+            options = options or {}
+            local displayText = GetText(textSpanish, textEnglish)
+            local selected = default
+
+            local function selectedDisplay()
+                return selected or GetText("Elegí una opción", "Pick an option")
+            end
+
+            local Holder = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 64),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.78,
+                ZIndex = 9
+            })
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            corner(Holder, 10)
+            stroke(Holder, Theme.Stroke, 1, 0.55)
+
+            local AccentBar = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 3, 0, 36),
+                Position = UDim2.new(0, 10, 0.5, -18),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            AccentBar:SetAttribute("ThemeRole", "AccentOff")
+            corner(AccentBar, 999)
+
+            local LabelTxt = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -140, 0, 22),
+                Position = UDim2.new(0, 22, 0, 13),
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish", textSpanish)
+            LabelTxt:SetAttribute("TextEnglish", textEnglish)
+
+            local StateLabel = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -140, 0, 16),
+                Position = UDim2.new(0, 22, 0, 36),
+                BackgroundTransparency = 1,
+                Text = selectedDisplay(),
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
+            StateLabel:SetAttribute("ThemeTextRole", "TextDim")
+
+            local ChevronBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 40, 0, 40),
+                Position = UDim2.new(1, -52, 0.5, -20),
+                BackgroundColor3 = Theme.AccentOff,
+                Text = "v",
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 16,
+                ZIndex = 10
+            })
+            ChevronBtn:SetAttribute("ThemeRole", "AccentOff")
+            corner(ChevronBtn, 999)
+
+            resetScrollTop(TabPage)
+
+            local function buildPopupContents(Popup, closePopup)
+                for _, optionValue in ipairs(options) do
+                    local Row = mk("TextButton", {
+                        Parent = Popup,
+                        Size = UDim2.new(1, 0, 0, 32),
+                        BackgroundColor3 = Theme.Secondary,
+                        BackgroundTransparency = (optionValue == selected) and 0.4 or 0.78,
+                        Text = "",
+                        ZIndex = 203
+                    })
+                    Row:SetAttribute("ThemeRole", "Secondary")
+                    corner(Row, 6)
+
+                    local RowLabel = mk("TextLabel", {
+                        Parent = Row,
+                        Size = UDim2.new(1, -16, 1, 0),
+                        Position = UDim2.new(0, 10, 0, 0),
+                        BackgroundTransparency = 1,
+                        Text = optionValue,
+                        TextColor3 = Theme.Text,
+                        Font = Enum.Font.GothamMedium,
+                        TextSize = 12,
+                        TextXAlignment = Enum.TextXAlignment.Left,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                        ZIndex = 204
+                    })
+                    RowLabel:SetAttribute("ThemeTextRole", "Text")
+
+                    Row.MouseButton1Click:Connect(function()
+                        selected = optionValue
+                        StateLabel.Text = selectedDisplay()
+                        playSound(Sounds.Click, 0.5)
+                        closePopup()
+                        pcall(callback, selected)
+                    end)
+                end
+            end
+
+            attachDropdownBehavior(Holder, ChevronBtn, ChevronBtn, #options, buildPopupContents)
+
+            if Window._RegisterGlobalOption then
+                Window._RegisterGlobalOption(self, {
+                    Id = nameSpanish .. "::" .. textSpanish,
+                    NameSpanish = textSpanish,
+                    NameEnglish = textEnglish,
+                    Holder = Holder,
+                    Kind = "Dropdown",
+                })
+            end
+
+            return {
+                SetValue = function(value)
+                    selected = value
+                    StateLabel.Text = selectedDisplay()
+                end,
+                GetValue = function()
+                    return selected
+                end,
+                Holder = Holder,
+                Click = ChevronBtn
+            }
+        end
+
+        function Tab:CreateFloatingToggleSimple(text, default, callback)
+            local state = default or false
+            local TweenService = game:GetService("TweenService")
+            
+            local FloatingWindow = mk("Frame", {
+                Name = "FloatingToggleSimple_" .. text,
+                Size = UDim2.new(0, 220, 0, 50),
+                Position = UDim2.new(0.5, -110, 0.1, 0),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.3,
+                BorderSizePixel = 0,
+                ZIndex = 150,
+                CanQuery = true,
+                Active = true,
+                Selectable = false,
+            }, Window.ScreenGui)
+            FloatingWindow:SetAttribute("ThemeRole", "Secondary")
+            
+            corner(FloatingWindow, 999)
+            
+            stroke(FloatingWindow, Theme.Accent, 2, 0.5)
+            buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
+            
+            local TextContainer = mk("Frame", {
+                Size = UDim2.new(1, -10, 1, 0),
+                Position = UDim2.new(0, 5, 0, 0),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 151
+            }, FloatingWindow)
+            
+            local NameLabel = mk("TextLabel", {
+                Size = UDim2.new(0.6, 0, 1, 0),
+                Position = UDim2.new(0, 0, 0, 0),
+                BackgroundTransparency = 1,
+                Text = text,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextYAlignment = Enum.TextYAlignment.Center,
+                ZIndex = 151
+            }, TextContainer)
+            NameLabel:SetAttribute("ThemeTextRole", "Text")
+            
+            local StateLabel = mk("TextLabel", {
+                Size = UDim2.new(0.35, 0, 1, 0),
+                Position = UDim2.new(0.65, 0, 0, 0),
+                BackgroundTransparency = 1,
+                Text = state and "ON" or "OFF",
+                TextColor3 = state and Theme.ToggleOn or Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 14,
+                TextXAlignment = Enum.TextXAlignment.Right,
+                TextYAlignment = Enum.TextYAlignment.Center,
+                ZIndex = 151
+            }, TextContainer)
+            StateLabel:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+            
+            local shimmerGradient = Instance.new("UIGradient")
+            shimmerGradient.Rotation = 90
+            shimmerGradient.ColorSequence = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 255, 255), 0.9),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255), 0),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 255, 255), 0.9)
+            })
+            shimmerGradient.Parent = FloatingWindow
+            
+            local shimmerTween = TweenService:Create(
+                shimmerGradient,
+                TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, 0),
+                {Offset = Vector2.new(1, 0)}
+            )
+            shimmerTween:Play()
+            track(shimmerTween)
+            
+            local originalSize = FloatingWindow.Size
+            local pulseSize = UDim2.new(0, 230, 0, 55)
+            
+            local pulseTween = TweenService:Create(
+                FloatingWindow,
+                TweenInfo.new(2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true, 0),
+                {Size = pulseSize}
+            )
+            pulseTween:Play()
+            track(pulseTween)
+            
+            local ClickDetector = mk("TextButton", {
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                AutoButtonColor = false,
+                Active = true,
+                Selectable = false,
+                ZIndex = 152
+            }, FloatingWindow)
+            
+            local isDragging = false
+            local dragStart = nil
+            local dragStartPos = nil
+            local isHovering = false
+
+            local function clampSimpleFloatingWindow()
+                if not FloatingWindow or not FloatingWindow.Parent then return end
+                local viewport = Window.ScreenGui.AbsoluteSize
+                local windowSize = FloatingWindow.AbsoluteSize
+                if viewport.X <= 0 or viewport.Y <= 0 or windowSize.X <= 0 or windowSize.Y <= 0 then return end
+
+                local margin = 8
+                local pos = FloatingWindow.Position
+                local minX = margin - pos.X.Scale * viewport.X
+                local maxX = viewport.X - windowSize.X - margin - pos.X.Scale * viewport.X
+                local minY = margin - pos.Y.Scale * viewport.Y
+                local maxY = viewport.Y - windowSize.Y - margin - pos.Y.Scale * viewport.Y
+                local x = maxX < minX and ((viewport.X - windowSize.X) / 2) - pos.X.Scale * viewport.X
+                    or math.clamp(pos.X.Offset, minX, maxX)
+                local y = maxY < minY and ((viewport.Y - windowSize.Y) / 2) - pos.Y.Scale * viewport.Y
+                    or math.clamp(pos.Y.Offset, minY, maxY)
+
+                if x ~= pos.X.Offset or y ~= pos.Y.Offset then
+                    FloatingWindow.Position = UDim2.new(pos.X.Scale, x, pos.Y.Scale, y)
+                end
+            end
+            clampSimpleFloatingWindow()
+            track(FloatingWindow:GetPropertyChangedSignal("Size"):Connect(clampSimpleFloatingWindow))
+            track(Window.ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(clampSimpleFloatingWindow))
+            
+            local function updateState()
+                if state then
+                    StateLabel.Text = "ON"
+                    StateLabel.TextColor3 = Theme.ToggleOn
+                else
+                    StateLabel.Text = "OFF"
+                    StateLabel.TextColor3 = Theme.TextDim
+                end
+                StateLabel:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+            end
+            
+            track(FloatingWindow.MouseEnter:Connect(function()
+                isHovering = true
+                TweenService:Create(
+                    FloatingWindow,
+                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0.15}
+                ):Play()
+            end))
+            
+            track(FloatingWindow.MouseLeave:Connect(function()
+                isHovering = false
+                TweenService:Create(
+                    FloatingWindow,
+                    TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = 0.3}
+                ):Play()
+            end))
+            
+            track(ClickDetector.MouseButton1Click:Connect(function()
+                state = not state
+                updateState()
+                
+                pcall(function() playSound(Sounds.Click, 0.6) end)
+                
+                local pressSize = UDim2.new(0, 210, 0, 45)
+                TweenService:Create(
+                    FloatingWindow,
+                    TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                    {Size = pressSize, BackgroundTransparency = 0.5}
+                ):Play()
+                
+                task.wait(0.08)
+                
+                TweenService:Create(
+                    FloatingWindow,
+                    TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {Size = originalSize, BackgroundTransparency = isHovering and 0.15 or 0.3}
+                ):Play()
+                
+                if callback then
+                    pcall(function() callback(state) end)
+                end
+                
+                print("[" .. text .. "] " .. (state and " ACTIVADO" or " DESACTIVADO"))
+            end))
+            
+            track(ClickDetector.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = true
+                    dragStart = input.Position
+                    dragStartPos = FloatingWindow.Position
+                end
+            end))
+            
+            track(UserInputService.InputChanged:Connect(function(input)
+                if isDragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                    local delta = input.Position - dragStart
+                        FloatingWindow.Position = UDim2.new(
+                            dragStartPos.X.Scale,
+                            dragStartPos.X.Offset + delta.X,
+                            dragStartPos.Y.Scale,
+                            dragStartPos.Y.Offset + delta.Y
+                        )
+                        clampSimpleFloatingWindow()
+                end
+            end))
+            
+            track(UserInputService.InputEnded:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    isDragging = false
+                end
+            end))
+            
+            table.insert(Window.FloatingToggles, {Window = FloatingWindow, Name = text})
+
+            Window._RegisterGlobalOption(self, {
+                Id = text,
+                NameSpanish = text,
+                NameEnglish = text,
+                Holder = FloatingWindow,
+                Kind = "Floating",
+            })
+
+            return FloatingWindow
+        end
+
+        function Tab:CreateFloatingButton(textSpanish, textEnglishOrCooldown, cooldownOrCallback, callback, isMirror, mirrorSource)
+            local textEnglish = textSpanish
+            local cooldown, cb
+
+            if type(textEnglishOrCooldown) == "string" then
+                textEnglish = textEnglishOrCooldown
+                if type(cooldownOrCallback) == "number" then
+                    cooldown = cooldownOrCallback
+                    cb = callback
+                else
+                    cooldown = 0
+                    cb = cooldownOrCallback
+                end
+            elseif type(textEnglishOrCooldown) == "number" then
+                cooldown = textEnglishOrCooldown
+                cb = cooldownOrCallback
+            else
+                cooldown = 0
+                cb = textEnglishOrCooldown
+            end
+            cooldown = cooldown or 0
+
+            local displayText = GetText(textSpanish, textEnglish)
+            local isFloating  = false
+            local isLocked    = false
+            local onCooldown  = false
+
+            local FloatingWindow = nil
+            local FloatingGlow   = nil
+            local FloatLabel     = nil
+            local AccentBar      = nil
+            local StateLabel     = nil
+            local favoriteControlRefreshers = {}
+            local toggleFloating
+            local toggleLock
+
+            local function startCooldown()
+                if cooldown <= 0 then return end
+                onCooldown = true
+                AccentBar.BackgroundColor3 = Theme.TextDim
+                pcall(function()
+                    local bar = Instance.new("Frame")
+                    bar.Name = "CooldownBar"
+                    bar.AnchorPoint = Vector2.new(0, 1)
+                    bar.Position = UDim2.new(0, 14, 1, -4)
+                    bar.Size = UDim2.new(1, -28, 0, 3)
+                    bar.BackgroundColor3 = Theme.Accent
+                    bar.BorderSizePixel = 0
+                    bar.ZIndex = 11
+                    local bc = Instance.new("UICorner")
+                    bc.CornerRadius = UDim.new(1, 0)
+                    bc.Parent = bar
+                    bar.Parent = AccentBar.Parent
+                    local tw = TweenService:Create(bar, TweenInfo.new(cooldown, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)})
+                    tw.Completed:Connect(function() bar:Destroy() end)
+                    tw:Play()
+                end)
+                task.spawn(function()
+                    local remaining = cooldown
+                    while remaining > 0 do
+                        task.wait(0.1)
+                        remaining = math.max(0, remaining - 0.1)
+                        local cdTxt = string.format("%.1fs", remaining)
+                        StateLabel.Text = cdTxt
+                        if FloatLabel and FloatLabel.Parent then
+                            FloatLabel.Text      = cdTxt
+                            FloatLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+                        end
+                    end
+                    onCooldown = false
+                    AccentBar.BackgroundColor3 = Theme.Accent
+                    StateLabel.Text = GetText("Botón", "Button")
+                    if FloatLabel and FloatLabel.Parent then
+                        FloatLabel.Text = displayText
+                        TweenService:Create(FloatLabel, TweenInfo.new(0.20), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                    end
+                end)
+            end
+
+            local Holder = mk("Frame", {
+                Parent = TabPage,
+                Size   = UDim2.new(1, 0, 0, 64),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.78,
+                ZIndex = 9
+            })
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            corner(Holder, 10)
+            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
+            RowKit.Card(Holder)
+
+            AccentBar = mk("Frame", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 3, 0, 36),
+                Position = UDim2.new(0, 10, 0.5, -18),
+                BackgroundColor3 = Theme.Accent,
+                ZIndex   = 10
+            })
+            AccentBar:SetAttribute("ThemeRole", "Accent")
+            corner(AccentBar, 999)
+
+            local LabelTxt = mk("TextLabel", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, -90, 0, 22),
+                Position = UDim2.new(0, 22, 0, 13),
+                BackgroundTransparency = 1,
+                Text     = displayText,
+                TextColor3 = Theme.Text,
+                Font     = Enum.Font.GothamBlack,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate   = Enum.TextTruncate.AtEnd,
+                ZIndex   = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish",  textSpanish)
+            LabelTxt:SetAttribute("TextEnglish",  textEnglish)
+
+            StateLabel = mk("TextLabel", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, -90, 0, 16),
+                Position = UDim2.new(0, 22, 0, 36),
+                BackgroundTransparency = 1,
+                Text     = GetText("Botón", "Button"),
+                TextColor3 = Theme.TextDim,
+                Font     = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex   = 10
+            })
+            StateLabel:SetAttribute("ThemeTextRole", "TextDim")
+            RowKit.Chip(StateLabel, "Accent")
+            StateLabel.Position = UDim2.new(0, 22, 0, 38)
+
+            local DetachBtn = mk("TextButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -70, 0.5, -14),
+                BackgroundColor3 = Theme.Accent,
+                Text     = "↗",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                Font     = Enum.Font.GothamBold,
+                TextSize = 13,
+                ZIndex   = 15
+            })
+            corner(DetachBtn, 6)
+            RowKit.Control(DetachBtn, true)
+
+            local PinBtn = mk("ImageButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -38, 0.5, -14),
+                BackgroundColor3 = Theme.Secondary,
+                Image    = "rbxassetid://83537941312438",
+                ImageColor3 = Theme.Text,
+                ScaleType   = Enum.ScaleType.Stretch,
+                ZIndex   = 15
+            })
+            corner(PinBtn, 6)
+            stroke(PinBtn, Theme.Stroke, 1, 0.5)
+            RowKit.Control(PinBtn)
+
+            local function syncExternalState()
+                if not isMirror or not mirrorSource then return end
+                local floating = false
+                local locked = false
+                pcall(function() floating = mirrorSource.GetFloating() end)
+                pcall(function() locked = mirrorSource.GetLocked() end)
+                DetachBtn.Text = floating and "←" or "↗"
+                PinBtn.Image = locked and "rbxassetid://91959170037380" or "rbxassetid://83537941312438"
+            end
+            syncExternalState()
+
+            if not isMirror then
+                local favId = nameSpanish .. "::" .. textSpanish
+                local isFavorite = SavedFavoriteIds[favId] or false
+                local FavBtn = mk("ImageButton", {
+                    Parent = Holder,
+                    Size = UDim2.new(0, 30, 0, 30),
+                    Position = UDim2.new(1, -104, 0.5, -15),
+                    BackgroundTransparency = 1,
+                    Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 15
+                })
+
+                local favRow = nil
+                local function syncFavoriteRow()
+                    favoriteControlRefreshers = {}
+                    if favRow then
+                        pcall(function() favRow.Holder:Destroy() end)
+                        favRow = nil
+                    end
+                    if isFavorite and AutoTabFavoritosRef then
+                        favRow = AutoTabFavoritosRef:CreateFloatingButton(
+                            textSpanish, textEnglish, cooldown, cb, true,
+                            {
+                                ToggleFloating = function() toggleFloating() end,
+                                ToggleLock = function() toggleLock() end,
+                                GetFloating = function() return isFloating end,
+                                GetLocked = function() return isLocked end,
+                            }
+                        )
+                        if favRow.SyncExternalState then
+                            table.insert(favoriteControlRefreshers, favRow.SyncExternalState)
+                        end
+                    end
+                end
+                FavBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.5)
+                    isFavorite = not isFavorite
+                    FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                    SavedFavoriteIds[favId] = isFavorite or nil
+                    syncFavoriteRow()
+                    SyncFavoritesToConfig()
+                end)
+
+                syncFavoriteRow()
+            end
+
+            local HolderClick = mk("TextButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, isMirror and -100 or -120, 1, 0),
+                BackgroundTransparency = 1,
+                Text     = "",
+                ZIndex   = 13
+            })
+
+            HolderClick.MouseEnter:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = RowKit.HOVER}):Play()
+            end)
+            HolderClick.MouseLeave:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = RowKit.IDLE}):Play()
+            end)
+
+            HolderClick.MouseButton1Click:Connect(function()
+                if onCooldown then return end
+                playSound(Sounds.Click, 0.5)
+                RowKit.Press(Holder)
+                HolderStroke.Color = Theme.Accent
+                HolderStroke.Transparency = 0.1
+                TweenService:Create(HolderStroke, TweenInfo.new(0.45), {Color = Theme.Stroke, Transparency = 0.55}):Play()
+                pcall(cb)
+                startCooldown()
+            end)
+
+            local function createFloatingWindow()
+                FloatingGlow = mk("Frame", {
+                    Parent   = Window.ScreenGui,
+                    Size     = UDim2.fromOffset(216, 48),
+                    Position = UDim2.new(0.5, -108, 0.5, -24),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex  = 3
+                })
+                corner(FloatingGlow, 999)
+
+                local pillW = math.max(120, FloatingPillV5.FitWidth(displayText, 20))
+                FloatingWindow = mk("Frame", {
+                    Parent   = Window.ScreenGui,
+                    Size     = UDim2.fromOffset(pillW, 34),
+                    Position = UDim2.new(0.5, -pillW / 2, 0.5, -17),
+                    BackgroundColor3 = FloatingPillV5.OffColor(),
+                    BackgroundTransparency = 0.12,
+                    BorderSizePixel = 0,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex  = 4
+                })
+                FloatPos.Apply(nameSpanish .. "::" .. textSpanish, FloatingWindow)
+                if FloatPos.IsLocked(nameSpanish .. "::" .. textSpanish) then
+                    isLocked = true
+                    PinBtn.Image = "rbxassetid://91959170037380"
+                end
+                corner(FloatingWindow, 999)
+                local pillStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0.15)
+                pillStroke:SetAttribute("ThemeRole", nil)
+                mk("UIGradient", {
+                    Rotation = 90,
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0),
+                        NumberSequenceKeypoint.new(1, 0.35),
+                    }),
+                }, FloatingWindow)
+                local pillScale = mk("UIScale", {Scale = 1}, FloatingWindow)
+
+                FloatLabel = mk("TextLabel", {
+                    Parent   = FloatingWindow,
+                    Name     = "FloatLabel",
+                    Size     = UDim2.new(1, -24, 1, 0),
+                    Position = UDim2.new(0, 12, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text     = onCooldown and StateLabel.Text or displayText,
+                    TextColor3 = onCooldown and Color3.fromRGB(170, 170, 170) or Color3.fromRGB(255, 255, 255),
+                    Font     = Enum.Font.GothamBlack,
+                    TextSize = 20,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    TextYAlignment = Enum.TextYAlignment.Center,
+                    TextTruncate   = Enum.TextTruncate.AtEnd,
+                    ZIndex   = 5,
+                })
+                FloatLabel:SetAttribute("IgnoreTextEffect", true)
+                FloatLabel:SetAttribute("TextSpanish",  textSpanish)
+                FloatLabel:SetAttribute("TextEnglish",  textEnglish)
+
+                local function flashBtn()
+                    pillScale.Scale = 0.9
+                    TweenService:Create(pillScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                    TweenService:Create(FloatingWindow, TweenInfo.new(0.08),
+                        {BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.05}):Play()
+                    TweenService:Create(pillStroke, TweenInfo.new(0.08), {Transparency = 0}):Play()
+                    task.delay(0.22, function()
+                        if FloatingWindow and FloatingWindow.Parent then
+                            TweenService:Create(FloatingWindow, TweenInfo.new(0.25),
+                                {BackgroundColor3 = FloatingPillV5.OffColor(), BackgroundTransparency = 0.12}):Play()
+                            TweenService:Create(pillStroke, TweenInfo.new(0.25), {Transparency = 0.15}):Play()
+                        end
+                    end)
+                    if cooldown > 0 then
+                        local fill = mk("Frame", {
+                            Parent = FloatingWindow,
+                            Size = UDim2.new(1, 0, 1, 0),
+                            BackgroundColor3 = Theme.Accent,
+                            BackgroundTransparency = 0.7,
+                            BorderSizePixel = 0,
+                            ZIndex = 4,
+                        })
+                        corner(fill, 999)
+                        local tw = TweenService:Create(fill, TweenInfo.new(cooldown, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
+                        tw.Completed:Connect(function() fill:Destroy() end)
+                        tw:Play()
+                    end
+                end
+
+                local dragging  = false
+                local dragStart = nil
+                local startPos  = nil
+
+                local FloatClick = mk("TextButton", {
+                    Parent   = FloatingWindow,
+                    Size     = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    AutoButtonColor = false,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex   = 6
+                })
+
+                FloatClick.MouseButton1Click:Connect(function()
+                    if dragging or onCooldown then return end
+                    playSound(Sounds.Click, 0.5)
+                    flashBtn()
+                    pcall(cb)
+                    startCooldown()
+                end)
+
+                local function syncGlow()
+                    if FloatingGlow and FloatingGlow.Parent then
+                        FloatingGlow.Size = UDim2.fromOffset(
+                            FloatingWindow.Size.X.Offset + 16,
+                            FloatingWindow.Size.Y.Offset + 12)
+                        FloatingGlow.Position = UDim2.new(
+                            FloatingWindow.Position.X.Scale,
+                            FloatingWindow.Position.X.Offset - 8,
+                            FloatingWindow.Position.Y.Scale,
+                            FloatingWindow.Position.Y.Offset - 6)
+                    end
+                end
+                syncGlow()
+                track(FloatingWindow:GetPropertyChangedSignal("Position"):Connect(syncGlow))
+
+                FloatClick.InputBegan:Connect(function(input)
+                    if (input.UserInputType == Enum.UserInputType.MouseButton1
+                    or  input.UserInputType == Enum.UserInputType.Touch)
+                    and not isLocked then
+                        dragging  = false
+                        dragStart = input.Position
+                        startPos  = FloatingWindow.Position
+                    end
+                end)
+
+                track(UserInputService.InputChanged:Connect(function(input)
+                    if dragStart and not isLocked
+                    and (input.UserInputType == Enum.UserInputType.MouseMovement
+                    or   input.UserInputType == Enum.UserInputType.Touch) then
+                        local delta = input.Position - dragStart
+                        if delta.Magnitude > 4 then
+                            dragging = true
+                            FloatingWindow.Position = UDim2.new(
+                                startPos.X.Scale, startPos.X.Offset + delta.X,
+                                startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                        end
+                    end
+                end))
+
+                track(UserInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch then
+                        task.defer(function() dragging = false end)
+                        dragStart = nil
+                    end
+                end))
+
+                table.insert(Window.FloatingToggles, {Window = FloatingWindow, Name = displayText})
+            end
+
+            toggleFloating = function()
+                if isMirror and mirrorSource then
+                    pcall(mirrorSource.ToggleFloating)
+                    syncExternalState()
+                    return
+                end
+                playSound(Sounds.Click, 0.6)
+                if not isFloating then
+                    isFloating = true
+                    createFloatingWindow()
+                    DetachBtn.Text = "←"
+                else
+                    isFloating   = false
+                    FloatLabel   = nil
+                    if FloatingWindow then FloatingWindow:Destroy(); FloatingWindow = nil end
+                    if FloatingGlow   then FloatingGlow:Destroy();   FloatingGlow   = nil end
+                    DetachBtn.Text = "↗"
+                    isLocked   = false
+                    PinBtn.Image = "rbxassetid://83537941312438"
+                end
+                for _, refresh in ipairs(favoriteControlRefreshers) do pcall(refresh) end
+            end
+
+            toggleLock = function()
+                if isMirror and mirrorSource then
+                    pcall(mirrorSource.ToggleLock)
+                    syncExternalState()
+                    return
+                end
+                if not isFloating then return end
+                playSound(Sounds.Click, 0.5)
+                isLocked = not isLocked
+                if isLocked then FloatPos.Save(nameSpanish .. "::" .. textSpanish, FloatingWindow, Window.ScreenGui) else FloatPos.SetLocked(nameSpanish .. "::" .. textSpanish, false) end
+                PinBtn.Image = isLocked
+                    and "rbxassetid://91959170037380"
+                    or  "rbxassetid://83537941312438"
+                for _, refresh in ipairs(favoriteControlRefreshers) do pcall(refresh) end
+            end
+
+            DetachBtn.MouseButton1Click:Connect(toggleFloating)
+            PinBtn.MouseButton1Click:Connect(toggleLock)
+
+            resetScrollTop(TabPage)
+
+            if not isMirror then
+                Window._RegisterGlobalOption(self, {
+                    Id = nameSpanish .. "::" .. textSpanish,
+                    NameSpanish = textSpanish,
+                    NameEnglish = textEnglish,
+                    Holder = Holder,
+                    Kind = "Button",
+                })
+            end
+
+            return {
+                Holder = Holder,
+                Fire = function()
+                    if not onCooldown then
+                        pcall(cb)
+                        startCooldown()
+                    end
+                end,
+                SetCooldown = function(secs)
+                    cooldown = secs or cooldown
+                end,
+                SyncExternalState = syncExternalState,
+            }
+        end
+
+        function Tab:CreateSlider(text, min, max, default, callback, isMirror)
+            local value = default or min
+            local pendingValue = value
+            local isDragging = false
+            local lastUpdateTime = 0
+            local UPDATE_THROTTLE = 0.008
+
+            local Carousel = nil
+            local children = TabPage:GetChildren()
+            for i = #children, 1, -1 do
+                local child = children[i]
+                if child:IsA("GuiObject") then
+                    if child:GetAttribute("IsSliderCarouselSection") and Tab._LastSliderCarousel
+                    and Tab._LastSliderCarousel.Section == child then
+                        Carousel = Tab._LastSliderCarousel
+                    end
+                    break
+                end
+            end
+
+            if not Carousel then
+                local SliderSection = mk("Frame", {
+                    Parent = TabPage,
+                    Size = UDim2.new(1, 0, 0, 134),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 9
+                })
+                SliderSection:SetAttribute("IsSliderCarouselSection", true)
+
+                local Viewport = mk("Frame", {
+                    Parent = SliderSection,
+                    Size = UDim2.new(1, -8, 0, 110),
+                    Position = UDim2.new(0, 4, 0, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ClipsDescendants = true,
+                    ZIndex = 10
+                })
+
+                local PrevBtn = mk("TextButton", {
+                    Parent = Viewport,
+                    Size = UDim2.new(0, 38, 0, 38),
+                    Position = UDim2.new(0, 4, 0.5, -19),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.18,
+                    BorderSizePixel = 0,
+                    Text = "‹",
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 30,
+                    AutoButtonColor = false,
+                    ZIndex = 60
+                })
+                corner(PrevBtn, 19)
+                stroke(PrevBtn, Theme.Stroke, 1, 0.5)
+
+                local NextBtn = mk("TextButton", {
+                    Parent = Viewport,
+                    Size = UDim2.new(0, 38, 0, 38),
+                    Position = UDim2.new(1, -42, 0.5, -19),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.18,
+                    BorderSizePixel = 0,
+                    Text = "›",
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 30,
+                    AutoButtonColor = false,
+                    ZIndex = 60
+                })
+                corner(NextBtn, 19)
+                stroke(NextBtn, Theme.Stroke, 1, 0.5)
+
+                local DotHolder = mk("Frame", {
+                    Parent = SliderSection,
+                    Size = UDim2.new(1, -80, 0, 16),
+                    Position = UDim2.new(0, 40, 0, 114),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 60
+                })
+                mk("UIListLayout", {
+                    Parent = DotHolder,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    Padding = UDim.new(0, 6),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+
+                Carousel = {
+                    Section = SliderSection,
+                    Viewport = Viewport,
+                    PrevBtn = PrevBtn,
+                    NextBtn = NextBtn,
+                    DotHolder = DotHolder,
+                    Cards = {},
+                    Dots = {},
+                    ActiveIndex = 1,
+                    Reflow = nil,
+                    GoTo = nil,
+                }
+                Tab._LastSliderCarousel = Carousel
+
+                local function refreshDots()
+                    local count = #Carousel.Cards
+                    for i, dot in ipairs(Carousel.Dots) do
+                        dot.BackgroundColor3 = (i == Carousel.ActiveIndex) and Theme.Text or Theme.AccentOff
+                        dot.BackgroundTransparency = (i == Carousel.ActiveIndex) and 0 or 0.35
+                        dot.Size = (i == Carousel.ActiveIndex)
+                            and UDim2.new(0, 20, 0, 7)
+                            or UDim2.new(0, 7, 0, 7)
+                    end
+                    Carousel.PrevBtn.Visible = count > 1
+                    Carousel.NextBtn.Visible = count > 1
+                    Carousel.DotHolder.Visible = count > 1
+                end
+
+                local function reflow()
+                    local count = #Carousel.Cards
+                    if count == 0 then
+                        refreshDots()
+                        return
+                    end
+
+                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
+                    local cardHeight = 96
+                    local step = cardWidth * 0.78
+                    local centerX = viewportWidth * 0.5 - cardWidth * 0.5
+
+                    for i, cardData in ipairs(Carousel.Cards) do
+                        local card = cardData.Holder
+                        if card and card.Parent then
+                            local offset = (i - Carousel.ActiveIndex)
