@@ -1062,6 +1062,7 @@ put)
         AlbumArt.Image = hasCover and resolvedCover or ""
         AlbumArt.BackgroundColor3 = hasCover and Color3.fromRGB(0, 0, 0) or fallbackColor
         AlbumFallback.Visible = not hasCover
+        if Window._SpotifyAmbient then Window._SpotifyAmbient.SetCover(resolvedCover) end
 
         PlayerSongTitle.Text = track.Name
         PlayerSongArtist.Text = track.Artist
