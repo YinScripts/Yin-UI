@@ -1,4 +1,31 @@
-TemaInicial = ConfigCargada.theme
+ext then return end
+        text = text:match("^%s*(.-)%s*$")
+        if text == "" then return end
+        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
+        ask(text)
+    end)
+
+    task.delay(1.5, function()
+        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
+    end)
+
+    print("Yin AI integrada — usa /IA mensaje en el chat")
+end)()
+
+
+local DEMO_ACTIVO = false
+
+if DEMO_ACTIVO then
+    task.wait(0.5)
+    
+    print("\n" .. string.rep("=", 60))
+    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
+    print(string.rep("=", 60))
+    
+    local ConfigCargada = LoadConfig()
+    local TemaInicial = "Dark"
+    if ConfigCargada and ConfigCargada.theme then
+        TemaInicial = ConfigCargada.theme
     end
 
     local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)

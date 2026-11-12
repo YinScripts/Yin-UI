@@ -1,4 +1,25 @@
-mk("TextButton", {
+ng.Name,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 15,
+            TextColor3 = spotifyText,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.new(1, -230, 0, 16),
+            Position = UDim2.new(0, 102, 0, 31),
+            BackgroundTransparency = 1,
+            Text = song.Artist,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        local Heart = mk("TextButton", {
             Parent = Row,
             Size = UDim2.fromOffset(36, 36),
             Position = UDim2.new(1, -126, 0.5, -18),
@@ -1044,31 +1065,4 @@ REGLAS DE RESPUESTA:
 
     LocalPlayer.Chatted:Connect(function(msg)
         local text = tostring(msg):match("^[/]IA%s+(.+)$")
-        if not text then return end
-        text = text:match("^%s*(.-)%s*$")
-        if text == "" then return end
-        chatMsg("[" .. PLAYER_NAME .. "]: " .. text, Color3.fromRGB(80, 180, 255))
-        ask(text)
-    end)
-
-    task.delay(1.5, function()
-        chatMsg("[Yin AI]: Activa. Usa /IA hola para hablar conmigo.", Color3.fromRGB(140, 120, 255))
-    end)
-
-    print("Yin AI integrada — usa /IA mensaje en el chat")
-end)()
-
-
-local DEMO_ACTIVO = false
-
-if DEMO_ACTIVO then
-    task.wait(0.5)
-    
-    print("\n" .. string.rep("=", 60))
-    print("INICIANDO DEMO VISUAL DE YIN YANG v24 - LIBRERÍA PROFESIONAL")
-    print(string.rep("=", 60))
-    
-    local ConfigCargada = LoadConfig()
-    local TemaInicial = "Dark"
-    if ConfigCargada and ConfigCargada.theme then
-        
+        if not t

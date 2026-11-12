@@ -230,7 +230,7 @@
         Size = UDim2.new(1, 0, 1, -90),
         Position = UDim2.new(1, 0, 0, 0),
         BackgroundColor3 = Color3.fromRGB(18, 18, 18),
-        BackgroundTransparency = 0,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         Visible = false,
@@ -260,6 +260,7 @@
         Parent = FavPage.Scroll,
         Size = UDim2.new(1, 0, 0, FavPage.HERO_H),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.72,
         BorderSizePixel = 0,
         LayoutOrder = 1,
         ZIndex = 41,
@@ -386,6 +387,7 @@
         Parent = FavPage.Scroll,
         Size = UDim2.new(1, 0, 0, 84),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.80,
         BorderSizePixel = 0,
         LayoutOrder = 2,
         ZIndex = 41,
@@ -502,6 +504,7 @@
         Parent = FavPage.Scroll,
         Size = UDim2.new(1, 0, 0, 36),
         BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        BackgroundTransparency = 0.55,
         BorderSizePixel = 0,
         LayoutOrder = 3,
         ZIndex = 41,
@@ -558,6 +561,7 @@
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        BackgroundTransparency = 0.55,
         BorderSizePixel = 0,
         LayoutOrder = 4,
         ZIndex = 41,
@@ -637,11 +641,16 @@
     FavPage.text(FavPage.MiniTitle, "Canciones que te gustan", "Liked Songs")
 
     FavPage.layout = function()
-        local w = FavPage.Root.AbsoluteSize.X
+        local w = spotifyLogicalSize(FavPage.Root).X
         if w <= 0 then
             return
         end
         local narrow = w < 520
+        local inset = Window.CompactNavigation and 60 or 0
+        FavPage.Back.Position = UDim2.new(0, 12 + inset, 0.5, -16)
+        FavPage.MiniPlay.Position = UDim2.new(0, 54 + inset, 0.5, -17)
+        FavPage.MiniTitle.Position = UDim2.new(0, 98 + inset, 0, 0)
+        FavPage.MiniTitle.Size = UDim2.new(1, -110 - inset, 1, 0)
         local cover = narrow and 104 or 136
         FavPage.Cover.Size = UDim2.fromOffset(cover, cover)
         FavPage.Info.Position = UDim2.new(0, 20 + cover + 16, 1, -18)
@@ -649,15 +658,20 @@
         FavPage.Title.TextSize = narrow and 22 or (w < 760 and 30 or 38)
         FavPage.Title.Size = UDim2.new(1, 0, 0, math.max(40, cover - 64))
         FavPage.Kind.Position = UDim2.new(0, 0, 0, narrow and 2 or 14)
-        FavPage.SearchBox.Size = UDim2.fromOffset(narrow and 140 or 210, 32)
+        FavPage.SearchBox.Size = UDim2.fromOffset(narrow and math.clamp(w - 190, 70, 140) or 210, 32)
         FavPage.HeadTime.Visible = not narrow
     end
     FavPage.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(FavPage.layout)
+    if Window._SpotifyAmbient then
+        Window._SpotifyAmbient.LayoutFavorites = function()
+            if FavPage.open then FavPage.layout() end
+        end
+    end
 
     FavPage.Scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
         local y = FavPage.Scroll.CanvasPosition.Y
         local solid = y > FavPage.HERO_H - 40
-        FavPage.TopBar.BackgroundTransparency = solid and 0 or math.clamp(1 - (y / (FavPage.HERO_H - 40)), 0, 1)
+        FavPage.TopBar.BackgroundTransparency = solid and 0.35 or math.clamp(1 - 0.65 * (y / (FavPage.HERO_H - 40)), 0.35, 1)
         FavPage.MiniPlay.Visible = solid and FavPage.PlayAll.Visible
         FavPage.MiniTitle.Visible = solid
     end)

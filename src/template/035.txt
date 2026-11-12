@@ -428,6 +428,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             ContentArea.Size = UDim2.new(1, -side, 1, 56)
             if A.LayoutCatalog then A.LayoutCatalog(compact) end
             if A.LayoutPlayer then A.LayoutPlayer(compact) end
+            if A.LayoutFavorites then A.LayoutFavorites(compact) end
         end
         function A.enter()
             if A.Active then return end

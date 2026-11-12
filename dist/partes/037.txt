@@ -1,4 +1,5 @@
-2, 0, 8),
+   Size = UDim2.new(1, -24, 0, 34),
+        Position = UDim2.new(0, 12, 0, 8),
         BackgroundTransparency = 1,
         Visible = false,
         ZIndex = 20,
@@ -1129,4 +1130,4 @@
         end
 
         if not getcustomasset then
-            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la porta
+            warn("[YinYang Spotify] getcustomas
