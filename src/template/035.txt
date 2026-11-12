@@ -381,6 +381,234 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
     SPage.ScrollBarThickness = 0
     SPage.ScrollingEnabled = false
 
+    -- La portada se presenta como una capa temporal: no modifica ni guarda el tema.
+    do
+        local A = {Active = false, Token = 0, Cover = "", Cache = {}, SavedText = {}}
+        Window._SpotifyAmbient = A
+
+        local function tween(obj, values, duration)
+            if obj and obj.Parent then
+                local ok, tw = pcall(function()
+                    return TweenService:Create(obj, TweenInfo.new(duration or 0.32, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), values)
+                end)
+                if ok and tw then tw:Play() end
+            end
+        end
+
+        function A.makeLayer(parent, z, size)
+            local frame = mk("Frame", {
+                Name = "SpotifyAmbient", Parent = parent, Size = size,
+                Position = UDim2.fromOffset(0, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+                BackgroundTransparency = 1, BorderSizePixel = 0, Active = false,
+                Visible = false, ClipsDescendants = true, ZIndex = z,
+            })
+            corner(frame, 10)
+            local image = mk("ImageLabel", {
+                Parent = frame, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+                Image = "", ImageTransparency = 1, ScaleType = Enum.ScaleType.Crop,
+                Active = false, ZIndex = z,
+            })
+            corner(image, 10)
+            local shade = mk("Frame", {
+                Parent = frame, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(7, 7, 10),
+                BackgroundTransparency = 1, BorderSizePixel = 0, Active = false, ZIndex = z,
+            })
+            corner(shade, 10)
+            return {Frame = frame, Image = image, Shade = shade}
+        end
+
+        A.Top = A.makeLayer(TopBar, 6, UDim2.fromScale(1, 1))
+        -- Debajo de la lista para que el desplazamiento y los toques sigan funcionando.
+        A.Side = A.makeLayer(Body, 6, UDim2.new(0, 110, 1, 0))
+        local compactRail = Body:FindFirstChild("CompactTabRail")
+        if compactRail then A.Compact = A.makeLayer(compactRail, 16, UDim2.fromScale(1, 1)) end
+        A.Layers = {A.Top, A.Side}
+        if A.Compact then table.insert(A.Layers, A.Compact) end
+
+        function A.rememberText(obj)
+            if obj and obj.Parent and (obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox")) then
+                if A.SavedText[obj] == nil then A.SavedText[obj] = obj.TextColor3 end
+                tween(obj, {TextColor3 = Color3.fromRGB(250, 250, 250)}, 0.22)
+            end
+        end
+
+        function A.paintTabs(color)
+            if not A.Active then return end
+            for strokeObject in pairs(A.SavedStrokes or {}) do
+                if strokeObject.Parent then tween(strokeObject, {Color = color}, 0.24) end
+            end
+            for _, tab in ipairs(Window.Tabs or {}) do
+                A.rememberText(tab.NameLabel)
+                if tab.Button and tab.Button.Parent then
+                    local selected = tab.Page and tab.Page.Visible
+                    tween(tab.Button, {
+                        BackgroundColor3 = selected and color or Color3.fromRGB(10, 10, 12),
+                        BackgroundTransparency = selected and 0.35 or 1,
+                    }, 0.24)
+                end
+                if tab.CompactButton and tab.CompactButton.Parent then
+                    local selected = tab.Page and tab.Page.Visible
+                    tween(tab.CompactButton, {
+                        BackgroundColor3 = selected and color or Color3.fromRGB(10, 10, 12),
+                        BackgroundTransparency = selected and 0.3 or 0.7,
+                    }, 0.24)
+                    A.rememberText(tab.CompactButton:FindFirstChild("Fallback"))
+                end
+            end
+        end
+
+        -- EditableImage no siempre tiene permiso para leer una portada; el fondo
+        -- sigue usando la imagen real y se usa un acento neutro si no se puede.
+        function A.sample(cover, token)
+            if A.Cache[cover] then return A.Cache[cover] end
+            if type(Content) ~= "table" or type(buffer) ~= "table" or cover == "" then return nil end
+            local image
+            local ok, result = pcall(function()
+                image = game:GetService("AssetService"):CreateEditableImageAsync(Content.fromUri(cover))
+                if not image then return nil end
+                local size = image.Size
+                if size.X <= 0 or size.Y <= 0 then return nil end
+                local r, g, b, weight = 0, 0, 0, 0
+                for y = 0, 5 do
+                    for x = 0, 5 do
+                        if token ~= A.Token then return nil end
+                        local px = math.clamp(math.floor((x + 0.5) * size.X / 6), 0, size.X - 1)
+                        local py = math.clamp(math.floor((y + 0.5) * size.Y / 6), 0, size.Y - 1)
+                        local bytes = image:ReadPixelsBuffer(Vector2.new(px, py), Vector2.new(1, 1))
+                        local rr, gg, bb = buffer.readu8(bytes, 0), buffer.readu8(bytes, 1), buffer.readu8(bytes, 2)
+                        local alpha = buffer.readu8(bytes, 3) / 255
+                        local brightness = math.max(rr, gg, bb) / 255
+                        local saturation = (math.max(rr, gg, bb) - math.min(rr, gg, bb)) / 255
+                        local w = alpha * (0.3 + saturation) * math.clamp(brightness * 2, 0.12, 1)
+                        r, g, b, weight = r + rr * w, g + gg * w, b + bb * w, weight + w
+                    end
+                end
+                if weight <= 0 then return nil end
+                return Color3.fromRGB(math.floor(r / weight), math.floor(g / weight), math.floor(b / weight))
+            end)
+            if image then pcall(function() image:Destroy() end) end
+            if not ok or not result then return nil end
+            local h, s = Color3.toHSV(result)
+            local color = Color3.fromHSV(h, math.clamp(s, 0, 0.8), 0.36)
+            A.Cache[cover] = color
+            return color
+        end
+
+        function A.updateLayers(cover, token)
+            local tint = A.Cache[cover] or Color3.fromRGB(35, 35, 40)
+            A.paintTabs(tint)
+            for _, layer in ipairs(A.Layers) do
+                layer.Frame.Visible = true
+                tween(layer.Frame, {BackgroundTransparency = 0.08, BackgroundColor3 = tint}, 0.28)
+                tween(layer.Shade, {BackgroundTransparency = 0.48}, 0.28)
+                tween(layer.Image, {ImageTransparency = 1}, 0.14)
+            end
+            A.Side.Frame.Visible = TabList.Visible
+            task.delay(0.15, function()
+                if token ~= A.Token or not A.Active then return end
+                for _, layer in ipairs(A.Layers) do
+                    layer.Image.Image = cover
+                    tween(layer.Image, {ImageTransparency = cover ~= "" and 0.12 or 1}, 0.32)
+                end
+            end)
+            if cover ~= "" and not A.Cache[cover] then
+                task.spawn(function()
+                    local color = A.sample(cover, token)
+                    if color and A.Active and token == A.Token then
+                        A.paintTabs(color)
+                        for _, layer in ipairs(A.Layers) do tween(layer.Frame, {BackgroundColor3 = color}, 0.3) end
+                    end
+                end)
+            end
+        end
+
+        function A.SetCover(cover)
+            cover = type(cover) == "string" and cover or ""
+            if A.Cover == cover then return end
+            A.Cover = cover
+            if A.Active then
+                A.Token = A.Token + 1
+                A.updateLayers(cover, A.Token)
+            end
+        end
+
+        function A.enter()
+            if A.Active then return end
+            A.Active = true
+            A.ThemeAtEntry = Window.CurrentTheme
+            A.TabListTransparency = TabList.BackgroundTransparency
+            A.Token = A.Token + 1
+            A.SavedText = {}
+            A.SavedStrokes = {}
+            for _, parent in ipairs({Main, TitleDivider}) do
+                local border = parent:FindFirstChildOfClass("UIStroke")
+                if border then A.SavedStrokes[border] = border.Color end
+            end
+            for _, obj in ipairs(TopBar:GetDescendants()) do A.rememberText(obj) end
+            A.rememberText(TitleLabel)
+            tween(TabList, {BackgroundTransparency = 1}, 0.28)
+            A.updateLayers(A.Cover, A.Token)
+        end
+
+        function A.leave()
+            if not A.Active then return end
+            A.Active = false
+            A.Token = A.Token + 1
+            local token = A.Token
+            local listTransparency = A.TabListTransparency
+            if A.ThemeAtEntry ~= Window.CurrentTheme then
+                listTransparency = Theme.TransparentTabs and 1 or 0
+            end
+            tween(TabList, {BackgroundTransparency = listTransparency or 0}, 0.3)
+            for _, layer in ipairs(A.Layers) do
+                tween(layer.Frame, {BackgroundTransparency = 1}, 0.3)
+                tween(layer.Image, {ImageTransparency = 1}, 0.3)
+                tween(layer.Shade, {BackgroundTransparency = 1}, 0.3)
+            end
+            for obj, color in pairs(A.SavedText) do
+                if obj and obj.Parent then
+                    local role = obj:GetAttribute("ThemeTextRole")
+                    if A.ThemeAtEntry ~= Window.CurrentTheme and role and Theme[role] then color = Theme[role] end
+                    tween(obj, {TextColor3 = color}, 0.22)
+                end
+            end
+            A.SavedText = {}
+            for border, color in pairs(A.SavedStrokes or {}) do
+                if border and border.Parent then
+                    if A.ThemeAtEntry ~= Window.CurrentTheme then color = Theme.Border or Theme.Accent end
+                    tween(border, {Color = color}, 0.22)
+                end
+            end
+            A.SavedStrokes = {}
+            for _, tab in ipairs(Window.Tabs or {}) do
+                if tab.Button and tab.Button.Parent then
+                    local selected = tab.Page and tab.Page.Visible
+                    tween(tab.Button, {
+                        BackgroundColor3 = selected and Theme.TabActive or Theme.Background,
+                        BackgroundTransparency = selected and 0 or (Theme.TransparentTabs and 1 or 0),
+                    }, 0.22)
+                end
+            end
+            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
+            task.delay(0.32, function()
+                if A.Token ~= token or A.Active then return end
+                for _, layer in ipairs(A.Layers) do layer.Frame.Visible = false end
+            end)
+        end
+
+        track(SPage:GetPropertyChangedSignal("Visible"):Connect(function()
+            task.defer(function()
+                if not SPage.Parent then return end
+                if SPage.Visible then A.enter() else A.leave() end
+            end)
+        end))
+        track(TabList:GetPropertyChangedSignal("Visible"):Connect(function()
+            if A.Active then A.Side.Frame.Visible = TabList.Visible end
+        end))
+        if SPage.Visible then A.enter() end
+    end
+
+
     local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/nbritez672-tech/Yin-music/refs/heads/main/YinYang_Spotify_Catalog.lua"
 
     local function asset(id)

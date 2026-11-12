@@ -646,7 +646,7 @@
             local isActive = (TabPage.Visible)
             if not isActive then
                 TweenService:Create(TabButton, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Theme.TransparentTabs and 1 or 0}):Play()
+                    {BackgroundTransparency = (Window._SpotifyAmbient and Window._SpotifyAmbient.Active) and 1 or (Theme.TransparentTabs and 1 or 0)}):Play()
             end
         end)
         TabButton.InputBegan:Connect(function(inp)
@@ -663,7 +663,7 @@
                 local isActive = (TabPage.Visible)
                 if not isActive then
                     TweenService:Create(TabButton, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {BackgroundTransparency = Theme.TransparentTabs and 1 or 0}):Play()
+                        {BackgroundTransparency = (Window._SpotifyAmbient and Window._SpotifyAmbient.Active) and 1 or (Theme.TransparentTabs and 1 or 0)}):Play()
                 end
             end
         end)
