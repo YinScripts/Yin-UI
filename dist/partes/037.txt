@@ -646,7 +646,9 @@ put)
         AddUserSongButton.Visible = mySongs
         SongSearchHolder.Position = UDim2.new(0, 12, 0, subview and 50 or 8)
         SongList.Position = UDim2.new(0, 12, 0, subview and 86 or 50)
-        SongList.Size = UDim2.new(1, -24, 1, subview and -92 or -56)
+        -- Reservar espacio para la barra de reproducción y la navegación inferior.
+        SongList.Size = UDim2.new(1, -24, 1, subview and -182 or -146)
+        if SpotifyState.RefreshCatalogNavigation then SpotifyState.RefreshCatalogNavigation() end
         if SpotifyState.CatalogLoaded then
             renderSongRows()
         end
@@ -1072,6 +1074,7 @@ put)
 
         refreshAllRows()
         refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
     end
 
     local function destroyCurrentSound()
@@ -1114,6 +1117,7 @@ put)
             LikeBtn.Image = asset(116559368303288)
         end
         refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
         if SpotifyState.OnPlaybackChanged then
             pcall(SpotifyState.OnPlaybackChanged)
         end
@@ -1137,6 +1141,7 @@ put)
             or (track and track.Duration or secondsToClock(total))
         ProgressFill.Size = UDim2.new(clamp(current / total, 0, 1), 0, 1, 0)
         refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer(current / total) end
     end
 
     local function ensureTrackCached(track)
