@@ -1,4 +1,10 @@
-
+ "class", className = "ColorCorrectionEffect", parent = "Lighting"},
+        ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
+        DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
+        SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
+        CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
+        CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
+        CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
         CameraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
         CameraSunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "CurrentCamera"},
     }
@@ -791,20 +797,4 @@
         if self.TextureOriginal[part] ~= nil then return end
         local owner = part:FindFirstAncestorOfClass("Model")
         if owner and owner:FindFirstChildOfClass("Humanoid") then return end
-        local record = {children = {}}
-        local touched = false
-        local okVariant, variant = pcall(function() return part.MaterialVariant end)
-        if okVariant and variant ~= "" then
-            record.variant = variant
-            pcall(function() part.MaterialVariant = "" end)
-            touched = true
-        end
-        if part:IsA("MeshPart") then
-            local okTexture, textureId = pcall(function() return part.TextureID end)
-            if okTexture and textureId ~= "" then
-                record.textureId = textureId
-                pcall(function() part.TextureID = "" end)
-                touched = true
-            end
-        end
-        for _, 
+    

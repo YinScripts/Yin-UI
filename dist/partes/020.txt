@@ -1,4 +1,23 @@
-sterGlobalOption(self, {
+                  {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
+            end)
+            Click.MouseLeave:Connect(function()
+                TweenService:Create(Holder,
+                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.08 or RowKit.IDLE}):Play()
+            end)
+
+            Click.MouseButton1Click:Connect(function()
+                state = not state
+                playSound(Sounds.Click, 0.5)
+                RowKit.Press(Holder)
+                applyVisual(state, true)
+                pcall(cb, state)
+            end)
+
+            resetScrollTop(TabPage)
+
+            if not isMirror then
+                Window._RegisterGlobalOption(self, {
                     Id = nameSpanish .. "::" .. textSpanish,
                     NameSpanish = textSpanish,
                     NameEnglish = textEnglish,
@@ -1009,16 +1028,4 @@ sterGlobalOption(self, {
                             local targetY = 4 + (cardHeight - targetHeight) * 0.5
                             local isActive = distance == 0
 
-                            TweenService:Create(
-                                card,
-                                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                                {
-                                    Position = UDim2.new(0, targetX, 0, targetY),
-                                    Size = UDim2.new(0, targetWidth, 0, targetHeight),
-                                    BackgroundTransparency = isActive and 0.12 or 0.72
-                                }
-                            ):Play()
-                            card.ZIndex = isActive and 50 or 20 - math.min(distance, 4)
-                            for _, descendant in ipairs(card:GetDescendants()) do
-                                if descendant:IsA("GuiObject") then
-                                    descendant.Z
+                            T

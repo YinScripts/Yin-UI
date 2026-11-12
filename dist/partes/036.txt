@@ -1,4 +1,24 @@
-ndary")
+ClassicPage = TabClassic.Page
+
+    ClassicPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
+    ClassicPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    ClassicPage.ScrollBarThickness = 2
+    ClassicPage.ScrollingEnabled = true
+    ClassicPage.BackgroundTransparency = 1
+    ClassicPage:SetAttribute("ThemeRole", "Background")
+
+    local classicScripts = LoadClassicManifest()
+    local CL = {holders = {}}
+
+    CL.hero = mk("Frame", {
+        Parent = ClassicPage,
+        Size = UDim2.new(1, 0, 0, 92),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    CL.hero:SetAttribute("ThemeRole", "Secondary")
     corner(CL.hero, 16)
     stroke(CL.hero, Theme.Stroke, 1, 0.55)
     CL.emblem = mk("Frame", {
@@ -1178,24 +1198,4 @@ ndary")
         Text = "0:00",
         Font = Enum.Font.GothamMedium,
         TextSize = 12,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Right,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local Controls = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 48),
-        Position = UDim2.new(0, 14, 0, 351),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 20,
-    })
-
-    local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
-        local btn = mk("ImageButton", {
-            Parent = parent,
-            Size = UDim2.new(0, size, 0, size),
-            BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
-            BackgroundTra
+        TextColor3 = spotifyD

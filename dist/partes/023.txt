@@ -1,4 +1,15 @@
-                        holdInput = input
+    HomeAnim.OwnerAfterStep = updateGrab
+                        updateGrab()
+                        function HomeAnim.OwnerHit(pos)
+                            local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
+                            return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
+                        end
+                        local holdInput, prevScroll = nil, true
+                        local function screenOf(input) return Vector2.new(input.Position.X, input.Position.Y) end
+                        Grab.InputBegan:Connect(function(input)
+                            if holdInput then return end
+                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                                holdInput = input
                                 prevScroll = TabPage.ScrollingEnabled
                                 TabPage.ScrollingEnabled = false -- que la página no se mueva mientras lo arrastran
                                 ctl.Grab()
@@ -626,7 +637,7 @@
             if t.IconLabel then
                 t.IconLabel.Image = t.IconAsset or ""
                 t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
-                if themeName ~= "Navidad" then YinIcons.apply(t.IconLabel, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
+                YinIcons.applyTab(t.IconLabel, t.NameEnglish, t.NameSpanish)
                 t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
                 t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
                 if t.NameLabel then
@@ -639,7 +650,7 @@
                 if compactIcon then
                     compactIcon.Image = t.IconAsset or ""
                     compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
-                    if themeName ~= "Navidad" then YinIcons.apply(compactIcon, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
+                    YinIcons.applyTab(compactIcon, t.NameEnglish, t.NameSpanish)
                 end
             end
         end
@@ -909,23 +920,4 @@
                     color = Color3.fromRGB(
                         255,
                         math.floor(100 + (255 - 100) * t),
-                        math.floor(150 + (255 - 150) * t)
-                    )
-                else
-                    local t = (cycle - 0.5) * 2
-                    color = Color3.fromRGB(
-                        255,
-                        math.floor(255 - (255 - 100) * t),
-                        math.floor(255 - (255 - 150) * t)
-                    )
-                end
-                
-                applyTextColorToAll(color)
-            end))
-
-        elseif mode == "RainbowDarkWhite" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local cycle = (elapsed * 0.25) % 1
-                
-                local
+                        math.floor(150 

@@ -1,4 +1,23 @@
-TextSize = 10,
+for index, info in ipairs(colorRoles) do
+        local cell = mk("Frame", {
+            Parent = ColorGridHolder,
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            LayoutOrder = index,
+            ZIndex = 202,
+        })
+        cell:SetAttribute("ThemeRole", "Secondary")
+        corner(cell, 12)
+        stroke(cell, Theme.Stroke, 1, 0.7)
+
+        local label = mk("TextLabel", {
+            Parent = cell,
+            Size = UDim2.new(1, -12, 0, 14),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundTransparency = 1,
+            Text = GetText(info[2], info[3]),
+            TextColor3 = Theme.Text,
+            TextSize = 10,
             Font = Enum.Font.GothamBold,
             TextXAlignment = Enum.TextXAlignment.Center,
             TextTruncate = Enum.TextTruncate.AtEnd,
@@ -1003,10 +1022,4 @@ TextSize = 10,
         Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
         BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
         BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
-        ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
-        ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
-        DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
-        SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
-        CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
-        CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
-        CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
+        ColorCorrectionEffect = {kind =

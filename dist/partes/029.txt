@@ -1,4 +1,23 @@
-l then
+instance:IsA("Shirt") then
+            property = "ShirtTemplate"
+        elseif instance:IsA("Pants") then
+            property = "PantsTemplate"
+        elseif instance:IsA("ShirtGraphic") then
+            property = "Graphic"
+        else
+            return
+        end
+
+        if self.ClothingOriginal[instance] == nil then
+            self.ClothingOriginal[instance] = {}
+            pcall(function() self.ClothingOriginal[instance][property] = instance[property] end)
+        end
+        pcall(function() instance[property] = "" end)
+    end
+
+    function ShaderSilhouette:_applyTerrain()
+        if not self.Enabled then return end
+        if self.TerrainWaterColor == nil then
             pcall(function() self.TerrainWaterColor = ShaderTerrain.WaterColor end)
         end
         for _, material in ipairs(Enum.Material:GetEnumItems()) do
@@ -910,18 +929,4 @@ l then
         local band = layer("Tracking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, -0.2, 0), BackgroundColor3 = Color3.fromRGB(235, 230, 200), BackgroundTransparency = 1})
         local bandGradient = Instance.new("UIGradient")
         bandGradient.Rotation = 90
-        bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
-        bandGradient.Parent = band
-        self.Band = band
-        gui.Parent = playerGui
-        return gui
-    end
-
-    function ShaderFootage:_step(delta)
-        local camera = workspace.CurrentCamera
-        if not camera then return end
-        -- lente abierto (se acerca suave al FOV objetivo)
-        pcall(function() camera.FieldOfView = camera.FieldOfView + (self.TargetFov - camera.FieldOfView) * math.min(1, delta * 4) end)
-        -- desenfoque de movimiento: cuanto más rápido gira la cámara, más borroso
-        local look = camera.CFrame.LookVector
-     
+        bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSe

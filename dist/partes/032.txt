@@ -1,4 +1,12 @@
-ta[1],
+Ciudad Neón", "Neon City", "NeonNight", "Noche magenta y cian con piso espejo realista", "Magenta and cyan night with realistic mirror floor"},
+        {"Diluvio", "Monsoon", "Monsoon", "Lluvia torrencial, cielo negro y rayos constantes", "Torrential rain, black sky and frequent lightning"},
+        {"Nivel 0", "Level 0", "Level0", "Cinta perdida: luz amarilla, grano, lente abierto y algo que no está bien", "Lost tape: yellow light, grain, wide lens and something not quite right"},
+    }
+    for _, presetData in ipairs(shaderPresetButtons) do
+        local data = presetData
+        shaderCreateModeCard(ShaderModeGrid, {
+            key = data[3],
+            labelES = data[1],
             labelEN = data[2],
             descES = data[4],
             descEN = data[5] or (data[2] .. " atmosphere"),
@@ -889,21 +897,4 @@ ta[1],
         Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.5)}),
     })
     LP.stage = mk("Frame", {
-        Parent = LP.hero,
-        Size = UDim2.fromOffset(80, 80),
-        Position = UDim2.new(0, 14, 0.5, -40),
-        BackgroundColor3 = Theme.Background,
-        BackgroundTransparency = 0.15,
-        BorderSizePixel = 0,
-        ZIndex = 12,
-    })
-    LP.stage:SetAttribute("ThemeRole", "Background")
-    corner(LP.stage, 999)
-    local heroRing = stroke(LP.stage, Theme.Accent, 2.5, 0)
-    heroRing:SetAttribute("ThemeRole", "Accent")
-    LP.caption = mk("TextLabel", {
-        Parent = LP.hero,
-        Size = UDim2.new(1, -120, 0, 12),
-        Position = UDim2.new(0, 108, 0, 24),
-        BackgroundTransparency = 1,
-        Text = GetText("ÍCONO FLOTANTE EN USO", "FLOATING
+     

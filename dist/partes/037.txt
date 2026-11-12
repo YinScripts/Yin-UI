@@ -1,4 +1,24 @@
-nsparency = bgColor and 0 or 1,
+im,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local Controls = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 48),
+        Position = UDim2.new(0, 14, 0, 351),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 20,
+    })
+
+    local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
+        local btn = mk("ImageButton", {
+            Parent = parent,
+            Size = UDim2.new(0, size, 0, size),
+            BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = bgColor and 0 or 1,
             Image = asset(imageId),
             ImageColor3 = imageColor or Color3.new(1, 1, 1),
             AutoButtonColor = false,
@@ -1118,28 +1138,4 @@ nsparency = bgColor and 0 or 1,
 
         local customAsset = audioPath
         if getcustomasset then
-            local okAsset, resultAsset = pcall(function()
-                return getcustomasset(audioPath)
-            end)
-            if okAsset and type(resultAsset) == "string" then
-                customAsset = resultAsset
-            end
-        end
-
-        return true, customAsset
-    end
-
-    local function ensureCoverCached(track)
-        if not track.CoverURL or track.CoverURL == "" then
-            return false, "no_cover_url"
-        end
-
-        local cacheName = track.CoverCacheName
-        if not cacheName or cacheName == "" then
-            return false, "no_cover_cache_name"
-        end
-
-        local coverPath = "YinYang_Cover_" .. cacheName
-        local coverExists = false
-
-        if
+            local okAsset, resultAs

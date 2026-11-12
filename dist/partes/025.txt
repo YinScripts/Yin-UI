@@ -1,4 +1,16 @@
-xtSize = 10,
+   "Your executor can't copy: copy the code below")
+                    -- Respaldo: mostrar el codigo para copiarlo a mano
+                    if not CodeBox then
+                        CodeBox = mk("TextBox", {
+                            Parent = Panel,
+                            Size = UDim2.new(1, -32, 0, 30),
+                            Position = UDim2.new(0, 16, 1, -90),
+                            BackgroundColor3 = Theme.Secondary,
+                            BackgroundTransparency = 0.2,
+                            Text = "",
+                            TextColor3 = Theme.Text,
+                            Font = Enum.Font.Code,
+                            TextSize = 10,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             ClearTextOnFocus = false,
@@ -1151,23 +1163,4 @@ xtSize = 10,
         closeColorPicker()
     end)
 
-    for index, info in ipairs(colorRoles) do
-        local cell = mk("Frame", {
-            Parent = ColorGridHolder,
-            BackgroundColor3 = Theme.Secondary,
-            BorderSizePixel = 0,
-            LayoutOrder = index,
-            ZIndex = 202,
-        })
-        cell:SetAttribute("ThemeRole", "Secondary")
-        corner(cell, 12)
-        stroke(cell, Theme.Stroke, 1, 0.7)
-
-        local label = mk("TextLabel", {
-            Parent = cell,
-            Size = UDim2.new(1, -12, 0, 14),
-            Position = UDim2.new(0, 6, 0, 6),
-            BackgroundTransparency = 1,
-            Text = GetText(info[2], info[3]),
-            TextColor3 = Theme.Text,
-            
+    

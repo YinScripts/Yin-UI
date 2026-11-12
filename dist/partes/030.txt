@@ -1,4 +1,18 @@
-   local turn = 0
+quenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
+        bandGradient.Parent = band
+        self.Band = band
+        gui.Parent = playerGui
+        return gui
+    end
+
+    function ShaderFootage:_step(delta)
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+        -- lente abierto (se acerca suave al FOV objetivo)
+        pcall(function() camera.FieldOfView = camera.FieldOfView + (self.TargetFov - camera.FieldOfView) * math.min(1, delta * 4) end)
+        -- desenfoque de movimiento: cuanto más rápido gira la cámara, más borroso
+        local look = camera.CFrame.LookVector
+        local turn = 0
         if self.LastLook then
             turn = math.acos(math.clamp(self.LastLook:Dot(look), -1, 1)) / math.max(delta, 1 / 240)
         end
@@ -1038,21 +1052,4 @@
         bar:SetAttribute("ThemeRole", "AccentOff")
         corner(bar, 99)
 
-        local fill = mk("Frame", {
-            Parent = bar,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Theme.Accent,
-            BorderSizePixel = 0,
-            ZIndex = 315,
-        })
-        fill:SetAttribute("ThemeRole", "Accent")
-        corner(fill, 99)
-        mk("UIGradient", {
-            Parent = fill,
-            Color = ColorSequence.new(Color3.fromRGB(190, 190, 190), Color3.new(1, 1, 1)),
-        })
-
-        local defaultPercent = (spec.max - spec.min) == 0 and 0 or math.clamp((spec.default - spec.min) / (spec.max - spec.min), 0, 1)
-        local defaultTick = mk("Frame", {
-            Parent = bar,
-            Size = UDim2.fromOf
+    

@@ -1,4 +1,23 @@
- color = Color3.fromRGB(
++ (255 - 150) * t)
+                    )
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(255 - (255 - 100) * t),
+                        math.floor(255 - (255 - 150) * t)
+                    )
+                end
+                
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "RainbowDarkWhite" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.25) % 1
+                
+                local color = Color3.fromRGB(
                     math.floor(255 * cycle),
                     math.floor(255 * cycle),
                     math.floor(255 * cycle)
@@ -1002,16 +1021,4 @@
                 else
                     setStatus("err",
                         "Tu ejecutor no copia: copiá el código de abajo",
-                        "Your executor can't copy: copy the code below")
-                    -- Respaldo: mostrar el codigo para copiarlo a mano
-                    if not CodeBox then
-                        CodeBox = mk("TextBox", {
-                            Parent = Panel,
-                            Size = UDim2.new(1, -32, 0, 30),
-                            Position = UDim2.new(0, 16, 1, -90),
-                            BackgroundColor3 = Theme.Secondary,
-                            BackgroundTransparency = 0.2,
-                            Text = "",
-                            TextColor3 = Theme.Text,
-                            Font = Enum.Font.Code,
-                            Te
+                     

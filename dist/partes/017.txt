@@ -127,17 +127,32 @@ startPos = Main.Position
             end
         end)
     end
-    function YinIcons.apply(image, name)
-        if not image or not name then return end
+    function YinIcons.apply(image, name, allowed)
+        if not image or not name or (allowed and not allowed()) then return end
         YinIcons.get(name, function(asset)
-            if image.Parent and Theme.ThemeName ~= "Navidad" then
+            if image.Parent and Theme.ThemeName ~= "Navidad" and (not allowed or allowed()) then
                 image.Image = asset
                 image.ImageColor3 = Color3.new(1, 1, 1)
             end
         end)
     end
-    YinIcons.tabs = { Home="home", Inicio="home", Favs="favorites", Favo="favorites", Themes="palette", Temas="palette", Effects="effects", Efectos="effects", Shaders="color_wheel", Settings="settings", Ajustes="settings", Chat="chat", Credits="info", ["Créditos"]="info", Logo="logo", Classic="diamonds", Spotify="music", ["Fan Art"]="fanart", All="all", Player="player", Players="players", Games="games", Map="map", Emotes="emotes", Movement="movement" }
+    YinIcons.tabs = { Home="home", Inicio="home", Favs="favorites", Favo="favorites", Themes="palette", Temas="palette", Effects="effects", Efectos="effects", Shaders="color_wheel", Settings="settings", Ajustes="settings", Chat="chat", Credits="info", ["Créditos"]="info", Logo="logo", Classic="diamonds", Spotify="music", ["Fan Art"]="fanart", All="all", Player="player", Players="players", Games="games", Map="map", Emotes="emotes", Movement="movement", Move="movement", Extra="grid_add", Avatar="player", Emote="emotes", Color="color_wheel" }
     YinIcons.stats = { ["rbxassetid://99086270459218"]="music", ["rbxassetid://90955646581059"]="players", ["rbxassetid://80031485123484"]="ping", ["rbxassetid://126144525731859"]="server", ["rbxassetid://128054256171328"]="time", ["rbxassetid://84609306530754"]="region", ["rbxassetid://88363727246005"]="status" }
+    -- El tema externo tiene prioridad por cada pestaña y botón.
+    function YinIcons.applyTab(image, english, spanish)
+        local function hasNoThemedIcon()
+            local icons = ThemeTabIcons[Theme.ThemeName]
+            return not (icons and (icons[english] or icons[spanish]))
+        end
+        YinIcons.apply(image, YinIcons.tabs[english] or YinIcons.tabs[spanish], hasNoThemedIcon)
+    end
+    function YinIcons.applyControl(image, key)
+        local function hasNoThemedIcon()
+            local icons = Theme.WindowIcons or {}
+            return not icons[key]
+        end
+        YinIcons.apply(image, ({ Search="search", Minimize="minimize", Maximize="maximize", Close="close" })[key], hasNoThemedIcon)
+    end
 
     local function applyThemeExtras()
         CatImage.Visible = (Theme.ThemeName == "Dark") and not (Window and Window.CompactNavigation)
@@ -161,7 +176,7 @@ startPos = Main.Position
             local key = controlKeys[control.Name]
             if key and control:IsA("ImageButton") then
                 control.Image = windowIcons[key] or control:GetAttribute("DefaultImage") or control.Image
-                if Theme.ThemeName ~= "Navidad" then YinIcons.apply(control, ({ Search="search", Minimize="minimize", Maximize="maximize", Close="close" })[key]) end
+                YinIcons.applyControl(control, key)
                 local controlPx = key == "Search" and searchSize or controlSize
                 control.Size = UDim2.fromOffset(controlPx, controlPx)
             end
@@ -361,11 +376,12 @@ startPos = Main.Position
             stroke(entry, Theme.Stroke, 1.0, 0.42)
             local icon = tab.IconAsset
             if type(icon) == "string" and icon ~= "" then
-                mk("ImageLabel", {
+                local compactIcon = mk("ImageLabel", {
                     Name = "Icon", Parent = entry, Size = UDim2.fromOffset(25, 25),
                     Position = UDim2.new(0.5, -12, 0.5, -12), BackgroundTransparency = 1,
                     Image = icon, ImageColor3 = Theme.TabIcon or Theme.Text, ScaleType = Enum.ScaleType.Fit, ZIndex = 19,
                 })
+                YinIcons.applyTab(compactIcon, tab.NameEnglish, tab.NameSpanish)
             else
                 local fallback = mk("TextLabel", {
                     Name = "Fallback", Parent = entry, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
@@ -1006,30 +1022,4 @@ startPos = Main.Position
 
         local length = #TabIconCarousel.Items * TAB_ICON_STEP
         local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
-        local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
-        TabIconCarousel.Velocity = 0
-
-        if animate then
-            TabIconCarousel.Anim = {
-                From = TabIconCarousel.Offset,
-                To = TabIconCarousel.Offset + delta,
-                T0 = os.clock(),
-                Dur = 0.35,
-            }
-        else
-            TabIconCarousel.Anim = nil
-            TabIconCarousel.Offset = TabIconCarousel.Offset + delta
-            renderTabCarousel()
-            TabIconCarousel.Spin = 0
-            applyTabCarouselSpin()
-        end
-    end
-
-    local function relayoutTabCarousel()
-        if not TabIconCarousel.Enabled then return end
-        TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
-        TabIconCarousel.Anim = nil
-        TabIconCarousel.Velocity = 0
-        renderTabCarousel()
-        if TabIconCarousel.ActiveTab then
-          
+        local delta = (target - TabIconCarousel.Offset + length / 2) 

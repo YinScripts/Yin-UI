@@ -1,4 +1,21 @@
-fset(2, 14),
+    local fill = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.new(0, 0, 1, 0),
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        fill:SetAttribute("ThemeRole", "Accent")
+        corner(fill, 99)
+        mk("UIGradient", {
+            Parent = fill,
+            Color = ColorSequence.new(Color3.fromRGB(190, 190, 190), Color3.new(1, 1, 1)),
+        })
+
+        local defaultPercent = (spec.max - spec.min) == 0 and 0 or math.clamp((spec.default - spec.min) / (spec.max - spec.min), 0, 1)
+        local defaultTick = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.fromOffset(2, 14),
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(defaultPercent, 0, 0.5, 0),
             BackgroundColor3 = Theme.TextDim,
@@ -745,12 +762,4 @@ fset(2, 14),
         {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
         {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
         {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
-        {"Ciudad Neón", "Neon City", "NeonNight", "Noche magenta y cian con piso espejo realista", "Magenta and cyan night with realistic mirror floor"},
-        {"Diluvio", "Monsoon", "Monsoon", "Lluvia torrencial, cielo negro y rayos constantes", "Torrential rain, black sky and frequent lightning"},
-        {"Nivel 0", "Level 0", "Level0", "Cinta perdida: luz amarilla, grano, lente abierto y algo que no está bien", "Lost tape: yellow light, grain, wide lens and something not quite right"},
-    }
-    for _, presetData in ipairs(shaderPresetButtons) do
-        local data = presetData
-        shaderCreateModeCard(ShaderModeGrid, {
-            key = data[3],
-            labelES = da
+        {"

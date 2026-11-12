@@ -1,4 +1,30 @@
-  focusTabCarousel(TabIconCarousel.ActiveTab, false)
+% length - length / 2
+        TabIconCarousel.Velocity = 0
+
+        if animate then
+            TabIconCarousel.Anim = {
+                From = TabIconCarousel.Offset,
+                To = TabIconCarousel.Offset + delta,
+                T0 = os.clock(),
+                Dur = 0.35,
+            }
+        else
+            TabIconCarousel.Anim = nil
+            TabIconCarousel.Offset = TabIconCarousel.Offset + delta
+            renderTabCarousel()
+            TabIconCarousel.Spin = 0
+            applyTabCarouselSpin()
+        end
+    end
+
+    local function relayoutTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
+        TabIconCarousel.Anim = nil
+        TabIconCarousel.Velocity = 0
+        renderTabCarousel()
+        if TabIconCarousel.ActiveTab then
+            focusTabCarousel(TabIconCarousel.ActiveTab, false)
         end
     end
 
@@ -277,7 +303,7 @@
                 ScaleType = Enum.ScaleType.Fit,
                 ZIndex = 9
             })
-            if Theme.ThemeName ~= "Navidad" then YinIcons.apply(TabIconLabel, YinIcons.tabs[nameEnglish] or YinIcons.tabs[nameSpanish]) end
+            YinIcons.applyTab(TabIconLabel, nameEnglish, nameSpanish)
             textStart = 14 + iconSize
         end
 
@@ -942,19 +968,4 @@
 
                 local pillV5 = nil
                 if usePillV5 then
-                    -- El color del texto lo maneja el diseno (blanco apagado / contraste del tema al encender)
-                    FloatLabel:SetAttribute("ThemeTextRole", nil)
-                    FloatLabel:SetAttribute("IgnoreTextEffect", true)
-                    pillV5 = FloatingPillV5.Build(FloatingWindow, FloatingGlow, FloatLabel, floatStroke, hasLinkedSlider, hasDial)
-                end
-                if hasDial then
-                    FloatingPillV5.BuildDial(FloatingWindow, FloatLabel, _dialList)
-                end
-
-                if hasLinkedSlider then
-                    local sMin   = _linkedSliderRef._min or 0
-                    local sMax   = _linkedSliderRef._max or 100
-                    local sValue = math.clamp(_linkedSliderRef._value or sMin, sMin, sMax)
-
-                    local SliderRow = mk("Frame", {
-                        Parent = FloatingWindow
+                    -- El color del texto lo maneja el diseno (blanco apagado / contra

@@ -1,4 +1,21 @@
-ows[#FavPage.rows + 1] = row
+          ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 46,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.fromOffset(60, 58),
+            Position = UDim2.new(1, -78, 0, 0),
+            BackgroundTransparency = 1,
+            Text = song.Duration,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 43,
+        })
+
+        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
+        FavPage.rows[#FavPage.rows + 1] = row
         Row.MouseEnter:Connect(function()
             row.Hover = true
             Row.BackgroundTransparency = 0.9
@@ -1056,23 +1073,4 @@ if DEMO_ACTIVO then
     end)
 
     createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
-        print("ESP: " .. (state and "ON" or "OFF"))
-    end)
-
-    createToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
-        print("GodMode: " .. (state and "ON" or "OFF"))
-    end)
-
-    TabFeatures:CreateDivider()
-    TabFeatures:CreateLabel("Botones Flotantes 🔘", 14)
-    TabFeatures:CreateDivider()
-
-    TabFeatures:CreateFloatingButton("Teleport Here", "Teleport Here", function()
-        print("[FloatingButton] Teleport Here → ejecutado")
-    end)
-
-    TabFeatures:CreateFloatingButton("Noclip", "Noclip", 3, function()
-        print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
-    end)
-
-    TabFeatures:CreateFloatingButton("Eliminar Enti
+    

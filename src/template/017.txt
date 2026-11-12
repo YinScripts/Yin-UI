@@ -507,7 +507,7 @@
                 ScaleType = Enum.ScaleType.Fit,
                 ZIndex = 9
             })
-            if Theme.ThemeName ~= "Navidad" then YinIcons.apply(TabIconLabel, YinIcons.tabs[nameEnglish] or YinIcons.tabs[nameSpanish]) end
+            YinIcons.applyTab(TabIconLabel, nameEnglish, nameSpanish)
             textStart = 14 + iconSize
         end
 

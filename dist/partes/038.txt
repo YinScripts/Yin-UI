@@ -1,4 +1,28 @@
- isfile then
+set = pcall(function()
+                return getcustomasset(audioPath)
+            end)
+            if okAsset and type(resultAsset) == "string" then
+                customAsset = resultAsset
+            end
+        end
+
+        return true, customAsset
+    end
+
+    local function ensureCoverCached(track)
+        if not track.CoverURL or track.CoverURL == "" then
+            return false, "no_cover_url"
+        end
+
+        local cacheName = track.CoverCacheName
+        if not cacheName or cacheName == "" then
+            return false, "no_cover_cache_name"
+        end
+
+        local coverPath = "YinYang_Cover_" .. cacheName
+        local coverExists = false
+
+        if isfile then
             local okFile, resultFile = pcall(function()
                 return isfile(coverPath)
             end)
@@ -1065,23 +1089,4 @@
         FP.PlayBtn.BackgroundTransparency = 0
         FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
         local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
-        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
-
-        FP.Time = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-        
+        nextBtn.Position = UDim2.ne

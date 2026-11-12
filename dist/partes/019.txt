@@ -1,4 +1,19 @@
-,
+ste del tema al encender)
+                    FloatLabel:SetAttribute("ThemeTextRole", nil)
+                    FloatLabel:SetAttribute("IgnoreTextEffect", true)
+                    pillV5 = FloatingPillV5.Build(FloatingWindow, FloatingGlow, FloatLabel, floatStroke, hasLinkedSlider, hasDial)
+                end
+                if hasDial then
+                    FloatingPillV5.BuildDial(FloatingWindow, FloatLabel, _dialList)
+                end
+
+                if hasLinkedSlider then
+                    local sMin   = _linkedSliderRef._min or 0
+                    local sMax   = _linkedSliderRef._max or 100
+                    local sValue = math.clamp(_linkedSliderRef._value or sMin, sMin, sMax)
+
+                    local SliderRow = mk("Frame", {
+                        Parent = FloatingWindow,
                         Size = UDim2.new(1, -24, 0, 34),
                         Position = UDim2.new(0, 12, 0, 36),
                         BackgroundTransparency = 1,
@@ -954,23 +969,4 @@
             Click.MouseEnter:Connect(function()
                 TweenService:Create(Holder,
                     TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
-            end)
-            Click.MouseLeave:Connect(function()
-                TweenService:Create(Holder,
-                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.08 or RowKit.IDLE}):Play()
-            end)
-
-            Click.MouseButton1Click:Connect(function()
-                state = not state
-                playSound(Sounds.Click, 0.5)
-                RowKit.Press(Holder)
-                applyVisual(state, true)
-                pcall(cb, state)
-            end)
-
-            resetScrollTop(TabPage)
-
-            if not isMirror then
-                Window._Regi
+  

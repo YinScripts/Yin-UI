@@ -1,4 +1,16 @@
-})
+.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        LayoutOrder = 1,
+        ZIndex = Z + 4,
+    })
+    CodeBox:SetAttribute("ThemeRole", "Background")
+    CodeBox:SetAttribute("ThemeTextRole", "Text")
+    CodeBox:SetAttribute("PlaceholderSpanish", "Pegá acá un código YYLOGO1:...")
+    CodeBox:SetAttribute("PlaceholderEnglish", "Paste a YYLOGO1:... code here")
+    CodeBox.PlaceholderText = GetText("Pegá acá un código YYLOGO1:...", "Paste a YYLOGO1:... code here")
+    corner(CodeBox, 9)
+    pad(CodeBox, 0, 10, 10, 0)
+    local shareRow = mk("Frame", { Parent = ShareCard, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
     local CopyBtn = button(shareRow, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
     local ImportBtn = button(shareRow, "Cargar código", "Load code", "Secondary", { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new(0.5, 4, 0, 0), TextSize = 11 })
     CopyBtn.MouseButton1Click:Connect(function()
@@ -748,24 +760,4 @@
 
     function Window:CreateClassicTab()
     local TabClassic = Window:CreateTab("Classic", "Classic", "rbxassetid://99086270459218")
-    local ClassicPage = TabClassic.Page
-
-    ClassicPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    ClassicPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ClassicPage.ScrollBarThickness = 2
-    ClassicPage.ScrollingEnabled = true
-    ClassicPage.BackgroundTransparency = 1
-    ClassicPage:SetAttribute("ThemeRole", "Background")
-
-    local classicScripts = LoadClassicManifest()
-    local CL = {holders = {}}
-
-    CL.hero = mk("Frame", {
-        Parent = ClassicPage,
-        Size = UDim2.new(1, 0, 0, 92),
-        BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.35,
-        BorderSizePixel = 0,
-        ZIndex = 9,
-    })
-    CL.hero:SetAttribute("ThemeRole", "Seco
+    local 

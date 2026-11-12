@@ -1,4 +1,25 @@
- (i == selectedIndex)
+("Frame", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 9,
+            })
+            mk("UIGridLayout", {
+                Parent = GridHolder,
+                CellSize = UDim2.new(0.485, 0, 0, 180),
+                CellPadding = UDim2.new(0.03, 0, 0, 10),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            })
+
+            local selectedIndex = nil
+            local cards = {}
+
+            local function refreshSelection()
+                for i, c in ipairs(cards) do
+                    local isSel = selectable and (i == selectedIndex)
                     c.Card.BackgroundColor3 = isSel and Theme.Accent or Theme.Secondary
                     c.Card.BackgroundTransparency = isSel and 0 or 0.4
                     c.Stroke.Color = isSel and Theme.Accent or Theme.Stroke
@@ -845,15 +866,4 @@
                             Grab.Size = UDim2.fromOffset(w, h)
                             Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
                         end
-                        HomeAnim.OwnerAfterStep = updateGrab
-                        updateGrab()
-                        function HomeAnim.OwnerHit(pos)
-                            local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
-                            return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
-                        end
-                        local holdInput, prevScroll = nil, true
-                        local function screenOf(input) return Vector2.new(input.Position.X, input.Position.Y) end
-                        Grab.InputBegan:Connect(function(input)
-                            if holdInput then return end
-                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-        
+                    
