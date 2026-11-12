@@ -941,12 +941,12 @@
             Click.MouseEnter:Connect(function()
                 TweenService:Create(Holder,
                     TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.10 or RowKit.HOVER}):Play()
+                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
             end)
             Click.MouseLeave:Connect(function()
                 TweenService:Create(Holder,
                     TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.16 or RowKit.IDLE}):Play()
+                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.08 or RowKit.IDLE}):Play()
             end)
 
             Click.MouseButton1Click:Con

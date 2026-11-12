@@ -993,7 +993,7 @@
             if not hasCredit then
                 Holder.ClipsDescendants = true
                 Holder:SetAttribute("OptionCardV5", true)
-                Holder.BackgroundTransparency = 0.16
+                Holder.BackgroundTransparency = 0.08
                 local label, status
                 for _, child in ipairs(Holder:GetChildren()) do
                     if child:IsA("TextLabel") and child:GetAttribute("TextSpanish") == textSpanish then
@@ -1007,7 +1007,7 @@
                 local panel = mk("Frame", {
                     Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(1, 0),
                     Position = UDim2.fromScale(1, 0), Size = UDim2.fromScale(1, 1),
-                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.20,
+                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.10,
                     BorderSizePixel = 0, ZIndex = 9,
                 })
                 panel:SetAttribute("ThemeRole", "Background")
@@ -1038,34 +1038,69 @@
                 favoriteBorder:SetAttribute("ThemeRole", "Stroke")
                 -- Borde suave de la tarjeta y cápsula inferior de tecla, como en la referencia.
                 local rim = mk("Frame", {
-                    Name = "OptionRim", Parent = Holder, Position = UDim2.fromOffset(1, 1),
-                    Size = UDim2.new(1, -2, 1, -2), BackgroundTransparency = 1,
+                    Name = "OptionRim", Parent = Holder, Position = UDim2.new(0.40, 0, 0, 1),
+                    Size = UDim2.new(0.60, -1, 1, -2), BackgroundTransparency = 1,
                     BorderSizePixel = 0, Active = false, ZIndex = 12,
                 })
                 corner(rim, 14)
                 local rimStroke = stroke(rim, Color3.new(1, 1, 1), 1.5, 0.12)
-                local rimGradient = mk("UIGradient", {Parent = rimStroke, Rotation = 12})
-                KeybindBtn.BackgroundColor3 = Theme.Background
-                KeybindBtn.BackgroundTransparency = 0.12
-                KeybindBtn:SetAttribute("ThemeRole", "Background")
+                local rimGradient = mk("UIGradient", {Parent = rimStroke, Rotation = 0,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
+                KeybindBtn.BackgroundTransparency = 1
+                KeybindBtn:SetAttribute("ThemeRole", nil)
+                local keyPlate = mk("Frame", {Parent = KeybindBtn, Name = "KeyPlate",
+                    Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 14, Active = false})
+                keyPlate:SetAttribute("ThemeRole", "Secondary")
+                corner(keyPlate, 999)
+                mk("UIGradient", {Parent = keyPlate, Rotation = 25,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
+                local keySlash = mk("Frame", {Parent = KeybindBtn, Name = "KeySlash",
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
+                    Size = UDim2.fromOffset(2, 20), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
+                    BackgroundTransparency = 0.05, BorderSizePixel = 0, Active = false, ZIndex = 16})
+                keySlash:SetAttribute("ThemeRole", "ToggleOn")
+                corner(keySlash, 2)
+                local keyGlow = mk("Frame", {Parent = KeybindBtn, Name = "KeySlashGlow",
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
+                    Size = UDim2.fromOffset(5, 21), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
+                    BackgroundTransparency = 0.75, BorderSizePixel = 0, Active = false, ZIndex = 15})
+                keyGlow:SetAttribute("ThemeRole", "ToggleOn")
+                corner(keyGlow, 3)
                 local keyCorner = KeybindBtn:FindFirstChildOfClass("UICorner")
                 if keyCorner then keyCorner.CornerRadius = UDim.new(1, 0) end
                 local keyBorder = KeybindBtn:FindFirstChildOfClass("UIStroke")
                 if keyBorder then
                     keyBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                    keyBorder.Color = Theme.Accent
-                    keyBorder.Transparency = 0.16
-                    keyBorder:SetAttribute("ThemeRole", "Accent")
-                    keyBorder.Thickness = 1.3
+                    keyBorder.Color = Color3.new(1, 1, 1)
+                    keyBorder.Transparency = 0.12
+                    keyBorder:SetAttribute("ThemeRole", nil)
+                    keyBorder.Thickness = 1.4
                 end
+                local keyGradient = keyBorder and mk("UIGradient", {Parent = keyBorder,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.07, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
                 local function updateRim()
                     local accent = Theme.Accent or Theme.Stroke
                     local second = Theme.ToggleOn or accent
                     rimGradient.Color = ColorSequence.new({
                         ColorSequenceKeypoint.new(0, accent),
                         ColorSequenceKeypoint.new(0.70, accent),
-                        ColorSequenceKeypoint.new(1, second),
+                        ColorSequenceKeypoint.new(1, accent),
                     })
+                    if keyGradient then
+                        keyGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, second),
+                            ColorSequenceKeypoint.new(0.12, second),
+                            ColorSequenceKeypoint.new(0.35, accent),
+                            ColorSequenceKeypoint.new(1, accent),
+                        })
+                    end
                 end
                 Holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(updateRim)
                 updateRim()
@@ -1080,6 +1115,8 @@
                     panel.Position = narrow and UDim2.new(1, -8, 1, -72) or UDim2.fromScale(1, 0)
                     panelMask.Enabled = not narrow
                     separator.Visible = not narrow
+                    rim.Position = narrow and UDim2.fromOffset(1, 1) or UDim2.new(0.40, 0, 0, 1)
+                    rim.Size = narrow and UDim2.new(1, -2, 1, -2) or UDim2.new(0.60, -1, 1, -2)
                     if label then
                         label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(0.38, -26, 0, 22)
                         label.Position = UDim2.new(0, 16, 0, narrow and 4 or 13)
