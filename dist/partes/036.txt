@@ -452,7 +452,7 @@
 
         A.Top = A.makeLayer(TopBar, 6, UDim2.fromScale(1, 1))
         -- Debajo de la lista para que el desplazamiento y los toques sigan funcionando.
-        A.Side = A.makeLayer(Body, 6, UDim2.new(0, 110, 1, 0))
+        A.Side = A.makeLayer(Body, 6, UDim2.new(0, 128, 1, 0))
         local compactRail = Body:FindFirstChild("CompactTabRail")
         if compactRail then A.Compact = A.makeLayer(compactRail, 16, UDim2.fromScale(1, 1)) end
         A.Layers = {A.Top, A.Side}
