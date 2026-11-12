@@ -1,4 +1,8 @@
-pillV5 = nil
+      FloatLabel:SetAttribute("ThemeTextRole", "Text")
+                FloatLabel:SetAttribute("TextSpanish", textSpanish)
+                FloatLabel:SetAttribute("TextEnglish", textEnglish)
+
+                local pillV5 = nil
                 if usePillV5 then
                     -- El color del texto lo maneja el diseno (blanco apagado / contraste del tema al encender)
                     FloatLabel:SetAttribute("ThemeTextRole", nil)
@@ -963,10 +967,4 @@ pillV5 = nil
                     end)
                 else
                     Knob.Size     = knobNormal
-                    Knob.Position = newState and knobON or knobOFF
-                    KnobShadow.Position = newState and shadowON or shadowOFF
-                end
-            end
-
-            Click.MouseEnter:Connect(function()
-   
+                  

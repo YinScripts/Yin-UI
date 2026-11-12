@@ -1,4 +1,8 @@
-olorToHex(selected)
+rCancel.MouseButton1Click:Connect(closeColorPicker)
+    PickerApply.MouseButton1Click:Connect(function()
+        if pickerTarget then
+            local selected = pickerColor()
+            pickerTarget.Box.Text = colorToHex(selected)
             pickerTarget.Swatch.BackgroundColor3 = selected
         end
         closeColorPicker()
@@ -1024,6 +1028,4 @@ olorToHex(selected)
         Lighting = {kind = "service", serviceName = "Lighting"},
         Terrain = {kind = "direct", instance = ShaderTerrain},
         Sky = {kind = "class", className = "Sky", parent = "Lighting"},
-        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
-        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
-        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Ligh
+        Atmosphere = {kind = 

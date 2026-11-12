@@ -1,4 +1,6 @@
-ting"},
+"class", className = "Atmosphere", parent = "Lighting"},
+        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
+        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
         BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
         ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
         ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
@@ -794,7 +796,4 @@ ting"},
     end
 
     -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
-    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
-    function ShaderReflections:_stripPartTextures(part)
-        if self.TextureOriginal[part] ~= nil then return end
-        l
+    -- TextureID de MeshPart y 

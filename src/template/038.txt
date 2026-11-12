@@ -1046,12 +1046,12 @@
         end
 
         local m = getSpotifyMetrics()
-        local cardH = m.compact and 228 or 242
+        local cardH = m.cardHeight
         local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(76, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.compact and 138 or 182))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
 
         local Row = mk("Frame", {
             Parent = SongList,

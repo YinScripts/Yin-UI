@@ -1,4 +1,6 @@
-  {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
+epúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
+        {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
+        {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
         {"Ciudad Neón", "Neon City", "NeonNight", "Noche magenta y cian con piso espejo realista", "Magenta and cyan night with realistic mirror floor"},
         {"Diluvio", "Monsoon", "Monsoon", "Lluvia torrencial, cielo negro y rayos constantes", "Torrential rain, black sky and frequent lightning"},
         {"Nivel 0", "Level 0", "Level0", "Cinta perdida: luz amarilla, grano, lente abierto y algo que no está bien", "Lost tape: yellow light, grain, wide lens and something not quite right"},
@@ -888,11 +890,4 @@
         BorderSizePixel = 0,
         LayoutOrder = 0,
         ZIndex = 11,
-    })
-    LP.hero:SetAttribute("ThemeRole", "Secondary")
-    corner(LP.hero, 16)
-    stroke(LP.hero, Theme.Stroke, 1, 0.55)
-    mk("UIGradient", {
-        Parent = LP.hero,
-        Rotation = 0,
-        Transparency = 
+    }

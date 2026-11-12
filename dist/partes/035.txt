@@ -1,4 +1,10 @@
-
+0, 32),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
         TextSize = 10,
         Font = Enum.Font.Code,
         ClearTextOnFocus = false,
@@ -755,11 +761,4 @@
         local data = IconCatalog.Icons[name]
         if data then
             firstIcon = firstIcon or name
-            CreateIconCard(name, data, i)
-        end
-    end
-    LP.setHero(IconCatalog.Icons[SavedConfig.SelectedLogoIcon or ""] and SavedConfig.SelectedLogoIcon or firstIcon)
-    end
-    BuildLogoTab()
-
-    funct
+ 

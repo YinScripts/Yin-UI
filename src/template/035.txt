@@ -381,6 +381,15 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
     SPage.ScrollBarThickness = 0
     SPage.ScrollingEnabled = false
 
+    -- Capa estática de brillo ahumado; si falla la descarga, conserva el panel normal.
+    local function spotifyGlass(parent, z)
+        local overlay = mk("ImageLabel", {Parent = parent, Name = "SpotifyGlass", Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1, Image = "", ImageTransparency = 0.76,
+            ScaleType = Enum.ScaleType.Stretch, Active = false, ZIndex = z})
+        corner(overlay, 10)
+        YinIcons.get("spotify-glass", function(image) if overlay.Parent then overlay.Image = image end end)
+    end
+
     -- Fondo continuo y geometría temporal mientras Spotify está seleccionado.
     do
         local A = {Active = false, Cover = "", Saved = {}}
@@ -392,7 +401,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
         })
         corner(A.Frame, 10)
         A.Image = mk("ImageLabel", {
-            Parent = A.Frame, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+            Parent = A.Frame, Size = UDim2.new(1, 0, 1.48, 0), Position = UDim2.new(0, 0, -0.34, 0), BackgroundTransparency = 1,
             Image = "", ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.12, ZIndex = 5,
         })
         local shade = mk("Frame", {
@@ -425,7 +434,9 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             A.Active = true
             A.Saved = {visible = {}, tabTransparency = TabList.BackgroundTransparency,
                 topTransparency = TopBar.BackgroundTransparency, titleSize = TitleLabel.Size,
-                contentPosition = ContentArea.Position, contentSize = ContentArea.Size}
+                contentPosition = ContentArea.Position, contentSize = ContentArea.Size,
+                titleStroke = TitleLabel.TextStrokeTransparency, badgeStroke = DaraHubLabel.TextStrokeTransparency,
+                titleStrokeColor = TitleLabel.TextStrokeColor3, badgeStrokeColor = DaraHubLabel.TextStrokeColor3}
             for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
                 TitleDivider, TopBarArt, TabListArt, CatImage, BackgroundArt, Main:FindFirstChild("RotatingSubText")}) do
                 if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
@@ -435,10 +446,15 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             TopBar.BackgroundTransparency = 1
             TabList.BackgroundTransparency = 1
             TitleLabel.Size = UDim2.fromOffset(106, 26)
+            TitleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+            TitleLabel.TextStrokeTransparency = 0.15
+            DaraHubLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+            DaraHubLabel.TextStrokeTransparency = 0.15
             for _, tab in ipairs(Window.Tabs or {}) do
                 if tab.Button then tab.Button.BackgroundTransparency = tab.Page and tab.Page.Visible and 0.35 or 1 end
             end
             A.Layout()
+            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
         end
         function A.leave()
             if not A.Active then return end
@@ -447,6 +463,10 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             for obj, visible in pairs(A.Saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
             TopBar.BackgroundTransparency = A.Saved.topTransparency
             TitleLabel.Size = A.Saved.titleSize
+            TitleLabel.TextStrokeTransparency = A.Saved.titleStroke
+            DaraHubLabel.TextStrokeTransparency = A.Saved.badgeStroke
+            TitleLabel.TextStrokeColor3 = A.Saved.titleStrokeColor
+            DaraHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
             TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
             local compact = Window.CompactNavigation == true
             TabListArt.Visible = not compact
@@ -730,17 +750,30 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
 
     local spotifyPanel = Color3.fromRGB(0, 0, 0)
 
+    local function spotifyLogicalSize(gui)
+        local scale, node = 1, gui
+        while node and not node:IsA("LayerCollector") do
+            local uiScale = node:FindFirstChildOfClass("UIScale")
+            if uiScale then scale = scale * uiScale.Scale end
+            node = node.Parent
+        end
+        return gui.AbsoluteSize / math.max(scale, 0.01)
+    end
+
     local function getSpotifyMetrics()
-        local width = 0
+        local width, height = 0, 0
         pcall(function()
-            width = (SPage and SPage.AbsoluteSize and SPage.AbsoluteSize.X) or 0
+            local logical = spotifyLogicalSize(SPage)
+            width, height = logical.X, logical.Y
         end)
 
         local compact = width > 0 and width < 640
         local gridColumns = 3
         local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
         local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
-        local cardHeight = width > 0 and (width < 420 and 228 or 242) or 228
+        -- Dos filas visibles, con límites para mantener controles legibles en móviles.
+        local cardHeight = height > 0 and math.clamp(math.floor((height - 160) / 2), 100, 164) or 140
+        local coverMax = math.max(40, cardHeight - 68)
 
         return {
             compact = compact,
@@ -772,6 +805,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             rowPlayX = compact and -34 or -42,
             gridColumns = gridColumns,
             cardHeight = cardHeight,
+            coverMax = coverMax,
             gridGapY = gridGapY,
             gridGapX = gridGapX,
         }

@@ -1,4 +1,12 @@
-* TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
+en
+                index = i
+                break
+            end
+        end
+        if not index then return end
+
+        local length = #TabIconCarousel.Items * TAB_ICON_STEP
+        local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
         local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
         TabIconCarousel.Velocity = 0
 
@@ -963,8 +971,4 @@
                     TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
                     ZIndex = 5,
                 })
-                FloatLabel:SetAttribute("ThemeTextRole", "Text")
-                FloatLabel:SetAttribute("TextSpanish", textSpanish)
-                FloatLabel:SetAttribute("TextEnglish", textEnglish)
-
-                local 
+          

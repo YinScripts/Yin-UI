@@ -1,4 +1,72 @@
-ent.Left,
+extYAlignment.Center,
+        ZIndex = 21,
+    })
+
+    local AddUserSongButton = mk("TextButton", {
+        Parent = FavoritesHeader,
+        Size = UDim2.fromOffset(32, 30),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, 0, 0.5, 0),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        Text = "",
+        TextColor3 = Color3.fromRGB(0, 0, 0),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 22,
+        AutoButtonColor = false,
+        Visible = false,
+        ZIndex = 22,
+    })
+    corner(AddUserSongButton, 9)
+    mk("ImageLabel", {
+        Parent = AddUserSongButton,
+        Size = UDim2.fromOffset(19, 19),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        BackgroundTransparency = 1,
+        Image = asset(113157136350384),
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 23,
+    })
+
+    local SongSearchHolder = mk("Frame", {
+        Parent = SongsCard,
+        Size = UDim2.new(1, -24, 0, 30),
+        Position = UDim2.new(0, 12, 0, 50),
+        BackgroundColor3 = Color3.fromRGB(36, 36, 36),
+        BackgroundTransparency = 0.10,
+        BorderSizePixel = 0,
+        ZIndex = 20,
+    })
+    corner(SongSearchHolder, 12)
+    stroke(SongSearchHolder, Color3.fromRGB(75, 75, 82), 1, 0.55)
+
+    spotifyGlass(SongSearchHolder, 20)
+    local SongSearchIcon = mk("ImageButton", {
+        Parent = SongSearchHolder,
+        Size = UDim2.new(0, 18, 0, 18),
+        Position = UDim2.new(0, 10, 0.5, -9),
+        BackgroundTransparency = 1,
+        Image = asset(121018724060431),
+        ImageColor3 = spotifyDim,
+        AutoButtonColor = false,
+        ZIndex = 21,
+    })
+
+    local SongSearchBox = mk("TextBox", {
+        Parent = SongSearchHolder,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ClearTextOnFocus = false,
+        PlaceholderText = GetText("Buscar por nombre o artista...", "Search by song or artist..."),
+        PlaceholderColor3 = spotifyDim,
+        TextColor3 = spotifyText,
+        TextSize = 13,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
         ZIndex = 21,
     })
 
@@ -453,7 +521,7 @@ ent.Left,
 
     local function applySpotifyNowPlayingLayout()
         local m = getSpotifyMetrics()
-        local albumSz = m.compact and 118 or 132
+        local albumSz = m.compact and 108 or 122
         local cardW = 0
         pcall(function() cardW = NowPlayingCard.AbsoluteSize.X end)
         local compactCard = cardW > 0 and cardW < 640
@@ -464,10 +532,10 @@ ent.Left,
         NowPlayingCard.Size = UDim2.new(1, 0, 1, 0)
 
         AlbumArt.Size = UDim2.new(0, albumSz, 0, albumSz)
-        AlbumArt.Position = UDim2.new(0.5, -(albumSz / 2), 0, 12)
+        AlbumArt.Position = UDim2.new(0.5, -(albumSz / 2), 0, 42)
 
         InfoFrame.Size = UDim2.new(1, -28, 0, 62)
-        InfoFrame.Position = UDim2.new(0, 14, 0, albumSz + 22)
+        InfoFrame.Position = UDim2.new(0, 14, 0, albumSz + 48)
 
         PlayerSongTitle.TextSize = compactCard and 19 or 21
         PlayerSongArtist.Position = UDim2.new(0, 0, 0, 27)
@@ -475,18 +543,18 @@ ent.Left,
         PlayerMeta.Position = UDim2.new(0, 0, 0, 46)
         PlayerMeta.TextSize = 10
 
-        local progressTop = albumSz + 96
+        local progressTop = albumSz + 115
         ProgressTrack.Size = UDim2.new(1, -28, 0, 5)
         SeekHitbox.Size = UDim2.new(1, -28, 0, 28)
         ProgressTrack.Position = UDim2.new(0, 14, 0, progressTop)
         SeekHitbox.Position = UDim2.new(0, 14, 0, progressTop - 14)
-        ProgressTimeLeft.Position = UDim2.new(0, 14, 0, progressTop + 11)
-        ProgressTimeRight.Position = UDim2.new(1, -86, 0, progressTop + 11)
+        ProgressTimeLeft.Position = UDim2.new(0, 14, 0, progressTop + 8)
+        ProgressTimeRight.Position = UDim2.new(1, -86, 0, progressTop + 8)
         ProgressTimeLeft.TextSize = 11
         ProgressTimeRight.TextSize = 11
 
         Controls.Size = UDim2.new(1, -28, 0, 44)
-        Controls.Position = UDim2.new(0, 14, 0, progressTop + 34)
+        Controls.Position = UDim2.new(0, 14, 1, -52)
 
         RepeatBtn.Size = UDim2.new(0, 20, 0, 20)
         RepeatBtn.Position = UDim2.new(0.06, 0, 0.5, 0)
@@ -538,12 +606,12 @@ ent.Left,
         end
 
         local m = getSpotifyMetrics()
-        local cardH = m.compact and 228 or 242
+        local cardH = m.cardHeight
         local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(76, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.compact and 138 or 182))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
 
         rowData.Row.Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH)
         rowData.Row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
@@ -564,20 +632,21 @@ ent.Left,
         local textW = math.max(40, coverSize + 20 - sidePad * 2)
 
         if rowData.Title then
-            rowData.Title.Size = UDim2.fromOffset(textW, m.compact and 34 or 38)
+            rowData.Title.Size = UDim2.fromOffset(textW, m.compact and 22 or 26)
             rowData.Title.Position = UDim2.new(0, sidePad, 0, titleTop)
             rowData.Title.TextSize = m.compact and 11 or 13
         end
 
         if rowData.Artist then
             rowData.Artist.Size = UDim2.fromOffset(textW, 16)
-            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 36 or 40))
+            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 24 or 28))
             rowData.Artist.TextSize = m.compact and 9 or 10
         end
 
         if rowData.Duration then
+            rowData.Duration.Visible = m.cardHeight >= 120
             rowData.Duration.Size = UDim2.fromOffset(44, 16)
-            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 36 or 40) + 16)
+            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + (m.compact and 24 or 28) + 16)
             rowData.Duration.TextSize = 9
             rowData.Duration.TextXAlignment = Enum.TextXAlignment.Left
         end
@@ -602,7 +671,7 @@ ent.Left,
 
     local function refreshSpotifyUILayout()
         applySpotifyNowPlayingLayout()
-        local width = SongList.AbsoluteSize.X
+        local width = spotifyLogicalSize(SongList).X
         local columns = 3
         local gapX = width < 420 and 8 or 12
         local gapY = width < 420 and 12 or 16
@@ -611,8 +680,8 @@ ent.Left,
         local cellW = math.max(90, math.floor(availableW / columns))
         local m = getSpotifyMetrics()
         local rowAvailW = math.max(0, width - ((m.gridColumns - 1) * m.gridGapX) - 8)
-        local rowCoverSize = math.floor(math.min(math.max(76, math.floor(rowAvailW / m.gridColumns) - 20), m.compact and 138 or 182))
-        local cellH = (m.compact and 9 or 11) + rowCoverSize + (m.compact and 8 or 10) + (m.compact and 36 or 40) + 32 + (m.compact and 9 or 11)
+        local rowCoverSize = math.floor(math.min(math.max(42, math.floor(rowAvailW / m.gridColumns) - 20), m.coverMax))
+        local cellH = m.cardHeight
         if SongListLayout then
             SongListLayout.FillDirectionMaxCells = columns
             SongListLayout.CellPadding = UDim2.fromOffset(gapX, gapY)
@@ -1065,69 +1134,4 @@ ent.Left,
 
         SpotifyState.SelectedIndex = index
         SpotifyState.CurrentTrack = track
-        SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
-        SpotifyState.CurrentPausedPosition = 0
-        SpotifyState.IsPlaying = true
-
-        destroyAllSpotifySounds()
-        destroyCurrentSound()
-
-        updatePlayerFromTrack(track, index, "Descargando y reproduciendo...")
-        syncPlaybackUI()
-
-        local okCache, cachedAssetOrErr = ensureTrackCached(track)
-        local soundAsset = okCache and cachedAssetOrErr or track.AudioURL
-
-        local sound = Instance.new("Sound")
-        sound.Name = "YY_Spotify_CurrentSound"
-        sound.SoundId = soundAsset
-        sound.Volume = SpotifyState.PlaybackVolume
-        sound.PlaybackSpeed = SpotifyState.PlaybackSpeed
-        sound.Looped = SpotifyState.IsRepeat
-        sound.Parent = workspace
-
-        SpotifyState.CurrentSound = sound
-
-        SpotifyState.SoundProgressConnection = RunService.Heartbeat:Connect(function()
-            if SpotifyState.CurrentSound == sound then
-                updateProgress(track, sound)
-            end
-        end)
-
-        SpotifyState.SoundEndedConnection = sound.Ended:Connect(function()
-            if SpotifyState.CurrentSound ~= sound then
-                return
-            end
-
-            if SpotifyState.IsRepeat then
-                task.spawn(function()
-                    pcall(function()
-                        sound.TimePosition = 0
-                        sound:Play()
-                        SpotifyState.IsPlaying = true
-                        syncPlaybackUI()
-                    end)
-                end)
-                return
-            end
-
-            local nextIndex = index + 1
-            if nextIndex > #SpotifyState.Catalog then
-                nextIndex = 1
-            end
-            if SpotifyState.FavoriteNeighbor then
-                nextIndex = SpotifyState.FavoriteNeighbor(index, 1) or nextIndex
-            end
-            playTrack(nextIndex)
-        end)
-
-        pcall(function()
-            sound:Play()
-        end)
-
-        SpotifyState.IsPlaying = true
-        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
-        syncPlaybackUI()
-    end
-
- 
+   

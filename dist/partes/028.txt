@@ -1,4 +1,7 @@
-ocal owner = part:FindFirstAncestorOfClass("Model")
+Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+    function ShaderReflections:_stripPartTextures(part)
+        if self.TextureOriginal[part] ~= nil then return end
+        local owner = part:FindFirstAncestorOfClass("Model")
         if owner and owner:FindFirstChildOfClass("Humanoid") then return end
         local record = {children = {}}
         local touched = false
@@ -960,11 +963,4 @@ ocal owner = part:FindFirstAncestorOfClass("Model")
             if child:IsA("SurfaceAppearance") then
                 if self.Original[child] == nil then
                     self.Original[child] = {}
-                    pcall(function() self.Original[child].Color = child.Color end)
-                end
-                pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
-            end
-        end
-    end
-
-    function ShaderSilhouette:_applyClo
+                    pcall(function() self

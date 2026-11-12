@@ -1,4 +1,11 @@
-NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.5)}),
+)
+    LP.hero:SetAttribute("ThemeRole", "Secondary")
+    corner(LP.hero, 16)
+    stroke(LP.hero, Theme.Stroke, 1, 0.55)
+    mk("UIGradient", {
+        Parent = LP.hero,
+        Rotation = 0,
+        Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 0.5)}),
     })
     LP.stage = mk("Frame", {
         Parent = LP.hero,
@@ -852,6 +859,4 @@ NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new
     stroke(Ghost, Theme.Stroke, 1.2, 0.2)
     local GhostScale = mk("UIScale", { Parent = Ghost, Scale = 0.85 })
     do
-        local bar = sframe(Ghost, { Size = UDim2.new(1, 0, 0, 20), BackgroundColor3 = Theme.Secondary, ZIndex = SZ + 21 })
-        bar:SetAttribute("ThemeRole", "Secondary")
-        mk("TextLabel", { Parent = bar, Size = UDim2.new(1, -40, 1, 0), Position = UDim2.fromOffset(8, 0)
+        local bar = sframe(Ghost, { Size = UDim2.new(1, 0, 0, 20)

@@ -1,4 +1,69 @@
-   local function selectTrack(index)
+     SpotifyState.CurrentTrackSeconds = durationToSeconds(track.Duration)
+        SpotifyState.CurrentPausedPosition = 0
+        SpotifyState.IsPlaying = true
+
+        destroyAllSpotifySounds()
+        destroyCurrentSound()
+
+        updatePlayerFromTrack(track, index, "Descargando y reproduciendo...")
+        syncPlaybackUI()
+
+        local okCache, cachedAssetOrErr = ensureTrackCached(track)
+        local soundAsset = okCache and cachedAssetOrErr or track.AudioURL
+
+        local sound = Instance.new("Sound")
+        sound.Name = "YY_Spotify_CurrentSound"
+        sound.SoundId = soundAsset
+        sound.Volume = SpotifyState.PlaybackVolume
+        sound.PlaybackSpeed = SpotifyState.PlaybackSpeed
+        sound.Looped = SpotifyState.IsRepeat
+        sound.Parent = workspace
+
+        SpotifyState.CurrentSound = sound
+
+        SpotifyState.SoundProgressConnection = RunService.Heartbeat:Connect(function()
+            if SpotifyState.CurrentSound == sound then
+                updateProgress(track, sound)
+            end
+        end)
+
+        SpotifyState.SoundEndedConnection = sound.Ended:Connect(function()
+            if SpotifyState.CurrentSound ~= sound then
+                return
+            end
+
+            if SpotifyState.IsRepeat then
+                task.spawn(function()
+                    pcall(function()
+                        sound.TimePosition = 0
+                        sound:Play()
+                        SpotifyState.IsPlaying = true
+                        syncPlaybackUI()
+                    end)
+                end)
+                return
+            end
+
+            local nextIndex = index + 1
+            if nextIndex > #SpotifyState.Catalog then
+                nextIndex = 1
+            end
+            if SpotifyState.FavoriteNeighbor then
+                nextIndex = SpotifyState.FavoriteNeighbor(index, 1) or nextIndex
+            end
+            playTrack(nextIndex)
+        end)
+
+        pcall(function()
+            sound:Play()
+        end)
+
+        SpotifyState.IsPlaying = true
+        updatePlayerFromTrack(track, index, okCache and "Reproduciendo desde caché" or "Reproduciendo desde URL")
+        syncPlaybackUI()
+    end
+
+    local function selectTrack(index)
         local track = SpotifyState.Catalog[index]
         if not track then
             return
@@ -665,10 +730,11 @@
         })
         N.mini = mk("TextButton", {
             Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
-            BackgroundColor3 = Color3.fromRGB(47, 48, 56), BorderSizePixel = 0,
+            BackgroundColor3 = Color3.fromRGB(32, 32, 36), BackgroundTransparency = 0.24, BorderSizePixel = 0,
             Text = "", AutoButtonColor = false, ClipsDescendants = true, ZIndex = 56,
         })
         corner(N.mini, 8)
+        spotifyGlass(N.mini, 56)
         N.cover = mk("ImageLabel", {
             Parent = N.mini, Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(5, 5),
             BackgroundColor3 = Color3.fromRGB(25, 25, 28), BorderSizePixel = 0,
@@ -982,66 +1048,4 @@
         })
         corner(barBack, 999)
         FP.Bar = mk("Frame", {
-            Parent = barBack,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 526,
-        })
-        corner(FP.Bar, 999)
-        local seekHit = mk("TextButton", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 18),
-            Position = UDim2.new(0, 12, 1, -19),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 527,
-        })
-
-        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        closeBtn.Position = UDim2.new(1, -32, 0, 8)
-        closeBtn.BackgroundTransparency = 0.88
-        closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 15
-        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        miniBtn.Position = UDim2.new(1, -60, 0, 8)
-        miniBtn.BackgroundTransparency = 0.88
-        miniBtn.Text = "–"
-        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        miniBtn.Font = Enum.Font.GothamBold
-        miniBtn.TextSize = 15
-
-        FP.Disc = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, -4, 1, -4),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-            BorderSizePixel = 0,
-            Image = "",
-            ScaleType = Enum.ScaleType.Crop,
-            Visible = false,
-            ZIndex = 524,
-        })
-        corner(FP.Disc, 999)
-        FP.Ring.Parent = FP.Disc
-        local hole = mk("Frame", {
-            Parent = FP.Disc,
-            Size = UDim2.fromOffset(8, 8),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(hole, 999)
-
-        bindRowTap(closeBtn, function() setFloatingVisible(false) end)
-        bindRowTap(miniBtn, function()
-            FP.mini = true
-            FP.applyMode()
-        end)
-        bindRowTap(FP.LikeBtn, funct
+            Parent

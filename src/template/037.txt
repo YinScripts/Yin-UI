@@ -729,10 +729,11 @@ dPosition = 0
         })
         N.mini = mk("TextButton", {
             Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
-            BackgroundColor3 = Color3.fromRGB(47, 48, 56), BorderSizePixel = 0,
+            BackgroundColor3 = Color3.fromRGB(32, 32, 36), BackgroundTransparency = 0.24, BorderSizePixel = 0,
             Text = "", AutoButtonColor = false, ClipsDescendants = true, ZIndex = 56,
         })
         corner(N.mini, 8)
+        spotifyGlass(N.mini, 56)
         N.cover = mk("ImageLabel", {
             Parent = N.mini, Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(5, 5),
             BackgroundColor3 = Color3.fromRGB(25, 25, 28), BorderSizePixel = 0,
@@ -1255,12 +1256,12 @@ dPosition = 0
 
     createFavoritesTile = function(layoutOrder)
         local m = getSpotifyMetrics()
-        local cardH = m.compact and 228 or 242
+        local cardH = m.cardHeight
         local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(76, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.compact and 138 or 182))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
 
         local Card = mk("TextButton", {
             Parent = SongList,
@@ -1328,11 +1329,11 @@ dPosition = 0
 
     createMySongsTile = function(layoutOrder)
         local m = getSpotifyMetrics()
-        local cardH = m.compact and 228 or 242
+        local cardH = m.cardHeight
         local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.floor(math.min(math.max(76, cellW - 20), m.compact and 138 or 182))
+        local coverSize = math.floor(math.min(math.max(42, cellW - 20), m.coverMax))
 
         local Card = mk("TextButton", {
             Parent = SongList,

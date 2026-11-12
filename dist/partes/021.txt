@@ -1,4 +1,6 @@
-etY = 4 + (cardHeight - targetHeight) * 0.5
+         local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
+                            local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
+                            local targetY = 4 + (cardHeight - targetHeight) * 0.5
                             local isActive = distance == 0
 
                             TweenService:Create(
@@ -1029,8 +1031,4 @@ etY = 4 + (cardHeight - targetHeight) * 0.5
                     TextColor3 = Theme.Text,
                     TextSize = 13,
                     Font = Enum.Font.GothamBold,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 9,
-                })
-                Title:SetAttribute("ThemeTextRole", "Text")
-                Title:SetAttribute("TextSpani
+     

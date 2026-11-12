@@ -1,4 +1,7 @@
-
+              total .. " ajuste(s) copiados al portapapeles",
+                        total .. " setting(s) copied to clipboard")
+                    if CodeBox then CodeBox.Visible = false end
+                else
                     setStatus("err",
                         "Tu ejecutor no copia: copiá el código de abajo",
                         "Your executor can't copy: copy the code below")
@@ -1156,8 +1159,4 @@
     PickerGreen.FocusLost:Connect(applyRGBFields)
     PickerBlue.FocusLost:Connect(applyRGBFields)
     PickerClose.MouseButton1Click:Connect(closeColorPicker)
-    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
-    PickerApply.MouseButton1Click:Connect(function()
-        if pickerTarget then
-            local selected = pickerColor()
-            pickerTarget.Box.Text = c
+    Picke

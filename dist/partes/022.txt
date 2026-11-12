@@ -1,4 +1,8 @@
-sh", titleSpanish)
+               TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 9,
+                })
+                Title:SetAttribute("ThemeTextRole", "Text")
+                Title:SetAttribute("TextSpanish", titleSpanish)
                 Title:SetAttribute("TextEnglish", titleEnglish)
             end
 
@@ -865,7 +869,4 @@ sh", titleSpanish)
                             local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
                             local sp, d, abs, tanV = project(center)
                             if not sp then return end
-                            local hPx = env.H / (2 * d * tanV) * abs.Y
-                            local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
-                            Grab.Size = UDim2.fromOffset(w, h)
-    
+      

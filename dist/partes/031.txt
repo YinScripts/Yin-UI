@@ -1,4 +1,9 @@
-rSizePixel = 0,
+  local bar = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -36, 0, 8),
+            Position = UDim2.new(0, 18, 0, 44),
+            BackgroundColor3 = Theme.AccentOff,
+            BorderSizePixel = 0,
             ZIndex = 314,
         })
         bar:SetAttribute("ThemeRole", "AccentOff")
@@ -765,6 +770,4 @@ rSizePixel = 0,
         {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
         {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
         {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
-        {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
-        {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
-      
+        {"Hora Azul", "Blue Hour", "BlueHour", "Cr

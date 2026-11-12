@@ -1,4 +1,10 @@
-             TweenService:Create(Holder,
+  Knob.Position = newState and knobON or knobOFF
+                    KnobShadow.Position = newState and shadowON or shadowOFF
+                end
+            end
+
+            Click.MouseEnter:Connect(function()
+                TweenService:Create(Holder,
                     TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
                     {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
             end)
@@ -1025,6 +1031,4 @@
                             local offset = (i - Carousel.ActiveIndex) * step
                             local distance = math.abs(i - Carousel.ActiveIndex)
                             local targetX = centerX + offset
-                            local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
-                            local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
-                            local targ
+                   

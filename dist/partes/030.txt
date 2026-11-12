@@ -1,3 +1,5 @@
+cking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, -0.2, 0), BackgroundColor3 = Color3.fromRGB(235, 230, 200), BackgroundTransparency = 1})
+        local bandGradient = Instance.new("UIGradient")
         bandGradient.Rotation = 90
         bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
         bandGradient.Parent = band
@@ -1042,9 +1044,4 @@
         corner(resetButton, 999)
         RowKit.Icon(resetButton, 125802172782007, 13, 316, "Text")
 
-        local bar = mk("Frame", {
-            Parent = holder,
-            Size = UDim2.new(1, -36, 0, 8),
-            Position = UDim2.new(0, 18, 0, 44),
-            BackgroundColor3 = Theme.AccentOff,
-            Borde
+      

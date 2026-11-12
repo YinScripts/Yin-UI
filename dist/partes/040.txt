@@ -1,4 +1,66 @@
-ndex = 43,
+kgroundTransparency = 1
+            FavPage.paintRow(row)
+        end)
+        FavPage.paintRow(row)
+
+        bindRowTap(Heart, function()
+            toggleTrackLike(index)
+        end)
+        bindRowTap(Row, function()
+            FavPage.toggleRow(index)
+        end)
+    end
+
+    FavPage.rebuild = function()
+        for _, child in ipairs(FavPage.Body:GetChildren()) do
+            if child:IsA("GuiObject") then
+                safeDestroy(child)
+            end
+        end
+        FavPage.rows = {}
+        local list = FavPage.likedList()
+        local query = normalizeSearchText(FavPage.query or "")
+        local shown = 0
+        for position, index in ipairs(list) do
+            local song = SpotifyState.Catalog[index]
+            local ok = query == ""
+            if not ok and song then
+                ok = normalizeSearchText((song.Name or "") .. " " .. (song.Artist or "")):find(query, 1, true) ~= nil
+            end
+            if ok then
+                shown = shown + 1
+                FavPage.makeRow(index, position)
+            end
+        end
+        if #list == 0 or shown == 0 then
+            local box = mk("Frame", {
+                Parent = FavPage.Body,
+                Size = UDim2.new(1, 0, 0, 170),
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                ZIndex = 42,
+            })
+            mk("ImageLabel", {
+                Parent = box,
+                Size = UDim2.fromOffset(44, 44),
+                AnchorPoint = Vector2.new(0.5, 0),
+                Position = UDim2.new(0.5, 0, 0, 24),
+                BackgroundTransparency = 1,
+                Image = #list == 0 and FavPage.HEART_OFF or FavPage.SEARCH,
+                ImageColor3 = spotifyDim,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 43,
+            })
+            local t1 = mk("TextLabel", {
+                Parent = box,
+                Size = UDim2.new(1, 0, 0, 26),
+                Position = UDim2.new(0, 0, 0, 80),
+                BackgroundTransparency = 1,
+                Text = "",
+                Font = Enum.Font.GothamBlack,
+                TextSize = 18,
+                TextColor3 = spotifyText,
+                ZIndex = 43,
             })
             local t2 = mk("TextLabel", {
                 Parent = box,
@@ -131,12 +193,12 @@ ndex = 43,
         end
 
         local m = getSpotifyMetrics()
-        local cardH = m.compact and 228 or 242
+        local cardH = m.cardHeight
         local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
         local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(76, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.compact and 138 or 182))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
 
         local Row = mk("Frame", {
             Parent = SongList,
@@ -1013,53 +1075,4 @@ if DEMO_ACTIVO then
     TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
     TabFeatures:CreateDivider()
 
-    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
-        print("🚀 Teleport Speed: " .. string.format("%.2f", val))
-    end)
-
-    local SliderJumpHeight = TabFeatures:CreateSlider("Jump Height", 10.0, 300.0, 139.24, function(val)
-        print("⬆️  Jump Height: " .. string.format("%.2f", val))
-    end)
-
-    local SliderSpeed = TabFeatures:CreateSlider("Speed Multiplier", 0.5, 3.0, 1.5, function(val)
-        print("💨 Speed: " .. string.format("%.2f", val) .. "x")
-    end)
-
-    local SliderFOV = TabFeatures:CreateSlider("FOV", 30, 120, 70, function(val)
-        print("👁️  FOV: " .. string.format("%.0f", val))
-    end)
-
-    local SliderVolume = TabFeatures:CreateSlider("Volume", 0, 1.0, 0.5, function(val)
-        print("🔊 Volume: " .. string.format("%.1f%%", val * 100))
-    end)
-
-
-    
-    DemoUI:CreateSpotifyTab()
-
-    print("\n DEMO v24 INICIADA")
-    print("TABS: Inicio (Protegida) | Temas (16 colores sin duplicados) | Features | Dropdowns | Efectos")
-    print(" MEJORAS: Sin duplicados, Pestañas permanentes, Efectos de texto mejorados")
-    print("Para desactivar la demo, cambia DEMO_ACTIVO a false\n")
-    print(string.rep("=", 60) .. "\n")
-    
-    task.wait(0.2)
-    local efectoGuardado = ConfigCargada and ConfigCargada.effect
-    if efectoGuardado and efectoGuardado ~= "" and efectoGuardado ~= "Normal" then
-        DemoUI:SetTextEffect(efectoGuardado)
-        print(" Efecto cargado desde config: " .. efectoGuardado)
-    else
-        local autoEffect = ThemeAutoEffects and ThemeAutoEffects[TemaInicial]
-        if autoEffect and autoEffect ~= "Off" then
-            DemoUI:SetTextEffect(autoEffect)
-            print(" Efecto: " .. TemaInicial .. " + " .. autoEffect)
-        else
-            DemoUI:SetTextEffect("Off")
-            print(" Sin efecto de texto (tema: " .. TemaInicial .. ")")
-        end
-    end
-else
-    print("Yin Yang v24 - DEMO DESACTIVADA (DEMO_ACTIVO = false)")
-    print("Solo la librería está cargada y lista para usar")
-end
-
+    local SliderTeleportSpeed = TabFeatures:CreateSlider("T

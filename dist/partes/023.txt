@@ -1,4 +1,7 @@
-                        Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
+                      local hPx = env.H / (2 * d * tanV) * abs.Y
+                            local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
+                            Grab.Size = UDim2.fromOffset(w, h)
+                            Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
                         end
                         HomeAnim.OwnerAfterStep = updateGrab
                         updateGrab()
@@ -913,10 +916,4 @@
 
         elseif mode == "CatRainbow" then
             textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local cycle = (elapsed * 5) % 1
-                
-                local color
-                if cycle < 0.5 then
-                    local t = cycle * 2
-                    color = Color3.fro
+                elapsed = elapse

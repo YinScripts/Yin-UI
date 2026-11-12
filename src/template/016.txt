@@ -704,7 +704,11 @@
                 if entry and entry.Parent then
                     local active = tab.Page and tab.Page.Visible
                     entry.BackgroundColor3 = active and Theme.TabActive or Theme.Background
-                    entry.BackgroundTransparency = active and 0.06 or 0.26
+                    if Window._SpotifyAmbient and Window._SpotifyAmbient.Active then
+                        entry.BackgroundTransparency = active and 0.55 or 1
+                    else
+                        entry.BackgroundTransparency = active and 0.06 or 0.26
+                    end
                     local icon = entry:FindFirstChild("Icon")
                     if icon then icon.ImageColor3 = active and Color3.fromRGB(255, 255, 255) or Theme.Text end
                     local fallback = entry:FindFirstChild("Fallback")

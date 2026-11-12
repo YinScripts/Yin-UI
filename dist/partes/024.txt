@@ -1,4 +1,10 @@
-mRGB(
+d + dt
+                local cycle = (elapsed * 5) % 1
+                
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(
                         255,
                         math.floor(100 + (255 - 100) * t),
                         math.floor(150 + (255 - 150) * t)
@@ -1018,7 +1024,4 @@ mRGB(
                 playSound(Sounds.Click, 0.7)
                 if copied then
                     setStatus("ok",
-                        total .. " ajuste(s) copiados al portapapeles",
-                        total .. " setting(s) copied to clipboard")
-                    if CodeBox then CodeBox.Visible = false end
-                else
+          
