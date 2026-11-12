@@ -60,8 +60,7 @@ Fit, ZIndex = 14,
         corner(Card, 16)
         local CardStroke = mk("UIStroke", {
             Parent = Card,
-            Color
- = Color3.fromRGB(100, 235, 165),
+            Color = Color3.fromRGB(100, 235, 165),
             Thickness = 1.35,
             Transparency = 0.18,
         })
