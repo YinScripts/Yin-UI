@@ -988,6 +988,88 @@
             end
 
             HolderClick.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH) or UDim2.new(1, -206, 1, 0)
+
+            -- Tarjeta de dos zonas: nombre a la izquierda y controles a la derecha.
+            if not hasCredit then
+                Holder.ClipsDescendants = true
+                local label, status
+                for _, child in ipairs(Holder:GetChildren()) do
+                    if child:IsA("TextLabel") and child:GetAttribute("TextSpanish") == textSpanish then
+                        label = child
+                    elseif child:IsA("TextLabel") and child.Text:sub(1, 3) == "●" then
+                        status = child
+                    elseif child:IsA("Frame") and child.Size.X.Offset == 3 and child.Size.Y.Offset == 36 then
+                        child.Visible = false
+                    end
+                end
+                local panel = mk("Frame", {
+                    Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(1, 0),
+                    Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 206, 1, 0),
+                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.28,
+                    BorderSizePixel = 0, ZIndex = 9,
+                })
+                panel:SetAttribute("ThemeRole", "Background")
+                corner(panel, 14)
+                local separator = mk("Frame", {
+                    Name = "OptionDivider", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(1, -211, 0.5, 0), Size = UDim2.fromOffset(2, 110),
+                    Rotation = 23, BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.22, BorderSizePixel = 0, ZIndex = 10,
+                })
+                separator:SetAttribute("ThemeRole", "Accent")
+                corner(separator, 2)
+                FavBtn.BackgroundColor3 = Theme.Secondary
+                FavBtn.BackgroundTransparency = 0.2
+                FavBtn:SetAttribute("ThemeRole", "Secondary")
+                corner(FavBtn, 9)
+                local favoriteBorder = stroke(FavBtn, Theme.Stroke, 1, 0.5)
+                favoriteBorder:SetAttribute("ThemeRole", "Stroke")
+                local keyBorder = KeybindBtn:FindFirstChildOfClass("UIStroke")
+                if keyBorder then
+                    keyBorder.Color = Theme.Accent
+                    keyBorder.Transparency = 0.28
+                    keyBorder:SetAttribute("ThemeRole", "Accent")
+                end
+                local function layoutOptionCard()
+                    if not Holder.Parent then return end
+                    local logicalWidth = Holder.AbsoluteSize.X / math.max(MainScale.Scale, 0.01)
+                    if logicalWidth <= 0 then return end
+                    local narrow = logicalWidth < 330
+                    Holder.Size = UDim2.new(1, 0, 0, narrow and 118 or 92)
+                    panel.Size = narrow and UDim2.new(1, -16, 0, 67) or UDim2.new(0, 206, 1, 0)
+                    panel.Position = narrow and UDim2.new(1, -8, 1, -72) or UDim2.fromScale(1, 0)
+                    separator.Visible = not narrow
+                    if label then
+                        label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(1, -230, 0, 22)
+                        label.Position = UDim2.new(0, 16, 0, narrow and 4 or 13)
+                    end
+                    if status then
+                        status.Position = UDim2.new(0, 16, 0, narrow and 25 or 38)
+                    end
+                    local y = narrow and 48 or 18
+                    HolderSwitch.Position = UDim2.new(1, -66, 0, y)
+                    ComboBtn.Position = UDim2.new(1, -194, 0, y + 2)
+                    FavBtn.Position = UDim2.new(1, -164, 0, y - 1)
+                    DetachBtn.Position = UDim2.new(1, -130, 0, y)
+                    PinBtn.Position = UDim2.new(1, -98, 0, y)
+                    KeybindBtn.Position = UDim2.new(1, -194, 1, -27)
+                    KeybindBtn.Size = UDim2.fromOffset(180, 20)
+                    HolderClick.Size = narrow and UDim2.new(1, 0, 0, 44) or UDim2.new(1, -206, 1, 0)
+                end
+                Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutOptionCard)
+                layoutOptionCard()
+            end
+            -- El interruptor de la derecha también debe responder al toque directo.
+            local switchHit = mk("TextButton", {
+                Parent = HolderSwitch, Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 16,
+            })
+            switchHit.Activated:Connect(function()
+                state = not state
+                tog.SetValue(state)
+                if favRow and favRow.SetValue then favRow.SetValue(state) end
+                pcall(cb, state)
+            end)
             HolderClick.ZIndex = 14
             
             
