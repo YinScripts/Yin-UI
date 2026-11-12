@@ -585,23 +585,23 @@ e })
         Position = UDim2.new(0.5, -83, 0.5, 0), Size = UDim2.fromOffset(38, 38),
         BackgroundTransparency = 1, ClipsDescendants = false, ZIndex = 8,
     }, TopBar)
-    local BannerSprite = mk("ImageLabel", {
-        Name = "JumpSpinSprite", Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1, Image = "rbxassetid://95331276484866",
-        ScaleType = Enum.ScaleType.Fit, ZIndex = 9,
+    -- La ventana recorta una celda usando proporciones, independientemente de la resolución que entregue Roblox.
+    local BannerViewport = mk("Frame", {
+        Name = "SpriteViewport", Size = UDim2.fromScale(1, 1), Position = UDim2.fromOffset(0, 0),
+        BackgroundTransparency = 1, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 9,
     }, BannerFrame)
+    local BannerSprite = mk("ImageLabel", {
+        Name = "JumpSpinSprite", Size = UDim2.fromScale(4, 2),
+        BackgroundTransparency = 1, Image = "rbxassetid://95331276484866",
+        ScaleType = Enum.ScaleType.Stretch, ZIndex = 9,
+    }, BannerViewport)
     local BannerSheets = {"rbxassetid://95331276484866", "rbxassetid://98784763318607"}
-    -- Dimensiones originales de ambas imágenes PNG: 1774 x 887.
-    -- Los bordes se redondean por separado para distribuir correctamente los píxeles impares.
     local function bannerFrame(index)
         local localIndex = index % 8
         local col, row = localIndex % 4, math.floor(localIndex / 4)
-        local x0, x1 = math.floor(col * 1774 / 4), math.floor((col + 1) * 1774 / 4)
-        local y0, y1 = math.floor(row * 887 / 2), math.floor((row + 1) * 887 / 2)
         local image = BannerSheets[math.floor(index / 8) + 1]
         if BannerSprite.Image ~= image then BannerSprite.Image = image end
-        BannerSprite.ImageRectOffset = Vector2.new(x0, y0)
-        BannerSprite.ImageRectSize = Vector2.new(x1 - x0, y1 - y0)
+        BannerSprite.Position = UDim2.fromScale(-col, -row)
     end
     bannerFrame(0)
     task.spawn(function()
@@ -612,7 +612,7 @@ e })
         while BannerFrame and BannerFrame.Parent do
             if PerfOpt.Flags.NoDecorAnim then
                 bannerFrame(0)
-                BannerSprite.Position = UDim2.fromOffset(0, 0)
+                BannerViewport.Position = UDim2.fromOffset(0, 0)
                 task.wait(0.5)
             else
                 task.wait(0.65)
@@ -621,11 +621,11 @@ e })
                     if PerfOpt.Flags.NoDecorAnim then break end
                     bannerFrame(index)
                     local jump = math.sin(math.pi * index / 15) * 5
-                    BannerSprite.Position = UDim2.fromOffset(0, -jump)
+                    BannerViewport.Position = UDim2.fromOffset(0, -jump)
                     task.wait(0.09)
                 end
                 bannerFrame(0)
-                BannerSprite.Position = UDim2.fromOffset(0, 0)
+                BannerViewport.Position = UDim2.fromOffset(0, 0)
             end
         end
     end)
