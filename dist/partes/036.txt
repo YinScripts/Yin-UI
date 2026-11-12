@@ -283,7 +283,8 @@
                 topTransparency = TopBar.BackgroundTransparency, titleSize = TitleLabel.Size,
                 contentPosition = ContentArea.Position, contentSize = ContentArea.Size,
                 titleStroke = TitleLabel.TextStrokeTransparency, badgeStroke = DaraHubLabel.TextStrokeTransparency,
-                titleStrokeColor = TitleLabel.TextStrokeColor3, badgeStrokeColor = DaraHubLabel.TextStrokeColor3}
+                titleStrokeColor = TitleLabel.TextStrokeColor3, badgeStrokeColor = DaraHubLabel.TextStrokeColor3,
+                titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex, badgeFrameZ = DaraHubLabel.Parent.ZIndex}
             for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
                 TitleDivider, TopBarArt, TabListArt, CatImage, BackgroundArt, Main:FindFirstChild("RotatingSubText")}) do
                 if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
@@ -293,6 +294,9 @@
             TopBar.BackgroundTransparency = 1
             TabList.BackgroundTransparency = 1
             TitleLabel.Size = UDim2.fromOffset(106, 26)
+            TitleLabel.ZIndex = 60
+            DaraHubLabel.Parent.ZIndex = 60
+            DaraHubLabel.ZIndex = 61
             TitleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
             TitleLabel.TextStrokeTransparency = 0.15
             DaraHubLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
@@ -310,6 +314,9 @@
             for obj, visible in pairs(A.Saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
             TopBar.BackgroundTransparency = A.Saved.topTransparency
             TitleLabel.Size = A.Saved.titleSize
+            TitleLabel.ZIndex = A.Saved.titleZ
+            DaraHubLabel.Parent.ZIndex = A.Saved.badgeFrameZ
+            DaraHubLabel.ZIndex = A.Saved.badgeZ
             TitleLabel.TextStrokeTransparency = A.Saved.titleStroke
             DaraHubLabel.TextStrokeTransparency = A.Saved.badgeStroke
             TitleLabel.TextStrokeColor3 = A.Saved.titleStrokeColor
@@ -719,7 +726,7 @@
         ZIndex = 10,
     })
     corner(SpotifyShell, 18)
-    stroke(SpotifyShell, Color3.fromRGB(90, 90, 96), 1, 0.35)
+    -- El fondo continuo ya separa el contenido: sin borde divisorio en Spotify.
 
     local SpotifyPages = mk("UIPageLayout", {
         Parent = SpotifyShell,
@@ -785,6 +792,7 @@
     local NowPlayingShade = mk("Frame", {
         Parent = NowPlayingCard,
         Size = UDim2.new(1, 0, 1, 0),
+        Visible = false, -- el oscurecimiento uniforme pertenece al fondo de toda la ventana
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
         BackgroundTransparency = 0.45,
         BorderSizePixel = 0,
@@ -1184,7 +1192,7 @@
         Parent = CatalogPage,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.50,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = 11,
     })
@@ -1211,20 +1219,4 @@
         Parent = FavoritesHeader,
         Size = UDim2.fromOffset(30, 30),
         Position = UDim2.new(0, 0, 0.5, -15),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-        BackgroundTransparency = 0,
-        BorderSizePixel = 0,
-        Text = "‹",
-        TextColor3 = Color3.fromRGB(245, 245, 245),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 24,
-        AutoButtonColor = false,
-        ZIndex = 21,
-    })
-    corner(FavoritesBackButton, 999)
-
-    local FavoritesHeaderTitle = mk("TextLabel", {
-        Parent = FavoritesHeader,
-        Size = UDim2.new(1, -104, 1, 0),
-        Position = UDim2.new(0, 42, 0, 0),
-        BackgroundTransparenc
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30

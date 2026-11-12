@@ -33,7 +33,7 @@
         Parent = CatalogPage,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.50,
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ZIndex = 11,
     })
@@ -638,7 +638,7 @@
         ProgressTimeRight.TextSize = 11
 
         Controls.Size = UDim2.new(1, -28, 0, 44)
-        Controls.Position = UDim2.new(0, 14, 1, -52)
+        Controls.Position = UDim2.new(0, 14, 1, -82)
 
         RepeatBtn.Size = UDim2.new(0, 20, 0, 20)
         RepeatBtn.Position = UDim2.new(0.06, 0, 0.5, 0)

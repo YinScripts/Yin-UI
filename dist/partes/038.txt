@@ -1,4 +1,16 @@
-     return coverAssetOrErr
+nd
+
+        if track.CoverURL and track.CoverURL ~= "" then
+            local cacheKey = (track.CoverCacheName and track.CoverCacheName ~= "") and track.CoverCacheName or track.CoverURL
+            local cached = CoverAssetResolvedCache[cacheKey]
+            if cached then
+                return cached
+            end
+
+            local okCover, coverAssetOrErr = ensureCoverCached(track)
+            if okCover then
+                CoverAssetResolvedCache[cacheKey] = coverAssetOrErr
+                return coverAssetOrErr
             end
         end
 
@@ -1040,17 +1052,4 @@
         nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
 
         FP.Time = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent =
+            P

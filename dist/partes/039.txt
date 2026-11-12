@@ -1,4 +1,17 @@
- FP.Full,
+arent = FP.Full,
+            Size = UDim2.fromOffset(70, 14),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -12, 0, 62),
+            BackgroundTransparency = 1,
+            Text = "0:00",
+            TextColor3 = Color3.fromRGB(220, 220, 220),
+            Font = Enum.Font.GothamBold,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 525,
+        })
+        local barBack = mk("Frame", {
+            Parent = FP.Full,
             Size = UDim2.new(1, -24, 0, 4),
             Position = UDim2.new(0, 12, 1, -12),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
@@ -1144,16 +1157,4 @@
             ZIndex = 46,
         })
         mk("TextLabel", {
-            Parent = Row,
-            Size = UDim2.fromOffset(60, 58),
-            Position = UDim2.new(1, -78, 0, 0),
-            BackgroundTransparency = 1,
-            Text = song.Duration,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 13,
-            TextColor3 = Color3.fromRGB(179, 179, 179),
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 43,
-        })
-
-        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars
+    

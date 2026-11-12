@@ -1,4 +1,17 @@
-("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
+teToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
+        print("GodMode: " .. (state and "ON" or "OFF"))
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Botones Flotantes 🔘", 14)
+    TabFeatures:CreateDivider()
+
+    TabFeatures:CreateFloatingButton("Teleport Here", "Teleport Here", function()
+        print("[FloatingButton] Teleport Here → ejecutado")
+    end)
+
+    TabFeatures:CreateFloatingButton("Noclip", "Noclip", 3, function()
+        print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
     end)
 
     TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill Entity", 5, function()
