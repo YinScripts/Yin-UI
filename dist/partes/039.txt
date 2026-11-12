@@ -60,7 +60,8 @@ Fit, ZIndex = 14,
         corner(Card, 16)
         local CardStroke = mk("UIStroke", {
             Parent = Card,
-            Color = Color3.fromRGB(100, 235, 165),
+            Color
+ = Color3.fromRGB(100, 235, 165),
             Thickness = 1.35,
             Transparency = 0.18,
         })
@@ -289,7 +290,7 @@ Fit, ZIndex = 14,
 
     FavPage.Root = mk("Frame", {
         Parent = CatalogPage,
-        Size = UDim2.new(1, 0, 1, 0),
+        Size = UDim2.new(1, 0, 1, -90),
         Position = UDim2.new(1, 0, 0, 0),
         BackgroundColor3 = Color3.fromRGB(18, 18, 18),
         BackgroundTransparency = 0,
