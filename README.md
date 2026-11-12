@@ -27,12 +27,13 @@ Estas capturas muestran **Yin Yang**, una interfaz que utiliza Yin UI. Son ejemp
 La versión principal de la librería se encuentra en `main`:
 
 ```lua
-local YinUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/loader.lua"))()
+loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/loader.lua"))()
+local YinUI = _G.YinYang
 ```
 
 La versión principal incluye las mejoras probadas para reducir el tirón de la interfaz y descargar los fragmentos en paralelo.
 
-El cargador devuelve la librería; la interfaz y sus funciones se configuran desde el proyecto que la utiliza. La disponibilidad de `loadstring` y `game:HttpGet` depende del entorno de ejecución.
+La librería queda disponible en `_G.YinYang`; la interfaz y sus funciones se configuran desde el proyecto que la utiliza. Consulta la [guía de uso y controles](docs/GUIA.md) para ver ejemplos. La disponibilidad de `loadstring` y `game:HttpGet` depende del entorno de ejecución.
 
 ## Organización del proyecto
 
