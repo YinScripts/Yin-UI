@@ -291,7 +291,7 @@
                 })
                 Badge:SetAttribute("ThemeRole", "Accent")
                 corner(Badge, 11)
-                mk("ImageLabel", {
+                local StatIcon = mk("ImageLabel", {
                     Parent = Badge,
                     Size = UDim2.new(0, 24, 0, 24),
                     AnchorPoint = Vector2.new(0.5, 0.5),
@@ -301,6 +301,11 @@
                     ScaleType = Enum.ScaleType.Fit,
                     ZIndex = 11,
                 })
+
+                if Window and Window._NavidadIcons then
+                    table.insert(Window._NavidadIcons, StatIcon)
+                    Window._ApplyNavidadIcon(StatIcon)
+                end
 
                 local Title = mk("TextLabel", {
                     Parent = Card,

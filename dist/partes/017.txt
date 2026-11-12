@@ -823,6 +823,28 @@
 
     -- Fondo completo, EXCLUSIVO del tema Navidad (ver setActiveTheme): la imagen cubre toda la ventana, también
     -- la barra superior y las pestañas. Con cualquier otro tema queda como siempre (fondo solo en el área de contenido).
+    -- Iconos EXCLUSIVOS del tema Navidad: icono original -> icono navideño. Con cualquier otro tema vuelve el original.
+    Window._NavidadIconMap = {
+        ["rbxassetid://99086270459218"]  = "rbxassetid://71325091134162",  -- disco de la boombox
+        ["rbxassetid://90955646581059"]  = "rbxassetid://85040129377925",  -- Players
+        ["rbxassetid://80031485123484"]  = "rbxassetid://131034550856605", -- Ping
+        ["rbxassetid://126144525731859"] = "rbxassetid://138261713959809", -- Server ID
+        ["rbxassetid://128054256171328"] = "rbxassetid://116894523843499", -- Time
+        ["rbxassetid://84609306530754"]  = "rbxassetid://134133702100421", -- Region
+        ["rbxassetid://88363727246005"]  = "rbxassetid://111652786637018", -- Status
+    }
+    Window._NavidadIcons = {}
+    function Window._ApplyNavidadIcon(img)
+        local base = img:GetAttribute("NavidadIconBase")
+        if base == nil then
+            base = img.Image
+            img:SetAttribute("NavidadIconBase", base)
+        end
+        local nav = Theme.ThemeName == "Navidad" and Window._NavidadIconMap[base] or nil
+        img.Image = nav or base
+        return nav ~= nil
+    end
+
     function Window._ApplyFullBackground()
         if not (BackgroundArt and BackgroundArt.Parent) then return end
         local full = Theme.FullBackground == true
@@ -864,6 +886,14 @@
         for _, obj in ipairs(TabList:GetDescendants()) do strokeText(obj) end
         for _, obj in ipairs(TopBar:GetDescendants()) do strokeText(obj) end
         for _, obj in ipairs(Main:GetChildren()) do strokeText(obj) end
+        if Boom and Boom.Icon then
+            local isNav = Window._ApplyNavidadIcon(Boom.Icon)
+            Boom.Icon.Size = isNav and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 14, 0, 14)
+            Boom.Icon.ImageColor3 = isNav and Color3.new(1, 1, 1) or getContrastColor(Theme.Accent)
+        end
+        for _, img in ipairs(Window._NavidadIcons) do
+            if img.Parent then Window._ApplyNavidadIcon(img) end
+        end
     end
     Window._ApplyFullBackground()
     -- al maximizar/restaurar cambia la esquina de Main: el fondo completo la sigue
