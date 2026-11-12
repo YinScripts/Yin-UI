@@ -852,7 +852,7 @@ put)
     local layoutRefreshQueued = false
     local function queueSpotifyLayoutRefresh()
         -- anti-lag: durante la animación de abrir/cerrar (MainScale distinto de 1) el tamaño real no cambia
-        if MainScale.Scale ~= 1 then
+        if MainScale.Scale ~= 1 or not Main.Visible or not SPage.Visible then
             return
         end
         if layoutRefreshQueued then
@@ -862,14 +862,17 @@ put)
         task.defer(function()
             task.wait()
             layoutRefreshQueued = false
-            pcall(refreshSpotifyUILayout)
+            if Main.Visible and SPage.Visible and MainScale.Scale == 1 then
+                pcall(refreshSpotifyUILayout)
+            end
         end)
     end
 
+    SPage:GetPropertyChangedSignal("Visible"):Connect(queueSpotifyLayoutRefresh)
+    Main:GetPropertyChangedSignal("Visible"):Connect(queueSpotifyLayoutRefresh)
     SPage:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
     SongList:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
     ContentArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
-    ContentArea:GetPropertyChangedSignal("AbsolutePosition"):Connect(queueSpotifyLayoutRefresh)
 
     local function isLiked(index)
         return SpotifyState.CurrentLiked[index] == true
