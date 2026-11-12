@@ -248,6 +248,8 @@ f Chat.OWNER_AVATAR_NAMES[string.lower(tostring(user or ""))] then return UI.ICO
             BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Visible = false,
         }, Root)
         corner(UI.NewChatBar, 19)
+        UI.NewChatBar.BackgroundTransparency = 0.24
+        if ctx.Glass then ctx.Glass(UI.NewChatBar) end
         UI.icon(UI.NewChatBar, UI.ICON.search, 16, THEME.DIM, {Position = UDim2.fromOffset(14, 11)})
         UI.NewChatBox = mk("TextBox", {
             Size = UDim2.new(1, -120, 1, 0), Position = UDim2.fromOffset(40, 0),
@@ -714,11 +716,12 @@ f Chat.OWNER_AVATAR_NAMES[string.lower(tostring(user or ""))] then return UI.ICO
         local unread = tonumber(e.unread) or 0
         if e.pinned then
             local card = mk("TextButton", {
-                Size = UDim2.new(1, 0, 0, 86), BackgroundColor3 = THEME.PANEL, BorderSizePixel = 0,
+                Size = UDim2.new(1, 0, 0, 86), BackgroundColor3 = THEME.PANEL, BackgroundTransparency = 0.24, BorderSizePixel = 0,
                 Text = "", AutoButtonColor = true, LayoutOrder = order,
             }, UI.HomeList)
             corner(card, 20)
-            stroke(card, UI.C.line, 1, 0)
+            if ctx.Glass then ctx.Glass(card) end
+            stroke(card, UI.C.line, 1, 0.65)
             mk("UIGradient", {
                 Rotation = 0,
                 Color = ColorSequence.new(Color3.fromRGB(40, 28, 64), Color3.fromRGB(18, 18, 18)),

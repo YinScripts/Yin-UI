@@ -14,13 +14,12 @@
     }, ctx.Host)
     local Root = mk("Frame", {
         Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = THEME.BG,
+        BackgroundColor3 = THEME.BG, BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Active = true,
     }, Surface)
     UI.RootScale = mk("UIScale", {Scale = 1}, Root)
     corner(Root, 22)
-    stroke(Root, UI.C.line, 1.5, 0)
     Root.ClipsDescendants = true
     UI.ChatBg = mk("ImageLabel", {
         Size = UDim2.new(1, 0, 1, -58), Position = UDim2.fromOffset(0, 58),
@@ -33,13 +32,11 @@
     }, UI.ChatBg)
     local Header = mk("Frame", {
         Size = UDim2.new(1, 0, 0, 58),
-        BackgroundColor3 = THEME.BG,
+        BackgroundColor3 = THEME.BG, BackgroundTransparency = 1,
         BorderSizePixel = 0,
         Active = true,
     }, Root)
     corner(Header, 22)
-    mk("Frame", {Size = UDim2.new(1, 0, 0, 22), Position = UDim2.new(0, 0, 1, -22), BackgroundColor3 = THEME.BG, BorderSizePixel = 0}, Header)
-    mk("Frame", {Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = UI.C.line, BorderSizePixel = 0, ZIndex = 2}, Header)
     UI.Title = mk("TextLabel", {
         Size = UDim2.new(1, -235, 0, 24),
         Position = UDim2.fromOffset(19, 8),
@@ -1086,4 +1083,9 @@
         return g
     end
     Chat.ownerNameFx = function(label)
-        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transpa
+        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transparency = 0.72, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual}, label)
+        local grad = mk("UIGradient", {
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.65),
+                NumberSequenceKeypoint.new(0.5, 0),
+          

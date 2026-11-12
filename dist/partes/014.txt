@@ -1,5 +1,4 @@
-, "💂🏿‍♂️", "💂‍♀️", "💂🏻‍♀️", "💂🏼‍♀️", "💂🏽‍♀️", "💂🏾‍♀️", "💂🏿‍♀️",
-        "🥷", "🥷🏻", "🥷🏼", "🥷🏽", "🥷🏾", "🥷🏿", "👷", "👷🏻", "👷🏼", "👷🏽", "👷🏾", "👷🏿",
+🏼", "🥷🏽", "🥷🏾", "🥷🏿", "👷", "👷🏻", "👷🏼", "👷🏽", "👷🏾", "👷🏿",
         "👷‍♂️", "👷🏻‍♂️", "👷🏼‍♂️", "👷🏽‍♂️", "👷🏾‍♂️", "👷🏿‍♂️", "👷‍♀️", "👷🏻‍♀️", "👷🏼‍♀️", "👷🏽‍♀️", "👷🏾‍♀️", "👷🏿‍♀️",
         "🤴", "🤴🏻", "🤴🏼", "🤴🏽", "🤴🏾", "🤴🏿", "👸", "👸🏻", "👸🏼", "👸🏽", "👸🏾", "👸🏿",
         "👳", "👳🏻", "👳🏼", "👳🏽", "👳🏾", "👳🏿", "👳‍♂️", "👳🏻‍♂️", "👳🏼‍♂️", "👳🏽‍♂️", "👳🏾‍♂️", "👳🏿‍♂️",
@@ -743,4 +742,7 @@
             if Tr.robloxOk ~= nil then return Tr.robloxOk end
             local sample = Tr.base(Tr.lang) == "es" and "Hello, how are you today?" or "Hola, ¿cómo estás hoy?"
             local out = Tr.roblox(sample, Tr.lang)
-            Tr.robloxOk = type(out) == "string" and ou
+            Tr.robloxOk = type(out) == "string" and out ~= "" and out ~= sample
+            return Tr.robloxOk
+        end
+        Tr.one =
