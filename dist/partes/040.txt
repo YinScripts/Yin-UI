@@ -54,6 +54,8 @@ clearSongRows = function()
             end
         end
         SpotifyState.RowButtons = {}
+        SpotifyState._FavoritesTile = nil
+        SpotifyState._MySongsTile = nil
         updateSongListCanvas()
     end
 

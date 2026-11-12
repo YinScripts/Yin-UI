@@ -33,6 +33,7 @@ Fit, ZIndex = 14,
         TapArea.MouseLeave:Connect(function()
             TweenService:Create(Card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(96, 38, 160)}):Play()
         end)
+        return Card
     end
 
     createMySongsTile = function(layoutOrder)
@@ -135,6 +136,7 @@ Fit, ZIndex = 14,
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 14,
         })
+        countLabel.Name = "MySongsCount"
         countLabel:SetAttribute("MySongsCountLabel", true)
         countLabel:SetAttribute("TextSpanish", tostring(#SpotifyState.UserSongs) .. " canciones propias")
         countLabel:SetAttribute("TextEnglish", tostring(#SpotifyState.UserSongs) .. " personal songs")

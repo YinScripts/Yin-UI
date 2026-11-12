@@ -74,6 +74,7 @@
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 14,
         })
+        countLabel.Name = "MySongsCount"
         countLabel:SetAttribute("MySongsCountLabel", true)
         countLabel:SetAttribute("TextSpanish", tostring(#SpotifyState.UserSongs) .. " canciones propias")
         countLabel:SetAttribute("TextEnglish", tostring(#SpotifyState.UserSongs) .. " personal songs")
@@ -1168,6 +1169,8 @@ clearSongRows = function()
             end
         end
         SpotifyState.RowButtons = {}
+        SpotifyState._FavoritesTile = nil
+        SpotifyState._MySongsTile = nil
         updateSongListCanvas()
     end
 
