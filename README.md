@@ -1,16 +1,58 @@
+<div align="center">
+
+![Yin UI — una interfaz, muchas formas de hacerla tuya](docs/assets/portada.jpg)
+
 # Yin UI ✨
 
-Librería UI para Roblox por YinScripts.
+**Una librería de interfaces para Roblox creada por YinScripts.**  
+Una base para construir experiencias visuales con personalidad.
 
-## Cargador de prueba
+[Explorar las capturas](#un-vistazo-a-yin-yang) · [Cargador](#cargador) · [Organización](#organización-del-proyecto) · [Licencia](#licencia)
+
+</div>
+
+---
+
+## Un vistazo a Yin Yang
+
+Estas capturas muestran **Yin Yang**, una interfaz que utiliza Yin UI. Son ejemplos de su apariencia y personalización: las funciones propias de Yin Yang, como su reproductor, dependen del proyecto que las integra.
+
+<table>
+<tr><td width="50%"><img src="docs/assets/home.jpg" alt="Vista principal de Yin Yang"><br><b>Una interfaz con personalidad</b><br>Una ventana con navegación y secciones visuales.</td><td width="50%"><img src="docs/assets/themes.jpg" alt="Interfaz Yin Yang con tema rosa"><br><b>Estilos para cada gusto</b><br>Colores, fondos y una identidad visual propia.</td></tr>
+<tr><td width="50%"><img src="docs/assets/custom.jpg" alt="Editor de tema personalizado en Yin Yang"><br><b>Personalización</b><br>Ejemplo del editor de temas de Yin Yang.</td><td width="50%"><img src="docs/assets/music.jpg" alt="Reproductor de música en Yin Yang"><br><b>Una experiencia integrada</b><br>Ejemplo de una sección creada para el proyecto.</td></tr>
+</table>
+
+## Cargador
+
+La versión principal de la librería se encuentra en `main`:
 
 ```lua
-loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/loader.lua"))()
+local YinUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/loader.lua"))()
 ```
 
-**Versión experimental:** no ha sido probada en Roblox. El código fuente se está reorganizando; las funciones de `src/modules` se insertan al construir y mantienen su contexto compartido. La distribución se descarga en fragmentos y se compila como un único script: los fragmentos no son módulos independientes en tiempo de ejecución. No se ha demostrado una mejora de rendimiento.
+La versión de prueba utilizada para reducir el tirón al abrir, cerrar y mover la interfaz se encuentra en una rama independiente:
 
-Para reconstruir la distribución, ejecuta `python3 construir.py` y actualiza el número de fragmentos de `loader.lua` si cambia.
+```lua
+local YinUI = loadstring(game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/perf-ui-prueba-20261112/loader.lua"))()
+```
+
+El cargador devuelve la librería; la interfaz y sus funciones se configuran desde el proyecto que la utiliza. La disponibilidad de `loadstring` y `game:HttpGet` depende del entorno de ejecución.
+
+## Organización del proyecto
+
+- `src/modules/` contiene el código fuente separado por partes.
+- `dist/partes/` contiene los fragmentos que descarga el cargador.
+- `loader.lua` reúne los fragmentos y ejecuta la librería.
+- `construir.py` reconstruye la distribución desde el código fuente.
+
+Los archivos fuente se ensamblan para ejecutarse con un contexto compartido; no son módulos independientes en tiempo de ejecución. Si se reconstruye la distribución, hay que comprobar que la cantidad de fragmentos coincida con la indicada en el cargador.
 
 ## Licencia
-Consulta LICENSE. Uso permitido; no se permite publicar versiones modificadas sin autorización del titular.
+
+Copyright © YinScripts. Todos los derechos reservados. Se permite usar y ejecutar la versión original; la publicación o distribución de versiones modificadas requiere autorización previa. Consulta [LICENSE](LICENSE) para leer los términos completos.
+
+---
+
+<div align="center">
+Hecho por <b>YinScripts</b> ✨
+</div>
