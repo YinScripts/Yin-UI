@@ -475,11 +475,14 @@ ignment = Enum.TextXAlignment.Left,
         end)
 
         local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[tema]
-        local previewImage = (themeData and themeData.Background) or ThemeBackgroundImages[tema] or ""
-        if previewImage == "" and themeData and type(themeData.Images) == "table" then
-            previewImage = themeData.Images[1] or ""
+        local previewImage = themeData and themeData.Background
+        if type(previewImage) ~= "string" or previewImage == "" then
+            previewImage = ThemeBackgroundImages[tema]
         end
-        local hasImage = previewImage ~= ""
+        if (type(previewImage) ~= "string" or previewImage == "") and themeData and type(themeData.Images) == "table" then
+            previewImage = themeData.Images[1]
+        end
+        local hasImage = type(previewImage) == "string" and previewImage ~= ""
 
         local Preview = mk("Frame", {
             Parent = Card,
@@ -497,26 +500,6 @@ ignment = Enum.TextXAlignment.Left,
                 Rotation = 45,
                 Color = ColorSequence.new(palette.Background, palette.Secondary or palette.Background),
             })
-        else
-            local PreviewImage = mk("ImageLabel", {
-                Parent = Preview,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                Image = previewImage,
-                ScaleType = Enum.ScaleType.Crop,
-                ZIndex = 10,
-            })
-            corner(PreviewImage, 10)
-            local PreviewShade = mk("Frame", {
-                Parent = Preview,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                BackgroundTransparency = 0.5,
-                BorderSizePixel = 0,
-                ZIndex = 11,
-            })
-            corner(PreviewShade, 10)
         end
         local MockHolder = mk("Frame", {
             Parent = Preview,
@@ -525,7 +508,32 @@ ignment = Enum.TextXAlignment.Left,
             BackgroundTransparency = 1,
             ZIndex = 12,
         })
-        RowKit.PaintMock(RowKit.ThemeMock(MockHolder, 12), palette, hasImage)
+        local mock = RowKit.ThemeMock(MockHolder, 12)
+        RowKit.PaintMock(mock, palette, false)
+        if hasImage then
+            -- Solo Navidad usa el fondo en toda la ventana; los demás lo limitan al contenido.
+            local full = tema == "Navidad"
+            mock.Root.ClipsDescendants = true
+            local areaPosition = full and UDim2.fromScale(0, 0) or UDim2.new(0.24, 8, 0, 24)
+            local areaSize = full and UDim2.fromScale(1, 1) or UDim2.new(0.76, -12, 1, -28)
+            local art = mk("ImageLabel", {
+                Parent = mock.Root, Position = areaPosition, Size = areaSize,
+                BackgroundTransparency = 1, Image = previewImage,
+                ImageTransparency = 0.08, ScaleType = Enum.ScaleType.Crop, ZIndex = 12,
+            })
+            corner(art, full and 8 or 5)
+            local shade = mk("Frame", {
+                Parent = mock.Root, Position = areaPosition, Size = areaSize,
+                BackgroundColor3 = palette.Background, BackgroundTransparency = 0.7,
+                BorderSizePixel = 0, ZIndex = 12,
+            })
+            corner(shade, full and 8 or 5)
+            for _, row in ipairs(mock.Rows) do row.Row.BackgroundTransparency = 0.55 end
+            if full then
+                mock.Side.BackgroundTransparency = 0.62
+                mock.Top.BackgroundTransparency = 0.62
+            end
+        end
 
         local NameLabel = mk("TextLabel", {
             Parent = Card,
