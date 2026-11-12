@@ -1,4 +1,14 @@
-),
+2, 0, 8),
+        BackgroundTransparency = 1,
+        Visible = false,
+        ZIndex = 20,
+    })
+
+    local FavoritesBackButton = mk("TextButton", {
+        Parent = FavoritesHeader,
+        Size = UDim2.fromOffset(30, 30),
+        Position = UDim2.new(0, 0, 0.5, -15),
+        BackgroundColor3 = Color3.fromRGB(30, 30, 30),
         BackgroundTransparency = 0,
         BorderSizePixel = 0,
         Text = "‹",
@@ -543,21 +553,25 @@
 
     local function applySpotifyNowPlayingLayout()
         local m = getSpotifyMetrics()
-        local albumSz = m.compact and 108 or 122
-        local cardW = 0
-        pcall(function() cardW = NowPlayingCard.AbsoluteSize.X end)
+        local cardW, cardH = 0, 0
+        pcall(function()
+            local size = spotifyLogicalSize(NowPlayingCard)
+            cardW, cardH = size.X, size.Y
+        end)
         local compactCard = cardW > 0 and cardW < 640
-        if compactCard then
-            albumSz = math.min(albumSz, 118)
+        -- La portada aprovecha el espacio sin alcanzar el progreso ni los controles.
+        local albumSz = 118
+        if cardW > 0 and cardH > 0 then
+            albumSz = math.clamp(math.floor(math.min(cardW * 0.46, cardH - 214, 152)), 48, 152)
         end
 
         NowPlayingCard.Size = UDim2.new(1, 0, 1, 0)
 
         AlbumArt.Size = UDim2.new(0, albumSz, 0, albumSz)
-        AlbumArt.Position = UDim2.new(0.5, -(albumSz / 2), 0, 42)
+        AlbumArt.Position = UDim2.new(0.5, -(albumSz / 2), 0, 38)
 
         InfoFrame.Size = UDim2.new(1, -28, 0, 62)
-        InfoFrame.Position = UDim2.new(0, 14, 0, albumSz + 48)
+        InfoFrame.Position = UDim2.new(0, 14, 0, albumSz + 42)
 
         PlayerSongTitle.TextSize = compactCard and 19 or 21
         PlayerSongArtist.Position = UDim2.new(0, 0, 0, 27)
@@ -565,7 +579,7 @@
         PlayerMeta.Position = UDim2.new(0, 0, 0, 46)
         PlayerMeta.TextSize = 10
 
-        local progressTop = albumSz + 115
+        local progressTop = albumSz + 108
         ProgressTrack.Size = UDim2.new(1, -28, 0, 5)
         SeekHitbox.Size = UDim2.new(1, -28, 0, 28)
         ProgressTrack.Position = UDim2.new(0, 14, 0, progressTop)
@@ -583,13 +597,16 @@
         LikeBtn.Size = UDim2.new(0, 22, 0, 22)
         LikeBtn.Position = UDim2.new(0.22, 0, 0.5, 0)
 
+        PrevBtn.Size = UDim2.new(0, 22, 0, 22)
+        PrevBtn.Position = UDim2.new(0.37, 0, 0.5, 0)
+
         PlayPauseBtnOuter.Size = UDim2.new(0, 40, 0, 40)
         PlayPauseBtnOuter.Position = UDim2.new(0.50, 0, 0.5, 0)
         PlayPauseBtn.Size = UDim2.new(0, 18, 0, 18)
         PlayPauseBtn.Position = UDim2.new(0.5, -9, 0.5, -9)
 
         NextBtn.Size = UDim2.new(0, 22, 0, 22)
-        NextBtn.Position = UDim2.new(0.78, 0, 0.5, 0)
+        NextBtn.Position = UDim2.new(0.70, 0, 0.5, 0)
         MoreBtn.Size = UDim2.new(0, 20, 0, 20)
         MoreBtn.Position = UDim2.new(0.94, 0, 0.5, 0)
 
@@ -1112,25 +1129,4 @@
         end
 
         if not getcustomasset then
-            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la portada: " .. coverPath)
-            return false, "getcustomasset_unavailable"
-        end
-
-        local okAsset, resultAsset = pcall(function()
-            return getcustomasset(coverPath)
-        end)
-
-        if not (okAsset and type(resultAsset) == "string") then
-            warn("[YinYang Spotify] getcustomasset falló para la portada (" .. coverPath .. "): " .. tostring(resultAsset))
-            return false, "getcustomasset_failed"
-        end
-
-        return true, resultAsset
-    end
-
-    local CoverAssetResolvedCache = {}
-
-    resolveTrackCoverImage = function(track)
-        if not track then
-            return ""
-        e
+            warn("[YinYang Spotify] getcustomasset no está disponible en este ejecutor; no se puede mostrar la porta

@@ -1180,9 +1180,16 @@
     })
     PlayPauseBtn.AnchorPoint = Vector2.new(0, 0)
 
+    local PrevBtn = createIconButton(Controls, 24, 124844823753990, spotifyText)
+    PrevBtn.Name = "PreviousTrack"
+    PrevBtn.AnchorPoint = Vector2.new(0.5, 0.5)
+    PrevBtn.Position = UDim2.new(0.37, 0, 0.5, 0)
+    PrevBtn.Rotation = 180
+    PrevBtn:SetAttribute("Tooltip", GetText("Canción anterior", "Previous song"))
+
     local NextBtn = createIconButton(Controls, 24, 124844823753990, spotifyText)
     NextBtn.AnchorPoint = Vector2.new(0.5, 0.5)
-    NextBtn.Position = UDim2.new(0.78, 0, 0.5, 0)
+    NextBtn.Position = UDim2.new(0.70, 0, 0.5, 0)
 
     local MoreBtn = createIconButton(Controls, 22, 117978708573781, spotifyText)
     MoreBtn.AnchorPoint = Vector2.new(0.5, 0.5)
@@ -1209,14 +1216,4 @@
     local FavoritesHeader = mk("Frame", {
         Parent = SongsCard,
         Size = UDim2.new(1, -24, 0, 34),
-        Position = UDim2.new(0, 12, 0, 8),
-        BackgroundTransparency = 1,
-        Visible = false,
-        ZIndex = 20,
-    })
-
-    local FavoritesBackButton = mk("TextButton", {
-        Parent = FavoritesHeader,
-        Size = UDim2.fromOffset(30, 30),
-        Position = UDim2.new(0, 0, 0.5, -15),
-        BackgroundColor3 = Color3.fromRGB(30, 30, 30
+        Position = UDim2.new(0, 1

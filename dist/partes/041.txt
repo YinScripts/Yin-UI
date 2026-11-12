@@ -1,4 +1,26 @@
-teToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
+ng:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
+    
+    DemoUI:SetTheme(TemaInicial)
+    
+    local TabFeatures = DemoUI:CreateTab("Features")
+    
+    TabFeatures:CreateLabel("Toggles", 14)
+    TabFeatures:CreateDivider()
+
+    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
+        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
+    end
+
+
+    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
+        print("Aimbot: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
+        print("ESP: " .. (state and "ON" or "OFF"))
+    end)
+
+    createToggleWithFloat(TabFeatures, "GodMode", "GodMode", false, function(state)
         print("GodMode: " .. (state and "ON" or "OFF"))
     end)
 

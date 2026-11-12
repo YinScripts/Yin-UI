@@ -1,4 +1,23 @@
-        Parent = Row,
+fromOffset(36, 36),
+            Position = UDim2.new(1, -126, 0.5, -18),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 45,
+        })
+        mk("ImageLabel", {
+            Parent = Heart,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = FavPage.HEART_ON,
+            ImageColor3 = spotifyGreen,
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 46,
+        })
+        mk("TextLabel", {
+            Parent = Row,
             Size = UDim2.fromOffset(60, 58),
             Position = UDim2.new(1, -78, 0, 0),
             BackgroundTransparency = 1,
@@ -556,6 +575,8 @@ clearSongRows = function()
         end
     end)
 
+    PrevBtn.MouseButton1Click:Connect(previousTrack)
+
     NextBtn.MouseButton1Click:Connect(function()
         if #SpotifyState.Catalog == 0 then
             return
@@ -1051,26 +1072,4 @@ if DEMO_ACTIVO then
         TemaInicial = ConfigCargada.theme
     end
 
-    local DemoUI = _G.YinYang:CreateWindow("Yin Yang - DEMO v6",TemaInicial)
-    
-    DemoUI:SetTheme(TemaInicial)
-    
-    local TabFeatures = DemoUI:CreateTab("Features")
-    
-    TabFeatures:CreateLabel("Toggles", 14)
-    TabFeatures:CreateDivider()
-
-    local function createToggleWithFloat(tab, labelES, labelEN, default, callback)
-        return tab:CreateFloatingToggle(labelES, labelEN, default, callback)
-    end
-
-
-    createToggleWithFloat(TabFeatures, "Aimbot", "Aimbot", false, function(state)
-        print("Aimbot: " .. (state and "ON" or "OFF"))
-    end)
-
-    createToggleWithFloat(TabFeatures, "ESP", "ESP", false, function(state)
-        print("ESP: " .. (state and "ON" or "OFF"))
-    end)
-
-    crea
+    local DemoUI = _G.YinYa

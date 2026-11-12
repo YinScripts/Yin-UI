@@ -194,6 +194,8 @@
         end
     end)
 
+    PrevBtn.MouseButton1Click:Connect(previousTrack)
+
     NextBtn.MouseButton1Click:Connect(function()
         if #SpotifyState.Catalog == 0 then
             return

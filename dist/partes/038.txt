@@ -1,4 +1,25 @@
-nd
+da: " .. coverPath)
+            return false, "getcustomasset_unavailable"
+        end
+
+        local okAsset, resultAsset = pcall(function()
+            return getcustomasset(coverPath)
+        end)
+
+        if not (okAsset and type(resultAsset) == "string") then
+            warn("[YinYang Spotify] getcustomasset falló para la portada (" .. coverPath .. "): " .. tostring(resultAsset))
+            return false, "getcustomasset_failed"
+        end
+
+        return true, resultAsset
+    end
+
+    local CoverAssetResolvedCache = {}
+
+    resolveTrackCoverImage = function(track)
+        if not track then
+            return ""
+        end
 
         if track.CoverURL and track.CoverURL ~= "" then
             local cacheKey = (track.CoverCacheName and track.CoverCacheName ~= "") and track.CoverCacheName or track.CoverURL
@@ -1041,15 +1062,4 @@ nd
             ZIndex = 525,
         })
         FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
-        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
-        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
-        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
-        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
-        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
-        FP.PlayBtn.BackgroundTransparency = 0
-        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
-        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
-        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
-
-        FP.Time = mk("TextLabel", {
-            P
+       
