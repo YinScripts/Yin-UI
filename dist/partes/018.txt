@@ -1005,14 +1005,14 @@
                 local panel = mk("Frame", {
                     Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(1, 0),
                     Position = UDim2.fromScale(1, 0), Size = UDim2.new(0, 206, 1, 0),
-                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.28,
+                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.46,
                     BorderSizePixel = 0, ZIndex = 9,
                 })
                 panel:SetAttribute("ThemeRole", "Background")
                 corner(panel, 14)
                 local separator = mk("Frame", {
                     Name = "OptionDivider", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(1, -211, 0.5, 0), Size = UDim2.fromOffset(2, 110),
+                    Position = UDim2.new(0.38, 4, 0.5, 0), Size = UDim2.fromOffset(1, 96),
                     Rotation = 23, BackgroundColor3 = Theme.Accent,
                     BackgroundTransparency = 0.22, BorderSizePixel = 0, ZIndex = 10,
                 })
@@ -1024,23 +1024,50 @@
                 corner(FavBtn, 9)
                 local favoriteBorder = stroke(FavBtn, Theme.Stroke, 1, 0.5)
                 favoriteBorder:SetAttribute("ThemeRole", "Stroke")
+                -- Borde suave de la tarjeta y cápsula inferior de tecla, como en la referencia.
+                local rim = mk("Frame", {
+                    Name = "OptionRim", Parent = Holder, Position = UDim2.fromOffset(1, 1),
+                    Size = UDim2.new(1, -2, 1, -2), BackgroundTransparency = 1,
+                    BorderSizePixel = 0, Active = false, ZIndex = 12,
+                })
+                corner(rim, 14)
+                local rimStroke = stroke(rim, Color3.new(1, 1, 1), 1.5, 0.12)
+                local rimGradient = mk("UIGradient", {Parent = rimStroke, Rotation = 12})
+                KeybindBtn.BackgroundColor3 = Theme.Background
+                KeybindBtn.BackgroundTransparency = 0.12
+                KeybindBtn:SetAttribute("ThemeRole", "Background")
+                local keyCorner = KeybindBtn:FindFirstChildOfClass("UICorner")
+                if keyCorner then keyCorner.CornerRadius = UDim.new(1, 0) end
                 local keyBorder = KeybindBtn:FindFirstChildOfClass("UIStroke")
                 if keyBorder then
                     keyBorder.Color = Theme.Accent
                     keyBorder.Transparency = 0.28
                     keyBorder:SetAttribute("ThemeRole", "Accent")
+                    keyBorder.Thickness = 1.3
                 end
+                local function updateRim()
+                    local accent = Theme.Accent or Theme.Stroke
+                    local second = Theme.ToggleOn or accent
+                    rimGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(0.70, accent),
+                        ColorSequenceKeypoint.new(1, second),
+                    })
+                end
+                Holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(updateRim)
+                updateRim()
+                if status then status.BackgroundTransparency = 1 end
                 local function layoutOptionCard()
                     if not Holder.Parent then return end
                     local logicalWidth = Holder.AbsoluteSize.X / math.max(MainScale.Scale, 0.01)
                     if logicalWidth <= 0 then return end
                     local narrow = logicalWidth < 330
                     Holder.Size = UDim2.new(1, 0, 0, narrow and 118 or 92)
-                    panel.Size = narrow and UDim2.new(1, -16, 0, 67) or UDim2.new(0, 206, 1, 0)
+                    panel.Size = narrow and UDim2.new(1, -16, 0, 67) or UDim2.new(0.62, 0, 1, 0)
                     panel.Position = narrow and UDim2.new(1, -8, 1, -72) or UDim2.fromScale(1, 0)
                     separator.Visible = not narrow
                     if label then
-                        label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(1, -230, 0, 22)
+                        label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(0.38, -26, 0, 22)
                         label.Position = UDim2.new(0, 16, 0, narrow and 4 or 13)
                     end
                     if status then
@@ -1052,9 +1079,9 @@
                     FavBtn.Position = UDim2.new(1, -164, 0, y - 1)
                     DetachBtn.Position = UDim2.new(1, -130, 0, y)
                     PinBtn.Position = UDim2.new(1, -98, 0, y)
-                    KeybindBtn.Position = UDim2.new(1, -194, 1, -27)
-                    KeybindBtn.Size = UDim2.fromOffset(180, 20)
-                    HolderClick.Size = narrow and UDim2.new(1, 0, 0, 44) or UDim2.new(1, -206, 1, 0)
+                    KeybindBtn.Position = narrow and UDim2.new(0, 14, 1, -27) or UDim2.new(0.38, 12, 1, -27)
+                    KeybindBtn.Size = narrow and UDim2.new(1, -28, 0, 20) or UDim2.new(0.62, -26, 0, 20)
+                    HolderClick.Size = narrow and UDim2.new(1, 0, 0, 44) or UDim2.new(0.38, -6, 1, 0)
                 end
                 Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutOptionCard)
                 layoutOptionCard()
