@@ -43,7 +43,7 @@
 
     local Footer = mk("Frame", {
         Parent = CredRoot_, Size = UDim2.new(1, 0, 0, 34),
-        BackgroundTransparency = 1, LayoutOrder = 6, ZIndex = 10,
+        BackgroundTransparency = 1, LayoutOrder = 9, ZIndex = 10,
     })
     for _, x in ipairs({0, 0.62}) do
         local line = mk("Frame", {

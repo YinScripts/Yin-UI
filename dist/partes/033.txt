@@ -18,9 +18,111 @@
     }, "Creador de Yin Yang v28. Apasionado por la programación y la comunidad.",
        "Creator of Yin Yang v28. Passionate about programming and the community.", "TextDim")
 
-    sectionLabel(4, 132202203337109, "COMUNIDAD", "COMMUNITY")
+    sectionLabel(4, 131335187671764, "REDES OFICIALES", "OFFICIAL CHANNELS")
 
-    local DC = card(5, 128)
+    -- Las imágenes originales se descargan como assets locales cuando el entorno lo permite.
+    local function socialCard(order, platform, displayName, handle, link, imageName, offset, dimensions)
+        local c = card(order, 110)
+        c.ClipsDescendants = true
+        local portrait = mk("ImageLabel", {
+            Parent = c, Size = UDim2.fromOffset(54, 54), Position = UDim2.fromOffset(14, 14),
+            BackgroundColor3 = Theme.Background, BorderSizePixel = 0,
+            Image = "rbxassetid://125311226076728", ScaleType = Enum.ScaleType.Crop, ZIndex = 11,
+        })
+        corner(portrait, 999)
+        local border = mk("UIStroke", {Parent = portrait, Color = Theme.Stroke, Thickness = 1.4, Transparency = 0.18})
+        border:SetAttribute("ThemeRole", "Stroke")
+        local stripe = mk("Frame", {Parent = c, Position = UDim2.new(0, 0, 0, 13),
+            Size = UDim2.new(0, 3, 1, -26), BorderSizePixel = 0,
+            BackgroundColor3 = Theme.Accent, ZIndex = 11})
+        stripe:SetAttribute("ThemeRole", "Accent")
+        corner(stripe, 4)
+        local platformLabel = text({
+            Parent = c, Position = UDim2.new(0, 80, 0, 10), Size = UDim2.new(1, -95, 0, 14),
+            Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Theme.Accent,
+            Text = platform, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
+        }, nil, nil, "Accent")
+        text({
+            Parent = c, Position = UDim2.new(0, 80, 0, 25), Size = UDim2.new(1, -95, 0, 21),
+            Font = Enum.Font.GothamBold, TextSize = 15, TextColor3 = Theme.Text,
+            Text = displayName, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
+        }, nil, nil, "Text")
+        text({
+            Parent = c, Position = UDim2.new(0, 80, 0, 47), Size = UDim2.new(1, -95, 0, 17),
+            Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.TextDim,
+            Text = handle, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
+        }, nil, nil, "TextDim")
+        local copy = mk("TextButton", {
+            Parent = c, Position = UDim2.new(0, 14, 1, -37), Size = UDim2.new(1, -28, 0, 26),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.85,
+            BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 12,
+        })
+        copy:SetAttribute("ThemeRole", "Accent")
+        corner(copy, 8)
+        local label = text({
+            Parent = copy, Size = UDim2.fromScale(1, 1), Font = Enum.Font.GothamBold,
+            TextSize = 11, TextColor3 = Theme.Text, TextXAlignment = Enum.TextXAlignment.Center, ZIndex = 13,
+        }, "Copiar enlace", "Copy link", "Text")
+        local serial = 0
+        local address
+        copy.Activated:Connect(function()
+            local copied = type(setclipboard) == "function" and pcall(setclipboard, link)
+            if not copied then
+                copy.Visible = false
+                address.Visible = true
+                address:CaptureFocus()
+                return
+            end
+            serial = serial + 1
+            local this = serial
+            label.Text = copied and GetText("✓ Enlace copiado", "✓ Link copied")
+                or GetText("No se pudo copiar", "Could not copy")
+            task.delay(2.5, function()
+                if this == serial and copy.Parent then label.Text = GetText("Copiar enlace", "Copy link") end
+            end)
+        end)
+        -- El enlace también queda disponible para selección manual sin portapapeles.
+        address = mk("TextBox", {
+            Parent = c, Name = platform .. "Link", Position = UDim2.new(0, 14, 1, -37),
+            Size = UDim2.new(1, -28, 0, 26), BackgroundColor3 = Theme.Background,
+            Text = link, TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 10,
+            ClearTextOnFocus = false, TextEditable = false, Visible = false, ZIndex = 14,
+        })
+        corner(address, 8)
+        address.FocusLost:Connect(function() address.Visible = false copy.Visible = true end)
+        copy:SetAttribute("Link", link)
+        task.spawn(function()
+            if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
+            local ok, asset = pcall(function()
+                local localName = "YinCredits_" .. imageName
+                if type(isfile) ~= "function" or not isfile(localName) then
+                    local data = game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/docs/assets/" .. imageName)
+                    if type(data) ~= "string" or #data < 100 then return nil end
+                    writefile(localName, data)
+                end
+                return getcustomasset(localName)
+            end)
+            if ok and type(asset) == "string" and asset ~= "" and portrait.Parent then
+                portrait.Image = asset
+                portrait.ImageRectOffset = offset
+                portrait.ImageRectSize = dimensions
+            end
+        end)
+    end
+    socialCard(5, "YOUTUBE", "Yin yang | New Script", "@Yin-Yang-Hub",
+        "https://youtube.com/@yin-yang-hub?si=lX7-WkyujSdjX7i7", "credit-youtube.jpg",
+        Vector2.new(42, 310), Vector2.new(188, 188))
+    socialCard(6, "TIKTOK", "Yin yang", "@natsuyong",
+        "https://vm.tiktok.com/ZS9fuBBTjnLqg-3jf52/", "credit-tiktok.jpg",
+        Vector2.new(226, 25), Vector2.new(249, 249))
+
+
+    sectionLabel(7, 132202203337109, "COMUNIDAD", "COMMUNITY")
+
+    local DC = card(8, 128)
     DC.ClipsDescendants = true
     local Stripe = mk("Frame", {
         Parent = DC, Size = UDim2.new(0, 4, 1, -24), Position = UDim2.new(0, 0, 0, 12),
@@ -96,7 +198,7 @@
 
     local Footer = mk("Frame", {
         Parent = CredRoot_, Size = UDim2.new(1, 0, 0, 34),
-        BackgroundTransparency = 1, LayoutOrder = 6, ZIndex = 10,
+        BackgroundTransparency = 1, LayoutOrder = 9, ZIndex = 10,
     })
     for _, x in ipairs({0, 0.62}) do
         local line = mk("Frame", {
