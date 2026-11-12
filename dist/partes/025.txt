@@ -1,170 +1,4 @@
-Info.new(animate and 0.18 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-                TweenService:Create(r.box, info, {BackgroundColor3 = on and Theme.Accent or Theme.Background, BackgroundTransparency = on and 0 or 0.2}):Play()
-                r.box:SetAttribute("ThemeRole", on and "Accent" or "Background")
-                r.mark.Visible = on
-                r.stroke.Color = on and Theme.Accent or Theme.Stroke
-                r.stroke.Transparency = on and 0.25 or 0.6
-                r.stroke:SetAttribute("ThemeRole", on and "Accent" or "Stroke")
-                r.row.BackgroundTransparency = on and 0.2 or 0.5
-            end
 
-            for i, tabName in ipairs(tabNames) do
-                local Row = mk("Frame", {
-                    Parent = ListScroll,
-                    Size = UDim2.new(1, 0, 0, 46),
-                    BackgroundColor3 = Theme.Secondary,
-                    BackgroundTransparency = 0.2,
-                    BorderSizePixel = 0,
-                    LayoutOrder = i,
-                    ZIndex = 503,
-                })
-                Row:SetAttribute("ThemeRole", "Secondary")
-                corner(Row, 12)
-                local rowStroke = stroke(Row, Theme.Accent, 1.2, 0.25)
-
-                local Box = mk("Frame", {
-                    Parent = Row,
-                    Size = UDim2.fromOffset(22, 22),
-                    Position = UDim2.new(0, 12, 0.5, -11),
-                    BackgroundColor3 = Theme.Accent,
-                    BorderSizePixel = 0,
-                    ZIndex = 504,
-                })
-                corner(Box, 7)
-                stroke(Box, Theme.Stroke, 1, 0.5)
-                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UDim2.new(0.5, -7, 0.5, -7), 505, "AccentText")
-
-                local Mono = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.fromOffset(28, 28),
-                    Position = UDim2.new(0, 44, 0.5, -14),
-                    BackgroundColor3 = Theme.Background,
-                    BackgroundTransparency = 0.25,
-                    Text = string.upper(string.sub(tabName, 1, 1)),
-                    TextColor3 = Theme.Accent,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = 13,
-                    ZIndex = 504,
-                })
-                Mono:SetAttribute("ThemeRole", "Background")
-                Mono:SetAttribute("ThemeTextRole", "Accent")
-                Mono:SetAttribute("IgnoreTextEffect", true)
-                corner(Mono, 9)
-
-                local RL = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.new(1, -170, 1, 0),
-                    Position = UDim2.new(0, 82, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = tabName,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    ZIndex = 504,
-                })
-                RL:SetAttribute("ThemeTextRole", "Text")
-
-                local n = tabCount[tabName] or 0
-                local CountChip = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.new(0, 0, 0, 22),
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -10, 0.5, 0),
-                    BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.82,
-                    Text = GetText(n .. (n == 1 and " slider" or " sliders"), n .. (n == 1 and " slider" or " sliders")),
-                    TextColor3 = Theme.Accent,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = 10,
-                    ZIndex = 504,
-                })
-                CountChip:SetAttribute("ThemeRole", "Accent")
-                CountChip:SetAttribute("ThemeTextRole", "Accent")
-                CountChip:SetAttribute("IgnoreTextEffect", true)
-                corner(CountChip, 999)
-                mk("UIPadding", {Parent = CountChip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
-
-                local RowBtn = mk("TextButton", {
-                    Parent = Row,
-                    Size = UDim2.new(1, 0, 1, 0),
-                    BackgroundTransparency = 1,
-                    Text = "",
-                    AutoButtonColor = false,
-                    ZIndex = 506,
-                })
-                local r = {name = tabName, row = Row, box = Box, mark = Mark, stroke = rowStroke}
-                rowsUI[#rowsUI + 1] = r
-                RowBtn.MouseButton1Click:Connect(function()
-                    playSound(Sounds.Click, 0.4)
-                    checked[tabName] = not checked[tabName]
-                    paintRow(r, true)
-                    refreshSummary()
-                end)
-                paintRow(r, false)
-            end
-
-            local function setAll(value)
-                playSound(Sounds.Click, 0.4)
-                for _, name in ipairs(tabNames) do checked[name] = value end
-                for _, r in ipairs(rowsUI) do paintRow(r, true) end
-                refreshSummary()
-            end
-            AllBtn.MouseButton1Click:Connect(function() setAll(true) end)
-            NoneBtn.MouseButton1Click:Connect(function() setAll(false) end)
-            refreshSummary()
-
-            local CodeBox = nil
-            ExportBtn.MouseButton1Click:Connect(function()
-                local sliders, total = {}, 0
-                for _, item in ipairs(buildIdMap()) do
-                    if checked[item.tab] then
-                        local ok, val = pcall(item.entry.GetValue)
-                        if ok and type(val) == "number" then
-                            sliders[item.id] = val
-                            total = total + 1
-                        end
-                    end
-                end
-
-                if total == 0 then
-                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
-                    return
-                end
-
-                local ok, encoded = pcall(function()
-                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
-                end)
-                if not ok then
-                    setStatus("err", "Error al codificar", "Encoding error")
-                    return
-                end
-
-                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
-                playSound(Sounds.Click, 0.7)
-                if copied then
-                    setStatus("ok",
-                        total .. " ajuste(s) copiados al portapapeles",
-                        total .. " setting(s) copied to clipboard")
-                    if CodeBox then CodeBox.Visible = false end
-                else
-                    setStatus("err",
-                        "Tu ejecutor no copia: copiá el código de abajo",
-                        "Your executor can't copy: copy the code below")
-                    -- Respaldo: mostrar el codigo para copiarlo a mano
-                    if not CodeBox then
-                        CodeBox = mk("TextBox", {
-                            Parent = Panel,
-                            Size = UDim2.new(1, -32, 0, 30),
-                            Position = UDim2.new(0, 16, 1, -90),
-                            BackgroundColor3 = Theme.Secondary,
-                            BackgroundTransparency = 0.2,
-                            Text = "",
-                            TextColor3 = Theme.Text,
-                            Font = Enum.Font.Code,
-                            TextSize = 10,
                             TextXAlignment = Enum.TextXAlignment.Left,
                             TextTruncate = Enum.TextTruncate.AtEnd,
                             ClearTextOnFocus = false,
@@ -1146,4 +980,194 @@ Info.new(animate and 0.18 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out
     corner(HueHandle, 4)
 
     local PickerPreview = mk("Frame", {
-        Pare
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.42, -6, 0, 34),
+        Position = UDim2.new(0.57, -6, 0, 61),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 262,
+    })
+    corner(PickerPreview, 7)
+    stroke(PickerPreview, Theme.Stroke, 1, 0.34)
+
+    local function createPickerInput(labelSpanish, labelEnglish, yOffset)
+        local field = mk("TextBox", {
+            Parent = ColorPickerPanel,
+            Size = UDim2.new(0.42, -6, 0, 29),
+            Position = UDim2.new(0.57, -6, 0, yOffset),
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderText = GetText(labelSpanish, labelEnglish),
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 262,
+        })
+        field:SetAttribute("ThemeRole", "Secondary")
+        field:SetAttribute("ThemeTextRole", "Text")
+        field:SetAttribute("PlaceholderSpanish", labelSpanish)
+        field:SetAttribute("PlaceholderEnglish", labelEnglish)
+        corner(field, 7)
+        return field
+    end
+    local PickerHex = createPickerInput("#RRGGBB · Hex", "#RRGGBB · Hex", 101)
+    local PickerRed = createPickerInput("Rojo", "Red", 136)
+    local PickerGreen = createPickerInput("Verde", "Green", 171)
+    local PickerBlue = createPickerInput("Azul", "Blue", 206)
+
+    local PickerCancel = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0, 14, 1, -45),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerCancel:SetAttribute("ThemeRole", "Secondary")
+    PickerCancel:SetAttribute("ThemeTextRole", "Text")
+    PickerCancel:SetAttribute("TextSpanish", "Cancelar")
+    PickerCancel:SetAttribute("TextEnglish", "Cancel")
+    corner(PickerCancel, 8)
+    local PickerApply = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0.56, -10, 1, -45),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Aplicar", "Apply"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerApply:SetAttribute("ThemeRole", "Accent")
+    PickerApply:SetAttribute("ThemeTextRole", "AccentText")
+    PickerApply:SetAttribute("TextSpanish", "Aplicar")
+    PickerApply:SetAttribute("TextEnglish", "Apply")
+    corner(PickerApply, 8)
+
+    local pickerTarget = nil
+    local pickerHue, pickerSaturation, pickerValue = 0, 0, 1
+    local draggingPicker, draggingHue = false, false
+    local function pickerColor()
+        return Color3.fromHSV(pickerHue, pickerSaturation, pickerValue)
+    end
+    local function refreshPicker()
+        local selected = pickerColor()
+        PickerArea.BackgroundColor3 = Color3.fromHSV(pickerHue, 1, 1)
+        PickerPreview.BackgroundColor3 = selected
+        SVHandle.Position = UDim2.new(pickerSaturation, 0, 1 - pickerValue, 0)
+        HueHandle.Position = UDim2.new(0.5, 0, pickerHue, 0)
+        PickerHex.Text = colorToHex(selected)
+        PickerRed.Text = tostring(math.floor(selected.R * 255 + 0.5))
+        PickerGreen.Text = tostring(math.floor(selected.G * 255 + 0.5))
+        PickerBlue.Text = tostring(math.floor(selected.B * 255 + 0.5))
+    end
+    local function setPickerColor(color)
+        pickerHue, pickerSaturation, pickerValue = color:ToHSV()
+        refreshPicker()
+    end
+    local function updateSVAt(position)
+        local size = PickerArea.AbsoluteSize
+        if size.X <= 0 or size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        local localPosition = pointer - PickerArea.AbsolutePosition
+        pickerSaturation = math.clamp(localPosition.X / size.X, 0, 1)
+        pickerValue = math.clamp(1 - localPosition.Y / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function updateHueAt(position)
+        local size = HueBar.AbsoluteSize
+        if size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        pickerHue = math.clamp((pointer.Y - HueBar.AbsolutePosition.Y) / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function closeColorPicker()
+        draggingPicker, draggingHue = false, false
+        ColorPickerOverlay.Visible = false
+        pickerTarget = nil
+    end
+    openThemeColorPicker = function(role)
+        local field = colorFields[role]
+        if not field then return end
+        local current = hexToColor(field.Box.Text) or field.Swatch.BackgroundColor3
+        pickerTarget = field
+        ColorPickerOverlay.Visible = true
+        task.defer(function()
+            if pickerTarget then setPickerColor(current) end
+        end)
+    end
+    PickerArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingPicker = true
+            updateSVAt(input.Position)
+        end
+    end)
+    HueBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHue = true
+            updateHueAt(input.Position)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingPicker and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSVAt(input.Position) end
+        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateHueAt(input.Position) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
+    end)
+    PickerHex.FocusLost:Connect(function()
+        local color = hexToColor(PickerHex.Text)
+        if color then setPickerColor(color) else refreshPicker() end
+    end)
+    local function applyRGBFields()
+        local color = Color3.fromRGB(
+            math.clamp(tonumber(PickerRed.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerGreen.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerBlue.Text) or 0, 0, 255)
+        )
+        setPickerColor(color)
+    end
+    PickerRed.FocusLost:Connect(applyRGBFields)
+    PickerGreen.FocusLost:Connect(applyRGBFields)
+    PickerBlue.FocusLost:Connect(applyRGBFields)
+    PickerClose.MouseButton1Click:Connect(closeColorPicker)
+    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
+    PickerApply.MouseButton1Click:Connect(function()
+        if pickerTarget then
+            local selected = pickerColor()
+            pickerTarget.Box.Text = colorToHex(selected)
+            pickerTarget.Swatch.BackgroundColor3 = selected
+        end
+        closeColorPicker()
+    end)
+
+    for index, info in ipairs(colorRoles) do
+        local cell = mk("Frame", {
+            Parent = ColorGridHolder,
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            LayoutOrder = index,
+            ZIndex = 202,
+        })
+        cell:SetAttribute("ThemeRole", "Secondary")
+        corner(cell, 12)
+        stroke(cell, Theme.Stroke, 1, 0.7)
+
+        local label = mk("TextLabel", {
+            Parent = cell,
+            Size = UDim2.new(1, -12, 0, 14),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundTransparency = 1,
+            Text = GetText(info[2], info[3]),
+            TextColor3 = Theme.Text,
+            TextSize = 1

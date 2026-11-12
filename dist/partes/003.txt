@@ -1,59 +1,3 @@
-= UDim.new(1, 0)
-    c.Parent = label
-    local pad = Instance.new("UIPadding")
-    pad.PaddingLeft = UDim.new(0, 8)
-    pad.PaddingRight = UDim.new(0, 8)
-    pad.Parent = label
-end
-
-function RowKit.Control(btn, accent)
-    pcall(function() btn.AutoButtonColor = false end)
-    local c = btn:FindFirstChildOfClass("UICorner")
-    if c then c.CornerRadius = UDim.new(0, 9) end
-    if accent then
-        btn.BackgroundColor3 = Theme.Accent
-        btn:SetAttribute("ThemeRole", "Accent")
-        if btn:IsA("TextButton") then
-            btn.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
-            btn:SetAttribute("ThemeTextRole", "AccentText")
-            btn.Font = Enum.Font.GothamBlack
-            btn.TextSize = 15
-        end
-    else
-        btn.BackgroundColor3 = Theme.Secondary
-        btn.BackgroundTransparency = 0.2
-        btn:SetAttribute("ThemeRole", "Secondary")
-    end
-    local scale = Instance.new("UIScale")
-    scale.Parent = btn
-    btn.MouseButton1Down:Connect(function()
-        TweenService:Create(scale, TweenInfo.new(0.07), {Scale = 0.86}):Play()
-    end)
-    local function release()
-        TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-    end
-    btn.MouseButton1Up:Connect(release)
-    btn.MouseLeave:Connect(release)
-end
-
-function RowKit.Press(holder)
-    local scale = holder:FindFirstChild("RowPressScale")
-    if not scale then
-        scale = Instance.new("UIScale")
-        scale.Name = "RowPressScale"
-        scale.Parent = holder
-    end
-    scale.Scale = 0.975
-    TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-end
-
--- Mini interfaz que muestra los 8 colores de un tema (tarjetas de temas y editor)
-function RowKit.ThemeMock(parent, z)
-    local m = {}
-    local function f(props, par)
-        local o = Instance.new("Frame")
-        o.BorderSizePixel = 0
-        for k, v in pairs(props) do o[k] = v end
         o.Parent = par
         return o
     end
@@ -965,4 +909,62 @@ function FloatingPillV5.Build(win, glow, label, winStroke, hasLinkedSlider, hasD
             win = { BackgroundColor3 = state and onBg or offBg },
             label = { TextColor3 = txt },
             stroke = { Transparency = state and 0 or 0.08 },
-            orb = { BackgroundColor3 = state and txt or offBg, Size
+            orb = { BackgroundColor3 = state and txt or offBg, Size = state and UDim2.fromOffset(10, 10) or UDim2.fromOffset(9, 9) },
+            track = { BackgroundColor3 = state and txt or Color3.fromRGB(70, 70, 76), BackgroundTransparency = state and 0.15 or 0.2 },
+            knob = { Position = state and UDim2.new(1, -14, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = state and onBg or Color3.fromRGB(235, 235, 235) },
+        }
+        local targets = { win = win, label = label, stroke = winStroke, orb = orb, track = track, knob = knob }
+        if instant then
+            for key, goal in pairs(goals) do
+                for prop, value in pairs(goal) do targets[key][prop] = value end
+            end
+        else
+            local info = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+            for key, goal in pairs(goals) do
+                TweenService:Create(targets[key], info, goal):Play()
+            end
+            pressScale.Scale = 0.92
+            TweenService:Create(pressScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        end
+
+        if glowPulse then
+            glowPulse:Cancel()
+            glowPulse = nil
+        end
+        if glow and glow.Parent then
+            local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            if state then
+                local glowIn = TweenService:Create(glow, fade, { BackgroundTransparency = 0.78 })
+                glowIn.Completed:Connect(function(playbackState)
+                    if playbackState == Enum.PlaybackState.Completed and wasOn and glow.Parent then
+                        glowPulse = TweenService:Create(glow,
+                            TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
+                            { BackgroundTransparency = 0.92 })
+                        glowPulse:Play()
+                    end
+                end)
+                glowIn:Play()
+            else
+                TweenService:Create(glow, fade, { BackgroundTransparency = 1 }):Play()
+            end
+        end
+        if state and ready and not wasOn then
+            playActivateRipple(onLight)
+        end
+        wasOn = state
+        ready = true
+    end
+
+    return { Apply = apply }
+end
+
+-- ============================================================================
+-- TAMBOR DE VALORES (DIAL) PARA LA PILDORA V6
+-- Va en el borde derecho de la pildora, en lugar del mini interruptor.
+-- Deslizar hacia ABAJO sube el valor, hacia ARRIBA lo baja. Un toque cambia de slider
+-- (si el toggle tiene varios). entries = { { Slider = <objeto de CreateSlider>, Tag = "VEL" }, ... }
+-- Al cambiar: Slider.Set(v) + Slider._callback(v) (Set solo mueve la barra, no aplica el valor).
+-- Si el slider del menu se mueve, el tambor lo lee cada 0.25 s mientras la pildora existe.
+-- Va dentro de FloatingPillV5: no suma locales al chunk principal.
+-- ============================================================================
+function Fl

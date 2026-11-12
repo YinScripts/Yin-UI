@@ -1,435 +1,4 @@
-  button.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                TweenService:Create(scale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            end
-        end)
-        return button
-    end
-
-
-    local Window
-
-    local GlobalSearch = {}
-    GlobalSearch.Button = createWindowControl("GlobalSearch", 123536470181783, 0, "Buscar")
-    GlobalSearch.Button.Size = UDim2.fromOffset(22, 22)
-    local MinimizeButton = createWindowControl("Minimize", 104305253111520, 1, "Minimizar")
-    local MaximizeButton = createWindowControl("Maximize", 115006761963973, 2, "Pantalla completa")
-    local CloseButton = createWindowControl("Close", 111128342524640, 3, "Cerrar")
-
-    GlobalSearch.Overlay = mk("Frame", {
-        Name = "GlobalSearch.Overlay",
-        Size = UDim2.fromScale(1, 1),
-        BackgroundTransparency = 1,
-        Visible = false,
-        ZIndex = 1000,
-    }, ScreenGui)
-
-    GlobalSearch.Backdrop = mk("TextButton", {
-        Size = UDim2.fromScale(1, 1),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.42,
-        Text = "",
-        AutoButtonColor = false,
-        ZIndex = 1000,
-    }, GlobalSearch.Overlay)
-
-    GlobalSearch.Panel = mk("Frame", {
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.fromScale(0.5, 0.5),
-        Size = UDim2.fromOffset(500, 500),
-        BackgroundColor3 = Theme.Background,
-        ZIndex = 1001,
-    }, GlobalSearch.Overlay)
-    GlobalSearch.Panel:SetAttribute("ThemeRole", "Background")
-    corner(GlobalSearch.Panel, 12)
-    stroke(GlobalSearch.Panel, Theme.Stroke, 1.5, 0.28)
-
-    GlobalSearch.Accent = mk("Frame", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.new(1, -40, 0, 2),
-        Position = UDim2.fromOffset(20, 58),
-        BackgroundColor3 = Theme.Accent,
-        BorderSizePixel = 0,
-        ZIndex = 1003,
-    })
-    corner(GlobalSearch.Accent, 999)
-    GlobalSearch.Accent:SetAttribute("ThemeRole", "Accent")
-
-    GlobalSearch.Icon = mk("ImageLabel", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.fromOffset(24, 24),
-        Position = UDim2.fromOffset(20, 16),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://83456197177232",
-        ImageColor3 = Theme.Accent,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 1003,
-    })
-    GlobalSearch.Icon:SetAttribute("ThemeImageRole", "Accent")
-
-    GlobalSearch.Title = mk("TextLabel", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.new(1, -88, 0, 24),
-        Position = UDim2.fromOffset(52, 11),
-        BackgroundTransparency = 1,
-        Text = GetText("Buscar en Yin Yang", "Search Yin Yang"),
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamBlack,
-        TextSize = 17,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1002,
-    })
-    GlobalSearch.Title:SetAttribute("ThemeTextRole", "Text")
-
-    GlobalSearch.Subtitle = mk("TextLabel", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.new(1, -88, 0, 17),
-        Position = UDim2.fromOffset(52, 33),
-        BackgroundTransparency = 1,
-        Text = GetText("Encuentra cualquier función rápidamente", "Find any feature quickly"),
-        TextColor3 = Theme.TextDim,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 10,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1002,
-    })
-    GlobalSearch.Subtitle:SetAttribute("ThemeTextRole", "TextDim")
-
-    GlobalSearch.Close = mk("TextButton", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.fromOffset(30, 30),
-        Position = UDim2.new(1, -42, 0, 10),
-        BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.15,
-        Text = "×",
-        TextColor3 = Theme.TextDim,
-        Font = Enum.Font.GothamBold,
-        TextSize = 20,
-        AutoButtonColor = false,
-        ZIndex = 1004,
-    })
-    GlobalSearch.Close:SetAttribute("ThemeRole", "Secondary")
-    corner(GlobalSearch.Close, 8)
-    stroke(GlobalSearch.Close, Theme.Stroke, 1, 0.65)
-
-    GlobalSearch.Holder = mk("Frame", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.new(1, -40, 0, 48),
-        Position = UDim2.fromOffset(20, 74),
-        BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.08,
-        ZIndex = 1002,
-    })
-    GlobalSearch.Holder:SetAttribute("ThemeRole", "Secondary")
-    corner(GlobalSearch.Holder, 9)
-    stroke(GlobalSearch.Holder, Theme.Stroke, 1, 0.48)
-
-    mk("ImageLabel", {
-        Parent = GlobalSearch.Holder,
-        Size = UDim2.fromOffset(19, 19),
-        Position = UDim2.fromOffset(12, 12),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://83456197177232",
-        ImageColor3 = Theme.TextDim,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 1003,
-    })
-
-    GlobalSearch.Box = mk("TextBox", {
-        Parent = GlobalSearch.Holder,
-        Size = UDim2.new(1, -54, 1, 0),
-        Position = UDim2.fromOffset(46, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        PlaceholderText = GetText("Buscar una función...", "Search a feature..."),
-        PlaceholderColor3 = Theme.TextDim,
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 13,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        ZIndex = 1003,
-    })
-    GlobalSearch.Box:SetAttribute("ThemeTextRole", "Text")
-
-    GlobalSearch.Results = mk("ScrollingFrame", {
-        Parent = GlobalSearch.Panel,
-        Size = UDim2.new(1, -40, 1, -138),
-        Position = UDim2.fromOffset(20, 134),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = Theme.Accent,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ZIndex = 1002,
-    }, GlobalSearch.Panel)
-    mk("UIListLayout", {
-        Padding = UDim.new(0, 7),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    }, GlobalSearch.Results)
-
-    GlobalSearch.Empty = mk("TextLabel", {
-        Parent = GlobalSearch.Results,
-        Size = UDim2.new(1, 0, 0, 100),
-        BackgroundTransparency = 1,
-        Text = GetText("Escribe para buscar una función", "Type to search for a feature"),
-        TextColor3 = Theme.TextDim,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Center,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 1003,
-    })
-    GlobalSearch.Empty:SetAttribute("ThemeTextRole", "TextDim")
-
-    GlobalSearch.Open = false
-
-    function GlobalSearch.UpdateSize()
-        local viewport = ScreenGui.AbsoluteSize
-        if viewport.X <= 0 or viewport.Y <= 0 then return end
-        local width = math.min(500, math.max(290, viewport.X - 24))
-        local height = math.min(500, math.max(300, viewport.Y - 24))
-        GlobalSearch.Panel.Size = UDim2.fromOffset(width, height)
-    end
-    track(ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(GlobalSearch.UpdateSize))
-    GlobalSearch.UpdateSize()
-
-    function GlobalSearch.ClearResults()
-        for _, child in ipairs(GlobalSearch.Results:GetChildren()) do
-            if child:IsA("GuiButton") then
-                child:Destroy()
-            end
-        end
-    end
-
-    function GlobalSearch.Refresh()
-        GlobalSearch.ClearResults()
-        local query = string.lower((GlobalSearch.Box.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-        if query == "" then
-            GlobalSearch.Empty.Text = GetText("Escribe para buscar una función", "Type to search for a feature")
-            GlobalSearch.Empty.Visible = true
-            return
-        end
-
-        local matches = {}
-        for _, entry in ipairs(Window._GlobalOptionRegistry or {}) do
-            local nameES = string.lower(tostring(entry.NameSpanish or ""))
-            local nameEN = string.lower(tostring(entry.NameEnglish or ""))
-            local tabES = string.lower(tostring(entry.Tab and entry.Tab.NameSpanish or ""))
-            local tabEN = string.lower(tostring(entry.Tab and entry.Tab.NameEnglish or ""))
-            local score = nil
-            for _, value in ipairs({nameES, nameEN, tabES, tabEN}) do
-                if value ~= "" then
-                    local found = string.find(value, query, 1, true)
-                    if found then
-                        local candidate = found == 1 and 0 or 1
-                        score = score == nil and candidate or math.min(score, candidate)
-                    end
-                end
-            end
-            if score ~= nil then
-                table.insert(matches, {entry = entry, score = score})
-            end
-        end
-
-        table.sort(matches, function(a, b)
-            if a.score ~= b.score then return a.score < b.score end
-            return string.lower(tostring(a.entry.NameSpanish or "")) < string.lower(tostring(b.entry.NameSpanish or ""))
-        end)
-
-        GlobalSearch.Empty.Visible = #matches == 0
-        if #matches == 0 then
-            GlobalSearch.Empty.Text = GetText("No encontramos esa función", "No matching feature found")
-            return
-        end
-
-        for index = 1, math.min(#matches, 20) do
-            local entry = matches[index].entry
-            local result = mk("TextButton", {
-                Parent = GlobalSearch.Results,
-                Size = UDim2.new(1, -4, 0, 62),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.12,
-                Text = "",
-                AutoButtonColor = false,
-                LayoutOrder = index,
-                ZIndex = 1003,
-            })
-            result:SetAttribute("ThemeRole", "Secondary")
-            corner(result, 9)
-            stroke(result, Theme.Stroke, 1, 0.62)
-
-            local resultIconFrame = mk("Frame", {
-                Parent = result,
-                Size = UDim2.fromOffset(38, 38),
-                Position = UDim2.fromOffset(10, 12),
-                BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.10,
-                BorderSizePixel = 0,
-                ZIndex = 1004,
-            })
-            resultIconFrame:SetAttribute("ThemeRole", "Background")
-            corner(resultIconFrame, 10)
-            stroke(resultIconFrame, Theme.Stroke, 1, 0.68)
-
-            local resultIcon = mk("ImageLabel", {
-                Parent = resultIconFrame,
-                Size = UDim2.fromOffset(20, 20),
-                Position = UDim2.fromOffset(9, 9),
-                BackgroundTransparency = 1,
-                Image = entry.Icon or (entry.Tab and entry.Tab.IconAsset) or "rbxassetid://83456197177232",
-                ImageColor3 = Theme.Text,
-                ScaleType = Enum.ScaleType.Fit,
-                ZIndex = 1005,
-            })
-
-            local resultTitle = mk("TextLabel", {
-                Parent = result,
-                Size = UDim2.new(1, -116, 0, 22),
-                Position = UDim2.fromOffset(60, 8),
-                BackgroundTransparency = 1,
-                Text = GetText(entry.NameSpanish, entry.NameEnglish),
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 1004,
-            })
-            resultTitle:SetAttribute("ThemeTextRole", "Text")
-
-            local tabName = entry.Tab and GetText(entry.Tab.NameSpanish, entry.Tab.NameEnglish) or GetText("General", "General")
-            local resultMeta = mk("TextLabel", {
-                Parent = result,
-                Size = UDim2.new(1, -116, 0, 16),
-                Position = UDim2.fromOffset(60, 32),
-                BackgroundTransparency = 1,
-                Text = tabName .. "  ·  " .. tostring(entry.Kind or "Feature"),
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamMedium,
-                TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 1004,
-            })
-            resultMeta:SetAttribute("ThemeTextRole", "TextDim")
-
-            local resultArrow = mk("TextLabel", {
-                Parent = result,
-                Size = UDim2.fromOffset(30, 62),
-                Position = UDim2.new(1, -38, 0, 0),
-                BackgroundTransparency = 1,
-                Text = "›",
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamBold,
-                TextSize = 24,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                TextYAlignment = Enum.TextYAlignment.Center,
-                ZIndex = 1004,
-            })
-            resultArrow:SetAttribute("ThemeTextRole", "TextDim")
-
-            result.MouseEnter:Connect(function()
-                TweenService:Create(result, TweenInfo.new(0.12), {BackgroundTransparency = 0.02}):Play()
-                TweenService:Create(resultArrow, TweenInfo.new(0.12), {TextColor3 = Theme.Accent}):Play()
-            end)
-            result.MouseLeave:Connect(function()
-                TweenService:Create(result, TweenInfo.new(0.15), {BackgroundTransparency = 0.12}):Play()
-                TweenService:Create(resultArrow, TweenInfo.new(0.15), {TextColor3 = Theme.TextDim}):Play()
-            end)
-            result.MouseButton1Click:Connect(function()
-                if entry.Tab and entry.Tab.Select then
-                    GlobalSearch.SetOpen(false)
-                    entry.Tab.Select()
-                    task.defer(function()
-                        if entry.Holder and entry.Holder.Parent and entry.Tab.Page then
-                            local y = entry.Holder.AbsolutePosition.Y - entry.Tab.Page.AbsolutePosition.Y + entry.Tab.Page.CanvasPosition.Y - 8
-                            entry.Tab.Page.CanvasPosition = Vector2.new(0, math.max(0, y))
-                        end
-                    end)
-                end
-            end)
-        end
-    end
-
-    function GlobalSearch.SetOpen(open)
-        GlobalSearch.Open = open
-        GlobalSearch.Overlay.Visible = open
-        if open then
-            GlobalSearch.UpdateSize()
-            GlobalSearch.Refresh()
-            task.defer(function()
-                pcall(function() GlobalSearch.Box:CaptureFocus() end)
-            end)
-        else
-            GlobalSearch.Box:ReleaseFocus()
-        end
-    end
-
-    GlobalSearch.Backdrop.MouseButton1Click:Connect(function()
-        GlobalSearch.SetOpen(false)
-    end)
-    GlobalSearch.Close.MouseButton1Click:Connect(function()
-        GlobalSearch.SetOpen(false)
-    end)
-    GlobalSearch.Box:GetPropertyChangedSignal("Text"):Connect(GlobalSearch.Refresh)
-    GlobalSearch.Button.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.6)
-        GlobalSearch.SetOpen(not GlobalSearch.Open)
-    end)
-
-    MinimizeButton.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.6)
-        if isMaximized then applyMaximizedState(false) end
-        hideMainWindow()
-    end)
-
-    MaximizeButton.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.6)
-        applyMaximizedState(not isMaximized)
-    end)
-
-    CloseButton.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.6)
-        shutdownUI()
-    end)
-
-    if title_text and (string.find(title_text, "Yin") or string.find(title_text, "Yang")) then
-        local animValue = 0
-        local animSpeed = 0.3
-        local origColor = TitleLabel.TextColor3
-        
-        track(RunService.RenderStepped:Connect(function()
-            if PerfOpt.Flags.NoDecorAnim then return end
-            animValue = (animValue + animSpeed) % 360
-            
-            local sine = 0.6 + 0.4 * ((math.sin(math.rad(animValue)) + 1) / 2)
-            
-            if string.find(title_text, "Yin Yang") or string.find(title_text, "yin yang") then
-                TitleLabel.TextColor3 = Color3.new(
-                    (Theme.TitleText or Theme.Accent).R * sine,
-                    (Theme.TitleText or Theme.Accent).G * sine,
-                    (Theme.TitleText or Theme.Accent).B * sine
-                )
-            else
-                TitleLabel.TextColor3 = Color3.new(
-                    (Theme.TitleText or Theme.Accent).R * sine,
-                    (Theme.TitleText or Theme.Accent).G * sine,
-                    (Theme.TitleText or Theme.Accent).B * sine
-                )
-            end
-        end))
-    end
-
-    do
-        local drag = false
-        local dragStart, startPos
-        TopBar.InputBegan:Connect(function(input)
-            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
-                drag = true
-                dragStart = input.Position
-                startPos = Main.Position
+startPos = Main.Position
             end
         end)
         track(UserInputService.InputChanged:Connect(function(input)
@@ -529,6 +98,48 @@
         ZIndex = 9,
     }, Body)
 
+    -- Iconos normales: descarga en segundo plano y conserva el recurso original si falla.
+    local YinIcons = { cache = {}, loading = {}, waiting = {} }
+    Window._YinIcons = YinIcons
+    function YinIcons.get(name, callback)
+        if YinIcons.cache[name] then callback(YinIcons.cache[name]); return end
+        if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
+        local queue = YinIcons.waiting[name] or {}
+        YinIcons.waiting[name] = queue
+        table.insert(queue, callback)
+        if YinIcons.loading[name] then return end
+        YinIcons.loading[name] = true
+        task.spawn(function()
+            local ok, asset = pcall(function()
+                local path = "YinUI_Icon_v1_" .. name .. ".png"
+                if type(isfile) ~= "function" or not isfile(path) then
+                    local data = game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/assets/iconos-yin/" .. name .. ".png")
+                    if type(data) ~= "string" or #data < 100 then return nil end
+                    writefile(path, data)
+                end
+                return getcustomasset(path)
+            end)
+            YinIcons.loading[name] = nil
+            local callbacks = YinIcons.waiting[name] or {}
+            YinIcons.waiting[name] = nil
+            if ok and type(asset) == "string" and asset ~= "" then
+                YinIcons.cache[name] = asset
+                for _, fn in ipairs(callbacks) do pcall(fn, asset) end
+            end
+        end)
+    end
+    function YinIcons.apply(image, name)
+        if not image or not name then return end
+        YinIcons.get(name, function(asset)
+            if image.Parent and Theme.ThemeName ~= "Navidad" then
+                image.Image = asset
+                image.ImageColor3 = Color3.new(1, 1, 1)
+            end
+        end)
+    end
+    YinIcons.tabs = { Home="home", Inicio="home", Favs="favorites", Favo="favorites", Themes="palette", Temas="palette", Effects="effects", Efectos="effects", Shaders="color_wheel", Settings="settings", Ajustes="settings", Chat="chat", Credits="info", ["Créditos"]="info", Logo="logo", Classic="diamonds", Spotify="music", ["Fan Art"]="fanart", All="all", Player="player", Players="players", Games="games", Map="map", Emotes="emotes", Movement="movement" }
+    YinIcons.stats = { ["rbxassetid://99086270459218"]="music", ["rbxassetid://90955646581059"]="players", ["rbxassetid://80031485123484"]="ping", ["rbxassetid://126144525731859"]="server", ["rbxassetid://128054256171328"]="time", ["rbxassetid://84609306530754"]="region", ["rbxassetid://88363727246005"]="status" }
+
     local function applyThemeExtras()
         CatImage.Visible = (Theme.ThemeName == "Dark") and not (Window and Window.CompactNavigation)
         TabListDivider.Visible = false -- v15: sin línea divisoria
@@ -551,6 +162,7 @@
             local key = controlKeys[control.Name]
             if key and control:IsA("ImageButton") then
                 control.Image = windowIcons[key] or control:GetAttribute("DefaultImage") or control.Image
+                if Theme.ThemeName ~= "Navidad" then YinIcons.apply(control, ({ Search="search", Minimize="minimize", Maximize="maximize", Close="close" })[key]) end
                 local controlPx = key == "Search" and searchSize or controlSize
                 control.Size = UDim2.fromOffset(controlPx, controlPx)
             end
@@ -842,6 +454,7 @@
         end
         local nav = Theme.ThemeName == "Navidad" and Window._NavidadIconMap[base] or nil
         img.Image = nav or base
+        if Theme.ThemeName ~= "Navidad" then YinIcons.apply(img, YinIcons.stats[base]) end
         return nav ~= nil
     end
 
@@ -889,7 +502,7 @@
         if Boom and Boom.Icon then
             local isNav = Window._ApplyNavidadIcon(Boom.Icon)
             Boom.Icon.Size = isNav and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 14, 0, 14)
-            Boom.Icon.ImageColor3 = isNav and Color3.new(1, 1, 1) or getContrastColor(Theme.Accent)
+            Boom.Icon.ImageColor3 = Color3.new(1, 1, 1)
         end
         for _, img in ipairs(Window._NavidadIcons) do
             if img.Parent then Window._ApplyNavidadIcon(img) end
@@ -1119,4 +732,305 @@
     track(UserInputService.InputBegan:Connect(function(input, _gameProcessedEvent)
         local capture = Window._keybindCapture
         if capture then
-  
+            if input.UserInputType == Enum.UserInputType.Keyboard then
+                if input.KeyCode == Enum.KeyCode.Escape then
+                    capture.Capturing = false
+                    Window._keybindCapture = nil
+                    updateKeybindButton(capture)
+                elseif input.KeyCode ~= Enum.KeyCode.Unknown then
+                    capture.SetKey(input.KeyCode.Name)
+                end
+            end
+            return
+        end
+
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        if input.KeyCode == Enum.KeyCode.Unknown then return end
+
+        local focusedTextBox = nil
+        pcall(function()
+            focusedTextBox = UserInputService:GetFocusedTextBox()
+        end)
+        if focusedTextBox then return end
+
+        local keyName = input.KeyCode.Name
+        for _, entry in pairs(Window.Keybinds) do
+            if entry.KeyName == keyName and type(entry.Activate) == "function" then
+                task.spawn(function()
+                    pcall(entry.Activate)
+                end)
+                break
+            end
+        end
+    end))
+
+    pcall(function()
+        Window.BackgroundVideo = mk("VideoFrame", {
+            Name = "BackgroundVideo",
+            Parent = ContentArea,
+            AnchorPoint = Vector2.new(0, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            Size = UDim2.new(1, 15, 1, 30),
+            BackgroundTransparency = 1,
+            Video = "",
+            Looped = true,
+            Playing = false,
+            Volume = 0,
+            Visible = false,
+            Active = false,
+            ZIndex = 5,
+        })
+        corner(Window.BackgroundVideo, 8)
+    end)
+    Window.VideoBackgroundSupported = Window.BackgroundVideo ~= nil
+
+    Window.ApplyFloatingStyle = function()
+        local isCircleStyle = (SavedConfig.FloatingToggleStyle or "Pill") == "Circle"
+        local floatW = isCircleStyle and 64 or 200
+        local floatH = isCircleStyle and 64 or 36
+
+        for _, floatData in ipairs(Window.FloatingToggles or {}) do
+            local win = floatData and floatData.Window
+            if win and win.Parent and win:GetAttribute("SupportsFloatStyle") and not win:GetAttribute("YYPillV5") then
+                local winHasLinkedSlider = win:GetAttribute("HasLinkedSlider")
+                local thisFloatW = winHasLinkedSlider and 200 or floatW
+                local thisFloatH = winHasLinkedSlider and (36 + 40) or floatH
+                local thisIsCircle = isCircleStyle and not winHasLinkedSlider
+
+                local curCenterX = win.Position.X.Offset + win.Size.X.Offset / 2
+                local curCenterY = win.Position.Y.Offset + win.Size.Y.Offset / 2
+
+                win.Size = UDim2.fromOffset(thisFloatW, thisFloatH)
+                win.Position = UDim2.new(
+                    win.Position.X.Scale, curCenterX - thisFloatW / 2,
+                    win.Position.Y.Scale, curCenterY - thisFloatH / 2
+                )
+                win.BackgroundTransparency = thisIsCircle and 0.55 or 0.30
+
+                local existingGradient = win:FindFirstChildOfClass("UIGradient")
+                if thisIsCircle then
+                    if existingGradient then existingGradient:Destroy() end
+                elseif not existingGradient then
+                    mk("UIGradient", {
+                        Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0,   Color3.fromRGB(180, 185, 200)),
+                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
+                            ColorSequenceKeypoint.new(1,   Color3.fromRGB(180, 185, 200)),
+                        }),
+                        Transparency = NumberSequence.new({
+                            NumberSequenceKeypoint.new(0,   0.45),
+                            NumberSequenceKeypoint.new(0.5, 0.15),
+                            NumberSequenceKeypoint.new(1,   0.45),
+                        }),
+                        Rotation = 90,
+                    }, win)
+                end
+
+                local existingStroke = win:FindFirstChildOfClass("UIStroke")
+                if existingStroke then
+                    existingStroke.Thickness = thisIsCircle and 3 or 2.5
+                end
+
+                local label = win:FindFirstChildOfClass("TextLabel")
+                if label and not winHasLinkedSlider then
+                    label.Size = thisIsCircle and UDim2.new(1, -24, 1, -24) or UDim2.new(1, -24, 1, 0)
+                    label.Position = thisIsCircle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0)
+                    label.TextSize = thisIsCircle and 11 or 21
+                    label.TextWrapped = thisIsCircle
+                    label.TextTruncate = thisIsCircle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd
+                end
+                if floatData.ClampPosition then
+                    pcall(floatData.ClampPosition)
+                end
+            end
+        end
+    end
+    Window.TopBarArt     = TopBarArt
+    Window.TabListArt    = TabListArt
+
+    local LibrarySizePresets = {
+        Small  = { Width = 500,  Height = 430 },
+        Large  = { Width = 760,  Height = 720 },
+        PC     = { Width = 920,  Height = 620 },
+    }
+
+    local LibrarySizeMode = ((SavedConfig.LibrarySizeMode or "Small") == "Large") and "Large" or "Small"
+
+    local function getCurrentLibraryPreset()
+        return LibrarySizePresets[LibrarySizeMode] or LibrarySizePresets.Small
+    end
+
+    Window.DetectPlatformType = function()
+        local preferredInput = nil
+        pcall(function()
+            local preferred = UserInputService.PreferredInput
+            if preferred == Enum.PreferredInput.KeyboardAndMouse then
+                preferredInput = "PC"
+            elseif preferred == Enum.PreferredInput.Touch then
+                preferredInput = "Mobile"
+            end
+        end)
+        if preferredInput then return preferredInput end
+
+        local hasKeyboard, hasMouse, hasTouch = false, false, false
+        pcall(function() hasKeyboard = UserInputService.KeyboardEnabled end)
+        pcall(function() hasMouse    = UserInputService.MouseEnabled    end)
+        pcall(function() hasTouch    = UserInputService.TouchEnabled    end)
+
+        local screenX = 0
+        pcall(function()
+            screenX = workspace.CurrentCamera.ViewportSize.X
+        end)
+
+        if hasKeyboard and hasMouse and not hasTouch then return "PC"     end
+        if hasTouch and not hasMouse and not hasKeyboard then return "Mobile" end
+        return (screenX >= 1080) and "PC" or "Mobile"
+    end
+
+    Window.UpdateWindowSize = function()
+        local effectiveMode = LibrarySizeMode
+
+        local platformMode = SavedConfig.PlatformMode or "Auto"
+        if platformMode == "Auto" then
+            if Window.DetectPlatformType() == "PC" then
+                effectiveMode = "PC"
+            end
+        elseif platformMode == "PC" then
+            effectiveMode = "PC"
+        end
+
+        local preset = LibrarySizePresets[effectiveMode] or LibrarySizePresets.Small
+        local screen  = ScreenGui.AbsoluteSize
+        local width   = preset.Width
+        local height  = preset.Height
+
+        if screen.X > 0 and screen.Y > 0 then
+            width  = math.min(width,  math.floor(screen.X * 0.92))
+            height = math.min(height, math.floor(screen.Y * 0.92))
+        end
+
+        shownSize = UDim2.new(0, width, 0, height)
+        if Main and not isMaximized then
+            Main.Size        = shownSize
+            normalWindowSize = shownSize
+        end
+    end
+
+    Window.UpdateWindowSize()
+    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(Window.UpdateWindowSize)
+
+    function Window:SetLibraryVersion(isLarge)
+        LibrarySizeMode = isLarge and "Large" or "Small"
+        self.LibrarySizeMode = LibrarySizeMode
+        self.LibraryHeight = getCurrentLibraryPreset().Height
+        SavedConfig.LibrarySizeMode = LibrarySizeMode
+        SavedConfig.LibraryHeight = self.LibraryHeight
+        SaveConfig()
+        Window.UpdateWindowSize()
+    end
+
+    Window.LibrarySizeMode = LibrarySizeMode
+    Window.LibraryHeight = getCurrentLibraryPreset().Height
+
+    -- Opcional: reutiliza la mecanica de iconos de TestUI_sprite_v7 sin cambiar
+    -- la navegacion original por defecto. Solo se activa desde Ajustes.
+    local TabIconCarousel = {
+        Enabled = false,
+        Items = {},
+        Offset = 0,
+        Velocity = 0,
+        ViewW = 0,
+        Anim = nil,
+        ActiveTab = nil,
+        Spin = 0,
+        LastOffset = 0,
+    }
+
+    local TAB_ICON_SIZE = 42
+    local TAB_ICON_GAP = 6
+    local TAB_ICON_STEP = TAB_ICON_SIZE + TAB_ICON_GAP
+    local TAB_DRAG_THRESHOLD = 7
+    local TAB_FRICTION = 4.2
+    local TAB_SPIN_GAIN = 0.6
+    local TAB_SPIN_MAX = 24
+    local TAB_SPIN_DECAY = 9
+
+    local function tabCarouselScale()
+        local s = MainScale.Scale
+        if type(s) ~= "number" or s < 0.05 then return 1 end
+        return s
+    end
+
+    local function applyTabCarouselSpin()
+        local spin = TabIconCarousel.Spin
+        for _, item in ipairs(TabIconCarousel.Items) do
+            local rotor = item.Tab and item.Tab.IconLabel
+            if rotor then
+                rotor.Rotation = spin * (0.6 + 0.8 * (item.Dist or 0))
+            end
+        end
+    end
+
+    local function renderTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        local count = #TabIconCarousel.Items
+        local viewW = TabIconCarousel.ViewW
+        if count == 0 or viewW <= 0 then return end
+
+        local length = count * TAB_ICON_STEP
+        TabIconCarousel.Offset = TabIconCarousel.Offset % length
+        local moved = ((TabIconCarousel.Offset - (TabIconCarousel.LastOffset or TabIconCarousel.Offset) + length / 2) % length) - length / 2
+        TabIconCarousel.LastOffset = TabIconCarousel.Offset
+        TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
+
+        for index, item in ipairs(TabIconCarousel.Items) do
+            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
+            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
+            local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
+            local edge = math.clamp((d - 0.6) / 0.4, 0, 1)
+            item.Scale.Scale = 1 - 0.2 * edge
+            item.Dist = math.clamp(d, 0, 1)
+        end
+        applyTabCarouselSpin()
+    end
+
+    local function focusTabCarousel(tab, animate)
+        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
+        local index
+        for i, item in ipairs(TabIconCarousel.Items) do
+            if item.Tab == tab then
+                index = i
+                break
+            end
+        end
+        if not index then return end
+
+        local length = #TabIconCarousel.Items * TAB_ICON_STEP
+        local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
+        local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
+        TabIconCarousel.Velocity = 0
+
+        if animate then
+            TabIconCarousel.Anim = {
+                From = TabIconCarousel.Offset,
+                To = TabIconCarousel.Offset + delta,
+                T0 = os.clock(),
+                Dur = 0.35,
+            }
+        else
+            TabIconCarousel.Anim = nil
+            TabIconCarousel.Offset = TabIconCarousel.Offset + delta
+            renderTabCarousel()
+            TabIconCarousel.Spin = 0
+            applyTabCarouselSpin()
+        end
+    end
+
+    local function relayoutTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
+        TabIconCarousel.Anim = nil
+        TabIconCarousel.Velocity = 0
+        renderTabCarousel()
+        if TabIconCarousel.ActiveTab then
+            focusTabCa

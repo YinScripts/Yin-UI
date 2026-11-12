@@ -672,6 +672,7 @@ xt = "",
             if t.IconLabel then
                 t.IconLabel.Image = t.IconAsset or ""
                 t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
+                if themeName ~= "Navidad" then YinIcons.apply(t.IconLabel, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
                 t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
                 t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
                 if t.NameLabel then
@@ -684,6 +685,7 @@ xt = "",
                 if compactIcon then
                     compactIcon.Image = t.IconAsset or ""
                     compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
+                    if themeName ~= "Navidad" then YinIcons.apply(compactIcon, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
                 end
             end
         end

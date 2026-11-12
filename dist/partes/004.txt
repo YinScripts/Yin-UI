@@ -1,62 +1,4 @@
- = state and UDim2.fromOffset(10, 10) or UDim2.fromOffset(9, 9) },
-            track = { BackgroundColor3 = state and txt or Color3.fromRGB(70, 70, 76), BackgroundTransparency = state and 0.15 or 0.2 },
-            knob = { Position = state and UDim2.new(1, -14, 0.5, 0) or UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = state and onBg or Color3.fromRGB(235, 235, 235) },
-        }
-        local targets = { win = win, label = label, stroke = winStroke, orb = orb, track = track, knob = knob }
-        if instant then
-            for key, goal in pairs(goals) do
-                for prop, value in pairs(goal) do targets[key][prop] = value end
-            end
-        else
-            local info = TweenInfo.new(0.22, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-            for key, goal in pairs(goals) do
-                TweenService:Create(targets[key], info, goal):Play()
-            end
-            pressScale.Scale = 0.92
-            TweenService:Create(pressScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-        end
-
-        if glowPulse then
-            glowPulse:Cancel()
-            glowPulse = nil
-        end
-        if glow and glow.Parent then
-            local fade = TweenInfo.new(0.35, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            if state then
-                local glowIn = TweenService:Create(glow, fade, { BackgroundTransparency = 0.78 })
-                glowIn.Completed:Connect(function(playbackState)
-                    if playbackState == Enum.PlaybackState.Completed and wasOn and glow.Parent then
-                        glowPulse = TweenService:Create(glow,
-                            TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true),
-                            { BackgroundTransparency = 0.92 })
-                        glowPulse:Play()
-                    end
-                end)
-                glowIn:Play()
-            else
-                TweenService:Create(glow, fade, { BackgroundTransparency = 1 }):Play()
-            end
-        end
-        if state and ready and not wasOn then
-            playActivateRipple(onLight)
-        end
-        wasOn = state
-        ready = true
-    end
-
-    return { Apply = apply }
-end
-
--- ============================================================================
--- TAMBOR DE VALORES (DIAL) PARA LA PILDORA V6
--- Va en el borde derecho de la pildora, en lugar del mini interruptor.
--- Deslizar hacia ABAJO sube el valor, hacia ARRIBA lo baja. Un toque cambia de slider
--- (si el toggle tiene varios). entries = { { Slider = <objeto de CreateSlider>, Tag = "VEL" }, ... }
--- Al cambiar: Slider.Set(v) + Slider._callback(v) (Set solo mueve la barra, no aplica el valor).
--- Si el slider del menu se mueve, el tambor lo lee cada 0.25 s mientras la pildora existe.
--- Va dentro de FloatingPillV5: no suma locales al chunk principal.
--- ============================================================================
-function FloatingPillV5.BuildDial(win, label, entries)
+oatingPillV5.BuildDial(win, label, entries)
     if not (win and label and type(entries) == "table" and #entries > 0) then return end
     local STEP_PX, CELL = 14, 13
     local idx = 1
@@ -1033,4 +975,81 @@ do
             pcall(FS.Paint, live.Win, live.GetState and live.GetState(), true)
         end
     end
-    f
+    function FS.ApplyAll()
+        local list = {}
+        for _, live in pairs(FS.Live) do list[#list + 1] = live end
+        for _, live in ipairs(list) do FS.Reapply(live) end
+    end
+
+    function FS.Summary()
+        local n = 0
+        for _ in pairs(FS.Data.Overrides) do n += 1 end
+        local custom = next(FS.Data.Global) ~= nil
+        return custom, n
+    end
+
+    FS.Load()
+end
+
+-- ---------- Estudio de Toggles Flotantes: vista previa, editor y entrada en Ajustes ----------
+do
+    local FS = FloatingPillV5.Studio
+    local WHITE = Color3.new(1, 1, 1)
+
+    -- Sube el ZIndex de todo lo que cuelga de root (los flotantes usan ZIndex 3-7 fijos; el editor vive en ZIndex 300+)
+    function FS.Lift(root, base)
+        local function fix(o)
+            if o and o.Parent and o:IsA("GuiObject") and o.ZIndex < base then o.ZIndex = o.ZIndex + base end
+        end
+        for _, d in ipairs(root:GetDescendants()) do fix(d) end
+        local conn = root.DescendantAdded:Connect(function(d) task.defer(fix, d) end)
+        root.Destroying:Connect(function() conn:Disconnect() end)
+    end
+
+    -- Réplica fiel de cada flotante (mismo código de construcción) para la vista previa
+    -- kind: "Pill5" | "Circle" | "Pill"   ·   getDesign: diseño que está editando el estudio
+    function FS.MakeSample(slot, kind, text, getDesign, zBase)
+        local S = { State = false, Kind = kind }
+        local holder = mk("Frame", { Parent = slot, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3 })
+        local glow = mk("Frame", {
+            Parent = holder, Size = UDim2.fromOffset(216, 48), Position = UDim2.new(0.5, -108, 0.5, -24),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3,
+        })
+        corner(glow, 999)
+        local win, lbl, pill
+        if kind == "Pill5" then
+            local w = FloatingPillV5.FitWidth(text, 21)
+            win = mk("Frame", {
+                Parent = holder, Size = UDim2.fromOffset(w, 30), Position = UDim2.new(0.5, -w / 2, 0.5, -15),
+                BackgroundColor3 = FloatingPillV5.OffColor(), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 4,
+            })
+            win:SetAttribute("YYPillV5", true)
+            corner(win, 999)
+            local st = mk("UIStroke", { Parent = win, Color = WHITE, Thickness = 2, Transparency = 0 })
+            lbl = mk("TextLabel", {
+                Parent = win, Size = UDim2.new(1, -24, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1,
+                Text = text, TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 21,
+                TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
+            })
+            lbl:SetAttribute("IgnoreTextEffect", true)
+            pill = FloatingPillV5.Build(win, glow, lbl, st, false)
+        else
+            local isC = kind == "Circle"
+            local w, h = isC and 64 or 200, isC and 64 or 36
+            win = mk("Frame", {
+                Parent = holder, Size = UDim2.fromOffset(w, h), Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2),
+                BackgroundColor3 = isC and Color3.fromRGB(20, 20, 26) or Theme.Secondary,
+                BackgroundTransparency = isC and 0.55 or 0.30, BorderSizePixel = 0, ZIndex = 4,
+            })
+            corner(win, 999)
+            if not isC then
+                mk("UIGradient", {
+                    Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 185, 200)),
+                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
+                        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 185, 200)),
+                    }),
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0.45),
+                        NumberSequenceKeypoint.new(0.

@@ -1,301 +1,4 @@
-return end
-            id = "rbxassetid://" .. digits
-        end
-        customStickers[#customStickers+1] = {id=id, name="Custom"}
-        saveCustomStickers()
-        createStickerButton(MineGrid, id, true)
-        refreshGrid(MineGrid, MineLayout)
-        AddStickerInput.Text=""
-        AddStickerInput.Visible=false
-        ConfirmAdd.Visible=false
-    end)
-    StickerButton.MouseButton1Click:Connect(function()
-        reactionPickerTargetKey = nil
-        StickerPanel.Visible = not StickerPanel.Visible
-        if StickerPanel.Visible then showStickerTab(false) end
-    end)
-    task.spawn(function()
-        local myGen = generation
-        local tick, lastRgen = 0, -1
-        while generation == myGen and ScreenGui.Parent do
-            Chat.pollNow = false
-            if Chat.view == "chat" then
-                local room, rgen = Chat.room, Chat.roomGen
-                if rgen ~= lastRgen then tick, lastRgen = 0, rgen end
-                tick += 1
-                local ok, data = Chat.fbCall("GET", "chat/" .. room .. "/messages", nil, "orderBy=%22$key%22&limitToLast=40")
-                if ok and rgen == Chat.roomGen then
-                    Chat.handleRoomData(type(data) == "table" and data or {}, room)
-                    if firebaseInitialLoad then
-                        firebaseInitialLoad = false
-                        if next(messageRows) == nil then
-                            EmptyLabel.Text = "Aún no hay mensajes. ¡Escribe el primero!"
-                            EmptyLabel.Visible = true
-                        end
-                    end
-                end
-                if tick % 2 == 1 and rgen == Chat.roomGen then
-                    local pok, pd = Chat.fbCall("GET", "chat/" .. room .. "/pin")
-                    if pok and rgen == Chat.roomGen then
-                        Chat.pin = (type(pd) == "table" and pd.key) and pd or nil
-                        Chat.refreshPin()
-                    end
-                end
-                if rgen == Chat.roomGen then
-                    local tok, td = Chat.fbCall("GET", "typing/" .. room)
-                    if tok and rgen == Chat.roomGen then
-                        local names = {}
-                        if type(td) == "table" then
-                            local now = Chat.serverNowMs()
-                            for tuid, v in pairs(td) do
-                                if tostring(tuid) ~= tostring(LocalPlayer.UserId) and type(v) == "table"
-                                    and tonumber(v.t) and math.abs(now - v.t) < 5000 then
-                                    names[#names + 1] = tostring(v.n or (Chat.kind == "private" and Chat.targetUser) or "Alguien")
-                                end
-                            end
-                        end
-                        table.sort(names)
-                        local typing = #names > 0
-                        local key = table.concat(names, ",")
-                        if typing ~= Chat.typing or key ~= Chat.typingKey then
-                            Chat.typing = typing
-                            Chat.typingKey = key
-                            Chat.typingNames = names
-                            Chat.updateHeader()
-                            Chat.refreshTypingPill()
-                        end
-                    end
-                end
-            end
-            local waited = 0
-            while waited < CONFIG.FB_POLL_RATE and not Chat.pollNow do
-                task.wait(0.25)
-                waited += 0.25
-            end
-        end
-    end)
-    task.spawn(function()
-        local myGen = generation
-        local rr = 0
-        task.wait(1)
-        while generation == myGen and ScreenGui.Parent do
-            local okTick, err = pcall(Chat.watchTick, rr)
-            if not okTick then warn("[YY Chat] watchTick: " .. tostring(err)) end
-            rr += 1
-            if Chat.dirty then
-                Chat.dirty = false
-                Chat.saveSettings()
-            end
-            task.wait(CONFIG.WATCH_RATE)
-        end
-    end)
-    task.spawn(function()
-        local myGen = generation
-        while generation == myGen and ScreenGui.Parent do
-            pcall(function()
-                local res = request({
-                    Url=FIREBASE .. "presence/" .. tostring(LocalPlayer.UserId) .. ".json",
-                    Method="PUT",
-                    Headers={["Content-Type"]="application/json"},
-                    Body=HttpService:JSONEncode({n=LocalPlayer.Name,t={ [".sv"]="timestamp" }}),
-                })
-                local okD, d = pcall(HttpService.JSONDecode, HttpService, res and res.Body or "")
-                if okD and type(d) == "table" and tonumber(d.t) then
-                    Chat.clockSkew = tonumber(d.t) - os.time() * 1000
-                end
-            end)
-            pcall(Chat.refreshPresence)
-            task.spawn(function() pcall(Chat.refreshRailwayOnline) end)
-            task.spawn(function()
-                pcall(function()
-                    request({
-                        Url = Chat.RAILWAY_URL .. "/api/heartbeat", Method = "POST",
-                        Headers = {["Content-Type"] = "application/json"},
-                        Body = HttpService:JSONEncode({playerId = tostring(LocalPlayer.UserId)}),
-                    })
-                end)
-            end)
-            task.wait(20)
-        end
-    end)
-    MessageBox:GetPropertyChangedSignal("Text"):Connect(function()
-        if #MessageBox.Text > CONFIG.MAX_CHAR then MessageBox.Text=MessageBox.Text:sub(1,CONFIG.MAX_CHAR) end
-        CharLabel.Text=tostring(#MessageBox.Text) .. "/" .. tostring(CONFIG.MAX_CHAR)
-    end)
-    SendButton.MouseButton1Click:Connect(sendText)
-    MessageBox.FocusLost:Connect(function(enterPressed) if enterPressed then sendText() end end)
-    local Reopen = mk("TextButton", {
-        Size=UDim2.fromOffset(62,62), AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-16,0.1,0),
-        BackgroundColor3=THEME.BG, BorderSizePixel=0, Text="",
-        AutoButtonColor=true, Visible=false, ZIndex=100,
-    }, ScreenGui)
-    corner(Reopen,30)
-    UI.storyRing(Reopen, 3)
-    UI.ReopenImg = mk("ImageLabel", {
-        Size=UDim2.new(1,-8,1,-8), Position=UDim2.fromOffset(4,4), BackgroundTransparency=1,
-        Image=UI.ICON.group, ScaleType=Enum.ScaleType.Crop, ZIndex=101,
-    }, Reopen)
-    corner(UI.ReopenImg,26)
-    UI.Reopen = Reopen
-    UI.ReopenBadge = mk("TextLabel", {
-        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(1,-6,0,6),
-        Size=UDim2.fromOffset(0,24), AutomaticSize=Enum.AutomaticSize.X,
-        BackgroundColor3=Color3.fromRGB(37,211,102), BorderSizePixel=0, Text="0",
-        TextColor3=Color3.fromRGB(255,255,255), Font=Enum.Font.GothamBlack, TextSize=13,
-        Visible=false, ZIndex=103,
-    }, Reopen)
-    corner(UI.ReopenBadge,12)
-    stroke(UI.ReopenBadge, THEME.BG, 2, 0)
-    mk("UIPadding", {PaddingLeft=UDim.new(0,7), PaddingRight=UDim.new(0,7)}, UI.ReopenBadge)
-    mk("UISizeConstraint", {MinSize=Vector2.new(24,24)}, UI.ReopenBadge)
-    UI.ReopenBadgeScale = mk("UIScale", {Scale=1}, UI.ReopenBadge)
-    -- v14 en la librería: "abierto" = la pestaña Chat se ve (ventana visible y pestaña elegida)
-    Chat.hostVisible = function()
-        local o = ctx.Host
-        while o and o:IsA("GuiObject") do
-            if not o.Visible then return false end
-            o = o.Parent
-        end
-        if o and o:IsA("LayerCollector") then return o.Enabled end
-        return o ~= nil
-    end
-    Chat.setOpen = function(v)
-        if v == open then return end
-        open = v
-        if v then
-            scrollBottom()
-            if Chat.view == "chat" then Chat.unread[Chat.room] = 0 end
-            if Chat.view == "home" then Chat.refreshHome(true) end
-        else
-            StickerPanel.Visible = false
-            Chat.hideOverlays()
-            hideMessageActions()
-        end
-        Chat.updateBadge()
-    end
-    -- tamaño: el diseño de v14 está pensado para un lienzo grande; se escala para que entre en la pestaña sin que
-    -- el texto quede demasiado chico
-    Chat.layoutHost = function()
-        local abs = ctx.Host.AbsoluteSize
-        if abs.X < 20 or abs.Y < 20 then return end
-        -- v15: se quita la escala de la ventana (animación de abrir/cerrar): así el chat no se re-arma en cada frame
-        -- de la animación ni se achica dos veces
-        local k, o = 1, ctx.Host.Parent
-        while o and not o:IsA("LayerCollector") do
-            local us = o:FindFirstChildOfClass("UIScale")
-            if us then k = k * us.Scale end
-            o = o.Parent
-        end
-        if k > 0.01 then abs = abs / k end
-        -- v15: lienzo de referencia más chico (antes 520x560) = textos más grandes dentro de la pestaña
-        local sc = math.clamp(math.min(abs.X / 470, abs.Y / 480), 0.55, 1)
-        if Chat.lastHostScale and math.abs(Chat.lastHostScale - sc) < 0.002 then return end
-        Chat.lastHostScale = sc
-        UI.RootScale.Scale = sc
-        Root.Size = UDim2.fromScale(1 / sc, 1 / sc)
-    end
-    ctx.Host:GetPropertyChangedSignal("AbsoluteSize"):Connect(Chat.layoutHost)
-    task.spawn(function()
-        while ScreenGui.Parent do
-            pcall(function() Chat.setOpen(Chat.hostVisible()) end)
-            task.wait(0.15)
-        end
-    end)
-    UserInputService.InputBegan:Connect(function(input, processed)
-        if processed then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        if ReactionBar.Visible or ActionMenu.Visible then
-            hideMessageActions()
-        end
-    end)
-    populateStickers()
-    populateEmojis()
-    task.delay(1.5,function()
-        if ScreenGui.Parent then populateStickers() end
-    end)
-    Chat.onStickersLoaded = function()
-        if ScreenGui.Parent then populateStickers() end
-    end
-    if Chat.stickersLoaded then Chat.onStickersLoaded() end
-    Chat.tr = {
-        cache = {}, waiters = {}, queue = {}, tries = {}, msgCache = {}, msgWait = {}, msgQueue = {},
-        setByMe = setmetatable({}, {__mode = "k"}), hooked = setmetatable({}, {__mode = "k"}),
-        props = {TextLabel = {"Text"}, TextButton = {"Text"}, TextBox = {"PlaceholderText"}},
-    }
-    do
-        local Tr = Chat.tr
-        Tr.base = function(l) return string.lower(tostring(l or "")):match("^(%a+)") or "" end
-        Tr.detect = function()
-            local loc = ""
-            pcall(function() loc = tostring(game:GetService("LocalizationService").RobloxLocaleId or "") end)
-            if loc == "" then pcall(function() loc = tostring(LocalPlayer.LocaleId or "") end) end
-            if loc == "" then pcall(function() loc = tostring(game:GetService("LocalizationService").SystemLocaleId or "") end) end
-            loc = string.lower(loc ~= "" and loc or "es-es"):gsub("_", "-")
-            local lang = loc:match("^(%a+)") or "es"
-            if lang == "zh" then lang = (loc:find("tw") or loc:find("hk") or loc:find("hant")) and "zh-TW" or "zh-CN" end
-            return lang, loc
-        end
-        Tr.lang, Tr.locale = Tr.detect()
-        Tr.uiOn = Tr.base(Tr.lang) ~= "es"
-        Tr.file = "YinYang_ChatLang_" .. Tr.lang .. ".json"
-        pcall(function()
-            if Tr.uiOn and isfile(Tr.file) then
-                local d = HttpService:JSONDecode(readfile(Tr.file))
-                if type(d) == "table" then
-                    for k, v in pairs(d) do
-                        if type(k) == "string" and type(v) == "string" then Tr.cache[k] = v end
-                    end
-                end
-            end
-        end)
-        Tr.save = function()
-            if Tr.saving then return end
-            Tr.saving = true
-            task.delay(3, function()
-                Tr.saving = false
-                pcall(function() writefile(Tr.file, HttpService:JSONEncode(Tr.cache)) end)
-            end)
-        end
-        Tr.google = function(text, tl)
-            local ok, res = pcall(function()
-                return request({
-                    Url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. HttpService:UrlEncode(tl)
-                        .. "&dt=t&q=" .. HttpService:UrlEncode(text),
-                    Method = "GET",
-                })
-            end)
-            if not ok or type(res) ~= "table" or type(res.Body) ~= "string" or res.Body == "" then return nil end
-            local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body)
-            if not okD or type(data) ~= "table" or type(data[1]) ~= "table" then return nil end
-            local out = {}
-            for _, seg in ipairs(data[1]) do
-                if type(seg) == "table" and type(seg[1]) == "string" then out[#out + 1] = seg[1] end
-            end
-            if #out == 0 then return nil end
-            local from = type(data[3]) == "string" and data[3] or nil
-            if not from then
-                for i, v in pairs(data) do
-                    if i ~= 1 and type(v) == "string" then from = v break end
-                end
-            end
-            return table.concat(out), from
-        end
-        Tr.roblox = function(text, tl)
-            local ok, out = pcall(function()
-                local r = TextService:FilterAndTranslateStringAsync(text, LocalPlayer.UserId, {tl})
-                local t = r:GetTranslations()
-                if type(t) ~= "table" then return nil end
-                local v = t[tl] or t[Tr.locale]
-                if v == nil then for _, x in pairs(t) do v = x break end end
-                return type(v) == "string" and v or nil
-            end)
-            return ok and out or nil
-        end
-        Tr.probe = function()
-            if Tr.robloxOk ~= nil then return Tr.robloxOk end
-            local sample = Tr.base(Tr.lang) == "es" and "Hello, how are you today?" or "Hola, ¿cómo estás hoy?"
-            local out = Tr.roblox(sample, Tr.lang)
-            Tr.robloxOk = type(out) == "string" and out ~= "" and out ~= sample
+t ~= "" and out ~= sample
             return Tr.robloxOk
         end
         Tr.one = function(text)
@@ -1019,4 +722,394 @@ function YinYang:CreateWindow(title_text, startTheme)
                 turboSpeed   = layerDef.TurboSpeed or 350,
                 sprite      = spriteState,
             }
-            table.insert(logoLayers, { label = label, def = layerDef, state = stat
+            table.insert(logoLayers, { label = label, def = layerDef, state = state })
+        end
+
+        logoRenderConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
+            if PerfOpt.Flags.NoLogoAnim then return end
+            for _, entry in ipairs(logoLayers) do
+                local lbl = entry.label
+                local def = entry.def
+                local st  = entry.state
+                if not lbl or not lbl.Parent then continue end
+
+                local mv  = def.Movement  or "None"
+                local spd = def.Speed     or 60
+                local amt = def.Amount    or 0
+                local dir = def.Direction or 1
+
+                st.time = st.time + dt
+
+                if st.sprite then
+                    local sprite = st.sprite
+                    sprite.Acc = sprite.Acc + dt
+                    local step = 1 / sprite.Config.FPS
+                    if sprite.Acc > 0.25 then
+                        sprite.Acc = 0.25
+                    end
+                    local moved = false
+                    while sprite.Acc >= step do
+                        sprite.Acc = sprite.Acc - step
+                        sprite.Frame = (sprite.Frame + 1) % sprite.Config.TotalFrames
+                        moved = true
+                    end
+                    if moved then
+                        updateSpriteSheetFrame(sprite, sprite.Frame)
+                    end
+                end
+
+                if mv == "Spin" then
+                    local now    = os.clock()
+                    local inTurbo = st.turboEndTime > 0 and now < st.turboEndTime
+
+                    if inTurbo then
+                        st.speed  = st.turboSpeed
+                        st.tSpeed = st.turboSpeed
+                    else
+                        if (def.Style or "Constant") == "Organic" then
+                            st.tSpeed = spd + math.sin(st.time * 0.8) * (spd * 0.33)
+                            st.speed  = lerpN(st.speed, st.tSpeed, 0.08)
+                        else
+                            st.speed = spd
+                        end
+                    end
+                    st.angle = st.angle + st.speed * dir * dt
+                    lbl.Rotation = st.angle
+
+                elseif mv == "Pulse" then
+                    local sc    = def.Scale or 1.6
+                    local off   = -((sc - 1) / 2)
+                    local scale = 1 + math.sin(st.time * (2 * math.pi / spd)) * ((amt ~= 0 and amt or 12) / 100)
+                    lbl.Size     = UDim2.new(sc * scale, 0, sc * scale, 0)
+                    lbl.Position = UDim2.new(off * scale, 0, off * scale, 0)
+
+                elseif mv == "Orbit" then
+                    local sc     = def.Scale or 1.6
+                    local off    = -((sc - 1) / 2)
+                    local radius = amt ~= 0 and amt or 6
+                    local angle  = st.time * math.rad(spd) * dir
+                    lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
+
+                elseif mv == "Float" then
+                    local sc  = def.Scale or 1.6
+                    local off = -((sc - 1) / 2)
+                    local oy  = math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4)
+                    lbl.Position = UDim2.new(off, 0, off, oy)
+
+                elseif mv == "Shake" then
+                    local sc        = def.Scale or 1.6
+                    local off       = -((sc - 1) / 2)
+                    local intensity = amt ~= 0 and amt or 2
+                    local ox = math.sin(st.time * spd * math.pi * 2 + 0.3) * intensity
+                    local oy = math.cos(st.time * spd * math.pi * 2) * intensity
+                    lbl.Position = UDim2.new(off, ox, off, oy)
+
+                elseif mv == "Fade" then
+                    local maxAlpha = math.clamp(amt ~= 0 and amt or 0.6, 0, 1)
+                    lbl.ImageTransparency = ((math.sin(st.time * (2 * math.pi / spd)) + 1) / 2) * maxAlpha
+                end
+            end
+        end)
+
+        local idleS = iconData.IdleSound
+        if idleS and type(idleS.Id) == "string" and idleS.Id ~= "" then
+            local interval = idleS.Interval or 15
+            local elapsed  = 0
+            logoIdleConn = game:GetService("RunService").Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                if elapsed >= interval then
+                    elapsed = 0
+                    if not Main or not Main.Visible then
+                        playSound(idleS.Id, idleS.Volume or 0.15)
+                    end
+                end
+            end)
+        end
+
+        if iconData.Eyes then
+            local eyeData  = iconData.Eyes
+            local eyeSize  = eyeData.Size  or 0.09
+            local eyeColor = Color3.fromRGB(255, 255, 255)
+            local eyeZIndex = 38
+
+            local function makeEye(xRel, yRel)
+                local eye = mk("Frame", {
+                    Parent = ToggleButton,
+                    Size = UDim2.new(eyeSize, 0, eyeSize, 0),
+                    Position = UDim2.new(xRel - eyeSize/2, 0, yRel - eyeSize/2, 0),
+                    BackgroundColor3 = eyeColor,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = eyeZIndex,
+                })
+                local uc = Instance.new("UICorner")
+                uc.CornerRadius = UDim.new(1, 0)
+                uc.Parent = eye
+
+                local glow = Instance.new("UIStroke")
+                glow.Color = Color3.fromRGB(220, 220, 255)
+                glow.Thickness = 1.5
+                glow.Transparency = 1
+                glow.Parent = eye
+
+                local inner = mk("Frame", {
+                    Parent = eye,
+                    Size = UDim2.new(0.35, 0, 0.35, 0),
+                    Position = UDim2.new(0.12, 0, 0.10, 0),
+                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = eyeZIndex + 1,
+                })
+                local uc2 = Instance.new("UICorner")
+                uc2.CornerRadius = UDim.new(1, 0)
+                uc2.Parent = inner
+
+                return eye, glow, inner
+            end
+
+            local eyeL, glowL, innerL = makeEye(eyeData.X1 or 0.36, eyeData.Y1 or 0.47)
+            local eyeR, glowR, innerR = makeEye(eyeData.X2 or 0.64, eyeData.Y2 or 0.47)
+
+            table.insert(logoLayers, {
+                label = eyeL,
+                def   = { Movement = "None" },
+                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
+            })
+            table.insert(logoLayers, {
+                label = eyeR,
+                def   = { Movement = "None" },
+                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
+            })
+
+            local function setEyes(alpha, duration)
+                local dur = duration or 0.12
+                local neonAlpha = alpha > 0.5 and 1 or 0.55
+                TweenService:Create(eyeL,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(eyeR,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(glowL, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
+                TweenService:Create(glowR, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
+                TweenService:Create(innerL,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+                TweenService:Create(innerR,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
+            end
+
+            local eyesOpen = false
+            local function openEyesCycle(holdTime, onDone)
+                if not eyeL.Parent then if onDone then onDone() end return end
+                if eyesOpen then if onDone then onDone() end return end
+                eyesOpen = true
+                setEyes(0, 2.0)
+                task.delay(2.0 + holdTime, function()
+                    if not eyeL.Parent then eyesOpen = false if onDone then onDone() end return end
+                    setEyes(1, 0.25)
+                    task.delay(0.25, function()
+                        eyesOpen = false
+                        if onDone then onDone() end
+                    end)
+                end)
+            end
+
+            local looping = true
+            local function eyeLoop()
+                if not eyeL.Parent or not looping then return end
+                task.delay(6, function()
+                    if not eyeL.Parent or not looping then return end
+                    openEyesCycle(2.0, function()
+                        task.delay(6, function()
+                            eyeLoop()
+                        end)
+                    end)
+                end)
+            end
+
+            eyeLoop()
+
+            toggleEyesOnClick = function()
+                openEyesCycle(3.0, nil)
+            end
+
+            local eyeConn
+            eyeConn = game:GetService("RunService").Heartbeat:Connect(function()
+                if not eyeL.Parent then
+                    looping = false
+                    toggleEyesOnClick = nil
+                    eyeConn:Disconnect()
+                end
+            end)
+        end
+    end
+
+    ApplyLogoIcon(SavedConfig.SelectedLogoIcon or "ClassicYinYang")
+
+    local ToggleScale = mk("UIScale", {Scale = 1}, ToggleButton)
+
+    local capsuleLastRelX = 0
+
+    ToggleButton.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            capsuleLastRelX = input.Position.X - ToggleButton.AbsolutePosition.X
+            if not ToggleButton:GetAttribute("IsCapsule") then
+                TweenService:Create(ToggleScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.88}):Play()
+            end
+        end
+    end)
+    ToggleButton.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            if not ToggleButton:GetAttribute("IsCapsule") then
+                TweenService:Create(ToggleScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            end
+        end
+    end)
+
+    local shownSize = UDim2.new(0, 420, 0, 340)
+    local ShadowFrame = mk("Frame", {
+        Size = UDim2.new(1, 0, 1, 0),
+        Position = UDim2.new(0, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.98,
+        BorderSizePixel = 0,
+        ZIndex = 4,
+        Parent = ScreenGui
+    })
+    corner(ShadowFrame, 10)
+    ShadowFrame:SetAttribute("ThemeRole", "Stroke")
+
+    local Main = mk("Frame", {
+        Name = "Main",
+        Size = shownSize,
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = true,
+        ZIndex = 5
+    }, ScreenGui)
+    Main:SetAttribute("ThemeRole", "Background")
+    corner(Main, 10)
+    stroke(Main, Theme.Border, 1.5)
+
+    local MainScale = mk("UIScale", {
+        Scale = 1,
+    }, Main)
+
+    buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+
+    local BackgroundArt
+    local TopBarArt
+    local TabListArt
+
+    local function updateShadowPos()
+        ShadowFrame.Size = UDim2.new(Main.Size.X.Scale, Main.Size.X.Offset + 4, Main.Size.Y.Scale, Main.Size.Y.Offset + 4)
+        ShadowFrame.Position = UDim2.new(Main.Position.X.Scale, Main.Position.X.Offset - 2, Main.Position.Y.Scale, Main.Position.Y.Offset - 2)
+    end
+    Main:GetPropertyChangedSignal("Size"):Connect(updateShadowPos)
+    Main:GetPropertyChangedSignal("Position"):Connect(updateShadowPos)
+    updateShadowPos()
+
+    local uiVisible = true
+    local windowTweenBusy = false
+    local activeWindowTween = nil
+
+    local function pauseMainGlowOnly(key)
+        local tweens = ActiveGlowTweens[key]
+        if tweens then
+            for _, tw in ipairs(tweens) do
+                pcall(function() tw:Cancel() end)
+            end
+        end
+    end
+
+    local function setMainGlowEnabled(enabled)
+        local key = tostring(Main)
+        if enabled then
+            local tweens = ActiveGlowTweens[key]
+            if tweens then
+                for _, tw in ipairs(tweens) do
+                    pcall(function() tw:Play() end)
+                end
+            else
+                buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+            end
+        else
+            pauseMainGlowOnly(key)
+        end
+    end
+
+    local function showMainWindow()
+        if windowTweenBusy or uiVisible then
+            return
+        end
+
+        windowTweenBusy = true
+        uiVisible = true
+
+        if activeWindowTween then
+            pcall(function()
+                activeWindowTween:Cancel()
+            end)
+            activeWindowTween = nil
+        end
+
+        setMainGlowEnabled(true)
+        ShadowFrame.Visible = false
+        Main.Visible = true
+        -- Evita recalcular el tamaño de todos los controles durante la apertura.
+        MainScale.Scale = 1
+        Main.BackgroundTransparency = 0
+
+        local tw = TweenService:Create(
+            MainScale,
+            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
+            { Scale = 1 }
+        )
+        activeWindowTween = tw
+        tw:Play()
+        tw.Completed:Once(function()
+            if activeWindowTween == tw then
+                activeWindowTween = nil
+            end
+            ShadowFrame.Visible = true
+            windowTweenBusy = false
+        end)
+
+        local turboEnd = os.clock() + 4
+        for _, entry in ipairs(logoLayers) do
+            if entry.def.Movement == "Spin" then
+                entry.state.turboEndTime = entry.def.TurboSeconds and (os.clock() + entry.def.TurboSeconds) or turboEnd
+            end
+        end
+    end
+
+    local function hideMainWindow()
+        if windowTweenBusy or not uiVisible then
+            return
+        end
+
+        windowTweenBusy = true
+        uiVisible = false
+
+        if activeWindowTween then
+            pcall(function() activeWindowTween:Cancel() end)
+            activeWindowTween = nil
+        end
+
+        ShadowFrame.Visible = false
+
+        local tw1 = TweenService:Create(
+            MainScale,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+            { Scale = 1 }
+        )
+        local tw2 = TweenService:Create(
+            Main,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
+            { BackgroundTransparency = 1 }
+        )
+
+        activeWindowTween = tw1
+        tw1:Play()
+        tw2:Play()
+
+        tw1.Completed:Once(function()
+   

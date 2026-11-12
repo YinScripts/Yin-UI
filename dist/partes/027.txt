@@ -1,157 +1,4 @@
-Order = 1,
-            Text = GetText("ACTIVO", "ACTIVE"),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 9,
-            TextColor3 = Theme.AccentText,
-            ZIndex = 15,
-        })
-        BadgeLabel:SetAttribute("ThemeTextRole", "AccentText")
-        BadgeLabel:SetAttribute("TextSpanish", "ACTIVO")
-        BadgeLabel:SetAttribute("TextEnglish", "ACTIVE")
-        BadgeLabel:SetAttribute("IgnoreTextEffect", true)
-
-        local Clicker = mk("TextButton", {
-            Parent = Card,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 16,
-        })
-
-        local function press()
-            playSound(Sounds.Click, 0.6)
-            CardScale.Scale = 0.95
-            TweenService:Create(CardScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            Window:SetTextEffect(mode)
-            refreshEffectRows()
-        end
-
-        Clicker.MouseButton1Click:Connect(press)
-
-        Clicker.MouseEnter:Connect(function()
-            TweenService:Create(CardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
-            TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = isEffectActive(mode) and 0.04 or 0.12}):Play()
-        end)
-        Clicker.MouseLeave:Connect(function()
-            TweenService:Create(CardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            TweenService:Create(Card, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = isEffectActive(mode) and 0.06 or 0.20}):Play()
-        end)
-
-        table.insert(effectRows, {
-            card = Card,
-            badge = Badge,
-            stroke = CardStroke,
-            mode = mode,
-            title = TitleLabel,
-            desc = DescLabel,
-            accent = accentColor,
-            titleES = titleES,
-            titleEN = titleEN,
-        })
-    end
-
-    local effectSpecs = {
-        {mode = "Off", titleES = "Normal (Blanco)", titleEN = "Normal (White)", descES = "Sin efecto - color del tema", descEN = "No effect - theme color", accent = Color3.fromRGB(200, 200, 200)},
-        {mode = "WhiteCyan", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
-        {mode = "WhitePink", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
-        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle", accent = Color3.fromRGB(255, 200, 0)},
-        {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
-        {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
-        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
-        {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
-        {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
-        {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
-        {mode = "IceBlue", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
-        {mode = "PurpleGlow", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
-        {mode = "MatrixGreen", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
-        {mode = "Sunset", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
-    }
-
-    for i, spec in ipairs(effectSpecs) do
-        createEffectRow(spec.mode, spec.titleES, spec.titleEN, spec.descES, spec.descEN, spec.accent, i)
-    end
-
-    -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
-    EffectsUI.Acc = 0
-    track(RunService.Heartbeat:Connect(function(dt)
-        effectPreviewElapsed = effectPreviewElapsed + dt
-        EffectsUI.Acc = EffectsUI.Acc + dt
-        if EffectsUI.Acc < 1 / 30 or not EffectsPage.Visible or PerfOpt.Flags.NoDecorAnim then return end
-        EffectsUI.Acc = 0
-        for index = #effectPreviews, 1, -1 do
-            local previewData = effectPreviews[index]
-            if not previewData.frame or not previewData.frame.Parent then
-                table.remove(effectPreviews, index)
-            else
-                local first = getEffectPreviewColor(previewData.mode, effectPreviewElapsed)
-                if first then
-                    local second = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.33)
-                    local third = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.66)
-                    setPreviewStripColors(previewData, first, second, third)
-                end
-            end
-        end
-        local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
-        local heroColor = current or Theme.Text
-        EffectsUI.HeroText.TextColor3 = heroColor
-        EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
-    end))
-
-    refreshEffectRows()
-
-    function Window:InitializeShaderSystem()
-    local ShaderLightingService = game:GetService("Lighting")
-    local ShaderTerrain = workspace:FindFirstChildOfClass("Terrain") or workspace.Terrain
-    local ShaderCore = {}
-    ShaderCore.__index = ShaderCore
-
-    local function shaderCopy(value, seen)
-        if type(value) ~= "table" then return value end
-        seen = seen or {}
-        if seen[value] then return seen[value] end
-        local result = {}
-        seen[value] = result
-        for key, item in pairs(value) do
-            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
-        end
-        return result
-    end
-
-    local function shaderSafe(callback)
-        local ok, result = pcall(callback)
-        return ok, result
-    end
-
-    local function shaderParent(spec)
-        if spec.parent == "Lighting" then
-            return ShaderLightingService
-        elseif spec.parent == "Terrain" then
-            return ShaderTerrain
-        elseif spec.parent == "CurrentCamera" then
-            return workspace.CurrentCamera
-        end
-        return spec.parent
-    end
-
-    local ShaderTargets = {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
-        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
-        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
-        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
-        BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
-        ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
-        ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
-        DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
-        SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
-        CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
-        CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
-        CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
-        CameraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
+eraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
         CameraSunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "CurrentCamera"},
     }
 
@@ -718,3 +565,245 @@ Order = 1,
         local preset = self.Presets[name]
         if not preset then
             return {ok = false, applied = {}, created = {}, failed = {{target = name, error = "preset no registrado"}}}
+        end
+        local report = self:Apply(shaderCopy(preset), options)
+        if report.ok then self.ActivePreset = name end
+        return report
+    end
+
+    function ShaderCore:RegisterPreset(name, preset)
+        self:_assertAlive()
+        assert(type(name) == "string" and type(preset) == "table", "preset inválido")
+        self.Presets[name] = shaderCopy(preset)
+    end
+
+    function ShaderCore:RegisterTarget(id, spec)
+        self:_assertAlive()
+        assert(type(id) == "string" and type(spec) == "table", "target inválido")
+        self.Targets[id] = shaderCopy(spec)
+        self.Instances[id] = nil
+        return self
+    end
+
+    function ShaderCore:GetTarget(id, createIfMissing)
+        self:_assertAlive()
+        return self:_resolve(id, createIfMissing ~= false)
+    end
+
+    function ShaderCore:Read(targetId, properties)
+        self:_assertAlive()
+        local instance, errorMessage = self:_resolve(targetId, false)
+        if not instance then return nil, errorMessage end
+        local result = {}
+        for property in pairs(properties or {}) do
+            local ok, value = shaderSafe(function() return instance[property] end)
+            if ok then result[property] = value end
+        end
+        return result
+    end
+
+    function ShaderCore:ApplyTo(instance, properties, options)
+        self:_assertAlive()
+        assert(instance and instance.Parent, "instancia Roblox inválida")
+        local report = {ok = true, applied = {}, failed = {}, created = {}}
+        for property, value in pairs(properties or {}) do
+            local ok, tweenedOrError = self:_set(instance, property, value, options or {})
+            if ok then
+                table.insert(report.applied, {target = instance.Name, property = property, tweened = tweenedOrError})
+            else
+                report.ok = false
+                table.insert(report.failed, {target = instance.Name, property = property, error = tweenedOrError})
+            end
+        end
+        return report
+    end
+
+    function ShaderCore:Restore(options)
+        self:_assertAlive()
+        options = options or {}
+        local report = {ok = true, restored = {}, failed = {}}
+        for instance, properties in pairs(self.Original) do
+            if instance and instance.Parent then
+                for property, value in pairs(properties) do
+                    self:_cancel(instance, property)
+                    local ok, errorMessage = shaderSafe(function() instance[property] = value end)
+                    if ok then
+                        table.insert(report.restored, {target = instance.Name, property = property})
+                    else
+                        report.ok = false
+                        table.insert(report.failed, {target = instance.Name, property = property, error = errorMessage})
+                    end
+                end
+            end
+        end
+        if options.destroyCreated then
+            for id, created in pairs(self.Created) do
+                if created and self.Instances[id] and self.Instances[id].Parent then
+                    pcall(function() self.Instances[id]:Destroy() end)
+                end
+                self.Instances[id] = nil
+                self.Created[id] = nil
+            end
+        end
+        self.ActivePreset = nil
+        return report
+    end
+
+    function ShaderCore:Destroy()
+        if self.Destroyed then return end
+        self:Restore({destroyCreated = true})
+        self.Destroyed = true
+    end
+
+    function ShaderCore:GetCatalog()
+        return shaderCopy(ShaderPropertyCatalog)
+    end
+
+    local ShaderManager = ShaderCore.new()
+
+    local ShaderQualityProfiles = {
+        Lite = {reflectionRadius = 56, reflectionLimit = 60, shadowRadius = 34, shadowLimit = 8, rainRate = 42, rainRadius = 25, mirrorRadius = 40, mirrorLimit = 52, rainDrops = 36, rainSplashes = 10},
+        Balanced = {reflectionRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
+        Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
+        Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
+    }
+    local ShaderSceneQuality = "Balanced"
+
+    local function shaderQualityProfile()
+        return ShaderQualityProfiles[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
+    end
+
+    local ShaderReflections = {
+        Enabled = false,
+        Intensity = 0.28,
+        Wetness = 0.82,
+        SurfaceMode = "All",
+        SceneCoverage = true,
+        SceneQueue = {},
+        SceneCursor = 1,
+        SceneElapsed = 0,
+        SceneBuilding = false,
+        SceneComplete = false,
+        ContactEnabled = false,
+        ContactStrength = 0.24,
+        ContactRig = nil,
+        ContactParts = {},
+        ContactCore = nil,
+        ContactElapsed = 0,
+        ModelDetailEnabled = true,
+        ModelApplied = {},
+        CharacterSpecularEnabled = false,
+        CharacterApplied = {},
+        ExcludeLocalAvatar = false,
+        SkyMirrorEnabled = true,
+        SkyMirrorStrength = 0.78,
+        SkyMirrorOriginal = {},
+        SkyMirrorApplied = {},
+        StripTextures = false,
+        OilSheen = false,
+        ObjectMirrorEnabled = false,
+        MirrorRig = nil,
+        MirrorProxies = {},
+        MirrorFloors = {},
+        MirrorPlanePos = nil,
+        MirrorPlaneNormal = nil,
+        MirrorScanElapsed = 0,
+        MirrorStepElapsed = 0,
+        MirrorFloorTransparency = 0.38,
+        MirrorBacking = nil,
+        MirrorLostAt = nil,
+        MirrorLast = {},
+        TextureOriginal = {},
+        ShadowEnabled = false,
+        ShadowStrength = 0.30,
+        ShadowRig = nil,
+        ShadowParts = {},
+        ShadowElapsed = 0,
+        ShadowConnection = nil,
+        Original = {},
+        Applied = {},
+        Connection = nil,
+        CharacterConn = nil,
+        SceneAnchor = nil,
+        Elapsed = 0,
+    }
+
+    function ShaderReflections:_root()
+        local character = LocalPlayer and LocalPlayer.Character
+        return character, character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    end
+
+    function ShaderReflections:_scan(origin, radius, character)
+        local ok, parts = pcall(function()
+            local params = OverlapParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = character and {character} or {}
+            return workspace:GetPartBoundsInRadius(origin, radius, params)
+        end)
+        if ok and type(parts) == "table" then return parts end
+        return {}
+    end
+
+    function ShaderReflections:_surfaceMultiplier(part)
+        local material = part.Material
+        if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
+        if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
+        if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
+        if material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
+        if material == Enum.Material.Water then return 0.96 end
+        if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
+        return 0.72
+    end
+
+    function ShaderReflections:_isSkyMirrorFloor(part, inModel)
+        return self.SkyMirrorEnabled
+            and not inModel
+            and math.abs(part.CFrame.UpVector.Y) >= 0.75
+            and part.Size.X >= 4
+            and part.Size.Z >= 4
+    end
+
+    function ShaderReflections:_applySkyMirrorSurface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+    function ShaderReflections:_stripPartTextures(part)
+        if self.TextureOriginal[part] ~= nil then return end
+        local owner = part:FindFirstAncestorOfClass("Model")
+        if owner and owner:FindFirstChildOfClass("Humanoid") then return end
+        local record = {children = {}}
+        local touched = false
+        local okVariant, variant = pcall(function() return part.MaterialVariant end)
+        if okVariant and variant ~= "" then
+            record.variant = variant
+            pcall(function() part.MaterialVariant = "" end)
+            touched = true
+        end
+        if part:IsA("MeshPart") then
+            local okTexture, textureId = pcall(function() return part.TextureID end)
+            if okTexture and textureId ~= "" then
+                record.textureId = textureId
+                pcall(function() part.TextureID = "" end)
+                touched = true
+            end
+        end
+        for _, child in ipa

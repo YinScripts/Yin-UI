@@ -1,305 +1,4 @@
-          if input.UserInputType == Enum.UserInputType.Keyboard then
-                if input.KeyCode == Enum.KeyCode.Escape then
-                    capture.Capturing = false
-                    Window._keybindCapture = nil
-                    updateKeybindButton(capture)
-                elseif input.KeyCode ~= Enum.KeyCode.Unknown then
-                    capture.SetKey(input.KeyCode.Name)
-                end
-            end
-            return
-        end
-
-        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
-        if input.KeyCode == Enum.KeyCode.Unknown then return end
-
-        local focusedTextBox = nil
-        pcall(function()
-            focusedTextBox = UserInputService:GetFocusedTextBox()
-        end)
-        if focusedTextBox then return end
-
-        local keyName = input.KeyCode.Name
-        for _, entry in pairs(Window.Keybinds) do
-            if entry.KeyName == keyName and type(entry.Activate) == "function" then
-                task.spawn(function()
-                    pcall(entry.Activate)
-                end)
-                break
-            end
-        end
-    end))
-
-    pcall(function()
-        Window.BackgroundVideo = mk("VideoFrame", {
-            Name = "BackgroundVideo",
-            Parent = ContentArea,
-            AnchorPoint = Vector2.new(0, 0.5),
-            Position = UDim2.new(0, 0, 0.5, 0),
-            Size = UDim2.new(1, 15, 1, 30),
-            BackgroundTransparency = 1,
-            Video = "",
-            Looped = true,
-            Playing = false,
-            Volume = 0,
-            Visible = false,
-            Active = false,
-            ZIndex = 5,
-        })
-        corner(Window.BackgroundVideo, 8)
-    end)
-    Window.VideoBackgroundSupported = Window.BackgroundVideo ~= nil
-
-    Window.ApplyFloatingStyle = function()
-        local isCircleStyle = (SavedConfig.FloatingToggleStyle or "Pill") == "Circle"
-        local floatW = isCircleStyle and 64 or 200
-        local floatH = isCircleStyle and 64 or 36
-
-        for _, floatData in ipairs(Window.FloatingToggles or {}) do
-            local win = floatData and floatData.Window
-            if win and win.Parent and win:GetAttribute("SupportsFloatStyle") and not win:GetAttribute("YYPillV5") then
-                local winHasLinkedSlider = win:GetAttribute("HasLinkedSlider")
-                local thisFloatW = winHasLinkedSlider and 200 or floatW
-                local thisFloatH = winHasLinkedSlider and (36 + 40) or floatH
-                local thisIsCircle = isCircleStyle and not winHasLinkedSlider
-
-                local curCenterX = win.Position.X.Offset + win.Size.X.Offset / 2
-                local curCenterY = win.Position.Y.Offset + win.Size.Y.Offset / 2
-
-                win.Size = UDim2.fromOffset(thisFloatW, thisFloatH)
-                win.Position = UDim2.new(
-                    win.Position.X.Scale, curCenterX - thisFloatW / 2,
-                    win.Position.Y.Scale, curCenterY - thisFloatH / 2
-                )
-                win.BackgroundTransparency = thisIsCircle and 0.55 or 0.30
-
-                local existingGradient = win:FindFirstChildOfClass("UIGradient")
-                if thisIsCircle then
-                    if existingGradient then existingGradient:Destroy() end
-                elseif not existingGradient then
-                    mk("UIGradient", {
-                        Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0,   Color3.fromRGB(180, 185, 200)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
-                            ColorSequenceKeypoint.new(1,   Color3.fromRGB(180, 185, 200)),
-                        }),
-                        Transparency = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0,   0.45),
-                            NumberSequenceKeypoint.new(0.5, 0.15),
-                            NumberSequenceKeypoint.new(1,   0.45),
-                        }),
-                        Rotation = 90,
-                    }, win)
-                end
-
-                local existingStroke = win:FindFirstChildOfClass("UIStroke")
-                if existingStroke then
-                    existingStroke.Thickness = thisIsCircle and 3 or 2.5
-                end
-
-                local label = win:FindFirstChildOfClass("TextLabel")
-                if label and not winHasLinkedSlider then
-                    label.Size = thisIsCircle and UDim2.new(1, -24, 1, -24) or UDim2.new(1, -24, 1, 0)
-                    label.Position = thisIsCircle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0)
-                    label.TextSize = thisIsCircle and 11 or 21
-                    label.TextWrapped = thisIsCircle
-                    label.TextTruncate = thisIsCircle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd
-                end
-                if floatData.ClampPosition then
-                    pcall(floatData.ClampPosition)
-                end
-            end
-        end
-    end
-    Window.TopBarArt     = TopBarArt
-    Window.TabListArt    = TabListArt
-
-    local LibrarySizePresets = {
-        Small  = { Width = 500,  Height = 430 },
-        Large  = { Width = 760,  Height = 720 },
-        PC     = { Width = 920,  Height = 620 },
-    }
-
-    local LibrarySizeMode = ((SavedConfig.LibrarySizeMode or "Small") == "Large") and "Large" or "Small"
-
-    local function getCurrentLibraryPreset()
-        return LibrarySizePresets[LibrarySizeMode] or LibrarySizePresets.Small
-    end
-
-    Window.DetectPlatformType = function()
-        local preferredInput = nil
-        pcall(function()
-            local preferred = UserInputService.PreferredInput
-            if preferred == Enum.PreferredInput.KeyboardAndMouse then
-                preferredInput = "PC"
-            elseif preferred == Enum.PreferredInput.Touch then
-                preferredInput = "Mobile"
-            end
-        end)
-        if preferredInput then return preferredInput end
-
-        local hasKeyboard, hasMouse, hasTouch = false, false, false
-        pcall(function() hasKeyboard = UserInputService.KeyboardEnabled end)
-        pcall(function() hasMouse    = UserInputService.MouseEnabled    end)
-        pcall(function() hasTouch    = UserInputService.TouchEnabled    end)
-
-        local screenX = 0
-        pcall(function()
-            screenX = workspace.CurrentCamera.ViewportSize.X
-        end)
-
-        if hasKeyboard and hasMouse and not hasTouch then return "PC"     end
-        if hasTouch and not hasMouse and not hasKeyboard then return "Mobile" end
-        return (screenX >= 1080) and "PC" or "Mobile"
-    end
-
-    Window.UpdateWindowSize = function()
-        local effectiveMode = LibrarySizeMode
-
-        local platformMode = SavedConfig.PlatformMode or "Auto"
-        if platformMode == "Auto" then
-            if Window.DetectPlatformType() == "PC" then
-                effectiveMode = "PC"
-            end
-        elseif platformMode == "PC" then
-            effectiveMode = "PC"
-        end
-
-        local preset = LibrarySizePresets[effectiveMode] or LibrarySizePresets.Small
-        local screen  = ScreenGui.AbsoluteSize
-        local width   = preset.Width
-        local height  = preset.Height
-
-        if screen.X > 0 and screen.Y > 0 then
-            width  = math.min(width,  math.floor(screen.X * 0.92))
-            height = math.min(height, math.floor(screen.Y * 0.92))
-        end
-
-        shownSize = UDim2.new(0, width, 0, height)
-        if Main and not isMaximized then
-            Main.Size        = shownSize
-            normalWindowSize = shownSize
-        end
-    end
-
-    Window.UpdateWindowSize()
-    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(Window.UpdateWindowSize)
-
-    function Window:SetLibraryVersion(isLarge)
-        LibrarySizeMode = isLarge and "Large" or "Small"
-        self.LibrarySizeMode = LibrarySizeMode
-        self.LibraryHeight = getCurrentLibraryPreset().Height
-        SavedConfig.LibrarySizeMode = LibrarySizeMode
-        SavedConfig.LibraryHeight = self.LibraryHeight
-        SaveConfig()
-        Window.UpdateWindowSize()
-    end
-
-    Window.LibrarySizeMode = LibrarySizeMode
-    Window.LibraryHeight = getCurrentLibraryPreset().Height
-
-    -- Opcional: reutiliza la mecanica de iconos de TestUI_sprite_v7 sin cambiar
-    -- la navegacion original por defecto. Solo se activa desde Ajustes.
-    local TabIconCarousel = {
-        Enabled = false,
-        Items = {},
-        Offset = 0,
-        Velocity = 0,
-        ViewW = 0,
-        Anim = nil,
-        ActiveTab = nil,
-        Spin = 0,
-        LastOffset = 0,
-    }
-
-    local TAB_ICON_SIZE = 42
-    local TAB_ICON_GAP = 6
-    local TAB_ICON_STEP = TAB_ICON_SIZE + TAB_ICON_GAP
-    local TAB_DRAG_THRESHOLD = 7
-    local TAB_FRICTION = 4.2
-    local TAB_SPIN_GAIN = 0.6
-    local TAB_SPIN_MAX = 24
-    local TAB_SPIN_DECAY = 9
-
-    local function tabCarouselScale()
-        local s = MainScale.Scale
-        if type(s) ~= "number" or s < 0.05 then return 1 end
-        return s
-    end
-
-    local function applyTabCarouselSpin()
-        local spin = TabIconCarousel.Spin
-        for _, item in ipairs(TabIconCarousel.Items) do
-            local rotor = item.Tab and item.Tab.IconLabel
-            if rotor then
-                rotor.Rotation = spin * (0.6 + 0.8 * (item.Dist or 0))
-            end
-        end
-    end
-
-    local function renderTabCarousel()
-        if not TabIconCarousel.Enabled then return end
-        local count = #TabIconCarousel.Items
-        local viewW = TabIconCarousel.ViewW
-        if count == 0 or viewW <= 0 then return end
-
-        local length = count * TAB_ICON_STEP
-        TabIconCarousel.Offset = TabIconCarousel.Offset % length
-        local moved = ((TabIconCarousel.Offset - (TabIconCarousel.LastOffset or TabIconCarousel.Offset) + length / 2) % length) - length / 2
-        TabIconCarousel.LastOffset = TabIconCarousel.Offset
-        TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
-
-        for index, item in ipairs(TabIconCarousel.Items) do
-            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
-            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
-            local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
-            local edge = math.clamp((d - 0.6) / 0.4, 0, 1)
-            item.Scale.Scale = 1 - 0.2 * edge
-            item.Dist = math.clamp(d, 0, 1)
-        end
-        applyTabCarouselSpin()
-    end
-
-    local function focusTabCarousel(tab, animate)
-        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
-        local index
-        for i, item in ipairs(TabIconCarousel.Items) do
-            if item.Tab == tab then
-                index = i
-                break
-            end
-        end
-        if not index then return end
-
-        local length = #TabIconCarousel.Items * TAB_ICON_STEP
-        local target = (index - 1) * TAB_ICON_STEP + TAB_ICON_SIZE / 2 - TabIconCarousel.ViewW / 2
-        local delta = (target - TabIconCarousel.Offset + length / 2) % length - length / 2
-        TabIconCarousel.Velocity = 0
-
-        if animate then
-            TabIconCarousel.Anim = {
-                From = TabIconCarousel.Offset,
-                To = TabIconCarousel.Offset + delta,
-                T0 = os.clock(),
-                Dur = 0.35,
-            }
-        else
-            TabIconCarousel.Anim = nil
-            TabIconCarousel.Offset = TabIconCarousel.Offset + delta
-            renderTabCarousel()
-            TabIconCarousel.Spin = 0
-            applyTabCarouselSpin()
-        end
-    end
-
-    local function relayoutTabCarousel()
-        if not TabIconCarousel.Enabled then return end
-        TabIconCarousel.ViewW = TabCarouselViewport.AbsoluteSize.X / tabCarouselScale()
-        TabIconCarousel.Anim = nil
-        TabIconCarousel.Velocity = 0
-        renderTabCarousel()
-        if TabIconCarousel.ActiveTab then
-            focusTabCarousel(TabIconCarousel.ActiveTab, false)
+rousel(TabIconCarousel.ActiveTab, false)
         end
     end
 
@@ -578,6 +277,7 @@
                 ScaleType = Enum.ScaleType.Fit,
                 ZIndex = 9
             })
+            if Theme.ThemeName ~= "Navidad" then YinIcons.apply(TabIconLabel, YinIcons.tabs[nameEnglish] or YinIcons.tabs[nameSpanish]) end
             textStart = 14 + iconSize
         end
 
@@ -1213,4 +913,49 @@
 
                 local floatStroke
                 if usePillV5 then
-                    floatStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0
+                    floatStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0)
+                else
+                    floatStroke = stroke(FloatingWindow, Theme.Accent, 3, 0.20)
+                    buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
+                end
+
+                local FloatLabel = mk("TextLabel", {
+                    Parent = FloatingWindow,
+                    Size = isCircleStyle and UDim2.new(1, -24, 1, -24)
+                        or hasLinkedSlider and UDim2.new(1, -24, 0, 34)
+                        or UDim2.new(1, -24, 1, 0),
+                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = displayText,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = isCircleStyle and 11 or (hasLinkedSlider and 17 or 21),
+                    TextWrapped = isCircleStyle,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    TextYAlignment = Enum.TextYAlignment.Center,
+                    TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
+                    ZIndex = 5,
+                })
+                FloatLabel:SetAttribute("ThemeTextRole", "Text")
+                FloatLabel:SetAttribute("TextSpanish", textSpanish)
+                FloatLabel:SetAttribute("TextEnglish", textEnglish)
+
+                local pillV5 = nil
+                if usePillV5 then
+                    -- El color del texto lo maneja el diseno (blanco apagado / contraste del tema al encender)
+                    FloatLabel:SetAttribute("ThemeTextRole", nil)
+                    FloatLabel:SetAttribute("IgnoreTextEffect", true)
+                    pillV5 = FloatingPillV5.Build(FloatingWindow, FloatingGlow, FloatLabel, floatStroke, hasLinkedSlider, hasDial)
+                end
+                if hasDial then
+                    FloatingPillV5.BuildDial(FloatingWindow, FloatLabel, _dialList)
+                end
+
+                if hasLinkedSlider then
+                    local sMin   = _linkedSliderRef._min or 0
+                    local sMax   = _linkedSliderRef._max or 100
+                    local sValue = math.clamp(_linkedSliderRef._value or sMin, sMin, sMax)
+
+                    local SliderRow = mk("Frame", {
+                        Parent = FloatingWindow,
+          

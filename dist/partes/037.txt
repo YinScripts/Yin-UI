@@ -1,69 +1,4 @@
-put)
-        if not isSeeking then return end
-        if input ~= seekInput then return end
-        isSeeking = false
-        seekInput = nil
-        SeekThumb.Visible = false
-        SeekTooltip.Visible = false
-        local pct = getSeekPercent(input.Position.X)
-        if SpotifyState.CurrentSound then
-            pcall(function()
-                local total = SpotifyState.CurrentSound.TimeLength
-                if total > 0 then
-                    local newPos = pct * total
-                    SpotifyState.CurrentSound.TimePosition = newPos
-                    SpotifyState.CurrentPausedPosition = newPos
-                    if SpotifyState.IsPlaying then
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
-    end)
-
-    local ProgressTimeLeft = mk("TextLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 72, 0, 16),
-        Position = UDim2.new(0, 14, 0, 319),
-        BackgroundTransparency = 1,
-        Text = "0:00",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 20,
-    })
-
-    local ProgressTimeRight = mk("TextLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 72, 0, 16),
-        Position = UDim2.new(1, -86, 0, 319),
-        BackgroundTransparency = 1,
-        Text = "0:00",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Right,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local Controls = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 48),
-        Position = UDim2.new(0, 14, 0, 351),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 20,
-    })
-
-    local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
-        local btn = mk("ImageButton", {
-            Parent = parent,
-            Size = UDim2.new(0, size, 0, size),
-            BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = bgColor and 0 or 1,
+bgColor and 0 or 1,
             Image = asset(imageId),
             ImageColor3 = imageColor or Color3.new(1, 1, 1),
             AutoButtonColor = false,
@@ -1200,4 +1135,11 @@ put)
         end
 
         local cacheName = track.CoverCacheName
-        if no
+        if not cacheName or cacheName == "" then
+            return false, "no_cover_cache_name"
+        end
+
+        local coverPath = "YinYang_Cover_" .. cacheName
+        local coverExists = false
+
+        if isfile then

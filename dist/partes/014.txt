@@ -1,193 +1,4 @@
-(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 18,
-        }, iconBox)
-        UI.noTr(initials)
-        local iconImg = mk("ImageLabel", {
-            Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 2,
-        }, iconBox)
-        corner(iconImg, 16)
-        local nameLbl = mk("TextLabel", {
-            Size = UDim2.new(1, -96, 0, 22), Position = UDim2.fromOffset(80, 36), BackgroundTransparency = 1,
-            Text = "Cargando...", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 17,
-            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd,
-        }, card)
-        local statsLbl = mk("TextLabel", {
-            Size = UDim2.new(1, -96, 0, 18), Position = UDim2.fromOffset(80, 62), BackgroundTransparency = 1,
-            Text = "discord.gg/" .. code, RichText = true, TextColor3 = Color3.fromRGB(181, 186, 193),
-            Font = Enum.Font.GothamMedium, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-        }, card)
-        UI.noTr(statsLbl)
-        local join = mk("TextButton", {
-            Size = UDim2.new(1, -28, 0, 36), Position = UDim2.fromOffset(14, 96),
-            BackgroundColor3 = Color3.fromRGB(36, 128, 70), BorderSizePixel = 0, Text = "Unirse (copiar link)",
-            TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 14, AutoButtonColor = true,
-        }, card)
-        corner(join, 8)
-        join.MouseButton1Click:Connect(function()
-            local link = "https://discord.gg/" .. code
-            local copied = pcall(function()
-                if setclipboard then setclipboard(link) elseif toclipboard then toclipboard(link) else error("sin portapapeles") end
-            end)
-            Chat.flash(copied and "Link de Discord copiado · pegalo en Discord o en tu navegador" or link)
-        end)
-        Chat.fetchDiscord(code, function(d)
-            if not card.Parent then return end
-            if not d then
-                nameLbl.Text = "Invitación no válida o expirada"
-                nameLbl.TextColor3 = Color3.fromRGB(181, 186, 193)
-                initials.Text = "?"
-                join.BackgroundColor3 = THEME.PANEL2
-                return
-            end
-            nameLbl:SetAttribute("NoTr", true)
-            nameLbl.Text = d.name
-            local ini = ""
-            for w in d.name:gmatch("%S+") do
-                if #ini < 2 then ini = ini .. w:sub(1, 1):upper() end
-            end
-            initials.Text = ini
-            if d.iconAsset then iconImg.Image = d.iconAsset end
-            local parts = {}
-            if d.online then parts[#parts + 1] = '<font color="#23A55A">●</font> ' .. d.online .. " en línea" end
-            if d.members then parts[#parts + 1] = '<font color="#80848E">●</font> ' .. d.members .. " miembros" end
-            if #parts > 0 then
-                statsLbl:SetAttribute("NoTr", nil)
-                statsLbl.Text = table.concat(parts, "   ")
-            end
-        end)
-        return card
-    end
-    -- (v14 en librería: sin escaneo de superposición; era para la ventana 3D)
-    UI.EmojiButton.MouseButton1Click:Connect(function()
-        reactionPickerTargetKey = nil
-        StickerPanel.Visible = not (StickerPanel.Visible and EmojiGrid.Visible)
-        if StickerPanel.Visible then showStickerTab(false, true) end
-    end)
-    UI.MoreBtn.MouseButton1Click:Connect(function()
-        UI.MoreMenu.Visible = not UI.MoreMenu.Visible
-    end)
-    UI.MoreOnline.MouseButton1Click:Connect(function()
-        UI.MoreMenu.Visible = false
-        Chat.showOnline()
-    end)
-    UI.MoreMute.MouseButton1Click:Connect(function()
-        UI.MoreMenu.Visible = false
-        Chat.toggleMute()
-    end)
-    UI.MoreDelete.MouseButton1Click:Connect(function()
-        UI.MoreMenu.Visible = false
-        if Chat.kind == "private" and Chat.target then
-            Chat.askDeleteChat(Chat.target, tostring(Chat.targetName or Chat.target))
-        end
-    end)
-    UI.MoreHome.MouseButton1Click:Connect(function()
-        UI.MoreMenu.Visible = false
-        Chat.goHome()
-    end)
-    UI.PencilBtn.MouseButton1Click:Connect(function()
-        Chat.focusBox(UI.NewChatBox, function() Chat.startChatByName() end)
-    end)
-    UI.NewChatBox:GetPropertyChangedSignal("Text"):Connect(function()
-        local t = tostring(UI.NewChatBox.Text or ""):match("^%s*@?(.-)%s*$") or ""
-        Chat.homeFilter = t
-        UI.NewChatGo.Visible = t ~= ""
-        Chat.refreshHome()
-    end)
-    MessageBox:GetPropertyChangedSignal("Text"):Connect(function()
-        CharLabel.Visible = #MessageBox.Text > CONFIG.MAX_CHAR - 100
-    end)
-    local EMOJI_LIST = {
-        "😀", "😃", "😄", "😁", "😆", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊",
-        "😇", "🥰", "😍", "🤩", "😘", "😗", "☺️", "😚", "😙", "🥲", "😋", "😛",
-        "😜", "🤪", "😝", "🤑", "🤗", "🤭", "🤫", "🤔", "🤐", "🤨", "😐", "😑",
-        "😶", "😶‍🌫️", "😏", "😒", "🙄", "😬", "😮‍💨", "🤥", "😌", "😔", "😪", "🤤",
-        "😴", "😷", "🤒", "🤕", "🤢", "🤮", "🤧", "🥵", "🥶", "🥴", "😵", "😵‍💫",
-        "🤯", "🤠", "🥳", "🥸", "😎", "🤓", "🧐", "😕", "😟", "🙁", "☹️", "😮",
-        "😯", "😲", "😳", "🥺", "😦", "😧", "😨", "😰", "😥", "😢", "😭", "😱",
-        "😖", "😣", "😞", "😓", "😩", "😫", "🥱", "😤", "😡", "😠", "🤬", "😈",
-        "👿", "💀", "☠️", "💩", "🤡", "👹", "👺", "👻", "👽", "👾", "🤖", "😺",
-        "😸", "😹", "😻", "😼", "😽", "🙀", "😿", "😾", "🙈", "🙉", "🙊", "💋",
-        "💌", "💘", "💝", "💖", "💗", "💓", "💞", "💕", "💟", "❣️", "💔", "❤️‍🔥",
-        "❤️‍🩹", "❤️", "🧡", "💛", "💚", "💙", "💜", "🤎", "🖤", "🤍", "💯", "💢",
-        "💥", "💫", "💦", "💨", "🕳️", "💣", "💬", "👁️‍🗨️", "🗨️", "🗯️", "💭", "💤",
-        "👋", "👋🏻", "👋🏼", "👋🏽", "👋🏾", "👋🏿", "🤚", "🤚🏻", "🤚🏼", "🤚🏽", "🤚🏾", "🤚🏿",
-        "🖐️", "🖐🏻", "🖐🏼", "🖐🏽", "🖐🏾", "🖐🏿", "✋", "✋🏻", "✋🏼", "✋🏽", "✋🏾", "✋🏿",
-        "🖖", "🖖🏻", "🖖🏼", "🖖🏽", "🖖🏾", "🖖🏿", "👌", "👌🏻", "👌🏼", "👌🏽", "👌🏾", "👌🏿",
-        "🤌", "🤌🏻", "🤌🏼", "🤌🏽", "🤌🏾", "🤌🏿", "🤏", "🤏🏻", "🤏🏼", "🤏🏽", "🤏🏾", "🤏🏿",
-        "✌️", "✌🏻", "✌🏼", "✌🏽", "✌🏾", "✌🏿", "🤞", "🤞🏻", "🤞🏼", "🤞🏽", "🤞🏾", "🤞🏿",
-        "🤟", "🤟🏻", "🤟🏼", "🤟🏽", "🤟🏾", "🤟🏿", "🤘", "🤘🏻", "🤘🏼", "🤘🏽", "🤘🏾", "🤘🏿",
-        "🤙", "🤙🏻", "🤙🏼", "🤙🏽", "🤙🏾", "🤙🏿", "👈", "👈🏻", "👈🏼", "👈🏽", "👈🏾", "👈🏿",
-        "👉", "👉🏻", "👉🏼", "👉🏽", "👉🏾", "👉🏿", "👆", "👆🏻", "👆🏼", "👆🏽", "👆🏾", "👆🏿",
-        "🖕", "🖕🏻", "🖕🏼", "🖕🏽", "🖕🏾", "🖕🏿", "👇", "👇🏻", "👇🏼", "👇🏽", "👇🏾", "👇🏿",
-        "☝️", "☝🏻", "☝🏼", "☝🏽", "☝🏾", "☝🏿", "👍", "👍🏻", "👍🏼", "👍🏽", "👍🏾", "👍🏿",
-        "👎", "👎🏻", "👎🏼", "👎🏽", "👎🏾", "👎🏿", "✊", "✊🏻", "✊🏼", "✊🏽", "✊🏾", "✊🏿",
-        "👊", "👊🏻", "👊🏼", "👊🏽", "👊🏾", "👊🏿", "🤛", "🤛🏻", "🤛🏼", "🤛🏽", "🤛🏾", "🤛🏿",
-        "🤜", "🤜🏻", "🤜🏼", "🤜🏽", "🤜🏾", "🤜🏿", "👏", "👏🏻", "👏🏼", "👏🏽", "👏🏾", "👏🏿",
-        "🙌", "🙌🏻", "🙌🏼", "🙌🏽", "🙌🏾", "🙌🏿", "👐", "👐🏻", "👐🏼", "👐🏽", "👐🏾", "👐🏿",
-        "🤲", "🤲🏻", "🤲🏼", "🤲🏽", "🤲🏾", "🤲🏿", "🤝", "🙏", "🙏🏻", "🙏🏼", "🙏🏽", "🙏🏾",
-        "🙏🏿", "✍️", "✍🏻", "✍🏼", "✍🏽", "✍🏾", "✍🏿", "💅", "💅🏻", "💅🏼", "💅🏽", "💅🏾",
-        "💅🏿", "🤳", "🤳🏻", "🤳🏼", "🤳🏽", "🤳🏾", "🤳🏿", "💪", "💪🏻", "💪🏼", "💪🏽", "💪🏾",
-        "💪🏿", "🦾", "🦿", "🦵", "🦵🏻", "🦵🏼", "🦵🏽", "🦵🏾", "🦵🏿", "🦶", "🦶🏻", "🦶🏼",
-        "🦶🏽", "🦶🏾", "🦶🏿", "👂", "👂🏻", "👂🏼", "👂🏽", "👂🏾", "👂🏿", "🦻", "🦻🏻", "🦻🏼",
-        "🦻🏽", "🦻🏾", "🦻🏿", "👃", "👃🏻", "👃🏼", "👃🏽", "👃🏾", "👃🏿", "🧠", "🫀", "🫁",
-        "🦷", "🦴", "👀", "👁️", "👅", "👄", "👶", "👶🏻", "👶🏼", "👶🏽", "👶🏾", "👶🏿",
-        "🧒", "🧒🏻", "🧒🏼", "🧒🏽", "🧒🏾", "🧒🏿", "👦", "👦🏻", "👦🏼", "👦🏽", "👦🏾", "👦🏿",
-        "👧", "👧🏻", "👧🏼", "👧🏽", "👧🏾", "👧🏿", "🧑", "🧑🏻", "🧑🏼", "🧑🏽", "🧑🏾", "🧑🏿",
-        "👱", "👱🏻", "👱🏼", "👱🏽", "👱🏾", "👱🏿", "👨", "👨🏻", "👨🏼", "👨🏽", "👨🏾", "👨🏿",
-        "🧔", "🧔🏻", "🧔🏼", "🧔🏽", "🧔🏾", "🧔🏿", "🧔‍♂️", "🧔🏻‍♂️", "🧔🏼‍♂️", "🧔🏽‍♂️", "🧔🏾‍♂️", "🧔🏿‍♂️",
-        "🧔‍♀️", "🧔🏻‍♀️", "🧔🏼‍♀️", "🧔🏽‍♀️", "🧔🏾‍♀️", "🧔🏿‍♀️", "👨‍🦰", "👨🏻‍🦰", "👨🏼‍🦰", "👨🏽‍🦰", "👨🏾‍🦰", "👨🏿‍🦰",
-        "👨‍🦱", "👨🏻‍🦱", "👨🏼‍🦱", "👨🏽‍🦱", "👨🏾‍🦱", "👨🏿‍🦱", "👨‍🦳", "👨🏻‍🦳", "👨🏼‍🦳", "👨🏽‍🦳", "👨🏾‍🦳", "👨🏿‍🦳",
-        "👨‍🦲", "👨🏻‍🦲", "👨🏼‍🦲", "👨🏽‍🦲", "👨🏾‍🦲", "👨🏿‍🦲", "👩", "👩🏻", "👩🏼", "👩🏽", "👩🏾", "👩🏿",
-        "👩‍🦰", "👩🏻‍🦰", "👩🏼‍🦰", "👩🏽‍🦰", "👩🏾‍🦰", "👩🏿‍🦰", "🧑‍🦰", "🧑🏻‍🦰", "🧑🏼‍🦰", "🧑🏽‍🦰", "🧑🏾‍🦰", "🧑🏿‍🦰",
-        "👩‍🦱", "👩🏻‍🦱", "👩🏼‍🦱", "👩🏽‍🦱", "👩🏾‍🦱", "👩🏿‍🦱", "🧑‍🦱", "🧑🏻‍🦱", "🧑🏼‍🦱", "🧑🏽‍🦱", "🧑🏾‍🦱", "🧑🏿‍🦱",
-        "👩‍🦳", "👩🏻‍🦳", "👩🏼‍🦳", "👩🏽‍🦳", "👩🏾‍🦳", "👩🏿‍🦳", "🧑‍🦳", "🧑🏻‍🦳", "🧑🏼‍🦳", "🧑🏽‍🦳", "🧑🏾‍🦳", "🧑🏿‍🦳",
-        "👩‍🦲", "👩🏻‍🦲", "👩🏼‍🦲", "👩🏽‍🦲", "👩🏾‍🦲", "👩🏿‍🦲", "🧑‍🦲", "🧑🏻‍🦲", "🧑🏼‍🦲", "🧑🏽‍🦲", "🧑🏾‍🦲", "🧑🏿‍🦲",
-        "👱‍♀️", "👱🏻‍♀️", "👱🏼‍♀️", "👱🏽‍♀️", "👱🏾‍♀️", "👱🏿‍♀️", "👱‍♂️", "👱🏻‍♂️", "👱🏼‍♂️", "👱🏽‍♂️", "👱🏾‍♂️", "👱🏿‍♂️",
-        "🧓", "🧓🏻", "🧓🏼", "🧓🏽", "🧓🏾", "🧓🏿", "👴", "👴🏻", "👴🏼", "👴🏽", "👴🏾", "👴🏿",
-        "👵", "👵🏻", "👵🏼", "👵🏽", "👵🏾", "👵🏿", "🙍", "🙍🏻", "🙍🏼", "🙍🏽", "🙍🏾", "🙍🏿",
-        "🙍‍♂️", "🙍🏻‍♂️", "🙍🏼‍♂️", "🙍🏽‍♂️", "🙍🏾‍♂️", "🙍🏿‍♂️", "🙍‍♀️", "🙍🏻‍♀️", "🙍🏼‍♀️", "🙍🏽‍♀️", "🙍🏾‍♀️", "🙍🏿‍♀️",
-        "🙎", "🙎🏻", "🙎🏼", "🙎🏽", "🙎🏾", "🙎🏿", "🙎‍♂️", "🙎🏻‍♂️", "🙎🏼‍♂️", "🙎🏽‍♂️", "🙎🏾‍♂️", "🙎🏿‍♂️",
-        "🙎‍♀️", "🙎🏻‍♀️", "🙎🏼‍♀️", "🙎🏽‍♀️", "🙎🏾‍♀️", "🙎🏿‍♀️", "🙅", "🙅🏻", "🙅🏼", "🙅🏽", "🙅🏾", "🙅🏿",
-        "🙅‍♂️", "🙅🏻‍♂️", "🙅🏼‍♂️", "🙅🏽‍♂️", "🙅🏾‍♂️", "🙅🏿‍♂️", "🙅‍♀️", "🙅🏻‍♀️", "🙅🏼‍♀️", "🙅🏽‍♀️", "🙅🏾‍♀️", "🙅🏿‍♀️",
-        "🙆", "🙆🏻", "🙆🏼", "🙆🏽", "🙆🏾", "🙆🏿", "🙆‍♂️", "🙆🏻‍♂️", "🙆🏼‍♂️", "🙆🏽‍♂️", "🙆🏾‍♂️", "🙆🏿‍♂️",
-        "🙆‍♀️", "🙆🏻‍♀️", "🙆🏼‍♀️", "🙆🏽‍♀️", "🙆🏾‍♀️", "🙆🏿‍♀️", "💁", "💁🏻", "💁🏼", "💁🏽", "💁🏾", "💁🏿",
-        "💁‍♂️", "💁🏻‍♂️", "💁🏼‍♂️", "💁🏽‍♂️", "💁🏾‍♂️", "💁🏿‍♂️", "💁‍♀️", "💁🏻‍♀️", "💁🏼‍♀️", "💁🏽‍♀️", "💁🏾‍♀️", "💁🏿‍♀️",
-        "🙋", "🙋🏻", "🙋🏼", "🙋🏽", "🙋🏾", "🙋🏿", "🙋‍♂️", "🙋🏻‍♂️", "🙋🏼‍♂️", "🙋🏽‍♂️", "🙋🏾‍♂️", "🙋🏿‍♂️",
-        "🙋‍♀️", "🙋🏻‍♀️", "🙋🏼‍♀️", "🙋🏽‍♀️", "🙋🏾‍♀️", "🙋🏿‍♀️", "🧏", "🧏🏻", "🧏🏼", "🧏🏽", "🧏🏾", "🧏🏿",
-        "🧏‍♂️", "🧏🏻‍♂️", "🧏🏼‍♂️", "🧏🏽‍♂️", "🧏🏾‍♂️", "🧏🏿‍♂️", "🧏‍♀️", "🧏🏻‍♀️", "🧏🏼‍♀️", "🧏🏽‍♀️", "🧏🏾‍♀️", "🧏🏿‍♀️",
-        "🙇", "🙇🏻", "🙇🏼", "🙇🏽", "🙇🏾", "🙇🏿", "🙇‍♂️", "🙇🏻‍♂️", "🙇🏼‍♂️", "🙇🏽‍♂️", "🙇🏾‍♂️", "🙇🏿‍♂️",
-        "🙇‍♀️", "🙇🏻‍♀️", "🙇🏼‍♀️", "🙇🏽‍♀️", "🙇🏾‍♀️", "🙇🏿‍♀️", "🤦", "🤦🏻", "🤦🏼", "🤦🏽", "🤦🏾", "🤦🏿",
-        "🤦‍♂️", "🤦🏻‍♂️", "🤦🏼‍♂️", "🤦🏽‍♂️", "🤦🏾‍♂️", "🤦🏿‍♂️", "🤦‍♀️", "🤦🏻‍♀️", "🤦🏼‍♀️", "🤦🏽‍♀️", "🤦🏾‍♀️", "🤦🏿‍♀️",
-        "🤷", "🤷🏻", "🤷🏼", "🤷🏽", "🤷🏾", "🤷🏿", "🤷‍♂️", "🤷🏻‍♂️", "🤷🏼‍♂️", "🤷🏽‍♂️", "🤷🏾‍♂️", "🤷🏿‍♂️",
-        "🤷‍♀️", "🤷🏻‍♀️", "🤷🏼‍♀️", "🤷🏽‍♀️", "🤷🏾‍♀️", "🤷🏿‍♀️", "🧑‍⚕️", "🧑🏻‍⚕️", "🧑🏼‍⚕️", "🧑🏽‍⚕️", "🧑🏾‍⚕️", "🧑🏿‍⚕️",
-        "👨‍⚕️", "👨🏻‍⚕️", "👨🏼‍⚕️", "👨🏽‍⚕️", "👨🏾‍⚕️", "👨🏿‍⚕️", "👩‍⚕️", "👩🏻‍⚕️", "👩🏼‍⚕️", "👩🏽‍⚕️", "👩🏾‍⚕️", "👩🏿‍⚕️",
-        "🧑‍🎓", "🧑🏻‍🎓", "🧑🏼‍🎓", "🧑🏽‍🎓", "🧑🏾‍🎓", "🧑🏿‍🎓", "👨‍🎓", "👨🏻‍🎓", "👨🏼‍🎓", "👨🏽‍🎓", "👨🏾‍🎓", "👨🏿‍🎓",
-        "👩‍🎓", "👩🏻‍🎓", "👩🏼‍🎓", "👩🏽‍🎓", "👩🏾‍🎓", "👩🏿‍🎓", "🧑‍🏫", "🧑🏻‍🏫", "🧑🏼‍🏫", "🧑🏽‍🏫", "🧑🏾‍🏫", "🧑🏿‍🏫",
-        "👨‍🏫", "👨🏻‍🏫", "👨🏼‍🏫", "👨🏽‍🏫", "👨🏾‍🏫", "👨🏿‍🏫", "👩‍🏫", "👩🏻‍🏫", "👩🏼‍🏫", "👩🏽‍🏫", "👩🏾‍🏫", "👩🏿‍🏫",
-        "🧑‍⚖️", "🧑🏻‍⚖️", "🧑🏼‍⚖️", "🧑🏽‍⚖️", "🧑🏾‍⚖️", "🧑🏿‍⚖️", "👨‍⚖️", "👨🏻‍⚖️", "👨🏼‍⚖️", "👨🏽‍⚖️", "👨🏾‍⚖️", "👨🏿‍⚖️",
-        "👩‍⚖️", "👩🏻‍⚖️", "👩🏼‍⚖️", "👩🏽‍⚖️", "👩🏾‍⚖️", "👩🏿‍⚖️", "🧑‍🌾", "🧑🏻‍🌾", "🧑🏼‍🌾", "🧑🏽‍🌾", "🧑🏾‍🌾", "🧑🏿‍🌾",
-        "👨‍🌾", "👨🏻‍🌾", "👨🏼‍🌾", "👨🏽‍🌾", "👨🏾‍🌾", "👨🏿‍🌾", "👩‍🌾", "👩🏻‍🌾", "👩🏼‍🌾", "👩🏽‍🌾", "👩🏾‍🌾", "👩🏿‍🌾",
-        "🧑‍🍳", "🧑🏻‍🍳", "🧑🏼‍🍳", "🧑🏽‍🍳", "🧑🏾‍🍳", "🧑🏿‍🍳", "👨‍🍳", "👨🏻‍🍳", "👨🏼‍🍳", "👨🏽‍🍳", "👨🏾‍🍳", "👨🏿‍🍳",
-        "👩‍🍳", "👩🏻‍🍳", "👩🏼‍🍳", "👩🏽‍🍳", "👩🏾‍🍳", "👩🏿‍🍳", "🧑‍🔧", "🧑🏻‍🔧", "🧑🏼‍🔧", "🧑🏽‍🔧", "🧑🏾‍🔧", "🧑🏿‍🔧",
-        "👨‍🔧", "👨🏻‍🔧", "👨🏼‍🔧", "👨🏽‍🔧", "👨🏾‍🔧", "👨🏿‍🔧", "👩‍🔧", "👩🏻‍🔧", "👩🏼‍🔧", "👩🏽‍🔧", "👩🏾‍🔧", "👩🏿‍🔧",
-        "🧑‍🏭", "🧑🏻‍🏭", "🧑🏼‍🏭", "🧑🏽‍🏭", "🧑🏾‍🏭", "🧑🏿‍🏭", "👨‍🏭", "👨🏻‍🏭", "👨🏼‍🏭", "👨🏽‍🏭", "👨🏾‍🏭", "👨🏿‍🏭",
-        "👩‍🏭", "👩🏻‍🏭", "👩🏼‍🏭", "👩🏽‍🏭", "👩🏾‍🏭", "👩🏿‍🏭", "🧑‍💼", "🧑🏻‍💼", "🧑🏼‍💼", "🧑🏽‍💼", "🧑🏾‍💼", "🧑🏿‍💼",
-        "👨‍💼", "👨🏻‍💼", "👨🏼‍💼", "👨🏽‍💼", "👨🏾‍💼", "👨🏿‍💼", "👩‍💼", "👩🏻‍💼", "👩🏼‍💼", "👩🏽‍💼", "👩🏾‍💼", "👩🏿‍💼",
-        "🧑‍🔬", "🧑🏻‍🔬", "🧑🏼‍🔬", "🧑🏽‍🔬", "🧑🏾‍🔬", "🧑🏿‍🔬", "👨‍🔬", "👨🏻‍🔬", "👨🏼‍🔬", "👨🏽‍🔬", "👨🏾‍🔬", "👨🏿‍🔬",
-        "👩‍🔬", "👩🏻‍🔬", "👩🏼‍🔬", "👩🏽‍🔬", "👩🏾‍🔬", "👩🏿‍🔬", "🧑‍💻", "🧑🏻‍💻", "🧑🏼‍💻", "🧑🏽‍💻", "🧑🏾‍💻", "🧑🏿‍💻",
-        "👨‍💻", "👨🏻‍💻", "👨🏼‍💻", "👨🏽‍💻", "👨🏾‍💻", "👨🏿‍💻", "👩‍💻", "👩🏻‍💻", "👩🏼‍💻", "👩🏽‍💻", "👩🏾‍💻", "👩🏿‍💻",
-        "🧑‍🎤", "🧑🏻‍🎤", "🧑🏼‍🎤", "🧑🏽‍🎤", "🧑🏾‍🎤", "🧑🏿‍🎤", "👨‍🎤", "👨🏻‍🎤", "👨🏼‍🎤", "👨🏽‍🎤", "👨🏾‍🎤", "👨🏿‍🎤",
-        "👩‍🎤", "👩🏻‍🎤", "👩🏼‍🎤", "👩🏽‍🎤", "👩🏾‍🎤", "👩🏿‍🎤", "🧑‍🎨", "🧑🏻‍🎨", "🧑🏼‍🎨", "🧑🏽‍🎨", "🧑🏾‍🎨", "🧑🏿‍🎨",
-        "👨‍🎨", "👨🏻‍🎨", "👨🏼‍🎨", "👨🏽‍🎨", "👨🏾‍🎨", "👨🏿‍🎨", "👩‍🎨", "👩🏻‍🎨", "👩🏼‍🎨", "👩🏽‍🎨", "👩🏾‍🎨", "👩🏿‍🎨",
-        "🧑‍✈️", "🧑🏻‍✈️", "🧑🏼‍✈️", "🧑🏽‍✈️", "🧑🏾‍✈️", "🧑🏿‍✈️", "👨‍✈️", "👨🏻‍✈️", "👨🏼‍✈️", "👨🏽‍✈️", "👨🏾‍✈️", "👨🏿‍✈️",
-        "👩‍✈️", "👩🏻‍✈️", "👩🏼‍✈️", "👩🏽‍✈️", "👩🏾‍✈️", "👩🏿‍✈️", "🧑‍🚀", "🧑🏻‍🚀", "🧑🏼‍🚀", "🧑🏽‍🚀", "🧑🏾‍🚀", "🧑🏿‍🚀",
-        "👨‍🚀", "👨🏻‍🚀", "👨🏼‍🚀", "👨🏽‍🚀", "👨🏾‍🚀", "👨🏿‍🚀", "👩‍🚀", "👩🏻‍🚀", "👩🏼‍🚀", "👩🏽‍🚀", "👩🏾‍🚀", "👩🏿‍🚀",
-        "🧑‍🚒", "🧑🏻‍🚒", "🧑🏼‍🚒", "🧑🏽‍🚒", "🧑🏾‍🚒", "🧑🏿‍🚒", "👨‍🚒", "👨🏻‍🚒", "👨🏼‍🚒", "👨🏽‍🚒", "👨🏾‍🚒", "👨🏿‍🚒",
-        "👩‍🚒", "👩🏻‍🚒", "👩🏼‍🚒", "👩🏽‍🚒", "👩🏾‍🚒", "👩🏿‍🚒", "👮", "👮🏻", "👮🏼", "👮🏽", "👮🏾", "👮🏿",
-        "👮‍♂️", "👮🏻‍♂️", "👮🏼‍♂️", "👮🏽‍♂️", "👮🏾‍♂️", "👮🏿‍♂️", "👮‍♀️", "👮🏻‍♀️", "👮🏼‍♀️", "👮🏽‍♀️", "👮🏾‍♀️", "👮🏿‍♀️",
-        "🕵️", "🕵🏻", "🕵🏼", "🕵🏽", "🕵🏾", "🕵🏿", "🕵️‍♂️", "🕵🏻‍♂️", "🕵🏼‍♂️", "🕵🏽‍♂️", "🕵🏾‍♂️", "🕵🏿‍♂️",
-        "🕵️‍♀️", "🕵🏻‍♀️", "🕵🏼‍♀️", "🕵🏽‍♀️", "🕵🏾‍♀️", "🕵🏿‍♀️", "💂", "💂🏻", "💂🏼", "💂🏽", "💂🏾", "💂🏿",
-        "💂‍♂️", "💂🏻‍♂️", "💂🏼‍♂️", "💂🏽‍♂️", "💂🏾‍♂️", "💂🏿‍♂️", "💂‍♀️", "💂🏻‍♀️", "💂🏼‍♀️", "💂🏽‍♀️", "💂🏾‍♀️", "💂🏿‍♀️",
+, "💂🏿‍♂️", "💂‍♀️", "💂🏻‍♀️", "💂🏼‍♀️", "💂🏽‍♀️", "💂🏾‍♀️", "💂🏿‍♀️",
         "🥷", "🥷🏻", "🥷🏼", "🥷🏽", "🥷🏾", "🥷🏿", "👷", "👷🏻", "👷🏼", "👷🏽", "👷🏾", "👷🏿",
         "👷‍♂️", "👷🏻‍♂️", "👷🏼‍♂️", "👷🏽‍♂️", "👷🏾‍♂️", "👷🏿‍♂️", "👷‍♀️", "👷🏻‍♀️", "👷🏼‍♀️", "👷🏽‍♀️", "👷🏾‍♀️", "👷🏿‍♀️",
         "🤴", "🤴🏻", "🤴🏼", "🤴🏽", "🤴🏾", "🤴🏿", "👸", "👸🏻", "👸🏼", "👸🏽", "👸🏾", "👸🏿",
@@ -635,4 +446,301 @@
         if id == "" then return end
         if not id:match("^rbxassetid://%d+$") then
             local digits = id:match("(%d+)")
-            if not digits then 
+            if not digits then return end
+            id = "rbxassetid://" .. digits
+        end
+        customStickers[#customStickers+1] = {id=id, name="Custom"}
+        saveCustomStickers()
+        createStickerButton(MineGrid, id, true)
+        refreshGrid(MineGrid, MineLayout)
+        AddStickerInput.Text=""
+        AddStickerInput.Visible=false
+        ConfirmAdd.Visible=false
+    end)
+    StickerButton.MouseButton1Click:Connect(function()
+        reactionPickerTargetKey = nil
+        StickerPanel.Visible = not StickerPanel.Visible
+        if StickerPanel.Visible then showStickerTab(false) end
+    end)
+    task.spawn(function()
+        local myGen = generation
+        local tick, lastRgen = 0, -1
+        while generation == myGen and ScreenGui.Parent do
+            Chat.pollNow = false
+            if Chat.view == "chat" then
+                local room, rgen = Chat.room, Chat.roomGen
+                if rgen ~= lastRgen then tick, lastRgen = 0, rgen end
+                tick += 1
+                local ok, data = Chat.fbCall("GET", "chat/" .. room .. "/messages", nil, "orderBy=%22$key%22&limitToLast=40")
+                if ok and rgen == Chat.roomGen then
+                    Chat.handleRoomData(type(data) == "table" and data or {}, room)
+                    if firebaseInitialLoad then
+                        firebaseInitialLoad = false
+                        if next(messageRows) == nil then
+                            EmptyLabel.Text = "Aún no hay mensajes. ¡Escribe el primero!"
+                            EmptyLabel.Visible = true
+                        end
+                    end
+                end
+                if tick % 2 == 1 and rgen == Chat.roomGen then
+                    local pok, pd = Chat.fbCall("GET", "chat/" .. room .. "/pin")
+                    if pok and rgen == Chat.roomGen then
+                        Chat.pin = (type(pd) == "table" and pd.key) and pd or nil
+                        Chat.refreshPin()
+                    end
+                end
+                if rgen == Chat.roomGen then
+                    local tok, td = Chat.fbCall("GET", "typing/" .. room)
+                    if tok and rgen == Chat.roomGen then
+                        local names = {}
+                        if type(td) == "table" then
+                            local now = Chat.serverNowMs()
+                            for tuid, v in pairs(td) do
+                                if tostring(tuid) ~= tostring(LocalPlayer.UserId) and type(v) == "table"
+                                    and tonumber(v.t) and math.abs(now - v.t) < 5000 then
+                                    names[#names + 1] = tostring(v.n or (Chat.kind == "private" and Chat.targetUser) or "Alguien")
+                                end
+                            end
+                        end
+                        table.sort(names)
+                        local typing = #names > 0
+                        local key = table.concat(names, ",")
+                        if typing ~= Chat.typing or key ~= Chat.typingKey then
+                            Chat.typing = typing
+                            Chat.typingKey = key
+                            Chat.typingNames = names
+                            Chat.updateHeader()
+                            Chat.refreshTypingPill()
+                        end
+                    end
+                end
+            end
+            local waited = 0
+            while waited < CONFIG.FB_POLL_RATE and not Chat.pollNow do
+                task.wait(0.25)
+                waited += 0.25
+            end
+        end
+    end)
+    task.spawn(function()
+        local myGen = generation
+        local rr = 0
+        task.wait(1)
+        while generation == myGen and ScreenGui.Parent do
+            local okTick, err = pcall(Chat.watchTick, rr)
+            if not okTick then warn("[YY Chat] watchTick: " .. tostring(err)) end
+            rr += 1
+            if Chat.dirty then
+                Chat.dirty = false
+                Chat.saveSettings()
+            end
+            task.wait(CONFIG.WATCH_RATE)
+        end
+    end)
+    task.spawn(function()
+        local myGen = generation
+        while generation == myGen and ScreenGui.Parent do
+            pcall(function()
+                local res = request({
+                    Url=FIREBASE .. "presence/" .. tostring(LocalPlayer.UserId) .. ".json",
+                    Method="PUT",
+                    Headers={["Content-Type"]="application/json"},
+                    Body=HttpService:JSONEncode({n=LocalPlayer.Name,t={ [".sv"]="timestamp" }}),
+                })
+                local okD, d = pcall(HttpService.JSONDecode, HttpService, res and res.Body or "")
+                if okD and type(d) == "table" and tonumber(d.t) then
+                    Chat.clockSkew = tonumber(d.t) - os.time() * 1000
+                end
+            end)
+            pcall(Chat.refreshPresence)
+            task.spawn(function() pcall(Chat.refreshRailwayOnline) end)
+            task.spawn(function()
+                pcall(function()
+                    request({
+                        Url = Chat.RAILWAY_URL .. "/api/heartbeat", Method = "POST",
+                        Headers = {["Content-Type"] = "application/json"},
+                        Body = HttpService:JSONEncode({playerId = tostring(LocalPlayer.UserId)}),
+                    })
+                end)
+            end)
+            task.wait(20)
+        end
+    end)
+    MessageBox:GetPropertyChangedSignal("Text"):Connect(function()
+        if #MessageBox.Text > CONFIG.MAX_CHAR then MessageBox.Text=MessageBox.Text:sub(1,CONFIG.MAX_CHAR) end
+        CharLabel.Text=tostring(#MessageBox.Text) .. "/" .. tostring(CONFIG.MAX_CHAR)
+    end)
+    SendButton.MouseButton1Click:Connect(sendText)
+    MessageBox.FocusLost:Connect(function(enterPressed) if enterPressed then sendText() end end)
+    local Reopen = mk("TextButton", {
+        Size=UDim2.fromOffset(62,62), AnchorPoint=Vector2.new(1,0), Position=UDim2.new(1,-16,0.1,0),
+        BackgroundColor3=THEME.BG, BorderSizePixel=0, Text="",
+        AutoButtonColor=true, Visible=false, ZIndex=100,
+    }, ScreenGui)
+    corner(Reopen,30)
+    UI.storyRing(Reopen, 3)
+    UI.ReopenImg = mk("ImageLabel", {
+        Size=UDim2.new(1,-8,1,-8), Position=UDim2.fromOffset(4,4), BackgroundTransparency=1,
+        Image=UI.ICON.group, ScaleType=Enum.ScaleType.Crop, ZIndex=101,
+    }, Reopen)
+    corner(UI.ReopenImg,26)
+    UI.Reopen = Reopen
+    UI.ReopenBadge = mk("TextLabel", {
+        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(1,-6,0,6),
+        Size=UDim2.fromOffset(0,24), AutomaticSize=Enum.AutomaticSize.X,
+        BackgroundColor3=Color3.fromRGB(37,211,102), BorderSizePixel=0, Text="0",
+        TextColor3=Color3.fromRGB(255,255,255), Font=Enum.Font.GothamBlack, TextSize=13,
+        Visible=false, ZIndex=103,
+    }, Reopen)
+    corner(UI.ReopenBadge,12)
+    stroke(UI.ReopenBadge, THEME.BG, 2, 0)
+    mk("UIPadding", {PaddingLeft=UDim.new(0,7), PaddingRight=UDim.new(0,7)}, UI.ReopenBadge)
+    mk("UISizeConstraint", {MinSize=Vector2.new(24,24)}, UI.ReopenBadge)
+    UI.ReopenBadgeScale = mk("UIScale", {Scale=1}, UI.ReopenBadge)
+    -- v14 en la librería: "abierto" = la pestaña Chat se ve (ventana visible y pestaña elegida)
+    Chat.hostVisible = function()
+        local o = ctx.Host
+        while o and o:IsA("GuiObject") do
+            if not o.Visible then return false end
+            o = o.Parent
+        end
+        if o and o:IsA("LayerCollector") then return o.Enabled end
+        return o ~= nil
+    end
+    Chat.setOpen = function(v)
+        if v == open then return end
+        open = v
+        if v then
+            scrollBottom()
+            if Chat.view == "chat" then Chat.unread[Chat.room] = 0 end
+            if Chat.view == "home" then Chat.refreshHome(true) end
+        else
+            StickerPanel.Visible = false
+            Chat.hideOverlays()
+            hideMessageActions()
+        end
+        Chat.updateBadge()
+    end
+    -- tamaño: el diseño de v14 está pensado para un lienzo grande; se escala para que entre en la pestaña sin que
+    -- el texto quede demasiado chico
+    Chat.layoutHost = function()
+        local abs = ctx.Host.AbsoluteSize
+        if abs.X < 20 or abs.Y < 20 then return end
+        -- v15: se quita la escala de la ventana (animación de abrir/cerrar): así el chat no se re-arma en cada frame
+        -- de la animación ni se achica dos veces
+        local k, o = 1, ctx.Host.Parent
+        while o and not o:IsA("LayerCollector") do
+            local us = o:FindFirstChildOfClass("UIScale")
+            if us then k = k * us.Scale end
+            o = o.Parent
+        end
+        if k > 0.01 then abs = abs / k end
+        -- v15: lienzo de referencia más chico (antes 520x560) = textos más grandes dentro de la pestaña
+        local sc = math.clamp(math.min(abs.X / 470, abs.Y / 480), 0.55, 1)
+        if Chat.lastHostScale and math.abs(Chat.lastHostScale - sc) < 0.002 then return end
+        Chat.lastHostScale = sc
+        UI.RootScale.Scale = sc
+        Root.Size = UDim2.fromScale(1 / sc, 1 / sc)
+    end
+    ctx.Host:GetPropertyChangedSignal("AbsoluteSize"):Connect(Chat.layoutHost)
+    task.spawn(function()
+        while ScreenGui.Parent do
+            pcall(function() Chat.setOpen(Chat.hostVisible()) end)
+            task.wait(0.15)
+        end
+    end)
+    UserInputService.InputBegan:Connect(function(input, processed)
+        if processed then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if ReactionBar.Visible or ActionMenu.Visible then
+            hideMessageActions()
+        end
+    end)
+    populateStickers()
+    populateEmojis()
+    task.delay(1.5,function()
+        if ScreenGui.Parent then populateStickers() end
+    end)
+    Chat.onStickersLoaded = function()
+        if ScreenGui.Parent then populateStickers() end
+    end
+    if Chat.stickersLoaded then Chat.onStickersLoaded() end
+    Chat.tr = {
+        cache = {}, waiters = {}, queue = {}, tries = {}, msgCache = {}, msgWait = {}, msgQueue = {},
+        setByMe = setmetatable({}, {__mode = "k"}), hooked = setmetatable({}, {__mode = "k"}),
+        props = {TextLabel = {"Text"}, TextButton = {"Text"}, TextBox = {"PlaceholderText"}},
+    }
+    do
+        local Tr = Chat.tr
+        Tr.base = function(l) return string.lower(tostring(l or "")):match("^(%a+)") or "" end
+        Tr.detect = function()
+            local loc = ""
+            pcall(function() loc = tostring(game:GetService("LocalizationService").RobloxLocaleId or "") end)
+            if loc == "" then pcall(function() loc = tostring(LocalPlayer.LocaleId or "") end) end
+            if loc == "" then pcall(function() loc = tostring(game:GetService("LocalizationService").SystemLocaleId or "") end) end
+            loc = string.lower(loc ~= "" and loc or "es-es"):gsub("_", "-")
+            local lang = loc:match("^(%a+)") or "es"
+            if lang == "zh" then lang = (loc:find("tw") or loc:find("hk") or loc:find("hant")) and "zh-TW" or "zh-CN" end
+            return lang, loc
+        end
+        Tr.lang, Tr.locale = Tr.detect()
+        Tr.uiOn = Tr.base(Tr.lang) ~= "es"
+        Tr.file = "YinYang_ChatLang_" .. Tr.lang .. ".json"
+        pcall(function()
+            if Tr.uiOn and isfile(Tr.file) then
+                local d = HttpService:JSONDecode(readfile(Tr.file))
+                if type(d) == "table" then
+                    for k, v in pairs(d) do
+                        if type(k) == "string" and type(v) == "string" then Tr.cache[k] = v end
+                    end
+                end
+            end
+        end)
+        Tr.save = function()
+            if Tr.saving then return end
+            Tr.saving = true
+            task.delay(3, function()
+                Tr.saving = false
+                pcall(function() writefile(Tr.file, HttpService:JSONEncode(Tr.cache)) end)
+            end)
+        end
+        Tr.google = function(text, tl)
+            local ok, res = pcall(function()
+                return request({
+                    Url = "https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=" .. HttpService:UrlEncode(tl)
+                        .. "&dt=t&q=" .. HttpService:UrlEncode(text),
+                    Method = "GET",
+                })
+            end)
+            if not ok or type(res) ~= "table" or type(res.Body) ~= "string" or res.Body == "" then return nil end
+            local okD, data = pcall(HttpService.JSONDecode, HttpService, res.Body)
+            if not okD or type(data) ~= "table" or type(data[1]) ~= "table" then return nil end
+            local out = {}
+            for _, seg in ipairs(data[1]) do
+                if type(seg) == "table" and type(seg[1]) == "string" then out[#out + 1] = seg[1] end
+            end
+            if #out == 0 then return nil end
+            local from = type(data[3]) == "string" and data[3] or nil
+            if not from then
+                for i, v in pairs(data) do
+                    if i ~= 1 and type(v) == "string" then from = v break end
+                end
+            end
+            return table.concat(out), from
+        end
+        Tr.roblox = function(text, tl)
+            local ok, out = pcall(function()
+                local r = TextService:FilterAndTranslateStringAsync(text, LocalPlayer.UserId, {tl})
+                local t = r:GetTranslations()
+                if type(t) ~= "table" then return nil end
+                local v = t[tl] or t[Tr.locale]
+                if v == nil then for _, x in pairs(t) do v = x break end end
+                return type(v) == "string" and v or nil
+            end)
+            return ok and out or nil
+        end
+        Tr.probe = function()
+            if Tr.robloxOk ~= nil then return Tr.robloxOk end
+            local sample = Tr.base(Tr.lang) == "es" and "Hello, how are you today?" or "Hola, ¿cómo estás hoy?"
+            local out = Tr.roblox(sample, Tr.lang)
+            Tr.robloxOk = type(out) == "string" and ou

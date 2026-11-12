@@ -1,201 +1,4 @@
-oreTextEffect", true)
-            round(c, 999)
-            new("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, c)
-            chips[g.Key] = c
-            c.Activated:Connect(function()
-                Current = g.Key
-                if search.Text ~= "" then search.Text = "" end
-                renderTab(Current)
-                paintChips()
-                page.CanvasPosition = Vector2.new(0, 0)
-            end)
-        end
-
-        local searchToken = 0
-        search:GetPropertyChangedSignal("Text"):Connect(function()
-            searchToken = searchToken + 1
-            local token = searchToken
-            task.delay(0.25, function()
-                if token ~= searchToken then return end
-                local q = search.Text:match("^%s*(.-)%s*$")
-                if #q >= 2 then renderSearch(q) else renderTab(Current) end
-                paintChips()
-            end)
-        end)
-
-        renderTab(Current)
-        paintChips()
-        -- si cambia el tema, al volver a la guía se repintan chips y tarjetas
-        page:GetPropertyChangedSignal("Visible"):Connect(function()
-            if page.Visible then
-                if search.Text == "" then renderTab(Current) end
-                paintChips()
-                repaintAll()
-            end
-        end)
-        return {Root = root, Search = search}
-    end
-end
-
--- ===== CHAT GLOBAL (YY_ChatGlobal_v14 integrado) =====
--- Todo el chat v14 (inicio con grupo y privados, mensajes, respuestas, reacciones, stickers, emojis, fijados,
--- editar/borrar, perfil, en línea, escribiendo..., traducción, avisos al costado) dentro de la pestaña Chat.
--- Cambios respecto del v14 suelto: sin ventana 3D (vive en ctx.Host), sin botón cerrar/reabrir, sin el texto
--- "proxy" (en ScreenGui los TextBox funcionan), ZIndex desplazado para quedar dentro de la ventana, contador online
--- y globo de no leídos conectados a la librería, Railway nuevo (yin-chatt) con latido para el contador.
-function YinYang._BuildChatGlobal(ctx)
-    local Players = game:GetService("Players")
-    local RunService = game:GetService("RunService")
-    local UserInputService = game:GetService("UserInputService")
-    local HttpService = game:GetService("HttpService")
-    local TweenService = game:GetService("TweenService")
-    local ContentProvider = game:GetService("ContentProvider")
-    local TextService = game:GetService("TextService")
-    local LocalPlayer = Players.LocalPlayer
-    local CONFIG = {
-        NAME = "YY_ChatGlobal_Lib",
-        TILT_DEG = 10,
-        DISTANCE_PC = 9.15,
-        DISTANCE_MOBILE = 7.55,
-        CANVAS_PC = Vector2.new(860, 593),
-        CANVAS_MOBILE = Vector2.new(600, 711),
-        MAX_MESSAGES = 100,
-        MAX_CHAR = 500,
-        POLL_RATE = 10,
-        FB_POLL_RATE = 3,
-        WATCH_RATE = 4,
-    }
-    local THEME = {
-        BG = Color3.fromRGB(0, 0, 0),
-        PANEL = Color3.fromRGB(18, 18, 18),
-        PANEL2 = Color3.fromRGB(38, 38, 38),
-        ACC = Color3.fromRGB(245, 245, 245),
-        ACC2 = Color3.fromRGB(54, 54, 54),
-        TXT = Color3.fromRGB(245, 245, 245),
-        DIM = Color3.fromRGB(200, 200, 200), -- v15: más legible (antes 168)
-        GOOD = Color3.fromRGB(88, 200, 110),
-        DANGER = Color3.fromRGB(237, 73, 86),
-    }
-    local ZB = 9 -- desplazamiento de ZIndex: el chat va dentro de la ventana (ZIndex 5 a 8) y por debajo de sus popups (1000+)
-    local function mk(className, props, parent)
-        local obj = Instance.new(className)
-        for k, v in pairs(props or {}) do obj[k] = v end
-        if obj:IsA("GuiObject") then obj.ZIndex = obj.ZIndex + ZB end
-        obj.Parent = parent
-        return obj
-    end
-    local function corner(obj, radius)
-        mk("UICorner", {CornerRadius = UDim.new(0, radius or 10)}, obj)
-    end
-    local function stroke(obj, color, thickness, transparency)
-        mk("UIStroke", {
-            Color = color or THEME.ACC,
-            Thickness = thickness or 1,
-            Transparency = transparency or 0,
-        }, obj)
-    end
-    local UI = {}
-    local Chat = {}
-    UI.ICON = {
-        back = "rbxassetid://74796775741491", search = "rbxassetid://83258052038009",
-        bell = "rbxassetid://89295019910511", bellOff = "rbxassetid://99202807344897",
-        more = "rbxassetid://114906210968666", pin = "rbxassetid://86392028702497",
-        pencil = "rbxassetid://104485628186988", crown = "rbxassetid://93104462877422",
-        tick = "rbxassetid://134652733924299", alert = "rbxassetid://92336184304336",
-        reply = "rbxassetid://140466985063077", copy = "rbxassetid://95657322010780",
-        trash = "rbxassetid://133795804974827", dm = "rbxassetid://140466985063077",
-        server = "rbxassetid://70960808418506", emoji = "rbxassetid://123610893406648",
-        people = "rbxassetid://90819416372909",
-        group = "rbxassetid://97389367768202",
-        globalBg = "rbxassetid://75673376659530",
-        ownerAvatar = "rbxassetid://74189877924111",
-        mousozaAvatar = "rbxassetid://127423980218258",
-    }
-    UI.C = {
-        blue = Color3.fromRGB(0, 149, 246),
-        ownA = Color3.fromRGB(122, 64, 255),
-        ownB = Color3.fromRGB(0, 132, 255),
-        other = Color3.fromRGB(38, 38, 38),
-        line = Color3.fromRGB(38, 38, 38),
-        online = Color3.fromRGB(88, 200, 110),
-        gold = Color3.fromRGB(255, 196, 0),
-    }
-    UI.icon = function(parent, id, size, color, props)
-        local img = mk("ImageLabel", {
-            Size = UDim2.fromOffset(size, size), BackgroundTransparency = 1, Image = id,
-            ImageColor3 = color or THEME.TXT, ScaleType = Enum.ScaleType.Fit,
-        }, parent)
-        for k, v in pairs(props or {}) do if k == "ZIndex" then v = v + ZB end img[k] = v end -- v15: ZIndex con el mismo desplazamiento que mk
-        return img
-    end
-    UI.noTr = function(o)
-        if o then o:SetAttribute("NoTr", true) end
-        return o
-    end
-    UI.iconButton = function(parent, id, size, iconSize, props)
-        local b = mk("TextButton", {
-            Size = UDim2.fromOffset(size, size), BackgroundColor3 = THEME.PANEL2,
-            BackgroundTransparency = 1, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
-        }, parent)
-        corner(b, math.floor(size / 2))
-        for k, v in pairs(props or {}) do if k == "ZIndex" then v = v + ZB end b[k] = v end -- v15: ZIndex con el mismo desplazamiento que mk (antes los botones del encabezado quedaban tapados)
-        local img = UI.icon(b, id, iconSize or math.floor(size * 0.58), THEME.TXT, {
-            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
-            ZIndex = b.ZIndex + 1 - ZB,
-        })
-        return b, img
-    end
-    UI.storyRing = function(target, thickness)
-        local s = mk("UIStroke", {Thickness = thickness or 2.5, Color = Color3.new(1, 1, 1), ApplyStrokeMode = Enum.ApplyStrokeMode.Border}, target)
-        mk("UIGradient", {
-            Rotation = 45,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(254, 218, 117)),
-                ColorSequenceKeypoint.new(0.35, Color3.fromRGB(250, 126, 30)),
-                ColorSequenceKeypoint.new(0.65, Color3.fromRGB(214, 41, 118)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 47, 191)),
-            }),
-        }, s)
-        return s
-    end
-    local function getRequest()
-        return (syn and syn.request)
-            or (http and http.request)
-            or fluxus_request
-            or http_request
-            or request
-            or function(opts)
-                local method = string.upper(opts.Method or "GET")
-                local ok, result = pcall(function()
-                    if method == "POST" then
-                        return HttpService:PostAsync(opts.Url, opts.Body or "", Enum.HttpContentType.ApplicationJson)
-                    elseif method ~= "GET" then
-                        return HttpService:RequestAsync({
-                            Url = opts.Url,
-                            Method = method,
-                            Headers = opts.Headers or { ["Content-Type"] = "application/json" },
-                            Body = opts.Body or "",
-                        }).Body
-                    else
-                        return HttpService:GetAsync(opts.Url)
-                    end
-                end)
-                return {
-                    Success = ok,
-                    Body = ok and tostring(result or "") or "",
-                    StatusCode = ok and 200 or 0,
-                }
-            end
-    end
-    local request = getRequest()
-    local OverlayParent = ctx.OverlayParent or LocalPlayer:WaitForChild("PlayerGui")
-    pcall(function()
-        local old = OverlayParent:FindFirstChild(CONFIG.NAME .. "_UI")
-        if old then old:Destroy() end
-    end)
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    -- capa aparte solo para lo que va fuera de la ventana (avisos al costado)
-    local ScreenGui = mk("ScreenGui", {
+ = mk("ScreenGui", {
         Name = CONFIG.NAME .. "_UI",
         ResetOnSpawn = false,
         IgnoreGuiInset = true,
@@ -1050,4 +853,237 @@ function YinYang._BuildChatGlobal(ctx)
     Chat.lastSeenKey = {}
     Chat.notified = {}
     Chat.checkQueue = {}
-    Cha
+    Chat.reactHold = {}
+    Chat.onlineMap = {}
+    Chat.onlineCount = 0
+    Chat.searchOpen = false
+    Chat.searchQuery = ""
+    Chat.lastInvite = -999
+    Chat.lastTypingPush = 0
+    Chat.inboxOk = true
+    Chat.order = 0
+    Chat.SETTINGS_FILE = "YinYang_ChatSettings.json"
+    Chat.settings = {
+        SideNotifs = true, MentionsEnabled = true,
+        MutedRooms = {}, StickerFavs = {}, RecentDMs = {}, DMLastSeen = {}, HiddenDMs = {},
+    }
+    Chat.loadSettings = function()
+        if readfile and isfile then
+            pcall(function()
+                if isfile(Chat.SETTINGS_FILE) then
+                    local data = HttpService:JSONDecode(readfile(Chat.SETTINGS_FILE))
+                    if type(data) == "table" then
+                        for k, v in pairs(data) do Chat.settings[k] = v end
+                    end
+                end
+            end)
+        end
+        for _, k in ipairs({"MutedRooms", "StickerFavs", "RecentDMs", "DMLastSeen", "HiddenDMs"}) do
+            if type(Chat.settings[k]) ~= "table" then Chat.settings[k] = {} end
+        end
+    end
+    Chat.saveSettings = function()
+        if not writefile then return end
+        pcall(function() writefile(Chat.SETTINGS_FILE, HttpService:JSONEncode(Chat.settings)) end)
+    end
+    Chat.loadSettings()
+    Chat.fbCall = function(method, path, body, query)
+        local ok, res = pcall(function()
+            return request({
+                Url = FIREBASE .. path .. ".json" .. (query and ("?" .. query) or ""),
+                Method = method,
+                Headers = {["Content-Type"] = "application/json"},
+                Body = body ~= nil and HttpService:JSONEncode(body) or nil,
+            })
+        end)
+        if not ok or type(res) ~= "table" then return false, nil, 0 end
+        local code = tonumber(res.StatusCode or res.Status) or 0
+        local success = (res.Success == true) or (code >= 200 and code < 300)
+        if code >= 400 then success = false end
+        local data = nil
+        if type(res.Body) == "string" and res.Body ~= "" then
+            local okD, d = pcall(HttpService.JSONDecode, HttpService, res.Body)
+            if okD then data = d end
+        end
+        return success, data, code
+    end
+    Chat.dmRoom = function(uid)
+        local a, b = tonumber(LocalPlayer.UserId), tonumber(uid)
+        if not b then return nil end
+        if a > b then a, b = b, a end
+        return "dm_" .. a .. "_" .. b
+    end
+    Chat.nextOrder = function()
+        Chat.order += 1
+        return Chat.order
+    end
+    Chat.clip = function(s, n)
+        s = tostring(s or "")
+        local okLen, len = pcall(utf8.len, s)
+        if not okLen or not len then return s:sub(1, n) end
+        if len <= n then return s end
+        local cut = utf8.offset(s, n + 1)
+        return (cut and s:sub(1, cut - 1) or s) .. "…"
+    end
+    Chat.esc = function(s)
+        return (tostring(s or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
+    end
+    local open = false
+    local generation = 0
+    local REPLY_STORE_FILE = "YinYang_ChatReplies.json"
+    local storedReplies = {}
+    local function loadStoredReplies()
+        if not (readfile and isfile) then return end
+        pcall(function()
+            if isfile(REPLY_STORE_FILE) then
+                local data = HttpService:JSONDecode(readfile(REPLY_STORE_FILE))
+                if type(data) == "table" then storedReplies = data end
+            end
+        end)
+    end
+    local function saveStoredReplies()
+        if not writefile then return end
+        pcall(function() writefile(REPLY_STORE_FILE, HttpService:JSONEncode(storedReplies)) end)
+    end
+    local function rememberReply(text, ts, reply)
+        if type(reply) ~= "table" then return end
+        storedReplies[#storedReplies + 1] = {
+            uid = tostring(LocalPlayer.UserId),
+            text = tostring(text or ""),
+            ts = tonumber(ts) or os.time(),
+            reply = reply,
+        }
+        while #storedReplies > CONFIG.MAX_MESSAGES do table.remove(storedReplies, 1) end
+        saveStoredReplies()
+    end
+    local function findStoredReply(uid, text, ts)
+        local targetTs = tonumber(ts) or os.time()
+        local best, bestDelta
+        for i = #storedReplies, 1, -1 do
+            local item = storedReplies[i]
+            if type(item) == "table" and tostring(item.uid) == tostring(uid) and tostring(item.text) == tostring(text) then
+                local delta = math.abs((tonumber(item.ts) or 0) - targetTs)
+                if delta <= 15 and (not bestDelta or delta < bestDelta) then
+                    best, bestDelta = item.reply, delta
+                end
+            end
+        end
+        return best
+    end
+    loadStoredReplies()
+    local function avatar(userId)
+        return ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(userId) or 0)
+    end
+    local function scrollBottom()
+        task.defer(function()
+            pcall(function()
+                MessageScroll.CanvasPosition = Vector2.new(0, math.max(0, MessageLayout.AbsoluteContentSize.Y + 1000))
+            end)
+        end)
+    end
+    local function sourceKey(name, uid, text, ts, id)
+        if id then return "id:" .. tostring(id) end
+        return table.concat({tostring(name), tostring(uid), tostring(text), tostring(math.floor((tonumber(ts) or os.time()) / 3))}, "|")
+    end
+    local function addHistory(name, uid, text, ts, id, reply)
+        chatMessages[#chatMessages+1] = {
+            name=tostring(name or "Unknown"), uid=tonumber(uid) or 0,
+            text=tostring(text or ""), ts=tonumber(ts) or os.time(), id=id, reply=reply,
+        }
+        while #chatMessages > CONFIG.MAX_MESSAGES do table.remove(chatMessages, 1) end
+    end
+    local function playerNameColor(name, uid)
+        local seedText = tostring(uid or "") .. ":" .. tostring(name or "Unknown")
+        local hash = 0
+        for i = 1, #seedText do
+            hash = (hash * 31 + string.byte(seedText, i)) % 2147483647
+        end
+        local palette = {
+            Color3.fromRGB(255, 174, 96),
+            Color3.fromRGB(111, 205, 255),
+            Color3.fromRGB(255, 135, 166),
+            Color3.fromRGB(174, 225, 132),
+            Color3.fromRGB(202, 163, 255),
+            Color3.fromRGB(255, 218, 112),
+            Color3.fromRGB(105, 225, 204),
+            Color3.fromRGB(255, 155, 105),
+        }
+        return palette[(hash % #palette) + 1]
+    end
+    Chat.MD_STYLES = {
+        h1 = {size = 32, font = Enum.Font.GothamBlack},
+        h2 = {size = 26, font = Enum.Font.GothamBlack},
+        h3 = {size = 22, font = Enum.Font.GothamBold},
+        sub = {size = 14, font = Enum.Font.GothamMedium, color = "#A8A8A8"},
+    }
+    Chat.mdInline = function(s)
+        s = s:gsub("`([^`]+)`", '<font face="RobotoMono" color="#FFD59A">%1</font>')
+        s = s:gsub("%*%*(.-)%*%*", '<font weight="Heavy">%1</font>')
+        s = s:gsub("__(.-)__", "<u>%1</u>")
+        s = s:gsub("~~(.-)~~", "<s>%1</s>")
+        s = s:gsub("%*([^%*]+)%*", "<i>%1</i>")
+        return s
+    end
+    Chat.mdStrip = function(s)
+        return (s:gsub("`", ""):gsub("%*", ""):gsub("__", ""):gsub("~~", ""))
+    end
+    Chat.mdLine = function(line)
+        local hashes, rest = line:match("^(#+)%s*([^#%s].*)$")
+        if hashes and #hashes <= 3 then
+            return (#hashes == 1 and "h1") or (#hashes == 2 and "h2") or "h3", rest
+        end
+        local sub = line:match("^%-#%s+(.+)$")
+        if sub then return "sub", sub end
+        return nil, line
+    end
+    Chat.formatMessage = function(text, baseSize, baseFont, maxWidth)
+        local rich, w, h = {}, 0, 0
+        for line in (tostring(text) .. "\n"):gmatch("([^\n]*)\n") do
+            local style, body = Chat.mdLine(line)
+            local st = style and Chat.MD_STYLES[style]
+            local size = st and st.size or baseSize
+            local font = st and st.font or baseFont
+            local inner = Chat.mdInline(Chat.esc(body))
+            if st then
+                if style ~= "sub" then inner = "<b>" .. inner .. "</b>" end
+                inner = '<font size="' .. size .. '"' .. (st.color and (' color="' .. st.color .. '"') or "") .. ">" .. inner .. "</font>"
+            end
+            rich[#rich + 1] = inner
+            local plain = Chat.mdStrip(body)
+            if plain == "" then plain = " " end
+            local b = TextService:GetTextSize(plain, size, font, Vector2.new(maxWidth, 10000))
+            local extra = (font ~= baseFont or inner:find("<b>", 1, true)) and 1.07 or 1
+            w = math.max(w, b.X * extra)
+            h += b.Y + (st and 4 or 0)
+        end
+        return table.concat(rich, "\n"), math.ceil(w) + 2, math.ceil(h)
+    end
+    Chat.rainbowBody = function(text)
+        local body = tostring(text or ""):match("^%+%s*(.+)$")
+        if body and body:match("%a") then return body end
+        return nil
+    end
+    Chat.RAINBOW = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 70, 70)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 165, 40)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 235, 60)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(70, 230, 110)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(60, 170, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(170, 90, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 70, 70)),
+    })
+    Chat.applyRainbow = function(label)
+        label.TextColor3 = Color3.new(1, 1, 1)
+        local g = mk("UIGradient", {Color = Chat.RAINBOW, Rotation = 0, Offset = Vector2.new(-0.5, 0)}, label)
+        task.spawn(function()
+            local t = 0
+            while label.Parent do
+                t = (t + 0.02) % 1
+                g.Offset = Vector2.new(t - 0.5, 0)
+                task.wait(0.05)
+            end
+        end)
+        return g
+    end
+    Chat.ownerNameFx = function(label)
+        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transpa

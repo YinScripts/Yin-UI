@@ -1,99 +1,4 @@
-  local okBox, cf, size = pcall(function()
-                        return model:GetBoundingBox()
-                    end)
-                    if okBox and cf and size then
-                        local biggest = math.max(size.X, size.Y, size.Z)
-                        local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
-                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.30)
-                        Camera.CFrame = CFrame.new(camPos, focus)
-                    else
-                        Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
-                    end
-
-                    -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
-                    local animAcc = 0
-                    local function startAnimLoop()
-                        if HomeAnim.Loop then return end
-                        HomeAnim.Loop = RunService.RenderStepped:Connect(function(dt)
-                            if not Viewport.Parent then
-                                HomeAnim.Loop:Disconnect()
-                                return
-                            end
-                            if not TabPage.Visible or PerfOpt.Flags.NoHomeAvatar then return end
-                            animAcc += dt
-                            if animAcc < 1 / 30 then return end
-                            local step = math.min(animAcc, 0.1)
-                            animAcc = 0
-                            if HomeAnim.PlayerCtl then pcall(HomeAnim.PlayerCtl.Step, step) end
-                            if HomeAnim.OwnerCtl then pcall(HomeAnim.OwnerCtl.Step, step) end
-                            if HomeAnim.OwnerAfterStep then pcall(HomeAnim.OwnerAfterStep) end
-                        end)
-                        track(HomeAnim.Loop)
-                    end
-                    HomeAnim.StartLoop = startAnimLoop
-
-                    -- ---------- agarrar al owner con el dedo ----------
-                    -- Proyección propia (la cámara de la vista no está en workspace): FOV vertical + proporción de la vista.
-                    local function camInfo()
-                        local abs = Viewport.AbsoluteSize
-                        local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
-                        local tanV = math.tan(math.rad((tonumber(Camera.FieldOfView) or 70) / 2))
-                        return abs, aspect, tanV
-                    end
-                    function HomeAnim.SetupOwnerGrab(ctl, env)
-                        -- zona invisible que sigue al owner (encima del área para girar al jugador)
-                        local Grab = mk("TextButton", {
-                            Parent = ViewportWrap,
-                            Name = "OwnerGrab",
-                            Size = UDim2.fromOffset(0, 0),
-                            BackgroundTransparency = 1,
-                            Text = "",
-                            AutoButtonColor = false,
-                            ZIndex = 13,
-                        })
-                        local function project(p)
-                            local abs, aspect, tanV = camInfo()
-                            local cp = Camera.CFrame:PointToObjectSpace(p)
-                            local d = -cp.Z
-                            if d <= 0.01 then return nil end
-                            return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
-                        end
-                        -- punto de la pantalla -> punto en el plano donde está el owner (z de su lugar)
-                        local function unproject(screen)
-                            local abs, aspect, tanV = camInfo()
-                            if abs.X <= 0 or abs.Y <= 0 then return nil end
-                            local rel = screen - Viewport.AbsolutePosition
-                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
-                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
-                            local camPos = Camera.CFrame.Position
-                            if math.abs(dir.Z) < 1e-4 then return nil end
-                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
-                            if tt <= 0 then return nil end
-                            return camPos + dir * tt
-                        end
-                        local function updateGrab()
-                            local piv = env.model:GetPivot()
-                            local sitting = ctl.state == "sit"
-                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
-                            local sp, d, abs, tanV = project(center)
-                            if not sp then return end
-                            local hPx = env.H / (2 * d * tanV) * abs.Y
-                            local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
-                            Grab.Size = UDim2.fromOffset(w, h)
-                            Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
-                        end
-                        HomeAnim.OwnerAfterStep = updateGrab
-                        updateGrab()
-                        function HomeAnim.OwnerHit(pos)
-                            local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
-                            return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
-                        end
-                        local holdInput, prevScroll = nil, true
-                        local function screenOf(input) return Vector2.new(input.Position.X, input.Position.Y) end
-                        Grab.InputBegan:Connect(function(input)
-                            if holdInput then return end
-                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                                holdInput = input
+            holdInput = input
                                 prevScroll = TabPage.ScrollingEnabled
                                 TabPage.ScrollingEnabled = false -- que la página no se mueva mientras lo arrastran
                                 ctl.Grab()
@@ -721,6 +626,7 @@
             if t.IconLabel then
                 t.IconLabel.Image = t.IconAsset or ""
                 t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
+                if themeName ~= "Navidad" then YinIcons.apply(t.IconLabel, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
                 t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
                 t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
                 if t.NameLabel then
@@ -733,6 +639,7 @@
                 if compactIcon then
                     compactIcon.Image = t.IconAsset or ""
                     compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
+                    if themeName ~= "Navidad" then YinIcons.apply(compactIcon, YinIcons.tabs[t.NameEnglish] or YinIcons.tabs[t.NameSpanish]) end
                 end
             end
         end
@@ -850,4 +757,175 @@
                             BackgroundVideo.Looped = videoData.Looped ~= false
                             BackgroundVideo.Volume = math.clamp(tonumber(videoData.Volume) or 0, 0, 1)
                             BackgroundVideo.Video = videoId
-                            self._videoConnection = BackgroundVideo.Lo
+                            self._videoConnection = BackgroundVideo.Loaded:Connect(function()
+                                loaded = true
+                                activateVideo()
+                            end)
+                        end)
+                        print("Video de fondo solicitado: " .. tostring(videoId))
+
+                        task.spawn(function()
+                            local deadline = tick() + 6
+                            while self._videoToken == mediaToken and BackgroundVideo.Parent and not loaded and not BackgroundVideo.IsLoaded and tick() < deadline do
+                                task.wait(0.15)
+                            end
+                            if self._videoToken ~= mediaToken or activated then return end
+                            if BackgroundVideo.IsLoaded then
+                                activateVideo()
+                            else
+                                markFailure(videoId)
+                                if self._videoConnection then
+                                    pcall(function() self._videoConnection:Disconnect() end)
+                                    self._videoConnection = nil
+                                end
+                                tryNextVideo()
+                            end
+                        end)
+                    end
+
+                    tryNextVideo()
+                else
+                    applyImages()
+                    print("Imagen de fondo actualizada")
+                end
+            end)
+        end
+
+        SavedConfig.CurrentTheme = themeName
+        SaveConfig()
+
+        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
+        if themeData and themeData.Sound then
+            CurrentClickSound = themeData.Sound
+        elseif ThemeClickSounds[themeName] then
+            CurrentClickSound = ThemeClickSounds[themeName]
+            print("Tema " .. themeName .. " - Sonido de click personalizado activado")
+        else
+            CurrentClickSound = Sounds.Click
+        end
+
+        local autoEffect = (themeData and themeData.Effect) or ThemeAutoEffects[themeName]
+        if autoEffect and autoEffect ~= "Off" then
+            self:SetTextEffect(autoEffect)
+        else
+            self:SetTextEffect("Off")
+        end
+
+        if TopBarArt then
+            pcall(function()
+                local img = (themeData and themeData.TitleBarImage) or ThemeTitleBarImages[themeName] or ""
+                TopBarArt.Image = img
+            end)
+        end
+
+        if TabListArt then
+            pcall(function()
+                local img = (themeData and themeData.TabListImage) or ThemeTabListImages[themeName] or ""
+                TabListArt.Image = img
+                TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or (img ~= "" and 0.5 or 0)
+            end)
+        end
+
+        CurrentTheme = themeName
+
+        buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+
+        for _, floatData in ipairs(Window.FloatingToggles or {}) do
+            if floatData.Window and floatData.Window.Parent and not floatData.Window:GetAttribute("YYPillV5") then
+                buildAnimatedBorder(floatData.Window, Theme.Border, UDim.new(1, 0), true)
+            end
+        end
+
+        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
+            if obj:GetAttribute("IsSliderHolder") then
+                buildAnimatedBorder(obj, Theme.Border, UDim.new(0, 12), true)
+            end
+        end
+
+        if self._refreshEffectRows then
+            self._refreshEffectRows()
+        end
+        if self._refreshShaderCustomTheme then
+            self._refreshShaderCustomTheme()
+        end
+    end
+
+    function Window:SetTextEffect(mode)
+        stopTextEffect()
+        Window.CurrentTextEffect = mode
+        SavedConfig.CurrentEffect = mode
+        SaveConfig()
+        -- Optimización: el efecto elegido queda guardado, pero no corre su loop
+        if PerfOpt.Flags.NoTextEffects then mode = "Off" end
+
+        if mode == "Off" then
+            for _, obj in ipairs(getAllTextObjects()) do
+                local role = obj:GetAttribute("ThemeTextRole")
+                if role and Theme[role] then
+                    obj.TextColor3 = Theme[role]
+                elseif not role then
+                    obj.TextColor3 = Theme.Text
+                end
+            end
+            return
+        end
+
+        local elapsed = 0
+        local RunService = game:GetService("RunService")
+
+        if mode == "WhiteCyan" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(120, 225, 255)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "WhitePink" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(255, 130, 205)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "Rainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local hue = (elapsed * 0.12) % 1
+                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
+            end))
+
+        elseif mode == "CatRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 5) % 1
+                
+                local color
+                if cycle < 0.5 then
+                    local t = cycle * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(100 + (255 - 100) * t),
+                        math.floor(150 + (255 - 150) * t)
+                    )
+                else
+                    local t = (cycle - 0.5) * 2
+                    color = Color3.fromRGB(
+                        255,
+                        math.floor(255 - (255 - 100) * t),
+                        math.floor(255 - (255 - 150) * t)
+                    )
+                end
+                
+                applyTextColorToAll(color)
+            end))
+
+        elseif mode == "RainbowDarkWhite" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 0.25) % 1
+                
+                local color = Col

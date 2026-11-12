@@ -1,80 +1,4 @@
-K.Hue.AbsoluteSize
-                if s.Y <= 0 then return end
-                PK.H = math.clamp((pos.Y - a.Y) / s.Y, 0, 0.999)
-            end
-            PK.refresh()
-        end
-        PK.Area.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "SV" K.pickAt(input.Position) end end)
-        PK.Hue.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "H" K.pickAt(input.Position) end end)
-        PK.Hex.FocusLost:Connect(function()
-            local c = fromHex(PK.Hex.Text)
-            if c then PK.set(c) else PK.refresh() end
-        end)
-        local function close(ok)
-            ov.Visible = false
-            PK.drag = nil
-            if ok and PK.onApply then PK.onApply(PK.color()) elseif not ok and PK.onCancel then PK.onCancel() end
-            PK.onApply, PK.onCancel, PK.onLive = nil, nil, nil
-        end
-        K.closePicker = close
-        cancel.MouseButton1Click:Connect(function() close(false) end)
-        apply.MouseButton1Click:Connect(function() close(true) end)
-        -- onLive pinta en vivo; Cancelar vuelve al valor de antes
-        function K.openPicker(es, en, current, onLive, onApply, onCancel)
-            K.L(PK.Title, es, en)
-            PK.onLive, PK.onApply, PK.onCancel = nil, onApply, onCancel
-            ov.Visible = true
-            PK.set(current or WHITE)
-            PK.onLive = onLive
-        end
-    end
-
-    -- ---------- hoja "Elegí un toggle" (excepciones) ----------
-    function FS.UIScopeSheet(K)
-        local Z = K.Z
-        local ov = mk("Frame", { Parent = K.Panel, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Visible = false, Active = true, ZIndex = Z + 50 })
-        corner(ov, 16)
-        local sh = mk("Frame", { Parent = ov, Size = UDim2.new(0.92, 0, 0.86, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 51 })
-        sh:SetAttribute("ThemeRole", "Background")
-        corner(sh, 14)
-        stroke(sh, Theme.Stroke, 1.4, 0.2)
-        local zs = Z + 49 -- los textos del kit van en Z+3/Z+4: así quedan por encima de la hoja (Z+52/53)
-        K.label(sh, "Elegí un toggle", "Pick a toggle", 14, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -60, 0, 20), Position = UDim2.fromOffset(14, 10), ZIndex = zs + 3 })
-        K.label(sh, "Su diseño propio pisa al global solo en ese toggle", "Its own design overrides the global one only on that toggle", 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -60, 0, 12), Position = UDim2.fromOffset(14, 30), ZIndex = zs + 3 })
-        local x = K.button(sh, "×", "×", "Secondary", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), TextSize = 18, ZIndex = zs + 4 })
-        local search = K.box(sh, { Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 48), Font = Enum.Font.GothamBold, ZIndex = zs + 4 })
-        K.placeholder(search, "Buscar toggle...", "Search toggle...")
-        local listF = mk("ScrollingFrame", {
-            Parent = sh, Size = UDim2.new(1, -28, 1, -92), Position = UDim2.fromOffset(14, 84), BackgroundTransparency = 1,
-            BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = zs + 3,
-        })
-        K.list(listF, 6)
-        local function rebuild()
-            for _, ch in ipairs(listF:GetChildren()) do
-                if ch:IsA("GuiObject") then ch:Destroy() end
-            end
-            local q = string.lower(search.Text or "")
-            local rows = {}
-            for _, e in ipairs(FS.Registry) do rows[#rows + 1] = e end
-            table.sort(rows, function(a, b)
-                if a.Tab ~= b.Tab then return a.Tab < b.Tab end
-                return a.ES < b.ES
-            end)
-            local shown = 0
-            for i, e in ipairs(rows) do
-                local name = GetText(e.ES, e.EN)
-                if q == "" or string.find(string.lower(name), q, 1, true) or string.find(string.lower(e.Tab), q, 1, true) then
-                    shown += 1
-                    local has = K.ED.O[e.Id] ~= nil
-                    local r = mk("TextButton", {
-                        Parent = listF, Size = UDim2.new(1, -4, 0, 40), BackgroundColor3 = K.ED.scope == e.Id and Theme.Accent or Theme.Secondary,
-                        BackgroundTransparency = K.ED.scope == e.Id and 0.55 or 0.3, BorderSizePixel = 0, Text = "", LayoutOrder = i, ZIndex = zs + 4,
-                    })
-                    r:SetAttribute("ThemeRole", K.ED.scope == e.Id and "Accent" or "Secondary")
-                    corner(r, 10)
-                    local t = mk("TextLabel", {
-                        Parent = r, Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(12, 5), BackgroundTransparency = 1,
-                        Text = name, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack,
+Enum.Font.GothamBlack,
                         TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = zs + 5,
                     })
                     t:SetAttribute("ThemeTextRole", "Text")
@@ -687,4 +611,155 @@ K.Hue.AbsoluteSize
                 if FS.HasPremium() then
                     K.L(K.scopeBtn, "Excepción: elegir toggle (" .. n .. ")", "Exception: pick toggle (" .. n .. ")")
                 else
-                    K.L(K.scopeBtn, "🔒 Excepciones por toggle · Premium", "🔒 Per-tog
+                    K.L(K.scopeBtn, "🔒 Excepciones por toggle · Premium", "🔒 Per-toggle exceptions · Premium")
+                end
+            end
+        end
+        function K.SetScope(id)
+            K.ED.scope = id
+            local e = id and FS.RegById[id]
+            local name = e and GetText(e.ES, e.EN) or GetText("Vuelo", "Fly")
+            if K.samples[1] then K.samples[1].SetText(name) end
+            if K.samples[2] then K.samples[2].SetText(name) end
+            K.RefreshAll()
+            K.changed()
+            if id then
+                K.setStatus("Editando la excepción de \"" .. (e and e.ES or id) .. "\": lo que cambies pisa al global solo ahí", "Editing \"" .. (e and e.EN or id) .. "\": changes override the global design only there", Theme.Accent)
+            end
+        end
+        K.globalBtn.MouseButton1Click:Connect(function() K.SetScope(nil) end)
+        K.scopeBtn.MouseButton1Click:Connect(function()
+            if not FS.HasPremium() then K.showPremium() return end
+            K.openScopeSheet()
+        end)
+        K.dropBtn.MouseButton1Click:Connect(function()
+            local id = K.ED.scope
+            if not id then return end
+            K.ED.O[id] = nil
+            K.SetScope(nil)
+            K.setStatus("Excepción quitada: ese toggle vuelve a usar el diseño global", "Exception removed: that toggle uses the global design again", Theme.Accent)
+        end)
+
+        local UI = {}
+        local function close()
+            K.open = false
+            K.flip = false
+            K.activeSlider = nil
+            if K.closePicker then pcall(K.closePicker, false) end
+            if K.liveReal then
+                K.liveReal = false
+                FS.LiveResolver = nil
+                FS.ApplyAll()
+            end
+            TweenService:Create(PanelScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.94 }):Play()
+            task.delay(0.15, function() Overlay.Visible = false end)
+        end
+        closeBtn.MouseButton1Click:Connect(close)
+        cancelBtn.MouseButton1Click:Connect(close)
+        saveBtn.MouseButton1Click:Connect(function()
+            FS.Data.Global = FS.Sanitize(K.ED.G, false)
+            local ov = {}
+            for id, t in pairs(K.ED.O) do
+                local s = FS.Sanitize(t, true)
+                if next(s) then ov[id] = s end
+            end
+            FS.Data.Overrides = ov
+            local ok = FS.Save()
+            playSound(Sounds.Click, 0.6)
+            K.liveReal = false
+            FS.LiveResolver = nil
+            FS.ApplyAll()
+            if FS.RefreshEntry then FS.RefreshEntry() end
+            if not ok then
+                warn("[YinYang Estudio de Toggles] Tu ejecutor no tiene writefile: el diseño dura hasta que cierres el juego")
+            end
+            close()
+        end)
+
+        function UI.Open()
+            K.ED = { G = FS.Copy(FS.Data.Global), O = FS.Copy(FS.Data.Overrides), scope = nil }
+            K.open = true
+            K.flip = false
+            Status.Text = ""
+            K.stateChips.Set("off")
+            K.backChips.Set(K.backdrop or "dark")
+            for _, S in ipairs(K.samples) do S.State = false end
+            K.setLive(false)
+            K.SetScope(nil)
+            Content.CanvasPosition = Vector2.new(0, 0)
+            Overlay.Visible = true
+            PanelScale.Scale = 0.94
+            TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        end
+        UI.Close = close
+        UI.K = K
+        return UI
+    end
+end
+
+ThemePalettes["PibbleV1"] = ThemePalettes["PibbleV1"] or {
+    Background = Color3.fromRGB(58, 63, 70),
+    Secondary = Color3.fromRGB(88, 93, 100),
+    AccentOff = Color3.fromRGB(118, 123, 128),
+    Text = Color3.fromRGB(250, 248, 245),
+    TextDim = Color3.fromRGB(200, 195, 190),
+    Stroke = Color3.fromRGB(228, 180, 190),
+    Accent = Color3.fromRGB(240, 200, 210),
+    ToggleOn = Color3.fromRGB(255, 210, 220),
+}
+
+local function swapThemeColor(obj, palette)
+    local bgRole = obj:GetAttribute("ThemeRole")
+    if bgRole and palette[bgRole] then
+        if obj:IsA("UIStroke") then
+            obj.Color = palette[bgRole]
+        elseif obj:IsA("GuiObject") then
+            pcall(function() obj.BackgroundColor3 = palette[bgRole] end)
+        end
+    end
+
+    local textRole = obj:GetAttribute("ThemeTextRole")
+    if textRole and palette[textRole] then
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            obj.TextColor3 = palette[textRole]
+        end
+    end
+
+    local textStrokeRole = obj:GetAttribute("ThemeTextStrokeRole")
+    if textStrokeRole and palette[textStrokeRole] then
+        if obj:IsA("TextLabel") or obj:IsA("TextButton") or obj:IsA("TextBox") then
+            pcall(function() obj.TextStrokeColor3 = palette[textStrokeRole] end)
+        end
+    end
+
+    local imageRole = obj:GetAttribute("ThemeImageRole")
+    if imageRole and palette[imageRole] then
+        if obj:IsA("ImageLabel") or obj:IsA("ImageButton") then
+            obj.ImageColor3 = palette[imageRole]
+        end
+    end
+end
+
+ThemePalettes["ShylfieV1"] = ThemePalettes["ShylfieV1"] or {
+    Background = Color3.fromRGB(35, 40, 28),
+    Secondary = Color3.fromRGB(58, 65, 42),
+    AccentOff = Color3.fromRGB(85, 90, 58),
+    Text = Color3.fromRGB(250, 245, 230),
+    TextDim = Color3.fromRGB(200, 190, 155),
+    Stroke = Color3.fromRGB(180, 165, 115),
+    Accent = Color3.fromRGB(230, 195, 130),
+    ToggleOn = Color3.fromRGB(255, 215, 145),
+}
+
+local function setActiveTheme(name)
+    local palette = ThemePalettes[name]
+    if not palette then return false end
+    Theme = table.clone(palette)
+    Theme.AccentText = getContrastColor(Theme.Accent)
+    Theme.TextStroke = getContrastColor(Theme.Text)
+    Theme.ThemeName = name
+    Theme.SliderTrack = Theme.SliderTrack or Theme.AccentOff
+    Theme.SliderFill = Theme.SliderFill or Theme.Accent
+    Theme.SliderThumb = Theme.SliderThumb or Theme.Accent
+    Theme.Border = Theme.Border or Theme.Accent
+ 

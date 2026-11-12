@@ -1,220 +1,4 @@
-=======================================================
-    local function header(order, es, en, subEs, subEn)
-        local h = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11 })
-        local t = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(4, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
-        t:SetAttribute("ThemeTextRole", "Text")
-        L(t, es, en)
-        local d = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 13), Position = UDim2.fromOffset(4, 19), BackgroundTransparency = 1, TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12 })
-        d:SetAttribute("ThemeTextRole", "TextDim")
-        d:SetAttribute("IgnoreTextEffect", true)
-        L(d, subEs, subEn)
-        return h, d
-    end
-    local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
-    local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
-    mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
-    header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
-
-    -- tarjeta "Crear": círculo con + y aro de colores girando
-    do
-        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
-        c:SetAttribute("ThemeRole", "Secondary")
-        corner(c, 14)
-        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickness = 1.5, Transparency = 0.1 })
-        local g = mk("UIGradient", {
-            Parent = cs,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Theme.Accent),
-            }),
-        })
-        TweenService:Create(g, TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
-        local circle = mk("Frame", { Parent = c, Size = UDim2.fromOffset(52, 52), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), BackgroundColor3 = Theme.Accent, ZIndex = 13 })
-        circle:SetAttribute("ThemeRole", "Accent")
-        corner(circle, 999)
-        local plus = mk("TextLabel", { Parent = circle, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font = Enum.Font.GothamBold, ZIndex = 14 })
-        plus:SetAttribute("ThemeTextRole", "AccentText")
-        plus:SetAttribute("IgnoreTextEffect", true)
-        TweenService:Create(circle, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromOffset(56, 56) }):Play()
-        local t = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 30), Position = UDim2.fromOffset(5, 76), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBlack, TextWrapped = true, ZIndex = 14 })
-        t:SetAttribute("ThemeTextRole", "Text")
-        L(t, "Crear logo", "Create logo")
-        -- candado dorado + chip PREMIUM mientras la cuenta no tenga el pase
-        local lockBadge = mk("Frame", { Parent = c, Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = 15 })
-        corner(lockBadge, 999)
-        local lbStroke = mk("UIStroke", { Parent = lockBadge, Color = WHITE, Thickness = 1.2 })
-        goldGradient(lbStroke, 45)
-        drawLock(lockBadge, 13, 16)
-        local chip = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(0, 14), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 100), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 8, Font = Enum.Font.GothamBlack, ZIndex = 15 })
-        chip:SetAttribute("IgnoreTextEffect", true)
-        corner(chip, 999)
-        pad(chip, 0, 7, 7, 0)
-        goldGradient(chip, 0)
-        local function paintLock(owned)
-            lockBadge.Visible = not owned
-            chip.Visible = not owned
-            if PR.checking then
-                L(chip, "VERIFICANDO", "CHECKING")
-            else
-                L(chip, "PREMIUM", "PREMIUM")
-            end
-            circle.BackgroundTransparency = owned and 0 or 0.45
-        end
-        table.insert(PR.listeners, paintLock)
-        paintLock(PR.owned)
-        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
-        local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        hit.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            sc.Scale = 0.93
-            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            guardedOpen(nil)
-        end)
-    end
-
-    local function customCard(id, rec, order)
-        local key = CL.Key(id)
-        local icon = IconCatalog.Icons[key]
-        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 12 })
-        c:SetAttribute("ThemeRole", "Secondary")
-        corner(c, 14)
-        local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
-        local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
-        stage:SetAttribute("ThemeRole", "Background")
-        corner(stage, 999)
-        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
-        composite(stage, icon, 54, 14)
-        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
-        name:SetAttribute("ThemeTextRole", "Text")
-        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
-        badge:SetAttribute("ThemeRole", "Accent")
-        corner(badge, 999)
-        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
-        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
-        -- acciones: editar / borrar (borrar pide un segundo toque)
-        local edit = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0, 6, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
-        edit:SetAttribute("ThemeRole", "Background")
-        edit:SetAttribute("ThemeTextRole", "Text")
-        L(edit, "Editar", "Edit")
-        corner(edit, 999)
-        local del = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0.5, 3, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
-        del:SetAttribute("ThemeRole", "Background")
-        del:SetAttribute("ThemeTextRole", "Text")
-        L(del, "Borrar", "Delete")
-        corner(del, 999)
-        local entry = { card = c, stroke = cStroke, ring = ring, badge = badge, name = name, key = key, custom = true }
-        LP.cards[#LP.cards + 1] = entry
-        LP.paint(entry, SavedConfig.SelectedLogoIcon == key, false)
-        hit.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            sc.Scale = 0.93
-            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            SavedConfig.SelectedLogoIcon = key
-            SaveConfig()
-            ApplyLogoIcon(key)
-            for _, other in ipairs(LP.cards) do
-                LP.paint(other, other.key == key, true)
-            end
-            LP.setHero(key)
-        end)
-        edit.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            guardedOpen(id)
-        end)
-        local armed = false
-        del.MouseButton1Click:Connect(function()
-            if not armed then
-                armed = true
-                L(del, "¿Seguro?", "Sure?")
-                del.BackgroundColor3 = Color3.fromRGB(200, 60, 70)
-                del.TextColor3 = WHITE
-                task.delay(3, function()
-                    if armed and del.Parent then
-                        armed = false
-                        L(del, "Borrar", "Delete")
-                        del.BackgroundColor3 = Theme.Background
-                        del.TextColor3 = Theme.Text
-                    end
-                end)
-                return
-            end
-            playSound(Sounds.Click, 0.5)
-            CL.Remove(id)
-            if SavedConfig.SelectedLogoIcon == key then
-                SavedConfig.SelectedLogoIcon = "ClassicYinYang"
-                SaveConfig()
-                ApplyLogoIcon("ClassicYinYang")
-                LP.setHero("ClassicYinYang")
-                for _, other in ipairs(LP.cards) do
-                    LP.paint(other, other.key == "ClassicYinYang", true)
-                end
-            end
-            LS.RefreshCards()
-        end)
-    end
-
-    function LS.RefreshCards()
-        for i = #LP.cards, 1, -1 do
-            if LP.cards[i].custom then
-                LP.cards[i].card:Destroy()
-                table.remove(LP.cards, i)
-            end
-        end
-        for i, id in ipairs(CL.Order) do
-            local rec = CL.Logos[id]
-            if rec and IconCatalog.Icons[CL.Key(id)] then
-                customCard(id, rec, i)
-            end
-        end
-        local n = #CL.Order
-        if n == 0 then
-            L(MineSub, "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
-        else
-            L(MineSub, n .. " de " .. CL.Max .. " · tocá uno para usarlo", n .. " of " .. CL.Max .. " · tap one to use it")
-        end
-    end
-    LS.RefreshCards()
-    LP.studio = LS
-    PR.check()
-    end
-    BuildLogoStudio()
-
-    local firstIcon = nil
-    for i, name in ipairs(IconCatalog.Order or { "ClassicYinYang" }) do
-        local data = IconCatalog.Icons[name]
-        if data then
-            firstIcon = firstIcon or name
-            CreateIconCard(name, data, i)
-        end
-    end
-    LP.setHero(IconCatalog.Icons[SavedConfig.SelectedLogoIcon or ""] and SavedConfig.SelectedLogoIcon or firstIcon)
-    end
-    BuildLogoTab()
-
-    function Window:CreateClassicTab()
-    local TabClassic = Window:CreateTab("Classic", "Classic", "rbxassetid://99086270459218")
-    local ClassicPage = TabClassic.Page
-
-    ClassicPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    ClassicPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ClassicPage.ScrollBarThickness = 2
-    ClassicPage.ScrollingEnabled = true
-    ClassicPage.BackgroundTransparency = 1
-    ClassicPage:SetAttribute("ThemeRole", "Background")
-
-    local classicScripts = LoadClassicManifest()
-    local CL = {holders = {}}
-
-    CL.hero = mk("Frame", {
-        Parent = ClassicPage,
-        Size = UDim2.new(1, 0, 0, 92),
-        BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.35,
-        BorderSizePixel = 0,
-        ZIndex = 9,
-    })
-    CL.hero:SetAttribute("ThemeRole", "Secondary")
-    corner(CL.hero, 16)
+corner(CL.hero, 16)
     stroke(CL.hero, Theme.Stroke, 1, 0.55)
     CL.emblem = mk("Frame", {
         Parent = CL.hero,
@@ -1348,4 +1132,69 @@
         ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
     end)
 
-    UserInputService.InputEnded:Connect(function(in
+    UserInputService.InputEnded:Connect(function(input)
+        if not isSeeking then return end
+        if input ~= seekInput then return end
+        isSeeking = false
+        seekInput = nil
+        SeekThumb.Visible = false
+        SeekTooltip.Visible = false
+        local pct = getSeekPercent(input.Position.X)
+        if SpotifyState.CurrentSound then
+            pcall(function()
+                local total = SpotifyState.CurrentSound.TimeLength
+                if total > 0 then
+                    local newPos = pct * total
+                    SpotifyState.CurrentSound.TimePosition = newPos
+                    SpotifyState.CurrentPausedPosition = newPos
+                    if SpotifyState.IsPlaying then
+                        SpotifyState.CurrentSound:Play()
+                    end
+                end
+            end)
+        end
+    end)
+
+    local ProgressTimeLeft = mk("TextLabel", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(0, 72, 0, 16),
+        Position = UDim2.new(0, 14, 0, 319),
+        BackgroundTransparency = 1,
+        Text = "0:00",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 20,
+    })
+
+    local ProgressTimeRight = mk("TextLabel", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(0, 72, 0, 16),
+        Position = UDim2.new(1, -86, 0, 319),
+        BackgroundTransparency = 1,
+        Text = "0:00",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Right,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local Controls = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 48),
+        Position = UDim2.new(0, 14, 0, 351),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 20,
+    })
+
+    local function createIconButton(parent, size, imageId, imageColor, bgColor, rounded)
+        local btn = mk("ImageButton", {
+            Parent = parent,
+            Size = UDim2.new(0, size, 0, size),
+            BackgroundColor3 = bgColor or Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 

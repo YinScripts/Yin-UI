@@ -1,175 +1,4 @@
-aded:Connect(function()
-                                loaded = true
-                                activateVideo()
-                            end)
-                        end)
-                        print("Video de fondo solicitado: " .. tostring(videoId))
-
-                        task.spawn(function()
-                            local deadline = tick() + 6
-                            while self._videoToken == mediaToken and BackgroundVideo.Parent and not loaded and not BackgroundVideo.IsLoaded and tick() < deadline do
-                                task.wait(0.15)
-                            end
-                            if self._videoToken ~= mediaToken or activated then return end
-                            if BackgroundVideo.IsLoaded then
-                                activateVideo()
-                            else
-                                markFailure(videoId)
-                                if self._videoConnection then
-                                    pcall(function() self._videoConnection:Disconnect() end)
-                                    self._videoConnection = nil
-                                end
-                                tryNextVideo()
-                            end
-                        end)
-                    end
-
-                    tryNextVideo()
-                else
-                    applyImages()
-                    print("Imagen de fondo actualizada")
-                end
-            end)
-        end
-
-        SavedConfig.CurrentTheme = themeName
-        SaveConfig()
-
-        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
-        if themeData and themeData.Sound then
-            CurrentClickSound = themeData.Sound
-        elseif ThemeClickSounds[themeName] then
-            CurrentClickSound = ThemeClickSounds[themeName]
-            print("Tema " .. themeName .. " - Sonido de click personalizado activado")
-        else
-            CurrentClickSound = Sounds.Click
-        end
-
-        local autoEffect = (themeData and themeData.Effect) or ThemeAutoEffects[themeName]
-        if autoEffect and autoEffect ~= "Off" then
-            self:SetTextEffect(autoEffect)
-        else
-            self:SetTextEffect("Off")
-        end
-
-        if TopBarArt then
-            pcall(function()
-                local img = (themeData and themeData.TitleBarImage) or ThemeTitleBarImages[themeName] or ""
-                TopBarArt.Image = img
-            end)
-        end
-
-        if TabListArt then
-            pcall(function()
-                local img = (themeData and themeData.TabListImage) or ThemeTabListImages[themeName] or ""
-                TabListArt.Image = img
-                TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or (img ~= "" and 0.5 or 0)
-            end)
-        end
-
-        CurrentTheme = themeName
-
-        buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
-
-        for _, floatData in ipairs(Window.FloatingToggles or {}) do
-            if floatData.Window and floatData.Window.Parent and not floatData.Window:GetAttribute("YYPillV5") then
-                buildAnimatedBorder(floatData.Window, Theme.Border, UDim.new(1, 0), true)
-            end
-        end
-
-        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
-            if obj:GetAttribute("IsSliderHolder") then
-                buildAnimatedBorder(obj, Theme.Border, UDim.new(0, 12), true)
-            end
-        end
-
-        if self._refreshEffectRows then
-            self._refreshEffectRows()
-        end
-        if self._refreshShaderCustomTheme then
-            self._refreshShaderCustomTheme()
-        end
-    end
-
-    function Window:SetTextEffect(mode)
-        stopTextEffect()
-        Window.CurrentTextEffect = mode
-        SavedConfig.CurrentEffect = mode
-        SaveConfig()
-        -- Optimización: el efecto elegido queda guardado, pero no corre su loop
-        if PerfOpt.Flags.NoTextEffects then mode = "Off" end
-
-        if mode == "Off" then
-            for _, obj in ipairs(getAllTextObjects()) do
-                local role = obj:GetAttribute("ThemeTextRole")
-                if role and Theme[role] then
-                    obj.TextColor3 = Theme[role]
-                elseif not role then
-                    obj.TextColor3 = Theme.Text
-                end
-            end
-            return
-        end
-
-        local elapsed = 0
-        local RunService = game:GetService("RunService")
-
-        if mode == "WhiteCyan" then
-            local colorA = Color3.fromRGB(255, 255, 255)
-            local colorB = Color3.fromRGB(120, 225, 255)
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "WhitePink" then
-            local colorA = Color3.fromRGB(255, 255, 255)
-            local colorB = Color3.fromRGB(255, 130, 205)
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "Rainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local hue = (elapsed * 0.12) % 1
-                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
-            end))
-
-        elseif mode == "CatRainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local cycle = (elapsed * 5) % 1
-                
-                local color
-                if cycle < 0.5 then
-                    local t = cycle * 2
-                    color = Color3.fromRGB(
-                        255,
-                        math.floor(100 + (255 - 100) * t),
-                        math.floor(150 + (255 - 150) * t)
-                    )
-                else
-                    local t = (cycle - 0.5) * 2
-                    color = Color3.fromRGB(
-                        255,
-                        math.floor(255 - (255 - 100) * t),
-                        math.floor(255 - (255 - 150) * t)
-                    )
-                end
-                
-                applyTextColorToAll(color)
-            end))
-
-        elseif mode == "RainbowDarkWhite" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local cycle = (elapsed * 0.25) % 1
-                
-                local color = Color3.fromRGB(
+or3.fromRGB(
                     math.floor(255 * cycle),
                     math.floor(255 * cycle),
                     math.floor(255 * cycle)
@@ -1019,4 +848,170 @@ aded:Connect(function()
 
             local function paintRow(r, animate)
                 local on = checked[r.name]
-                local info = Tween
+                local info = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
+                TweenService:Create(r.box, info, {BackgroundColor3 = on and Theme.Accent or Theme.Background, BackgroundTransparency = on and 0 or 0.2}):Play()
+                r.box:SetAttribute("ThemeRole", on and "Accent" or "Background")
+                r.mark.Visible = on
+                r.stroke.Color = on and Theme.Accent or Theme.Stroke
+                r.stroke.Transparency = on and 0.25 or 0.6
+                r.stroke:SetAttribute("ThemeRole", on and "Accent" or "Stroke")
+                r.row.BackgroundTransparency = on and 0.2 or 0.5
+            end
+
+            for i, tabName in ipairs(tabNames) do
+                local Row = mk("Frame", {
+                    Parent = ListScroll,
+                    Size = UDim2.new(1, 0, 0, 46),
+                    BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.2,
+                    BorderSizePixel = 0,
+                    LayoutOrder = i,
+                    ZIndex = 503,
+                })
+                Row:SetAttribute("ThemeRole", "Secondary")
+                corner(Row, 12)
+                local rowStroke = stroke(Row, Theme.Accent, 1.2, 0.25)
+
+                local Box = mk("Frame", {
+                    Parent = Row,
+                    Size = UDim2.fromOffset(22, 22),
+                    Position = UDim2.new(0, 12, 0.5, -11),
+                    BackgroundColor3 = Theme.Accent,
+                    BorderSizePixel = 0,
+                    ZIndex = 504,
+                })
+                corner(Box, 7)
+                stroke(Box, Theme.Stroke, 1, 0.5)
+                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UDim2.new(0.5, -7, 0.5, -7), 505, "AccentText")
+
+                local Mono = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.fromOffset(28, 28),
+                    Position = UDim2.new(0, 44, 0.5, -14),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.25,
+                    Text = string.upper(string.sub(tabName, 1, 1)),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 13,
+                    ZIndex = 504,
+                })
+                Mono:SetAttribute("ThemeRole", "Background")
+                Mono:SetAttribute("ThemeTextRole", "Accent")
+                Mono:SetAttribute("IgnoreTextEffect", true)
+                corner(Mono, 9)
+
+                local RL = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(1, -170, 1, 0),
+                    Position = UDim2.new(0, 82, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = tabName,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 504,
+                })
+                RL:SetAttribute("ThemeTextRole", "Text")
+
+                local n = tabCount[tabName] or 0
+                local CountChip = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(0, 0, 0, 22),
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -10, 0.5, 0),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.82,
+                    Text = GetText(n .. (n == 1 and " slider" or " sliders"), n .. (n == 1 and " slider" or " sliders")),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 10,
+                    ZIndex = 504,
+                })
+                CountChip:SetAttribute("ThemeRole", "Accent")
+                CountChip:SetAttribute("ThemeTextRole", "Accent")
+                CountChip:SetAttribute("IgnoreTextEffect", true)
+                corner(CountChip, 999)
+                mk("UIPadding", {Parent = CountChip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
+
+                local RowBtn = mk("TextButton", {
+                    Parent = Row,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    AutoButtonColor = false,
+                    ZIndex = 506,
+                })
+                local r = {name = tabName, row = Row, box = Box, mark = Mark, stroke = rowStroke}
+                rowsUI[#rowsUI + 1] = r
+                RowBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.4)
+                    checked[tabName] = not checked[tabName]
+                    paintRow(r, true)
+                    refreshSummary()
+                end)
+                paintRow(r, false)
+            end
+
+            local function setAll(value)
+                playSound(Sounds.Click, 0.4)
+                for _, name in ipairs(tabNames) do checked[name] = value end
+                for _, r in ipairs(rowsUI) do paintRow(r, true) end
+                refreshSummary()
+            end
+            AllBtn.MouseButton1Click:Connect(function() setAll(true) end)
+            NoneBtn.MouseButton1Click:Connect(function() setAll(false) end)
+            refreshSummary()
+
+            local CodeBox = nil
+            ExportBtn.MouseButton1Click:Connect(function()
+                local sliders, total = {}, 0
+                for _, item in ipairs(buildIdMap()) do
+                    if checked[item.tab] then
+                        local ok, val = pcall(item.entry.GetValue)
+                        if ok and type(val) == "number" then
+                            sliders[item.id] = val
+                            total = total + 1
+                        end
+                    end
+                end
+
+                if total == 0 then
+                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
+                    return
+                end
+
+                local ok, encoded = pcall(function()
+                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
+                end)
+                if not ok then
+                    setStatus("err", "Error al codificar", "Encoding error")
+                    return
+                end
+
+                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
+                playSound(Sounds.Click, 0.7)
+                if copied then
+                    setStatus("ok",
+                        total .. " ajuste(s) copiados al portapapeles",
+                        total .. " setting(s) copied to clipboard")
+                    if CodeBox then CodeBox.Visible = false end
+                else
+                    setStatus("err",
+                        "Tu ejecutor no copia: copiá el código de abajo",
+                        "Your executor can't copy: copy the code below")
+                    -- Respaldo: mostrar el codigo para copiarlo a mano
+                    if not CodeBox then
+                        CodeBox = mk("TextBox", {
+                            Parent = Panel,
+                            Size = UDim2.new(1, -32, 0, 30),
+                            Position = UDim2.new(0, 16, 1, -90),
+                            BackgroundColor3 = Theme.Secondary,
+                            BackgroundTransparency = 0.2,
+                            Text = "",
+                            TextColor3 = Theme.Text,
+                            Font = Enum.Font.Code,
+                            TextSize = 10,

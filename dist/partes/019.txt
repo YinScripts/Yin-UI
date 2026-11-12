@@ -1,49 +1,4 @@
-)
-                else
-                    floatStroke = stroke(FloatingWindow, Theme.Accent, 3, 0.20)
-                    buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
-                end
-
-                local FloatLabel = mk("TextLabel", {
-                    Parent = FloatingWindow,
-                    Size = isCircleStyle and UDim2.new(1, -24, 1, -24)
-                        or hasLinkedSlider and UDim2.new(1, -24, 0, 34)
-                        or UDim2.new(1, -24, 1, 0),
-                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = displayText,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = isCircleStyle and 11 or (hasLinkedSlider and 17 or 21),
-                    TextWrapped = isCircleStyle,
-                    TextXAlignment = Enum.TextXAlignment.Center,
-                    TextYAlignment = Enum.TextYAlignment.Center,
-                    TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
-                    ZIndex = 5,
-                })
-                FloatLabel:SetAttribute("ThemeTextRole", "Text")
-                FloatLabel:SetAttribute("TextSpanish", textSpanish)
-                FloatLabel:SetAttribute("TextEnglish", textEnglish)
-
-                local pillV5 = nil
-                if usePillV5 then
-                    -- El color del texto lo maneja el diseno (blanco apagado / contraste del tema al encender)
-                    FloatLabel:SetAttribute("ThemeTextRole", nil)
-                    FloatLabel:SetAttribute("IgnoreTextEffect", true)
-                    pillV5 = FloatingPillV5.Build(FloatingWindow, FloatingGlow, FloatLabel, floatStroke, hasLinkedSlider, hasDial)
-                end
-                if hasDial then
-                    FloatingPillV5.BuildDial(FloatingWindow, FloatLabel, _dialList)
-                end
-
-                if hasLinkedSlider then
-                    local sMin   = _linkedSliderRef._min or 0
-                    local sMax   = _linkedSliderRef._max or 100
-                    local sValue = math.clamp(_linkedSliderRef._value or sMin, sMin, sMax)
-
-                    local SliderRow = mk("Frame", {
-                        Parent = FloatingWindow,
-                        Size = UDim2.new(1, -24, 0, 34),
+              Size = UDim2.new(1, -24, 0, 34),
                         Position = UDim2.new(0, 12, 0, 36),
                         BackgroundTransparency = 1,
                         ZIndex = 7,
@@ -960,4 +915,61 @@
             local knobSquishOFF = UDim2.new(0, 30, 0, 22)
 
             local function applyVisual(newState, animate)
-               
+                local t = animate and 0.18 or 0
+                local ti = TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+                local trackColor = newState and Theme.ToggleOn or Theme.AccentOff
+                local barColor   = newState and Theme.ToggleOn or Theme.AccentOff
+                TweenService:Create(Switch,     ti, {BackgroundColor3 = trackColor}):Play()
+                TweenService:Create(AccentBar,  ti, {BackgroundColor3 = barColor}):Play()
+                Switch:SetAttribute("ThemeRole",    newState and "ToggleOn" or "AccentOff")
+                AccentBar:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
+
+                local stateText  = "●  " .. (newState and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"))
+                local stateColor = newState and Theme.ToggleOn or Theme.TextDim
+                StateLabel.Text = stateText
+                TweenService:Create(StateLabel, ti, {TextColor3 = stateColor, BackgroundColor3 = newState and Theme.ToggleOn or Theme.AccentOff}):Play()
+                StateLabel:SetAttribute("ThemeTextRole", newState and "ToggleOn" or "TextDim")
+                StateLabel:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
+                TweenService:Create(HolderStroke, ti, {Color = newState and Theme.ToggleOn or Theme.Stroke, Transparency = newState and 0.35 or 0.55}):Play()
+                HolderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
+
+                if animate then
+                    local squishSize = newState and knobSquishON or knobSquishOFF
+                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                        {Size = squishSize}):Play()
+                    task.delay(0.08, function()
+                        TweenService:Create(Knob,       ti, {Size = knobNormal,
+                            Position = newState and knobON or knobOFF}):Play()
+                        TweenService:Create(KnobShadow, ti, {Position = newState and shadowON or shadowOFF}):Play()
+                    end)
+                else
+                    Knob.Size     = knobNormal
+                    Knob.Position = newState and knobON or knobOFF
+                    KnobShadow.Position = newState and shadowON or shadowOFF
+                end
+            end
+
+            Click.MouseEnter:Connect(function()
+                TweenService:Create(Holder,
+                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
+            end)
+            Click.MouseLeave:Connect(function()
+                TweenService:Create(Holder,
+                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.08 or RowKit.IDLE}):Play()
+            end)
+
+            Click.MouseButton1Click:Connect(function()
+                state = not state
+                playSound(Sounds.Click, 0.5)
+                RowKit.Press(Holder)
+                applyVisual(state, true)
+                pcall(cb, state)
+            end)
+
+            resetScrollTop(TabPage)
+
+            if not isMirror then
+                Window._RegisterGlobalOp

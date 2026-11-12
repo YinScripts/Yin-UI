@@ -1,242 +1,4 @@
-Chat.inboxOk = false end
-            end
-        end)
-    end
-    local function sendText()
-        if sending then return end
-        local text = tostring(MessageBox.Text or ""):sub(1, CONFIG.MAX_CHAR)
-        text = text:match("^%s*(.-)%s*$") or ""
-        if text == "" then return end
-        sending = true
-        MessageBox.Text = ""
-        if Chat.editing then
-            Chat.submitEdit(text)
-        else
-            sendPayload(text)
-        end
-        task.delay(0.2, function() sending = false end)
-    end
-    Chat.sendText = sendText
-    Chat.isViewing = function(room)
-        return open and Chat.view == "chat" and Chat.room == room
-    end
-    Chat.setReactCounts = function(key, reacts)
-        if type(reacts) ~= "table" then localReactions[key] = nil return end
-        local counts = {}
-        for emoji, n in pairs(reacts) do
-            local v = tonumber(n)
-            if v and v > 0 then counts[tostring(emoji)] = math.floor(v) end
-        end
-        localReactions[key] = counts
-    end
-    Chat.applyServerReacts = function(meta, reacts)
-        if not meta then return end
-        local hold = Chat.reactHold[meta.key]
-        if hold and os.clock() < hold then return end
-        Chat.setReactCounts(meta.key, reacts)
-        refreshReactionChips(meta)
-    end
-    Chat.sendReaction = function(meta, emoji)
-        if not meta then return end
-        Chat.reactHold[meta.key] = os.clock() + 6
-        local room = Chat.room
-        task.spawn(function()
-            local t0 = os.clock()
-            while not meta.fbKey and os.clock() - t0 < 6 do task.wait(0.3) end
-            if not meta.fbKey then return end
-            local path = "chat/" .. room .. "/messages/" .. meta.fbKey .. "/reacts/" .. HttpService:UrlEncode(emoji)
-            local ok = Chat.fbCall("PUT", path, {[".sv"] = {increment = 1}})
-            if not ok then
-                local okGet, current = Chat.fbCall("GET", path)
-                Chat.fbCall("PUT", path, (okGet and tonumber(current) or 0) + 1)
-            end
-            Chat.reactHold[meta.key] = os.clock() + 1.5
-        end)
-    end
-    Chat.setStatus = function(meta, state)
-        if not meta or not meta.isMe or not meta.stamp then return end
-        local holder = meta.statusHolder
-        local ticks = holder and holder:FindFirstChild("Ticks")
-        local alert = holder and holder:FindFirstChild("Alert")
-        meta.stamp.Text = tostring(meta.timeText or "") .. (state == "pending" and " ·" or "")
-        if ticks then ticks.Visible = state ~= "pending" and state ~= "failed" end
-        if alert then alert.Visible = state == "failed" end
-        if state == "failed" then meta.stamp.TextColor3 = THEME.DANGER end
-        meta.state = state or "sent"
-    end
-    Chat.OWNER_AVATAR_NAMES = { v_orc = true, n_oqv = true }
-    Chat.avatarFor = function(uid, user)
-        if string.lower(tostring(user or "")) == "mousoza" then return UI.ICON.mousozaAvatar end
-        if Chat.OWNER_AVATAR_NAMES[string.lower(tostring(user or ""))] then return UI.ICON.ownerAvatar end
-        return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(tonumber(uid) or 0)
-    end
-    Chat.scriptTag = function(script)
-        script = tostring(script or "")
-        if script == "" or string.lower(script) == "yinyang" or string.lower(script) == "yin yang" then return nil end
-        return "[" .. script .. "]"
-    end
-    UI.relTime = function(ts)
-        ts = tonumber(ts)
-        if not ts then return "" end
-        local d = math.max(0, os.time() - math.floor(ts))
-        if d < 60 then return "ahora" end
-        if d < 3600 then return math.floor(d / 60) .. " min" end
-        if d < 86400 then return math.floor(d / 3600) .. " h" end
-        if d < 604800 then return math.floor(d / 86400) .. " d" end
-        return math.floor(d / 604800) .. " sem"
-    end
-    UI.sepText = function(ts)
-        local t = os.date("*t", ts)
-        local now = os.date("*t")
-        local h = t.hour % 12
-        if h == 0 then h = 12 end
-        local hour = string.format("%d:%02d %s", h, t.min, t.hour < 12 and "A. M." or "P. M.")
-        if t.year == now.year and t.yday == now.yday then return "Hoy " .. hour end
-        if t.year == now.year and t.yday == now.yday - 1 then return "Ayer " .. hour end
-        return UI.fullDate(ts)
-    end
-    Chat.richName = function(name, info)
-        local user = tostring(name or "Unknown")
-        local dn = tostring(info.dn or "")
-        local out
-        if dn ~= "" and dn ~= user then
-            out = Chat.esc(dn) .. ' <font transparency="0.45">@' .. Chat.esc(user) .. "</font>"
-        else
-            out = Chat.esc(user)
-        end
-        if type(info.ownerTag) == "string" and info.ownerTag ~= "" then
-            out ..= '  <font color="#FFD700">' .. Chat.esc(info.ownerTag) .. "</font>"
-        end
-        return out
-    end
-    Chat.mentionsMe = function(text)
-        if not Chat.settings.MentionsEnabled then return false end
-        local t = string.lower(tostring(text or ""))
-        local function hasFull(n)
-            if not n or n == "" or n == "@" then return false end
-            local pos = 1
-            while true do
-                local s, e = string.find(t, n, pos, true)
-                if not s then return false end
-                local before = s == 1 or string.sub(t, s - 1, s - 1):match("[%s%p]") ~= nil
-                local after = e == #t or string.sub(t, e + 1, e + 1):match("[%s%p]") ~= nil
-                if before and after then return true end
-                pos = e + 1
-            end
-        end
-        return hasFull("@" .. string.lower(LocalPlayer.Name)) or hasFull("@" .. string.lower(LocalPlayer.DisplayName))
-    end
-    Chat.isReplyToMe = function(reply)
-        if type(reply) ~= "table" then return false end
-        if tonumber(reply.uid) == LocalPlayer.UserId then return true end
-        local me1, me2 = string.lower(LocalPlayer.Name), string.lower(LocalPlayer.DisplayName)
-        local ru = string.lower(tostring(reply.user or ""))
-        local rd = string.lower(tostring(reply.dn or ""))
-        if ru ~= "" and (ru == me1 or ru == me2) then return true end
-        if rd ~= "" and (rd == me1 or rd == me2) then return true end
-        return false
-    end
-    Chat.previewText = function(m)
-        if type(m) ~= "table" then return "" end
-        if m.t == "invite" then return "Invitación al servidor" end
-        local text = tostring(m.text or "")
-        if text:match("^%[%[STICKER:") then return "Sticker" end
-        text = Chat.rainbowBody(text) or text
-        local _, body = Chat.mdLine(text)
-        text = Chat.mdStrip(body)
-        text = text:gsub("%s+", " ")
-        return Chat.clip(text, 60)
-    end
-    Chat.setPreview = function(room, m, onlyIfNewer)
-        if not room or type(m) ~= "table" then return end
-        local tsSec = tonumber(m.ts)
-        tsSec = tsSec and (tsSec > 1e11 and tsSec / 1000 or tsSec) or os.time()
-        local prev = Chat.previews[room]
-        if onlyIfNewer and prev and (prev.ts or 0) >= tsSec then return end
-        local kind = "text"
-        if m.t == "invite" then kind = "invite" elseif tostring(m.text or ""):match("^%[%[STICKER:") then kind = "sticker" end
-        Chat.previews[room] = {
-            name = tostring(m.dn or m.user or "?"), uid = tonumber(m.uid),
-            text = Chat.previewText(m), ts = tsSec, kind = kind,
-        }
-    end
-    Chat.removeRow = function(meta)
-        if not meta then return end
-        if meta.row and meta.row.Parent then meta.row:Destroy() end
-        if messageRows[meta.key] == meta then messageRows[meta.key] = nil end
-        if meta.fbKey and Chat.byFbKey[meta.fbKey] == meta then Chat.byFbKey[meta.fbKey] = nil end
-        if actionTarget == meta then hideMessageActions() end
-    end
-    Chat.ownerDelete = function(meta)
-        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
-        local room = Chat.room
-        task.spawn(function()
-            local ok, _, code = Chat.fbCall("DELETE", "chat/" .. room .. "/messages/" .. meta.fbKey)
-            if ok then
-                Chat.removeRow(meta)
-            else
-                Chat.flash("Firebase rechazó el borrado (código " .. tostring(code) .. ")")
-            end
-        end)
-    end
-    Chat.pinMessage = function(meta)
-        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
-        local room = Chat.room
-        local text = tostring(meta.text or "")
-        if text:match("^%[%[STICKER:") then text = "[Sticker]" end
-        local pin = {key = meta.fbKey, uid = meta.uid, user = meta.name, dn = meta.dn or meta.name, text = Chat.clip(text, 120)}
-        task.spawn(function()
-            local ok, _, code = Chat.fbCall("PUT", "chat/" .. room .. "/pin", pin)
-            if ok then
-                if room == Chat.room then
-                    Chat.pin = pin
-                    Chat.refreshPin()
-                end
-            else
-                Chat.flash("No se pudo fijar (código " .. tostring(code) .. ")")
-            end
-        end)
-    end
-    Chat.applySearch = function(meta)
-        if not meta or not meta.row then return end
-        local q = Chat.searchQuery
-        meta.row.Visible = q == "" or string.find(meta.searchText or "", q, 1, true) ~= nil
-    end
-    Chat.applySearchAll = function()
-        for _, meta in pairs(messageRows) do Chat.applySearch(meta) end
-    end
-    Chat.maskName = function(name)
-        name = tostring(name or "?"):gsub("[%c%z]", "")
-        local first = name:sub(1, 2)
-        if first == "" then first = "??" end
-        return first .. string.rep("*", math.clamp(#name - 2, 3, 8))
-    end
-    Chat.rememberDM = function(uid, name, user, bump)
-        uid = tonumber(uid)
-        if not uid or uid == LocalPlayer.UserId then return end
-        local list = Chat.settings.RecentDMs
-        local found
-        for i, e in ipairs(list) do
-            if type(e) == "table" and tonumber(e.uid) == uid then found = i break end
-        end
-        local entry = found and list[found] or {uid = uid}
-        local changed = not found
-        if name and tostring(name) ~= "" and entry.name ~= tostring(name) then entry.name = tostring(name) changed = true end
-        if user and tostring(user) ~= "" and entry.user ~= tostring(user) then entry.user = tostring(user) changed = true end
-        entry.name = entry.name or entry.user or tostring(uid)
-        if bump or not found then
-            if found then table.remove(list, found) end
-            table.insert(list, 1, entry)
-            entry.ts = os.time()
-            while #list > 12 do table.remove(list) end
-            changed = true
-        end
-        if changed then Chat.saveSettings() end
-    end
-    do
-        UI.BackButton = UI.iconButton(Header, UI.ICON.back, 34, 22, {Position = UDim2.fromOffset(8, 12), Visible = false, ZIndex = 3})
-        UI.BackCount = mk("TextLabel", {
-            Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0, 0),
+tor2.new(0, 0),
             Position = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
             TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 11, Visible = false, ZIndex = 5,
         }, UI.BackButton)
@@ -853,4 +615,234 @@ Chat.inboxOk = false end
             BackgroundTransparency = 1, Text = sub, TextColor3 = unread > 0 and THEME.TXT or THEME.DIM,
             Font = unread > 0 and Enum.Font.GothamBold or Enum.Font.GothamMedium, TextSize = 16,
             TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 2,
-        }, b
+        }, btn)
+        if e.muted then
+            UI.icon(btn, UI.ICON.bellOff, 16, THEME.DIM, {AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, unread > 0 and -48 or -16, 0.5, 0), ZIndex = 2})
+        end
+        if unread > 0 then
+            local b = mk("TextLabel", {
+                AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+                Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = UI.C.blue, BorderSizePixel = 0,
+                Text = unread > 99 and "99+" or tostring(unread), TextColor3 = Color3.new(1, 1, 1),
+                Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 3,
+            }, btn)
+            corner(b, 11)
+            mk("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)}, b)
+            mk("UISizeConstraint", {MinSize = Vector2.new(22, 22)}, b)
+        elseif e.action then
+            local a = mk("TextLabel", {
+                AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -14, 0.5, 0),
+                Size = UDim2.fromOffset(0, 30), AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, Text = e.action,
+                TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 13, ZIndex = 3,
+            }, btn)
+            corner(a, 10)
+            mk("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)}, a)
+        end
+        if e.onDelete then
+            local opt = UI.iconButton(btn, UI.ICON.more, 30, 18, {
+                AnchorPoint = Vector2.new(1, 0.5),
+                Position = UDim2.new(1, unread > 0 and -50 or -10, 0.5, 0), ZIndex = 4,
+            })
+            opt.MouseButton1Click:Connect(e.onDelete)
+            local holdToken = 0
+            btn.InputBegan:Connect(function(input)
+                if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                holdToken += 1
+                local my = holdToken
+                task.delay(0.7, function()
+                    if holdToken == my and btn.Parent then
+                        btn:SetAttribute("SkipClick", true)
+                        e.onDelete()
+                    end
+                end)
+            end)
+            btn.InputEnded:Connect(function() holdToken += 1 end)
+        end
+        if e.onClick then
+            btn.MouseButton1Click:Connect(function()
+                if btn:GetAttribute("SkipClick") then btn:SetAttribute("SkipClick", nil) return end
+                e.onClick()
+            end)
+        end
+    end
+    Chat.previewLine = function(p, isGroup)
+        if not p then return nil end
+        local mine = tonumber(p.uid) == LocalPlayer.UserId
+        if p.kind == "sticker" then return mine and "Enviaste un sticker" or ((isGroup and (p.name .. " envió") or "Envió") .. " un sticker") end
+        if p.kind == "invite" then return mine and "Enviaste una invitación" or ((isGroup and (p.name .. " envió") or "Envió") .. " una invitación") end
+        if mine then return "Tú: " .. p.text end
+        return isGroup and (p.name .. ": " .. p.text) or p.text
+    end
+    Chat.refreshHome = function(force)
+        if Chat.view ~= "home" then return end
+        local filter = string.lower(Chat.homeFilter or "")
+        local items, sig = {}, {}
+        local function matches(e)
+            if filter == "" or e.section then return true end
+            return string.find(string.lower(tostring(e.title) .. " " .. tostring(e.search or "")), filter, 1, true) ~= nil
+        end
+        local function add(e)
+            if not matches(e) then return end
+            items[#items + 1] = e
+            sig[#sig + 1] = table.concat({tostring(e.section), tostring(e.title), tostring(e.sub), tostring(e.time), tostring(e.unread), tostring(e.online), tostring(e.muted), tostring(e.extra)}, "|")
+        end
+        local muted = Chat.settings.MutedRooms
+        local g = FIREBASE_ROOM
+        local gp = Chat.previews[g]
+        add({
+            pinned = true, title = "Chat Global", search = "global grupo yin yang",
+            sub = Chat.previewLine(gp, true) or "Comunidad Yin Yang · todos los scripts",
+            extra = gp and UI.relTime(gp.ts) or "",
+            unread = Chat.unread[g] or 0, image = UI.ICON.group, muted = muted[g] == true,
+            onClick = function() Chat.openChat("global") end,
+        })
+        local dms = {}
+        for _, e in ipairs(Chat.settings.RecentDMs) do
+            local uid = type(e) == "table" and tonumber(e.uid)
+            if uid then
+                local room = Chat.dmRoom(uid)
+                local p = Chat.previews[room]
+                dms[#dms + 1] = {e = e, uid = uid, room = room, p = p, sortTs = (p and p.ts) or tonumber(e.ts) or 0}
+            end
+        end
+        table.sort(dms, function(a, b) return a.sortTs > b.sortTs end)
+        local shown = {}
+        local dmItems = {}
+        for _, d in ipairs(dms) do
+            shown[d.uid] = true
+            dmItems[#dmItems + 1] = {
+                title = tostring(d.e.name or d.e.user or d.uid), search = tostring(d.e.user or ""),
+                sub = Chat.previewLine(d.p, false) or (d.e.user and ("@" .. d.e.user) or "Toca para chatear"),
+                time = d.p and UI.relTime(d.p.ts) or nil, unread = Chat.unread[d.room] or 0,
+                image = Chat.avatarFor(d.uid, d.e.user), muted = muted[d.room] == true,
+                online = Chat.onlineMap[tostring(d.uid)] ~= nil,
+                onClick = function() Chat.openChat("private", d.uid, d.e.name, d.e.user) end,
+                onDelete = function() Chat.askDeleteChat(d.uid, tostring(d.e.name or d.e.user or d.uid)) end,
+            }
+        end
+        if #dmItems > 0 then add({section = "Mensajes"}) end
+        for _, e in ipairs(dmItems) do add(e) end
+        local others = {}
+        for _, plr in ipairs(Players:GetPlayers()) do
+            if plr ~= LocalPlayer and not shown[plr.UserId] then others[#others + 1] = plr end
+        end
+        if #others > 0 then add({section = "En este servidor"}) end
+        for _, plr in ipairs(others) do
+            local online = Chat.onlineMap[tostring(plr.UserId)] ~= nil
+            add({
+                title = plr.DisplayName, search = plr.Name,
+                sub = "@" .. plr.Name .. (online and " · usa el chat" or ""),
+                image = Chat.avatarFor(plr.UserId, plr.Name), online = online, action = "Escribir",
+                onClick = function() Chat.openChat("private", plr.UserId, plr.DisplayName, plr.Name) end,
+            })
+        end
+        if filter ~= "" then
+            add({
+                title = "Escribir a @" .. (Chat.homeFilter or ""), search = filter,
+                sub = "Abrir un chat privado nuevo", image = UI.ICON.pencil, action = "Abrir",
+                onClick = function() Chat.startChatByName() end,
+            })
+        end
+        local clean = {}
+        for i, e in ipairs(items) do
+            if e.section then
+                local nxt = items[i + 1]
+                if nxt and not nxt.section and not nxt.pinned then clean[#clean + 1] = e end
+            else
+                clean[#clean + 1] = e
+            end
+        end
+        local s = table.concat(sig, "\n")
+        if not force and s == Chat.homeSig then return end
+        Chat.homeSig = s
+        for _, c in ipairs(UI.HomeList:GetChildren()) do
+            if c:IsA("GuiObject") then c:Destroy() end
+        end
+        for i, e in ipairs(clean) do
+            if e.section then Chat.homeSection(i, e.section) else Chat.homeRow(i, e) end
+        end
+    end
+    do
+        UI.Confirm = mk("TextButton", {
+            Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45,
+            BorderSizePixel = 0, Text = "", AutoButtonColor = false, Visible = false, ZIndex = 160,
+        }, Root)
+        local box = mk("Frame", {
+            AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5),
+            Size = UDim2.fromOffset(330, 0), AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = THEME.PANEL2, BorderSizePixel = 0, ZIndex = 161,
+        }, UI.Confirm)
+        corner(box, 20)
+        mk("UIListLayout", {Padding = UDim.new(0, 0), SortOrder = Enum.SortOrder.LayoutOrder}, box)
+        UI.ConfirmTitle = mk("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+            Text = "", TextColor3 = THEME.TXT, Font = Enum.Font.GothamBold, TextSize = 18, TextWrapped = true,
+            LayoutOrder = 1, ZIndex = 162,
+        }, box)
+        mk("UIPadding", {PaddingTop = UDim.new(0, 22), PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18)}, UI.ConfirmTitle)
+        UI.ConfirmBody = mk("TextLabel", {
+            Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1,
+            Text = "", TextColor3 = THEME.DIM, Font = Enum.Font.GothamMedium, TextSize = 14, TextWrapped = true,
+            LayoutOrder = 2, ZIndex = 162,
+        }, box)
+        mk("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 18), PaddingLeft = UDim.new(0, 18), PaddingRight = UDim.new(0, 18)}, UI.ConfirmBody)
+        local function sheetButton(text, color, order)
+            mk("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = UI.C.line, BorderSizePixel = 0, LayoutOrder = order - 1, ZIndex = 162}, box)
+            return mk("TextButton", {
+                Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, Text = text, TextColor3 = color,
+                Font = Enum.Font.GothamBold, TextSize = 16, LayoutOrder = order, ZIndex = 162,
+            }, box)
+        end
+        UI.ConfirmOk = sheetButton("Eliminar", THEME.DANGER, 4)
+        UI.ConfirmCancel = sheetButton("Cancelar", THEME.TXT, 6)
+        UI.ConfirmCancel.MouseButton1Click:Connect(function() UI.Confirm.Visible = false end)
+        UI.Confirm.MouseButton1Click:Connect(function() UI.Confirm.Visible = false end)
+        UI.ConfirmOk.MouseButton1Click:Connect(function()
+            UI.Confirm.Visible = false
+            local fn = Chat.confirmAction
+            Chat.confirmAction = nil
+            if fn then fn() end
+        end)
+    end
+    Chat.askDeleteChat = function(uid, name)
+        uid = tonumber(uid)
+        if not uid then return end
+        UI.ConfirmTitle.Text = "¿Eliminar el chat con " .. tostring(name) .. "?"
+        UI.ConfirmBody.Text = "Se quita de tu lista de chats. Si te vuelve a escribir, el chat aparecerá de nuevo."
+        Chat.confirmAction = function() Chat.deleteChat(uid) end
+        UI.Confirm.Visible = true
+    end
+    Chat.deleteChat = function(uid)
+        uid = tonumber(uid)
+        if not uid then return end
+        local room = Chat.dmRoom(uid)
+        local list = Chat.settings.RecentDMs
+        for i = #list, 1, -1 do
+            if type(list[i]) == "table" and tonumber(list[i].uid) == uid then table.remove(list, i) end
+        end
+        local prev = Chat.previews[room]
+        local lastMs = math.max(tonumber(Chat.settings.DMLastSeen[room]) or 0, prev and math.floor((prev.ts or 0) * 1000) or 0)
+        Chat.settings.DMLastSeen[room] = lastMs
+        Chat.settings.HiddenDMs[tostring(uid)] = lastMs
+        Chat.previews[room] = nil
+        Chat.unread[room] = nil
+        Chat.saveSettings()
+        if Chat.view == "chat" and Chat.room == room then
+            Chat.goHome()
+        else
+            Chat.updateBadge()
+            Chat.refreshHome(true)
+        end
+        Chat.flash("Chat eliminado")
+    end
+    Chat.openChat = function(kind, uid, name, user)
+        hideMessageActions()
+        cancelReply()
+        StickerPanel.Visible = false
+        reactionPickerTargetKey = nil
+        Chat.hideOverlays()
+        if kind == "private" then
+            uid = tonumber(uid)
+            if not uid or uid == LocalPlayer.User

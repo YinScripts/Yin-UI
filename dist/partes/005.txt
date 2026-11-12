@@ -1,81 +1,4 @@
-unction FS.ApplyAll()
-        local list = {}
-        for _, live in pairs(FS.Live) do list[#list + 1] = live end
-        for _, live in ipairs(list) do FS.Reapply(live) end
-    end
-
-    function FS.Summary()
-        local n = 0
-        for _ in pairs(FS.Data.Overrides) do n += 1 end
-        local custom = next(FS.Data.Global) ~= nil
-        return custom, n
-    end
-
-    FS.Load()
-end
-
--- ---------- Estudio de Toggles Flotantes: vista previa, editor y entrada en Ajustes ----------
-do
-    local FS = FloatingPillV5.Studio
-    local WHITE = Color3.new(1, 1, 1)
-
-    -- Sube el ZIndex de todo lo que cuelga de root (los flotantes usan ZIndex 3-7 fijos; el editor vive en ZIndex 300+)
-    function FS.Lift(root, base)
-        local function fix(o)
-            if o and o.Parent and o:IsA("GuiObject") and o.ZIndex < base then o.ZIndex = o.ZIndex + base end
-        end
-        for _, d in ipairs(root:GetDescendants()) do fix(d) end
-        local conn = root.DescendantAdded:Connect(function(d) task.defer(fix, d) end)
-        root.Destroying:Connect(function() conn:Disconnect() end)
-    end
-
-    -- Réplica fiel de cada flotante (mismo código de construcción) para la vista previa
-    -- kind: "Pill5" | "Circle" | "Pill"   ·   getDesign: diseño que está editando el estudio
-    function FS.MakeSample(slot, kind, text, getDesign, zBase)
-        local S = { State = false, Kind = kind }
-        local holder = mk("Frame", { Parent = slot, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 3 })
-        local glow = mk("Frame", {
-            Parent = holder, Size = UDim2.fromOffset(216, 48), Position = UDim2.new(0.5, -108, 0.5, -24),
-            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 3,
-        })
-        corner(glow, 999)
-        local win, lbl, pill
-        if kind == "Pill5" then
-            local w = FloatingPillV5.FitWidth(text, 21)
-            win = mk("Frame", {
-                Parent = holder, Size = UDim2.fromOffset(w, 30), Position = UDim2.new(0.5, -w / 2, 0.5, -15),
-                BackgroundColor3 = FloatingPillV5.OffColor(), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 4,
-            })
-            win:SetAttribute("YYPillV5", true)
-            corner(win, 999)
-            local st = mk("UIStroke", { Parent = win, Color = WHITE, Thickness = 2, Transparency = 0 })
-            lbl = mk("TextLabel", {
-                Parent = win, Size = UDim2.new(1, -24, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1,
-                Text = text, TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 21,
-                TextXAlignment = Enum.TextXAlignment.Center, TextYAlignment = Enum.TextYAlignment.Center,
-                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 5,
-            })
-            lbl:SetAttribute("IgnoreTextEffect", true)
-            pill = FloatingPillV5.Build(win, glow, lbl, st, false)
-        else
-            local isC = kind == "Circle"
-            local w, h = isC and 64 or 200, isC and 64 or 36
-            win = mk("Frame", {
-                Parent = holder, Size = UDim2.fromOffset(w, h), Position = UDim2.new(0.5, -w / 2, 0.5, -h / 2),
-                BackgroundColor3 = isC and Color3.fromRGB(20, 20, 26) or Theme.Secondary,
-                BackgroundTransparency = isC and 0.55 or 0.30, BorderSizePixel = 0, ZIndex = 4,
-            })
-            corner(win, 999)
-            if not isC then
-                mk("UIGradient", {
-                    Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 185, 200)),
-                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
-                        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 185, 200)),
-                    }),
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 0.45),
-                        NumberSequenceKeypoint.new(0.5, 0.15),
+5, 0.15),
                         NumberSequenceKeypoint.new(1, 0.45),
                     }),
                     Rotation = 90,
@@ -757,4 +680,80 @@ do
                 PK.S = math.clamp((pos.X - a.X) / s.X, 0, 1)
                 PK.V = math.clamp(1 - (pos.Y - a.Y) / s.Y, 0, 1)
             elseif PK.drag == "H" then
-                local a, s = PK.Hue.AbsolutePosition, P
+                local a, s = PK.Hue.AbsolutePosition, PK.Hue.AbsoluteSize
+                if s.Y <= 0 then return end
+                PK.H = math.clamp((pos.Y - a.Y) / s.Y, 0, 0.999)
+            end
+            PK.refresh()
+        end
+        PK.Area.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "SV" K.pickAt(input.Position) end end)
+        PK.Hue.InputBegan:Connect(function(input) if K.isPress(input) then PK.drag = "H" K.pickAt(input.Position) end end)
+        PK.Hex.FocusLost:Connect(function()
+            local c = fromHex(PK.Hex.Text)
+            if c then PK.set(c) else PK.refresh() end
+        end)
+        local function close(ok)
+            ov.Visible = false
+            PK.drag = nil
+            if ok and PK.onApply then PK.onApply(PK.color()) elseif not ok and PK.onCancel then PK.onCancel() end
+            PK.onApply, PK.onCancel, PK.onLive = nil, nil, nil
+        end
+        K.closePicker = close
+        cancel.MouseButton1Click:Connect(function() close(false) end)
+        apply.MouseButton1Click:Connect(function() close(true) end)
+        -- onLive pinta en vivo; Cancelar vuelve al valor de antes
+        function K.openPicker(es, en, current, onLive, onApply, onCancel)
+            K.L(PK.Title, es, en)
+            PK.onLive, PK.onApply, PK.onCancel = nil, onApply, onCancel
+            ov.Visible = true
+            PK.set(current or WHITE)
+            PK.onLive = onLive
+        end
+    end
+
+    -- ---------- hoja "Elegí un toggle" (excepciones) ----------
+    function FS.UIScopeSheet(K)
+        local Z = K.Z
+        local ov = mk("Frame", { Parent = K.Panel, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Visible = false, Active = true, ZIndex = Z + 50 })
+        corner(ov, 16)
+        local sh = mk("Frame", { Parent = ov, Size = UDim2.new(0.92, 0, 0.86, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 51 })
+        sh:SetAttribute("ThemeRole", "Background")
+        corner(sh, 14)
+        stroke(sh, Theme.Stroke, 1.4, 0.2)
+        local zs = Z + 49 -- los textos del kit van en Z+3/Z+4: así quedan por encima de la hoja (Z+52/53)
+        K.label(sh, "Elegí un toggle", "Pick a toggle", 14, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -60, 0, 20), Position = UDim2.fromOffset(14, 10), ZIndex = zs + 3 })
+        K.label(sh, "Su diseño propio pisa al global solo en ese toggle", "Its own design overrides the global one only on that toggle", 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -60, 0, 12), Position = UDim2.fromOffset(14, 30), ZIndex = zs + 3 })
+        local x = K.button(sh, "×", "×", "Secondary", { Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -10, 0, 10), TextSize = 18, ZIndex = zs + 4 })
+        local search = K.box(sh, { Size = UDim2.new(1, -28, 0, 30), Position = UDim2.fromOffset(14, 48), Font = Enum.Font.GothamBold, ZIndex = zs + 4 })
+        K.placeholder(search, "Buscar toggle...", "Search toggle...")
+        local listF = mk("ScrollingFrame", {
+            Parent = sh, Size = UDim2.new(1, -28, 1, -92), Position = UDim2.fromOffset(14, 84), BackgroundTransparency = 1,
+            BorderSizePixel = 0, ScrollBarThickness = 3, AutomaticCanvasSize = Enum.AutomaticSize.Y, CanvasSize = UDim2.new(), ZIndex = zs + 3,
+        })
+        K.list(listF, 6)
+        local function rebuild()
+            for _, ch in ipairs(listF:GetChildren()) do
+                if ch:IsA("GuiObject") then ch:Destroy() end
+            end
+            local q = string.lower(search.Text or "")
+            local rows = {}
+            for _, e in ipairs(FS.Registry) do rows[#rows + 1] = e end
+            table.sort(rows, function(a, b)
+                if a.Tab ~= b.Tab then return a.Tab < b.Tab end
+                return a.ES < b.ES
+            end)
+            local shown = 0
+            for i, e in ipairs(rows) do
+                local name = GetText(e.ES, e.EN)
+                if q == "" or string.find(string.lower(name), q, 1, true) or string.find(string.lower(e.Tab), q, 1, true) then
+                    shown += 1
+                    local has = K.ED.O[e.Id] ~= nil
+                    local r = mk("TextButton", {
+                        Parent = listF, Size = UDim2.new(1, -4, 0, 40), BackgroundColor3 = K.ED.scope == e.Id and Theme.Accent or Theme.Secondary,
+                        BackgroundTransparency = K.ED.scope == e.Id and 0.55 or 0.3, BorderSizePixel = 0, Text = "", LayoutOrder = i, ZIndex = zs + 4,
+                    })
+                    r:SetAttribute("ThemeRole", K.ED.scope == e.Id and "Accent" or "Secondary")
+                    corner(r, 10)
+                    local t = mk("TextLabel", {
+                        Parent = r, Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(12, 5), BackgroundTransparency = 1,
+                        Text = name, TextColor3 = Theme.Text, TextSize = 12, Font = 

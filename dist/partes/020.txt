@@ -1,61 +1,4 @@
- local t = animate and 0.18 or 0
-                local ti = TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-                local trackColor = newState and Theme.ToggleOn or Theme.AccentOff
-                local barColor   = newState and Theme.ToggleOn or Theme.AccentOff
-                TweenService:Create(Switch,     ti, {BackgroundColor3 = trackColor}):Play()
-                TweenService:Create(AccentBar,  ti, {BackgroundColor3 = barColor}):Play()
-                Switch:SetAttribute("ThemeRole",    newState and "ToggleOn" or "AccentOff")
-                AccentBar:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
-
-                local stateText  = "●  " .. (newState and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"))
-                local stateColor = newState and Theme.ToggleOn or Theme.TextDim
-                StateLabel.Text = stateText
-                TweenService:Create(StateLabel, ti, {TextColor3 = stateColor, BackgroundColor3 = newState and Theme.ToggleOn or Theme.AccentOff}):Play()
-                StateLabel:SetAttribute("ThemeTextRole", newState and "ToggleOn" or "TextDim")
-                StateLabel:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
-                TweenService:Create(HolderStroke, ti, {Color = newState and Theme.ToggleOn or Theme.Stroke, Transparency = newState and 0.35 or 0.55}):Play()
-                HolderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
-
-                if animate then
-                    local squishSize = newState and knobSquishON or knobSquishOFF
-                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
-                        {Size = squishSize}):Play()
-                    task.delay(0.08, function()
-                        TweenService:Create(Knob,       ti, {Size = knobNormal,
-                            Position = newState and knobON or knobOFF}):Play()
-                        TweenService:Create(KnobShadow, ti, {Position = newState and shadowON or shadowOFF}):Play()
-                    end)
-                else
-                    Knob.Size     = knobNormal
-                    Knob.Position = newState and knobON or knobOFF
-                    KnobShadow.Position = newState and shadowON or shadowOFF
-                end
-            end
-
-            Click.MouseEnter:Connect(function()
-                TweenService:Create(Holder,
-                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.04 or RowKit.HOVER}):Play()
-            end)
-            Click.MouseLeave:Connect(function()
-                TweenService:Create(Holder,
-                    TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {BackgroundTransparency = Holder:GetAttribute("OptionCardV5") and 0.08 or RowKit.IDLE}):Play()
-            end)
-
-            Click.MouseButton1Click:Connect(function()
-                state = not state
-                playSound(Sounds.Click, 0.5)
-                RowKit.Press(Holder)
-                applyVisual(state, true)
-                pcall(cb, state)
-            end)
-
-            resetScrollTop(TabPage)
-
-            if not isMirror then
-                Window._RegisterGlobalOption(self, {
+tion(self, {
                     Id = nameSpanish .. "::" .. textSpanish,
                     NameSpanish = textSpanish,
                     NameEnglish = textEnglish,
@@ -990,4 +933,92 @@
                     Text = "›",
                     TextColor3 = Theme.Text,
                     Font = Enum.Font.GothamBold,
-                    TextS
+                    TextSize = 30,
+                    AutoButtonColor = false,
+                    ZIndex = 60
+                })
+                corner(NextBtn, 19)
+                stroke(NextBtn, Theme.Stroke, 1, 0.5)
+
+                local DotHolder = mk("Frame", {
+                    Parent = SliderSection,
+                    Size = UDim2.new(1, -80, 0, 16),
+                    Position = UDim2.new(0, 40, 0, 114),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 60
+                })
+                mk("UIListLayout", {
+                    Parent = DotHolder,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    Padding = UDim.new(0, 6),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+
+                Carousel = {
+                    Section = SliderSection,
+                    Viewport = Viewport,
+                    PrevBtn = PrevBtn,
+                    NextBtn = NextBtn,
+                    DotHolder = DotHolder,
+                    Cards = {},
+                    Dots = {},
+                    ActiveIndex = 1,
+                    Reflow = nil,
+                    GoTo = nil,
+                }
+                Tab._LastSliderCarousel = Carousel
+
+                local function refreshDots()
+                    local count = #Carousel.Cards
+                    for i, dot in ipairs(Carousel.Dots) do
+                        dot.BackgroundColor3 = (i == Carousel.ActiveIndex) and Theme.Text or Theme.AccentOff
+                        dot.BackgroundTransparency = (i == Carousel.ActiveIndex) and 0 or 0.35
+                        dot.Size = (i == Carousel.ActiveIndex)
+                            and UDim2.new(0, 20, 0, 7)
+                            or UDim2.new(0, 7, 0, 7)
+                    end
+                    Carousel.PrevBtn.Visible = count > 1
+                    Carousel.NextBtn.Visible = count > 1
+                    Carousel.DotHolder.Visible = count > 1
+                end
+
+                local function reflow()
+                    local count = #Carousel.Cards
+                    if count == 0 then
+                        refreshDots()
+                        return
+                    end
+
+                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
+                    local cardHeight = 96
+                    local step = cardWidth * 0.78
+                    local centerX = viewportWidth * 0.5 - cardWidth * 0.5
+
+                    for i, cardData in ipairs(Carousel.Cards) do
+                        local card = cardData.Holder
+                        if card and card.Parent then
+                            local offset = (i - Carousel.ActiveIndex) * step
+                            local distance = math.abs(i - Carousel.ActiveIndex)
+                            local targetX = centerX + offset
+                            local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
+                            local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
+                            local targetY = 4 + (cardHeight - targetHeight) * 0.5
+                            local isActive = distance == 0
+
+                            TweenService:Create(
+                                card,
+                                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                                {
+                                    Position = UDim2.new(0, targetX, 0, targetY),
+                                    Size = UDim2.new(0, targetWidth, 0, targetHeight),
+                                    BackgroundTransparency = isActive and 0.12 or 0.72
+                                }
+                            ):Play()
+                            card.ZIndex = isActive and 50 or 20 - math.min(distance, 4)
+                            for _, descendant in ipairs(card:GetDescendants()) do
+                                if descendant:IsA("GuiObject") then
+                                    descendant.ZIndex = isAc

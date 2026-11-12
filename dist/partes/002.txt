@@ -1,34 +1,4 @@
-245, 245, 245),
-    TextDim = Color3.fromRGB(170, 170, 170),
-    Stroke = Color3.fromRGB(205, 205, 205),
-    Accent = Color3.fromRGB(255, 255, 255),
-    ToggleOn = Color3.fromRGB(230, 230, 230),
-}
-
-local _YL = { t = LoadThemes() }
-
-ThemePalettes["V2"] = ThemePalettes["V2"] or {
-    Background = Color3.fromRGB(10, 10, 14),
-    Secondary = Color3.fromRGB(22, 22, 28),
-    AccentOff = Color3.fromRGB(42, 42, 50),
-    Text = Color3.fromRGB(235, 235, 240),
-    TextDim = Color3.fromRGB(150, 150, 160),
-    Stroke = Color3.fromRGB(180, 40, 50),
-    Accent = Color3.fromRGB(200, 50, 60),
-    ToggleOn = Color3.fromRGB(220, 70, 80),
-}
-
-local CUSTOM_THEMES_FILE = "yin_yang_custom_themes.json"
-local CustomThemes = {}
-local CustomThemeOrder = {}
-local OfficialThemeNames = {}
-
-ThemePalettes["V11"] = ThemePalettes["V11"] or {
-    Background = Color3.fromRGB(20, 10, 12),
-    Secondary = Color3.fromRGB(38, 20, 24),
-    AccentOff = Color3.fromRGB(62, 36, 40),
-    Text = Color3.fromRGB(245, 225, 225),
-    TextDim = Color3.fromRGB(200, 160, 165),
+xtDim = Color3.fromRGB(200, 160, 165),
     Stroke = Color3.fromRGB(210, 160, 170),
     Accent = Color3.fromRGB(220, 150, 160),
     ToggleOn = Color3.fromRGB(230, 170, 180),
@@ -1215,4 +1185,59 @@ function RowKit.Chip(label, role)
     label.TextSize = 10
     label.Font = Enum.Font.GothamBold
     local c = Instance.new("UICorner")
-    c.CornerRadius 
+    c.CornerRadius = UDim.new(1, 0)
+    c.Parent = label
+    local pad = Instance.new("UIPadding")
+    pad.PaddingLeft = UDim.new(0, 8)
+    pad.PaddingRight = UDim.new(0, 8)
+    pad.Parent = label
+end
+
+function RowKit.Control(btn, accent)
+    pcall(function() btn.AutoButtonColor = false end)
+    local c = btn:FindFirstChildOfClass("UICorner")
+    if c then c.CornerRadius = UDim.new(0, 9) end
+    if accent then
+        btn.BackgroundColor3 = Theme.Accent
+        btn:SetAttribute("ThemeRole", "Accent")
+        if btn:IsA("TextButton") then
+            btn.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
+            btn:SetAttribute("ThemeTextRole", "AccentText")
+            btn.Font = Enum.Font.GothamBlack
+            btn.TextSize = 15
+        end
+    else
+        btn.BackgroundColor3 = Theme.Secondary
+        btn.BackgroundTransparency = 0.2
+        btn:SetAttribute("ThemeRole", "Secondary")
+    end
+    local scale = Instance.new("UIScale")
+    scale.Parent = btn
+    btn.MouseButton1Down:Connect(function()
+        TweenService:Create(scale, TweenInfo.new(0.07), {Scale = 0.86}):Play()
+    end)
+    local function release()
+        TweenService:Create(scale, TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+    end
+    btn.MouseButton1Up:Connect(release)
+    btn.MouseLeave:Connect(release)
+end
+
+function RowKit.Press(holder)
+    local scale = holder:FindFirstChild("RowPressScale")
+    if not scale then
+        scale = Instance.new("UIScale")
+        scale.Name = "RowPressScale"
+        scale.Parent = holder
+    end
+    scale.Scale = 0.975
+    TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+end
+
+-- Mini interfaz que muestra los 8 colores de un tema (tarjetas de temas y editor)
+function RowKit.ThemeMock(parent, z)
+    local m = {}
+    local function f(props, par)
+        local o = Instance.new("Frame")
+        o.BorderSizePixel = 0
+        for k, v in pairs(props) do o[k] = v end

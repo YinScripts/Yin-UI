@@ -1,394 +1,4 @@
-e })
-        end
-
-        logoRenderConn = game:GetService("RunService").RenderStepped:Connect(function(dt)
-            if PerfOpt.Flags.NoLogoAnim then return end
-            for _, entry in ipairs(logoLayers) do
-                local lbl = entry.label
-                local def = entry.def
-                local st  = entry.state
-                if not lbl or not lbl.Parent then continue end
-
-                local mv  = def.Movement  or "None"
-                local spd = def.Speed     or 60
-                local amt = def.Amount    or 0
-                local dir = def.Direction or 1
-
-                st.time = st.time + dt
-
-                if st.sprite then
-                    local sprite = st.sprite
-                    sprite.Acc = sprite.Acc + dt
-                    local step = 1 / sprite.Config.FPS
-                    if sprite.Acc > 0.25 then
-                        sprite.Acc = 0.25
-                    end
-                    local moved = false
-                    while sprite.Acc >= step do
-                        sprite.Acc = sprite.Acc - step
-                        sprite.Frame = (sprite.Frame + 1) % sprite.Config.TotalFrames
-                        moved = true
-                    end
-                    if moved then
-                        updateSpriteSheetFrame(sprite, sprite.Frame)
-                    end
-                end
-
-                if mv == "Spin" then
-                    local now    = os.clock()
-                    local inTurbo = st.turboEndTime > 0 and now < st.turboEndTime
-
-                    if inTurbo then
-                        st.speed  = st.turboSpeed
-                        st.tSpeed = st.turboSpeed
-                    else
-                        if (def.Style or "Constant") == "Organic" then
-                            st.tSpeed = spd + math.sin(st.time * 0.8) * (spd * 0.33)
-                            st.speed  = lerpN(st.speed, st.tSpeed, 0.08)
-                        else
-                            st.speed = spd
-                        end
-                    end
-                    st.angle = st.angle + st.speed * dir * dt
-                    lbl.Rotation = st.angle
-
-                elseif mv == "Pulse" then
-                    local sc    = def.Scale or 1.6
-                    local off   = -((sc - 1) / 2)
-                    local scale = 1 + math.sin(st.time * (2 * math.pi / spd)) * ((amt ~= 0 and amt or 12) / 100)
-                    lbl.Size     = UDim2.new(sc * scale, 0, sc * scale, 0)
-                    lbl.Position = UDim2.new(off * scale, 0, off * scale, 0)
-
-                elseif mv == "Orbit" then
-                    local sc     = def.Scale or 1.6
-                    local off    = -((sc - 1) / 2)
-                    local radius = amt ~= 0 and amt or 6
-                    local angle  = st.time * math.rad(spd) * dir
-                    lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
-
-                elseif mv == "Float" then
-                    local sc  = def.Scale or 1.6
-                    local off = -((sc - 1) / 2)
-                    local oy  = math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4)
-                    lbl.Position = UDim2.new(off, 0, off, oy)
-
-                elseif mv == "Shake" then
-                    local sc        = def.Scale or 1.6
-                    local off       = -((sc - 1) / 2)
-                    local intensity = amt ~= 0 and amt or 2
-                    local ox = math.sin(st.time * spd * math.pi * 2 + 0.3) * intensity
-                    local oy = math.cos(st.time * spd * math.pi * 2) * intensity
-                    lbl.Position = UDim2.new(off, ox, off, oy)
-
-                elseif mv == "Fade" then
-                    local maxAlpha = math.clamp(amt ~= 0 and amt or 0.6, 0, 1)
-                    lbl.ImageTransparency = ((math.sin(st.time * (2 * math.pi / spd)) + 1) / 2) * maxAlpha
-                end
-            end
-        end)
-
-        local idleS = iconData.IdleSound
-        if idleS and type(idleS.Id) == "string" and idleS.Id ~= "" then
-            local interval = idleS.Interval or 15
-            local elapsed  = 0
-            logoIdleConn = game:GetService("RunService").Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                if elapsed >= interval then
-                    elapsed = 0
-                    if not Main or not Main.Visible then
-                        playSound(idleS.Id, idleS.Volume or 0.15)
-                    end
-                end
-            end)
-        end
-
-        if iconData.Eyes then
-            local eyeData  = iconData.Eyes
-            local eyeSize  = eyeData.Size  or 0.09
-            local eyeColor = Color3.fromRGB(255, 255, 255)
-            local eyeZIndex = 38
-
-            local function makeEye(xRel, yRel)
-                local eye = mk("Frame", {
-                    Parent = ToggleButton,
-                    Size = UDim2.new(eyeSize, 0, eyeSize, 0),
-                    Position = UDim2.new(xRel - eyeSize/2, 0, yRel - eyeSize/2, 0),
-                    BackgroundColor3 = eyeColor,
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = eyeZIndex,
-                })
-                local uc = Instance.new("UICorner")
-                uc.CornerRadius = UDim.new(1, 0)
-                uc.Parent = eye
-
-                local glow = Instance.new("UIStroke")
-                glow.Color = Color3.fromRGB(220, 220, 255)
-                glow.Thickness = 1.5
-                glow.Transparency = 1
-                glow.Parent = eye
-
-                local inner = mk("Frame", {
-                    Parent = eye,
-                    Size = UDim2.new(0.35, 0, 0.35, 0),
-                    Position = UDim2.new(0.12, 0, 0.10, 0),
-                    BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = eyeZIndex + 1,
-                })
-                local uc2 = Instance.new("UICorner")
-                uc2.CornerRadius = UDim.new(1, 0)
-                uc2.Parent = inner
-
-                return eye, glow, inner
-            end
-
-            local eyeL, glowL, innerL = makeEye(eyeData.X1 or 0.36, eyeData.Y1 or 0.47)
-            local eyeR, glowR, innerR = makeEye(eyeData.X2 or 0.64, eyeData.Y2 or 0.47)
-
-            table.insert(logoLayers, {
-                label = eyeL,
-                def   = { Movement = "None" },
-                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
-            })
-            table.insert(logoLayers, {
-                label = eyeR,
-                def   = { Movement = "None" },
-                state = { angle=0, speed=0, tSpeed=0, time=0, turboEndTime=0, turboSpeed=0 },
-            })
-
-            local function setEyes(alpha, duration)
-                local dur = duration or 0.12
-                local neonAlpha = alpha > 0.5 and 1 or 0.55
-                TweenService:Create(eyeL,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
-                TweenService:Create(eyeR,  TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
-                TweenService:Create(glowL, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
-                TweenService:Create(glowR, TweenInfo.new(dur, Enum.EasingStyle.Quad), {Transparency = neonAlpha}):Play()
-                TweenService:Create(innerL,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
-                TweenService:Create(innerR,TweenInfo.new(dur, Enum.EasingStyle.Quad), {BackgroundTransparency = alpha}):Play()
-            end
-
-            local eyesOpen = false
-            local function openEyesCycle(holdTime, onDone)
-                if not eyeL.Parent then if onDone then onDone() end return end
-                if eyesOpen then if onDone then onDone() end return end
-                eyesOpen = true
-                setEyes(0, 2.0)
-                task.delay(2.0 + holdTime, function()
-                    if not eyeL.Parent then eyesOpen = false if onDone then onDone() end return end
-                    setEyes(1, 0.25)
-                    task.delay(0.25, function()
-                        eyesOpen = false
-                        if onDone then onDone() end
-                    end)
-                end)
-            end
-
-            local looping = true
-            local function eyeLoop()
-                if not eyeL.Parent or not looping then return end
-                task.delay(6, function()
-                    if not eyeL.Parent or not looping then return end
-                    openEyesCycle(2.0, function()
-                        task.delay(6, function()
-                            eyeLoop()
-                        end)
-                    end)
-                end)
-            end
-
-            eyeLoop()
-
-            toggleEyesOnClick = function()
-                openEyesCycle(3.0, nil)
-            end
-
-            local eyeConn
-            eyeConn = game:GetService("RunService").Heartbeat:Connect(function()
-                if not eyeL.Parent then
-                    looping = false
-                    toggleEyesOnClick = nil
-                    eyeConn:Disconnect()
-                end
-            end)
-        end
-    end
-
-    ApplyLogoIcon(SavedConfig.SelectedLogoIcon or "ClassicYinYang")
-
-    local ToggleScale = mk("UIScale", {Scale = 1}, ToggleButton)
-
-    local capsuleLastRelX = 0
-
-    ToggleButton.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            capsuleLastRelX = input.Position.X - ToggleButton.AbsolutePosition.X
-            if not ToggleButton:GetAttribute("IsCapsule") then
-                TweenService:Create(ToggleScale, TweenInfo.new(0.1, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 0.88}):Play()
-            end
-        end
-    end)
-    ToggleButton.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            if not ToggleButton:GetAttribute("IsCapsule") then
-                TweenService:Create(ToggleScale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            end
-        end
-    end)
-
-    local shownSize = UDim2.new(0, 420, 0, 340)
-    local ShadowFrame = mk("Frame", {
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.98,
-        BorderSizePixel = 0,
-        ZIndex = 4,
-        Parent = ScreenGui
-    })
-    corner(ShadowFrame, 10)
-    ShadowFrame:SetAttribute("ThemeRole", "Stroke")
-
-    local Main = mk("Frame", {
-        Name = "Main",
-        Size = shownSize,
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        Visible = true,
-        ZIndex = 5
-    }, ScreenGui)
-    Main:SetAttribute("ThemeRole", "Background")
-    corner(Main, 10)
-    stroke(Main, Theme.Border, 1.5)
-
-    local MainScale = mk("UIScale", {
-        Scale = 1,
-    }, Main)
-
-    buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
-
-    local BackgroundArt
-    local TopBarArt
-    local TabListArt
-
-    local function updateShadowPos()
-        ShadowFrame.Size = UDim2.new(Main.Size.X.Scale, Main.Size.X.Offset + 4, Main.Size.Y.Scale, Main.Size.Y.Offset + 4)
-        ShadowFrame.Position = UDim2.new(Main.Position.X.Scale, Main.Position.X.Offset - 2, Main.Position.Y.Scale, Main.Position.Y.Offset - 2)
-    end
-    Main:GetPropertyChangedSignal("Size"):Connect(updateShadowPos)
-    Main:GetPropertyChangedSignal("Position"):Connect(updateShadowPos)
-    updateShadowPos()
-
-    local uiVisible = true
-    local windowTweenBusy = false
-    local activeWindowTween = nil
-
-    local function pauseMainGlowOnly(key)
-        local tweens = ActiveGlowTweens[key]
-        if tweens then
-            for _, tw in ipairs(tweens) do
-                pcall(function() tw:Cancel() end)
-            end
-        end
-    end
-
-    local function setMainGlowEnabled(enabled)
-        local key = tostring(Main)
-        if enabled then
-            local tweens = ActiveGlowTweens[key]
-            if tweens then
-                for _, tw in ipairs(tweens) do
-                    pcall(function() tw:Play() end)
-                end
-            else
-                buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
-            end
-        else
-            pauseMainGlowOnly(key)
-        end
-    end
-
-    local function showMainWindow()
-        if windowTweenBusy or uiVisible then
-            return
-        end
-
-        windowTweenBusy = true
-        uiVisible = true
-
-        if activeWindowTween then
-            pcall(function()
-                activeWindowTween:Cancel()
-            end)
-            activeWindowTween = nil
-        end
-
-        setMainGlowEnabled(true)
-        ShadowFrame.Visible = false
-        Main.Visible = true
-        -- Evita recalcular el tamaño de todos los controles durante la apertura.
-        MainScale.Scale = 1
-        Main.BackgroundTransparency = 0
-
-        local tw = TweenService:Create(
-            MainScale,
-            TweenInfo.new(0.22, Enum.EasingStyle.Back, Enum.EasingDirection.Out),
-            { Scale = 1 }
-        )
-        activeWindowTween = tw
-        tw:Play()
-        tw.Completed:Once(function()
-            if activeWindowTween == tw then
-                activeWindowTween = nil
-            end
-            ShadowFrame.Visible = true
-            windowTweenBusy = false
-        end)
-
-        local turboEnd = os.clock() + 4
-        for _, entry in ipairs(logoLayers) do
-            if entry.def.Movement == "Spin" then
-                entry.state.turboEndTime = entry.def.TurboSeconds and (os.clock() + entry.def.TurboSeconds) or turboEnd
-            end
-        end
-    end
-
-    local function hideMainWindow()
-        if windowTweenBusy or not uiVisible then
-            return
-        end
-
-        windowTweenBusy = true
-        uiVisible = false
-
-        if activeWindowTween then
-            pcall(function() activeWindowTween:Cancel() end)
-            activeWindowTween = nil
-        end
-
-        ShadowFrame.Visible = false
-
-        local tw1 = TweenService:Create(
-            MainScale,
-            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { Scale = 1 }
-        )
-        local tw2 = TweenService:Create(
-            Main,
-            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { BackgroundTransparency = 1 }
-        )
-
-        activeWindowTween = tw1
-        tw1:Play()
-        tw2:Play()
-
-        tw1.Completed:Once(function()
-            if activeWindowTween == tw1 then
+         if activeWindowTween == tw1 then
                 activeWindowTween = nil
             end
             setMainGlowEnabled(false)
@@ -1113,4 +723,435 @@ e })
                 TweenService:Create(scale, TweenInfo.new(0.08), {Scale = 0.82}):Play()
             end
         end)
-      
+        button.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                TweenService:Create(scale, TweenInfo.new(0.14, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            end
+        end)
+        return button
+    end
+
+
+    local Window
+
+    local GlobalSearch = {}
+    GlobalSearch.Button = createWindowControl("GlobalSearch", 123536470181783, 0, "Buscar")
+    GlobalSearch.Button.Size = UDim2.fromOffset(22, 22)
+    local MinimizeButton = createWindowControl("Minimize", 104305253111520, 1, "Minimizar")
+    local MaximizeButton = createWindowControl("Maximize", 115006761963973, 2, "Pantalla completa")
+    local CloseButton = createWindowControl("Close", 111128342524640, 3, "Cerrar")
+
+    GlobalSearch.Overlay = mk("Frame", {
+        Name = "GlobalSearch.Overlay",
+        Size = UDim2.fromScale(1, 1),
+        BackgroundTransparency = 1,
+        Visible = false,
+        ZIndex = 1000,
+    }, ScreenGui)
+
+    GlobalSearch.Backdrop = mk("TextButton", {
+        Size = UDim2.fromScale(1, 1),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.42,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 1000,
+    }, GlobalSearch.Overlay)
+
+    GlobalSearch.Panel = mk("Frame", {
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.fromScale(0.5, 0.5),
+        Size = UDim2.fromOffset(500, 500),
+        BackgroundColor3 = Theme.Background,
+        ZIndex = 1001,
+    }, GlobalSearch.Overlay)
+    GlobalSearch.Panel:SetAttribute("ThemeRole", "Background")
+    corner(GlobalSearch.Panel, 12)
+    stroke(GlobalSearch.Panel, Theme.Stroke, 1.5, 0.28)
+
+    GlobalSearch.Accent = mk("Frame", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.new(1, -40, 0, 2),
+        Position = UDim2.fromOffset(20, 58),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 1003,
+    })
+    corner(GlobalSearch.Accent, 999)
+    GlobalSearch.Accent:SetAttribute("ThemeRole", "Accent")
+
+    GlobalSearch.Icon = mk("ImageLabel", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.fromOffset(24, 24),
+        Position = UDim2.fromOffset(20, 16),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://83456197177232",
+        ImageColor3 = Theme.Accent,
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 1003,
+    })
+    GlobalSearch.Icon:SetAttribute("ThemeImageRole", "Accent")
+
+    GlobalSearch.Title = mk("TextLabel", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.new(1, -88, 0, 24),
+        Position = UDim2.fromOffset(52, 11),
+        BackgroundTransparency = 1,
+        Text = GetText("Buscar en Yin Yang", "Search Yin Yang"),
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamBlack,
+        TextSize = 17,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1002,
+    })
+    GlobalSearch.Title:SetAttribute("ThemeTextRole", "Text")
+
+    GlobalSearch.Subtitle = mk("TextLabel", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.new(1, -88, 0, 17),
+        Position = UDim2.fromOffset(52, 33),
+        BackgroundTransparency = 1,
+        Text = GetText("Encuentra cualquier función rápidamente", "Find any feature quickly"),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 10,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 1002,
+    })
+    GlobalSearch.Subtitle:SetAttribute("ThemeTextRole", "TextDim")
+
+    GlobalSearch.Close = mk("TextButton", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.fromOffset(30, 30),
+        Position = UDim2.new(1, -42, 0, 10),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.15,
+        Text = "×",
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamBold,
+        TextSize = 20,
+        AutoButtonColor = false,
+        ZIndex = 1004,
+    })
+    GlobalSearch.Close:SetAttribute("ThemeRole", "Secondary")
+    corner(GlobalSearch.Close, 8)
+    stroke(GlobalSearch.Close, Theme.Stroke, 1, 0.65)
+
+    GlobalSearch.Holder = mk("Frame", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.new(1, -40, 0, 48),
+        Position = UDim2.fromOffset(20, 74),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.08,
+        ZIndex = 1002,
+    })
+    GlobalSearch.Holder:SetAttribute("ThemeRole", "Secondary")
+    corner(GlobalSearch.Holder, 9)
+    stroke(GlobalSearch.Holder, Theme.Stroke, 1, 0.48)
+
+    mk("ImageLabel", {
+        Parent = GlobalSearch.Holder,
+        Size = UDim2.fromOffset(19, 19),
+        Position = UDim2.fromOffset(12, 12),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://83456197177232",
+        ImageColor3 = Theme.TextDim,
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 1003,
+    })
+
+    GlobalSearch.Box = mk("TextBox", {
+        Parent = GlobalSearch.Holder,
+        Size = UDim2.new(1, -54, 1, 0),
+        Position = UDim2.fromOffset(46, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = GetText("Buscar una función...", "Search a feature..."),
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 1003,
+    })
+    GlobalSearch.Box:SetAttribute("ThemeTextRole", "Text")
+
+    GlobalSearch.Results = mk("ScrollingFrame", {
+        Parent = GlobalSearch.Panel,
+        Size = UDim2.new(1, -40, 1, -138),
+        Position = UDim2.fromOffset(20, 134),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Theme.Accent,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ZIndex = 1002,
+    }, GlobalSearch.Panel)
+    mk("UIListLayout", {
+        Padding = UDim.new(0, 7),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    }, GlobalSearch.Results)
+
+    GlobalSearch.Empty = mk("TextLabel", {
+        Parent = GlobalSearch.Results,
+        Size = UDim2.new(1, 0, 0, 100),
+        BackgroundTransparency = 1,
+        Text = GetText("Escribe para buscar una función", "Type to search for a feature"),
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Center,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = 1003,
+    })
+    GlobalSearch.Empty:SetAttribute("ThemeTextRole", "TextDim")
+
+    GlobalSearch.Open = false
+
+    function GlobalSearch.UpdateSize()
+        local viewport = ScreenGui.AbsoluteSize
+        if viewport.X <= 0 or viewport.Y <= 0 then return end
+        local width = math.min(500, math.max(290, viewport.X - 24))
+        local height = math.min(500, math.max(300, viewport.Y - 24))
+        GlobalSearch.Panel.Size = UDim2.fromOffset(width, height)
+    end
+    track(ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(GlobalSearch.UpdateSize))
+    GlobalSearch.UpdateSize()
+
+    function GlobalSearch.ClearResults()
+        for _, child in ipairs(GlobalSearch.Results:GetChildren()) do
+            if child:IsA("GuiButton") then
+                child:Destroy()
+            end
+        end
+    end
+
+    function GlobalSearch.Refresh()
+        GlobalSearch.ClearResults()
+        local query = string.lower((GlobalSearch.Box.Text or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+        if query == "" then
+            GlobalSearch.Empty.Text = GetText("Escribe para buscar una función", "Type to search for a feature")
+            GlobalSearch.Empty.Visible = true
+            return
+        end
+
+        local matches = {}
+        for _, entry in ipairs(Window._GlobalOptionRegistry or {}) do
+            local nameES = string.lower(tostring(entry.NameSpanish or ""))
+            local nameEN = string.lower(tostring(entry.NameEnglish or ""))
+            local tabES = string.lower(tostring(entry.Tab and entry.Tab.NameSpanish or ""))
+            local tabEN = string.lower(tostring(entry.Tab and entry.Tab.NameEnglish or ""))
+            local score = nil
+            for _, value in ipairs({nameES, nameEN, tabES, tabEN}) do
+                if value ~= "" then
+                    local found = string.find(value, query, 1, true)
+                    if found then
+                        local candidate = found == 1 and 0 or 1
+                        score = score == nil and candidate or math.min(score, candidate)
+                    end
+                end
+            end
+            if score ~= nil then
+                table.insert(matches, {entry = entry, score = score})
+            end
+        end
+
+        table.sort(matches, function(a, b)
+            if a.score ~= b.score then return a.score < b.score end
+            return string.lower(tostring(a.entry.NameSpanish or "")) < string.lower(tostring(b.entry.NameSpanish or ""))
+        end)
+
+        GlobalSearch.Empty.Visible = #matches == 0
+        if #matches == 0 then
+            GlobalSearch.Empty.Text = GetText("No encontramos esa función", "No matching feature found")
+            return
+        end
+
+        for index = 1, math.min(#matches, 20) do
+            local entry = matches[index].entry
+            local result = mk("TextButton", {
+                Parent = GlobalSearch.Results,
+                Size = UDim2.new(1, -4, 0, 62),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.12,
+                Text = "",
+                AutoButtonColor = false,
+                LayoutOrder = index,
+                ZIndex = 1003,
+            })
+            result:SetAttribute("ThemeRole", "Secondary")
+            corner(result, 9)
+            stroke(result, Theme.Stroke, 1, 0.62)
+
+            local resultIconFrame = mk("Frame", {
+                Parent = result,
+                Size = UDim2.fromOffset(38, 38),
+                Position = UDim2.fromOffset(10, 12),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.10,
+                BorderSizePixel = 0,
+                ZIndex = 1004,
+            })
+            resultIconFrame:SetAttribute("ThemeRole", "Background")
+            corner(resultIconFrame, 10)
+            stroke(resultIconFrame, Theme.Stroke, 1, 0.68)
+
+            local resultIcon = mk("ImageLabel", {
+                Parent = resultIconFrame,
+                Size = UDim2.fromOffset(20, 20),
+                Position = UDim2.fromOffset(9, 9),
+                BackgroundTransparency = 1,
+                Image = entry.Icon or (entry.Tab and entry.Tab.IconAsset) or "rbxassetid://83456197177232",
+                ImageColor3 = Theme.Text,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 1005,
+            })
+
+            local resultTitle = mk("TextLabel", {
+                Parent = result,
+                Size = UDim2.new(1, -116, 0, 22),
+                Position = UDim2.fromOffset(60, 8),
+                BackgroundTransparency = 1,
+                Text = GetText(entry.NameSpanish, entry.NameEnglish),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 1004,
+            })
+            resultTitle:SetAttribute("ThemeTextRole", "Text")
+
+            local tabName = entry.Tab and GetText(entry.Tab.NameSpanish, entry.Tab.NameEnglish) or GetText("General", "General")
+            local resultMeta = mk("TextLabel", {
+                Parent = result,
+                Size = UDim2.new(1, -116, 0, 16),
+                Position = UDim2.fromOffset(60, 32),
+                BackgroundTransparency = 1,
+                Text = tabName .. "  ·  " .. tostring(entry.Kind or "Feature"),
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 1004,
+            })
+            resultMeta:SetAttribute("ThemeTextRole", "TextDim")
+
+            local resultArrow = mk("TextLabel", {
+                Parent = result,
+                Size = UDim2.fromOffset(30, 62),
+                Position = UDim2.new(1, -38, 0, 0),
+                BackgroundTransparency = 1,
+                Text = "›",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 24,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                TextYAlignment = Enum.TextYAlignment.Center,
+                ZIndex = 1004,
+            })
+            resultArrow:SetAttribute("ThemeTextRole", "TextDim")
+
+            result.MouseEnter:Connect(function()
+                TweenService:Create(result, TweenInfo.new(0.12), {BackgroundTransparency = 0.02}):Play()
+                TweenService:Create(resultArrow, TweenInfo.new(0.12), {TextColor3 = Theme.Accent}):Play()
+            end)
+            result.MouseLeave:Connect(function()
+                TweenService:Create(result, TweenInfo.new(0.15), {BackgroundTransparency = 0.12}):Play()
+                TweenService:Create(resultArrow, TweenInfo.new(0.15), {TextColor3 = Theme.TextDim}):Play()
+            end)
+            result.MouseButton1Click:Connect(function()
+                if entry.Tab and entry.Tab.Select then
+                    GlobalSearch.SetOpen(false)
+                    entry.Tab.Select()
+                    task.defer(function()
+                        if entry.Holder and entry.Holder.Parent and entry.Tab.Page then
+                            local y = entry.Holder.AbsolutePosition.Y - entry.Tab.Page.AbsolutePosition.Y + entry.Tab.Page.CanvasPosition.Y - 8
+                            entry.Tab.Page.CanvasPosition = Vector2.new(0, math.max(0, y))
+                        end
+                    end)
+                end
+            end)
+        end
+    end
+
+    function GlobalSearch.SetOpen(open)
+        GlobalSearch.Open = open
+        GlobalSearch.Overlay.Visible = open
+        if open then
+            GlobalSearch.UpdateSize()
+            GlobalSearch.Refresh()
+            task.defer(function()
+                pcall(function() GlobalSearch.Box:CaptureFocus() end)
+            end)
+        else
+            GlobalSearch.Box:ReleaseFocus()
+        end
+    end
+
+    GlobalSearch.Backdrop.MouseButton1Click:Connect(function()
+        GlobalSearch.SetOpen(false)
+    end)
+    GlobalSearch.Close.MouseButton1Click:Connect(function()
+        GlobalSearch.SetOpen(false)
+    end)
+    GlobalSearch.Box:GetPropertyChangedSignal("Text"):Connect(GlobalSearch.Refresh)
+    GlobalSearch.Button.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        GlobalSearch.SetOpen(not GlobalSearch.Open)
+    end)
+
+    MinimizeButton.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        if isMaximized then applyMaximizedState(false) end
+        hideMainWindow()
+    end)
+
+    MaximizeButton.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        applyMaximizedState(not isMaximized)
+    end)
+
+    CloseButton.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        shutdownUI()
+    end)
+
+    if title_text and (string.find(title_text, "Yin") or string.find(title_text, "Yang")) then
+        local animValue = 0
+        local animSpeed = 0.3
+        local origColor = TitleLabel.TextColor3
+        
+        track(RunService.RenderStepped:Connect(function()
+            if PerfOpt.Flags.NoDecorAnim then return end
+            animValue = (animValue + animSpeed) % 360
+            
+            local sine = 0.6 + 0.4 * ((math.sin(math.rad(animValue)) + 1) / 2)
+            
+            if string.find(title_text, "Yin Yang") or string.find(title_text, "yin yang") then
+                TitleLabel.TextColor3 = Color3.new(
+                    (Theme.TitleText or Theme.Accent).R * sine,
+                    (Theme.TitleText or Theme.Accent).G * sine,
+                    (Theme.TitleText or Theme.Accent).B * sine
+                )
+            else
+                TitleLabel.TextColor3 = Color3.new(
+                    (Theme.TitleText or Theme.Accent).R * sine,
+                    (Theme.TitleText or Theme.Accent).G * sine,
+                    (Theme.TitleText or Theme.Accent).B * sine
+                )
+            end
+        end))
+    end
+
+    do
+        local drag = false
+        local dragStart, startPos
+        TopBar.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
+                drag = true
+                dragStart = input.Position
+                

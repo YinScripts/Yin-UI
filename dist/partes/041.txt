@@ -1,0 +1,58 @@
+Entity", 5, function()
+        print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
+    end)
+
+    TabFeatures:CreateDivider()
+    TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
+    TabFeatures:CreateDivider()
+
+    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
+        print("🚀 Teleport Speed: " .. string.format("%.2f", val))
+    end)
+
+    local SliderJumpHeight = TabFeatures:CreateSlider("Jump Height", 10.0, 300.0, 139.24, function(val)
+        print("⬆️  Jump Height: " .. string.format("%.2f", val))
+    end)
+
+    local SliderSpeed = TabFeatures:CreateSlider("Speed Multiplier", 0.5, 3.0, 1.5, function(val)
+        print("💨 Speed: " .. string.format("%.2f", val) .. "x")
+    end)
+
+    local SliderFOV = TabFeatures:CreateSlider("FOV", 30, 120, 70, function(val)
+        print("👁️  FOV: " .. string.format("%.0f", val))
+    end)
+
+    local SliderVolume = TabFeatures:CreateSlider("Volume", 0, 1.0, 0.5, function(val)
+        print("🔊 Volume: " .. string.format("%.1f%%", val * 100))
+    end)
+
+
+    
+    DemoUI:CreateSpotifyTab()
+
+    print("\n DEMO v24 INICIADA")
+    print("TABS: Inicio (Protegida) | Temas (16 colores sin duplicados) | Features | Dropdowns | Efectos")
+    print(" MEJORAS: Sin duplicados, Pestañas permanentes, Efectos de texto mejorados")
+    print("Para desactivar la demo, cambia DEMO_ACTIVO a false\n")
+    print(string.rep("=", 60) .. "\n")
+    
+    task.wait(0.2)
+    local efectoGuardado = ConfigCargada and ConfigCargada.effect
+    if efectoGuardado and efectoGuardado ~= "" and efectoGuardado ~= "Normal" then
+        DemoUI:SetTextEffect(efectoGuardado)
+        print(" Efecto cargado desde config: " .. efectoGuardado)
+    else
+        local autoEffect = ThemeAutoEffects and ThemeAutoEffects[TemaInicial]
+        if autoEffect and autoEffect ~= "Off" then
+            DemoUI:SetTextEffect(autoEffect)
+            print(" Efecto: " .. TemaInicial .. " + " .. autoEffect)
+        else
+            DemoUI:SetTextEffect("Off")
+            print(" Sin efecto de texto (tema: " .. TemaInicial .. ")")
+        end
+    end
+else
+    print("Yin Yang v24 - DEMO DESACTIVADA (DEMO_ACTIVO = false)")
+    print("Solo la librería está cargada y lista para usar")
+end
+

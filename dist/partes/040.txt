@@ -1,4 +1,274 @@
-l Plus = mk("ImageButton", {
+.rows + 1] = row
+        Row.MouseEnter:Connect(function()
+            row.Hover = true
+            Row.BackgroundTransparency = 0.9
+            FavPage.paintRow(row)
+        end)
+        Row.MouseLeave:Connect(function()
+            row.Hover = false
+            Row.BackgroundTransparency = 1
+            FavPage.paintRow(row)
+        end)
+        FavPage.paintRow(row)
+
+        bindRowTap(Heart, function()
+            toggleTrackLike(index)
+        end)
+        bindRowTap(Row, function()
+            FavPage.toggleRow(index)
+        end)
+    end
+
+    FavPage.rebuild = function()
+        for _, child in ipairs(FavPage.Body:GetChildren()) do
+            if child:IsA("GuiObject") then
+                safeDestroy(child)
+            end
+        end
+        FavPage.rows = {}
+        local list = FavPage.likedList()
+        local query = normalizeSearchText(FavPage.query or "")
+        local shown = 0
+        for position, index in ipairs(list) do
+            local song = SpotifyState.Catalog[index]
+            local ok = query == ""
+            if not ok and song then
+                ok = normalizeSearchText((song.Name or "") .. " " .. (song.Artist or "")):find(query, 1, true) ~= nil
+            end
+            if ok then
+                shown = shown + 1
+                FavPage.makeRow(index, position)
+            end
+        end
+        if #list == 0 or shown == 0 then
+            local box = mk("Frame", {
+                Parent = FavPage.Body,
+                Size = UDim2.new(1, 0, 0, 170),
+                BackgroundTransparency = 1,
+                LayoutOrder = 1,
+                ZIndex = 42,
+            })
+            mk("ImageLabel", {
+                Parent = box,
+                Size = UDim2.fromOffset(44, 44),
+                AnchorPoint = Vector2.new(0.5, 0),
+                Position = UDim2.new(0.5, 0, 0, 24),
+                BackgroundTransparency = 1,
+                Image = #list == 0 and FavPage.HEART_OFF or FavPage.SEARCH,
+                ImageColor3 = spotifyDim,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 43,
+            })
+            local t1 = mk("TextLabel", {
+                Parent = box,
+                Size = UDim2.new(1, 0, 0, 26),
+                Position = UDim2.new(0, 0, 0, 80),
+                BackgroundTransparency = 1,
+                Text = "",
+                Font = Enum.Font.GothamBlack,
+                TextSize = 18,
+                TextColor3 = spotifyText,
+                ZIndex = 43,
+            })
+            local t2 = mk("TextLabel", {
+                Parent = box,
+                Size = UDim2.new(1, -40, 0, 40),
+                Position = UDim2.new(0, 20, 0, 110),
+                BackgroundTransparency = 1,
+                Text = "",
+                Font = Enum.Font.GothamMedium,
+                TextSize = 13,
+                TextWrapped = true,
+                TextColor3 = spotifyDim,
+                ZIndex = 43,
+            })
+            if #list == 0 then
+                FavPage.text(t1, "Las canciones que te gusten aparecerán acá", "Songs you like will appear here")
+                FavPage.text(t2, "Tocá el corazón de cualquier canción para guardarla.", "Save songs by tapping the heart icon.")
+            else
+                FavPage.text(t1, "No se encontraron resultados", "No results found")
+                FavPage.text(t2, "Probá con otro nombre o artista.", "Try another name or artist.")
+            end
+        end
+        FavPage.PlayAll.Visible = #list > 0
+        FavPage.ShuffleBtn.Visible = #list > 0
+        local es = (#list == 1) and "1 canción" or (tostring(#list) .. " canciones")
+        local en = (#list == 1) and "1 song" or (tostring(#list) .. " songs")
+        if #list > 0 then
+            local tes, ten = FavPage.totalText(list)
+            es = es .. ", aprox. " .. tes
+            en = en .. ", about " .. ten
+        end
+        FavPage.text(FavPage.Count, "• " .. es, "• " .. en)
+        FavPage.signature = table.concat(list, ",") .. "|" .. query
+        FavPage.paint()
+    end
+
+    FavPage.refresh = function()
+        if not FavPage.open then
+            return
+        end
+        local sig = table.concat(FavPage.likedList(), ",") .. "|" .. normalizeSearchText(FavPage.query or "")
+        if sig ~= FavPage.signature then
+            FavPage.rebuild()
+        else
+            FavPage.paint()
+        end
+    end
+
+    FavPage.SearchInput:GetPropertyChangedSignal("Text"):Connect(function()
+        FavPage.query = FavPage.SearchInput.Text or ""
+        FavPage.refresh()
+    end)
+
+    FavPage.animate = function()
+        task.spawn(function()
+            while FavPage.open and FavPage.Root.Parent do
+                if SpotifyState.IsPlaying then
+                    for _, row in ipairs(FavPage.rows) do
+                        if row.Bars.Visible then
+                            for _, bar in ipairs(row.BarList) do
+                                FavPage.tween(bar, 0.18, {Size = UDim2.new(0, 3, math.random(25, 100) / 100, 0)})
+                            end
+                        end
+                    end
+                end
+                task.wait(0.2)
+            end
+        end)
+    end
+
+    FavPage.show = function()
+        if FavPage.open then
+            return
+        end
+        FavPage.open = true
+        FavPage.layout()
+        FavPage.rebuild()
+        FavPage.Scroll.CanvasPosition = Vector2.new(0, 0)
+        FavPage.Root.Position = UDim2.new(1, 0, 0, 0)
+        FavPage.Root.Visible = true
+        TweenService:Create(FavPage.Root, TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
+        task.defer(FavPage.layout)
+        FavPage.animate()
+    end
+
+    FavPage.hide = function()
+        if not FavPage.open then
+            return
+        end
+        FavPage.open = false
+        pcall(function() FavPage.SearchInput:ReleaseFocus() end)
+        local tw = TweenService:Create(FavPage.Root, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)})
+        tw.Completed:Connect(function()
+            if not FavPage.open then
+                FavPage.Root.Visible = false
+            end
+        end)
+        tw:Play()
+    end
+
+    FavPage.playAll = function()
+        local list = FavPage.likedList()
+        if #list == 0 then
+            return
+        end
+        if SpotifyState.CurrentSound and isLiked(SpotifyState.SelectedIndex) then
+            SpotifyState.FavQueue = true
+            togglePlayback()
+        elseif SpotifyState.Shuffle then
+            FavPage.play(FavPage.randomFrom(list, nil))
+        else
+            FavPage.play(list[1])
+        end
+    end
+
+    bindRowTap(FavPage.Back, FavPage.hide)
+    bindRowTap(FavPage.PlayAll, FavPage.playAll)
+    bindRowTap(FavPage.MiniPlay, FavPage.playAll)
+    bindRowTap(FavPage.ShuffleBtn, function()
+        SpotifyState.Shuffle = not SpotifyState.Shuffle
+        FavPage.history = {}
+        FavPage.paint()
+    end)
+
+    SpotifyState.OnPlaybackChanged = FavPage.refresh
+    SpotifyState.FavoriteNeighbor = FavPage.neighbor
+
+    createSongRow = function(track, index, layoutOrder)
+        if SpotifyState.HiddenRows[index] then
+            return
+        end
+
+        local m = getSpotifyMetrics()
+        local cardH = m.compact and 228 or 242
+        local coverPad = m.compact and 9 or 11
+        local availableW = math.max(0, SongList.AbsoluteSize.X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
+        local coverSize = math.max(76, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.compact and 138 or 182))
+
+        local Row = mk("Frame", {
+            Parent = SongList,
+            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
+            BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            LayoutOrder = layoutOrder or (index + 1),
+            ClipsDescendants = true,
+            ZIndex = 11,
+        })
+        Row.Name = "SpotifySongCard_" .. index
+        corner(Row, 12)
+
+        local TapArea = mk("TextButton", {
+            Parent = Row, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+            Text = "", AutoButtonColor = false, ZIndex = 13,
+        })
+        TapArea.Name = "SongTapArea"
+
+        local Accent = mk("Frame", {
+            Parent = Row, Size = UDim2.new(1, 0, 0, 3), Position = UDim2.new(0, 0, 0, 0),
+            BackgroundColor3 = spotifyGreen, BorderSizePixel = 0,
+            Visible = index == SpotifyState.SelectedIndex, ZIndex = 14,
+        })
+        corner(Accent, 999)
+
+        local Cover = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(coverSize, coverSize),
+            Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad),
+            BackgroundColor3 = Color3.fromRGB(18, 18, 18), BackgroundTransparency = 0,
+            BorderSizePixel = 0, Image = resolveTrackCoverImage(track),
+            ScaleType = Enum.ScaleType.Crop, AutoButtonColor = false, ZIndex = 15,
+        })
+        corner(Cover, 9)
+
+        local Title = mk("TextLabel", {
+            Parent = Row, Size = UDim2.new(1, -22, 0, 20),
+            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 9),
+            BackgroundTransparency = 1, Text = track.Name, Font = Enum.Font.GothamBold,
+            TextSize = m.compact and 12 or 14, TextColor3 = index == SpotifyState.SelectedIndex and spotifyGreen or spotifyText,
+            TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 16,
+        })
+        Title.Name = "SongTitle"
+
+        local Artist = mk("TextLabel", {
+            Parent = Row, Size = UDim2.new(1, -22, 0, 16),
+            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 31),
+            BackgroundTransparency = 1, Text = track.Artist, Font = Enum.Font.GothamMedium,
+            TextSize = m.compact and 9 or 10, TextColor3 = index == SpotifyState.SelectedIndex and Color3.fromRGB(100, 220, 120) or spotifyDim,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,
+        })
+        Artist.Name = "SongArtist"
+
+        local Duration = mk("TextLabel", {
+            Parent = Row, Size = UDim2.fromOffset(44, 16), Position = UDim2.new(1, -50, 1, -22),
+            BackgroundTransparency = 1, Text = track.Duration, Font = Enum.Font.GothamMedium, TextSize = 9,
+            TextColor3 = spotifyDim, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 12,
+        })
+        Duration.Name = "SongDuration"
+
+        local Plus = mk("ImageButton", {
             Parent = Row, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 1),
             Position = UDim2.new(1, -7, 1, -5), BackgroundTransparency = 1, Image = "",
             ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 16, Active = true, Visible = false,
@@ -805,61 +1075,4 @@ if DEMO_ACTIVO then
         print("[FloatingButton] Noclip → ejecutado (cooldown 3s)")
     end)
 
-    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill Entity", 5, function()
-        print("[FloatingButton] Kill Entity → ejecutado (cooldown 5s)")
-    end)
-
-    TabFeatures:CreateDivider()
-    TabFeatures:CreateLabel("Sliders Premium v2.0 🚀", 14)
-    TabFeatures:CreateDivider()
-
-    local SliderTeleportSpeed = TabFeatures:CreateSlider("Teleport Speed", 1.0, 100.0, 23.1, function(val)
-        print("🚀 Teleport Speed: " .. string.format("%.2f", val))
-    end)
-
-    local SliderJumpHeight = TabFeatures:CreateSlider("Jump Height", 10.0, 300.0, 139.24, function(val)
-        print("⬆️  Jump Height: " .. string.format("%.2f", val))
-    end)
-
-    local SliderSpeed = TabFeatures:CreateSlider("Speed Multiplier", 0.5, 3.0, 1.5, function(val)
-        print("💨 Speed: " .. string.format("%.2f", val) .. "x")
-    end)
-
-    local SliderFOV = TabFeatures:CreateSlider("FOV", 30, 120, 70, function(val)
-        print("👁️  FOV: " .. string.format("%.0f", val))
-    end)
-
-    local SliderVolume = TabFeatures:CreateSlider("Volume", 0, 1.0, 0.5, function(val)
-        print("🔊 Volume: " .. string.format("%.1f%%", val * 100))
-    end)
-
-
-    
-    DemoUI:CreateSpotifyTab()
-
-    print("\n DEMO v24 INICIADA")
-    print("TABS: Inicio (Protegida) | Temas (16 colores sin duplicados) | Features | Dropdowns | Efectos")
-    print(" MEJORAS: Sin duplicados, Pestañas permanentes, Efectos de texto mejorados")
-    print("Para desactivar la demo, cambia DEMO_ACTIVO a false\n")
-    print(string.rep("=", 60) .. "\n")
-    
-    task.wait(0.2)
-    local efectoGuardado = ConfigCargada and ConfigCargada.effect
-    if efectoGuardado and efectoGuardado ~= "" and efectoGuardado ~= "Normal" then
-        DemoUI:SetTextEffect(efectoGuardado)
-        print(" Efecto cargado desde config: " .. efectoGuardado)
-    else
-        local autoEffect = ThemeAutoEffects and ThemeAutoEffects[TemaInicial]
-        if autoEffect and autoEffect ~= "Off" then
-            DemoUI:SetTextEffect(autoEffect)
-            print(" Efecto: " .. TemaInicial .. " + " .. autoEffect)
-        else
-            DemoUI:SetTextEffect("Off")
-            print(" Sin efecto de texto (tema: " .. TemaInicial .. ")")
-        end
-    end
-else
-    print("Yin Yang v24 - DEMO DESACTIVADA (DEMO_ACTIVO = false)")
-    print("Solo la librería está cargada y lista para usar")
-end
-
+    TabFeatures:CreateFloatingButton("Eliminar Entidad", "Kill 

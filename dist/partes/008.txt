@@ -1,104 +1,4 @@
-o or {}
-        local wrap = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Below and 26 or 26), BackgroundTransparency = 1}, self.Frame)
-        local P = {}
-        if o.Below then
-            local _, fill = Kit.Bar(wrap, {Size = UDim2.new(1, 0, 0, o.Thick or 8)}, "Accent", o.Track or "Background")
-            P.Fill = fill
-            P.Left = Label(wrap, {Position = UDim2.fromOffset(0, (o.Thick or 8) + 2), Size = UDim2.new(1, 0, 0, 14), TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left, Text = ""}, "TextDim")
-        else
-            P.Left = Label(wrap, {Size = UDim2.new(0.7, 0, 0, 14), TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Text = ""}, "Text")
-            P.Right = Label(wrap, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(0.3, 0, 0, 14),
-                TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, Text = ""}, "Accent")
-            local _, fill = Kit.Bar(wrap, {Position = UDim2.fromOffset(0, 18), Size = UDim2.new(1, 0, 0, o.Thick or 8)}, "Accent", o.Track or "Secondary")
-            P.Fill = fill
-        end
-        if o.Gradient ~= false then
-            local g = Kit.New("UIGradient", {Color = ColorSequence.new(Kit.Palette().Accent, Kit.Palette().Accent:Lerp(Color3.new(1, 1, 1), 0.45))}, P.Fill)
-            local off = Kit.OnTheme(function(p) g.Color = ColorSequence.new(p.Accent, p.Accent:Lerp(Color3.new(1, 1, 1), 0.45)) end)
-            wrap.Destroying:Connect(off)
-        end
-        function P:Set(fraction, left, right)
-            if left then P.Left.Text = left end
-            if right and P.Right then P.Right.Text = right end
-            Kit.Tween(P.Fill, 0.4, {Size = UDim2.fromScale(math.clamp(tonumber(fraction) or 0, 0, 1), 1)}, Enum.EasingStyle.Quad)
-        end
-        return P
-    end
-    -- barra fina sola (devuelve el relleno)
-    function Widgets:Bar(o)
-        o = o or {}
-        local _, fill = Kit.Bar(self.Frame, {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Thick or 5)}, "Accent", o.Track or "Background")
-        return fill
-    end
-    -- chip + texto grande a la derecha (estado / velocidad)
-    function Widgets:ChipValue()
-        local r = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 22), BackgroundTransparency = 1}, self.Frame)
-        local chip = Kit.New("TextLabel", {Size = UDim2.fromOffset(120, 22), BorderSizePixel = 0, Font = Enum.Font.GothamBold, TextSize = 11, Text = ""},
-            r, {bg = "Background", text = "Text"})
-        Kit.Corner(chip, 11)
-        local chipStroke = Kit.New("UIStroke", {Thickness = 1.5, Transparency = 0.1}, chip)
-        local value = Label(r, {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), Size = UDim2.new(1, -130, 1, 0),
-            Font = Enum.Font.GothamBlack, TextSize = 15, TextXAlignment = Enum.TextXAlignment.Right, Text = "0"}, "Text")
-        return chip, chipStroke, value
-    end
-    -- mosaicos (3 columnas): defs = {{Key, Label, Icon, Color}} ; T:Set(key, texto, delta)
-    function Widgets:Tiles(defs)
-        local grid = Kit.New("Frame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
-            BackgroundTransparency = 1}, self.Frame)
-        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / 3, -6, 0, 50), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder}, grid)
-        local T = {Items = {}}
-        for i, d in ipairs(defs) do
-            local t = Kit.New("Frame", {LayoutOrder = i, BackgroundTransparency = 0.25, BorderSizePixel = 0}, grid, {bg = "Secondary"})
-            Kit.Corner(t, 12)
-            Kit.New("ImageLabel", {Position = UDim2.fromOffset(8, 8), Size = UDim2.fromOffset(16, 16), BackgroundTransparency = 1,
-                Image = d.Icon or "", ImageColor3 = d.Color or Color3.new(1, 1, 1)}, t, d.Color == nil and {image = "Accent"} or nil)
-            local value = Kit.New("TextLabel", {Position = UDim2.fromOffset(28, 6), Size = UDim2.new(1, -32, 0, 20), BackgroundTransparency = 1,
-                Font = Enum.Font.GothamBlack, TextSize = 14, TextColor3 = d.Color or Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd, Text = "0"}, t, d.Color == nil and {text = "Accent"} or nil)
-            Label(t, {Position = UDim2.fromOffset(8, 30), Size = UDim2.new(1, -12, 0, 14), Font = Enum.Font.GothamMedium, TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left, Text = d.Label or ""}, "TextDim")
-            local pop = Kit.New("TextLabel", {AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 30), Size = UDim2.fromOffset(50, 14),
-                BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 10, TextColor3 = Color3.fromRGB(110, 255, 140),
-                TextXAlignment = Enum.TextXAlignment.Right, TextTransparency = 1, Text = ""}, t)
-            T.Items[d.Key] = {Value = value, Pop = pop}
-        end
-        function T:Set(key, text, delta)
-            local it = T.Items[key]
-            if not it then return end
-            it.Value.Text = text
-            if delta and delta ~= "" then
-                it.Pop.Text = delta
-                it.Pop.TextTransparency = 0
-                Kit.Tween(it.Pop, 1.6, {TextTransparency = 1}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
-            end
-        end
-        return T
-    end
-    -- caja de búsqueda
-    function Widgets:Search(placeholder)
-        local box = Kit.New("TextBox", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, 32), BorderSizePixel = 0, Text = "",
-            PlaceholderText = placeholder or "", PlaceholderColor3 = Kit.Palette().TextDim, Font = Enum.Font.GothamMedium, TextSize = 13,
-            ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left}, self.Frame, {bg = "Secondary", text = "Text"})
-        Kit.Corner(box, 10)
-        Kit.Pad(box, 0, 0, 0, 12)
-        return box
-    end
-    -- grilla de opciones elegibles: G:Set({{Key, Text}}, elegido, alElegir)
-    function Widgets:Grid(o)
-        o = o or {}
-        local list = Kit.New("ScrollingFrame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Height or 120), BackgroundTransparency = 0.4,
-            BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y}, self.Frame, {bg = "Secondary"})
-        Kit.Corner(list, 10)
-        Kit.Pad(list, 6, 6, 6, 6)
-        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / (o.Columns or 2), -4, 0, 26), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder}, list)
-        local G = {Frame = list, Chips = {}}
-        function G:Set(items, selected, onPick)
-            for _, c in ipairs(G.Chips) do c:Destroy() end
-            table.clear(G.Chips)
-            for i, it in ipairs(items) do
-                local on = it.Key == selected
+al on = it.Key == selected
                 local b = Btn(list, {LayoutOrder = i, Font = Enum.Font.GothamMedium, TextSize = 11, Text = it.Text, TextTruncate = Enum.TextTruncate.AtEnd},
                     on and "Accent" or "Background", on and "AccentText" or "Text")
                 Kit.Corner(b, 8)
@@ -654,4 +554,139 @@ do
     -- instancia simple (sin tocar AutoLocalize / Selectable, igual que las piezas que antes armaba el script)
     local function new(class, props, parent)
         local o = Instance.new(class)
-        for k, v in pairs
+        for k, v in pairs(props) do o[k] = v end
+        if parent then o.Parent = parent end
+        return o
+    end
+
+    local function lang(obj, es, en, placeholder)
+        if es == nil or en == nil then return end
+        obj:SetAttribute(placeholder and "PlaceholderSpanish" or "TextSpanish", es)
+        obj:SetAttribute(placeholder and "PlaceholderEnglish" or "TextEnglish", en)
+    end
+    -- borde fino con el color "Stroke" del tema
+    function Page.Stroke(parent, transparency)
+        local s = new("UIStroke", {Color = Kit.Palette().Stroke, Thickness = 1, Transparency = transparency or 0.55}, nil)
+        pcall(function() s.ZIndex = 12 end)
+        s.Parent = parent
+        s:SetAttribute("ThemeRole", "Stroke")
+        return s
+    end
+    -- color de estado que se lee en temas claros (lo oscurece a la mitad si el fondo es claro)
+    function Page.AdaptStatus(color)
+        local bg = Kit.Palette().Background
+        if 0.299 * bg.R + 0.587 * bg.G + 0.114 * bg.B > 0.55 then
+            return Color3.new(color.R * 0.5, color.G * 0.5, color.B * 0.5)
+        end
+        return color
+    end
+
+    -- tarjeta: o = {Name, Height, Transparency, LayoutOrder, StrokeTransparency}; devuelve tarjeta y borde
+    function Page.Card(parent, o)
+        o = o or {}
+        local card = new("Frame", {Name = o.Name or "Card", Size = UDim2.new(1, 0, 0, o.Height or 50), BackgroundColor3 = Kit.Palette().Secondary,
+            BackgroundTransparency = o.Transparency or 0.78, BorderSizePixel = 0, ZIndex = 10}, nil)
+        if o.LayoutOrder then card.LayoutOrder = o.LayoutOrder end
+        card.Parent = parent
+        card:SetAttribute("ThemeRole", "Secondary")
+        Kit.Corner(card, 10)
+        local stroke = Page.Stroke(card, o.StrokeTransparency or 0.55)
+        return card, stroke
+    end
+
+    -- texto: o = {Text, Es, En, TextSize, Font, Role, Position, Size}
+    function Page.Label(parent, o)
+        local role = o.Role or "Text"
+        local label = new("TextLabel", {BackgroundTransparency = 1, Position = o.Position or UDim2.new(), Size = o.Size or UDim2.new(1, 0, 0, 16),
+            Text = o.Text or "", TextColor3 = Kit.Palette()[role], TextSize = o.TextSize or 12, Font = o.Font or Enum.Font.GothamMedium,
+            TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 12}, parent)
+        label:SetAttribute("ThemeTextRole", role)
+        label:SetAttribute("IgnoreTextEffect", true)
+        lang(label, o.Es, o.En)
+        return label
+    end
+
+    -- encabezado de pestaña: tarjeta de 78 con barrita de acento, caja con ícono, título, ✦ y descripción
+    -- o = {Name, BarName, DescName, LayoutOrder, Icon, IconFn (ícono que cambia con el tema), Title, TitleEs, TitleEn,
+    --      Desc, DescEs, DescEn, PlainTitle (título que sí toma los efectos de texto de la librería)}
+    -- devuelve la tarjeta y sus piezas {Bar, IconBox, Icon, Title, Spark, Desc}
+    function Page.Header(parent, o)
+        o = o or {}
+        local p = Kit.Palette()
+        local header = Page.Card(parent, {Name = o.Name or "PageHeader", Height = 78, Transparency = 0.78, LayoutOrder = o.LayoutOrder})
+        local bar = new("Frame", {Name = o.BarName or "PageAccentBar", Size = UDim2.new(0, 3, 0, 44), Position = UDim2.new(0, 10, 0.5, -22),
+            BackgroundColor3 = p.Accent, BorderSizePixel = 0, ZIndex = 11}, header)
+        bar:SetAttribute("ThemeRole", "Accent")
+        Kit.Corner(bar, 999)
+        local iconBox = new("Frame", {Size = UDim2.fromOffset(44, 44), Position = UDim2.fromOffset(22, 17), BackgroundColor3 = p.AccentOff,
+            BorderSizePixel = 0, ZIndex = 11}, header)
+        iconBox:SetAttribute("ThemeRole", "AccentOff")
+        Kit.Corner(iconBox, 12)
+        Page.Stroke(iconBox, 0.45)
+        local icon = new("ImageLabel", {Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(8, 8), BackgroundTransparency = 1,
+            Image = (o.IconFn and o.IconFn()) or o.Icon or "", ImageColor3 = p.Text, ZIndex = 12}, iconBox)
+        icon:SetAttribute("ThemeImageRole", "Text")
+        local title
+        if o.PlainTitle then
+            title = new("TextLabel", {Size = UDim2.new(1, -112, 0, 20), Position = UDim2.fromOffset(74, 12), BackgroundTransparency = 1,
+                Text = o.Title or "", TextColor3 = p.Text, TextSize = 15, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11}, header)
+            title:SetAttribute("ThemeTextRole", "Text")
+            lang(title, o.TitleEs, o.TitleEn)
+        else
+            title = Page.Label(header, {Text = o.Title, Es = o.TitleEs, En = o.TitleEn, TextSize = 15, Font = Enum.Font.GothamBlack, Role = "Text",
+                Position = UDim2.fromOffset(74, 12), Size = UDim2.new(1, -112, 0, 20)})
+            title.TextWrapped = false
+            title.TextTruncate = Enum.TextTruncate.AtEnd
+            title.ZIndex = 11
+        end
+        local spark = new("TextLabel", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(1, -30, 0, 10), BackgroundTransparency = 1, Text = "✦",
+            TextColor3 = p.Accent, TextSize = 16, Font = Enum.Font.GothamBold, ZIndex = 12}, header)
+        spark:SetAttribute("ThemeTextRole", "Accent")
+        spark:SetAttribute("IgnoreTextEffect", true)
+        local desc = Page.Label(header, {Text = o.Desc, Es = o.DescEs, En = o.DescEn, TextSize = 11, Font = Enum.Font.GothamMedium, Role = "TextDim",
+            Position = UDim2.fromOffset(74, 34), Size = UDim2.new(1, -88, 0, 36)})
+        desc.ZIndex = 11
+        if o.DescName then desc.Name = o.DescName end
+        if o.IconFn then
+            -- al cambiar de tema se repintan estos colores: se relee el ícono del tema ya aplicado
+            local function refreshIcon()
+                task.defer(function()
+                    if icon and icon.Parent then icon.Image = o.IconFn() end
+                end)
+            end
+            header:GetPropertyChangedSignal("BackgroundColor3"):Connect(refreshIcon)
+            bar:GetPropertyChangedSignal("BackgroundColor3"):Connect(refreshIcon)
+            desc:GetPropertyChangedSignal("TextColor3"):Connect(refreshIcon)
+        end
+        return header, {Bar = bar, IconBox = iconBox, Icon = icon, Title = title, Spark = spark, Desc = desc}
+    end
+
+    -- campo con número: o = {Name, Number (nil = siguiente según los campos que ya hay), Caption, CaptionEs, CaptionEn,
+    --                        Placeholder, PlaceholderEs, PlaceholderEn}; devuelve el TextBox
+    function Page.Field(parent, o)
+        o = o or {}
+        local p = Kit.Palette()
+        local name = o.Name or "PageField"
+        local number = o.Number
+        if not number then
+            number = 1
+            for _, child in ipairs(parent:GetChildren()) do
+                if child.Name == name then number = number + 1 end
+            end
+        end
+        local card, stroke = Page.Card(parent, {Name = name, Height = 58, Transparency = 0.7})
+        stroke.Transparency = 0.45
+        local badge = new("Frame", {Size = UDim2.fromOffset(28, 28), Position = UDim2.fromOffset(12, 15), BackgroundColor3 = p.AccentOff,
+            BorderSizePixel = 0, ZIndex = 11}, card)
+        badge:SetAttribute("ThemeRole", "AccentOff")
+        Kit.Corner(badge, 8)
+        local num = new("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = tostring(number), TextColor3 = p.Text,
+            TextSize = 13, Font = Enum.Font.GothamBlack, ZIndex = 12}, badge)
+        num:SetAttribute("ThemeTextRole", "Text")
+        num:SetAttribute("IgnoreTextEffect", true)
+        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum.Font.GothamBold,
+            Role = "TextDim", Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -64, 0, 14)})
+        caption.TextWrapped = false
+        caption.TextTruncate = Enum.TextTruncate.AtEnd
+        local input = new("TextB

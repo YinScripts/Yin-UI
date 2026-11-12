@@ -1,92 +1,4 @@
-ize = 30,
-                    AutoButtonColor = false,
-                    ZIndex = 60
-                })
-                corner(NextBtn, 19)
-                stroke(NextBtn, Theme.Stroke, 1, 0.5)
-
-                local DotHolder = mk("Frame", {
-                    Parent = SliderSection,
-                    Size = UDim2.new(1, -80, 0, 16),
-                    Position = UDim2.new(0, 40, 0, 114),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 60
-                })
-                mk("UIListLayout", {
-                    Parent = DotHolder,
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    Padding = UDim.new(0, 6),
-                    SortOrder = Enum.SortOrder.LayoutOrder
-                })
-
-                Carousel = {
-                    Section = SliderSection,
-                    Viewport = Viewport,
-                    PrevBtn = PrevBtn,
-                    NextBtn = NextBtn,
-                    DotHolder = DotHolder,
-                    Cards = {},
-                    Dots = {},
-                    ActiveIndex = 1,
-                    Reflow = nil,
-                    GoTo = nil,
-                }
-                Tab._LastSliderCarousel = Carousel
-
-                local function refreshDots()
-                    local count = #Carousel.Cards
-                    for i, dot in ipairs(Carousel.Dots) do
-                        dot.BackgroundColor3 = (i == Carousel.ActiveIndex) and Theme.Text or Theme.AccentOff
-                        dot.BackgroundTransparency = (i == Carousel.ActiveIndex) and 0 or 0.35
-                        dot.Size = (i == Carousel.ActiveIndex)
-                            and UDim2.new(0, 20, 0, 7)
-                            or UDim2.new(0, 7, 0, 7)
-                    end
-                    Carousel.PrevBtn.Visible = count > 1
-                    Carousel.NextBtn.Visible = count > 1
-                    Carousel.DotHolder.Visible = count > 1
-                end
-
-                local function reflow()
-                    local count = #Carousel.Cards
-                    if count == 0 then
-                        refreshDots()
-                        return
-                    end
-
-                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
-                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
-                    local cardHeight = 96
-                    local step = cardWidth * 0.78
-                    local centerX = viewportWidth * 0.5 - cardWidth * 0.5
-
-                    for i, cardData in ipairs(Carousel.Cards) do
-                        local card = cardData.Holder
-                        if card and card.Parent then
-                            local offset = (i - Carousel.ActiveIndex) * step
-                            local distance = math.abs(i - Carousel.ActiveIndex)
-                            local targetX = centerX + offset
-                            local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
-                            local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
-                            local targetY = 4 + (cardHeight - targetHeight) * 0.5
-                            local isActive = distance == 0
-
-                            TweenService:Create(
-                                card,
-                                TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                                {
-                                    Position = UDim2.new(0, targetX, 0, targetY),
-                                    Size = UDim2.new(0, targetWidth, 0, targetHeight),
-                                    BackgroundTransparency = isActive and 0.12 or 0.72
-                                }
-                            ):Play()
-                            card.ZIndex = isActive and 50 or 20 - math.min(distance, 4)
-                            for _, descendant in ipairs(card:GetDescendants()) do
-                                if descendant:IsA("GuiObject") then
-                                    descendant.ZIndex = isActive and 51 or 21 - math.min(distance, 4)
+tive and 51 or 21 - math.min(distance, 4)
                                 end
                                 if descendant:IsA("TextLabel") or descendant:IsA("TextButton") then
                                     descendant.TextTransparency = isActive and 0 or 0.35
@@ -1004,4 +916,131 @@ ize = 30,
                         else
                             active = false
                             setVisualState("idle")
-                            local errColor = Color3.fromRGB(240, 80, 
+                            local errColor = Color3.fromRGB(240, 80, 80)
+                            StatusLabel.Text = GetText("Error al cargar", "Load failed")
+                            StatusLabel.TextColor3 = errColor
+                            StatusDot.BackgroundColor3 = errColor
+                            StatusBadge.BackgroundColor3 = errColor
+                            StatusBadge.BackgroundTransparency = 0.78
+                            StatusBadge.Size = UDim2.fromOffset(104, 20)
+                            task.delay(2.5, function()
+                                StatusBadge.Size = UDim2.fromOffset(78, 20)
+                                if not active and not loading then setVisualState("idle") end
+                            end)
+                            warn("[YinYang] CreateScriptToggle: error al cargar '" .. tostring(scriptKey) .. "': " .. tostring(err))
+                        end
+                    end)
+                else
+                    active = false
+                    setVisualState("idle")
+                    local stopKey = "_YY_STOP_" .. tostring(scriptKey)
+                    if _G[stopKey] then
+                        pcall(_G[stopKey])
+                    end
+                end
+            end)
+
+            Window._RegisterGlobalOption(self, {
+                Id = nameSpanish .. "::" .. textSpanish,
+                NameSpanish = textSpanish,
+                NameEnglish = textEnglish,
+                Holder = Holder,
+                Kind = "Script",
+            })
+
+            return Holder
+        end
+
+        function Tab:CreateLabel(textSpanish, textEnglishOrSize, fontSize)
+            local contentParent = self._ContentParent or TabPage
+            local textEnglish = textSpanish
+            if type(textEnglishOrSize) == "number" then
+                fontSize = textEnglishOrSize
+                textEnglish = textSpanish
+            elseif type(textEnglishOrSize) == "string" then
+                textEnglish = textEnglishOrSize
+            end
+            
+            fontSize = fontSize or 14
+            local displayText = GetText(textSpanish, textEnglish)
+            
+            local Label = mk("TextLabel", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = fontSize,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextWrapped = true,
+                ZIndex = 9
+            })
+            Label:SetAttribute("ThemeTextRole", "Text")
+            Label:SetAttribute("TextSpanish", textSpanish)
+            Label:SetAttribute("TextEnglish", textEnglish)
+            if contentParent == TabPage then resetScrollTop(TabPage) end
+            return Label
+        end
+
+        function Tab:CreateDivider()
+            local contentParent = self._ContentParent or TabPage
+            if self._homeBuilt then
+                return nil
+            end
+            local Divider = mk("Frame", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 1),
+                BackgroundColor3 = Theme.Stroke,
+                ZIndex = 9
+            })
+            Divider:SetAttribute("ThemeRole", "Stroke")
+            return Divider
+        end
+
+        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
+            local contentParent = self._ContentParent or TabPage
+            if selectable == nil then selectable = true end
+            items = items or {}
+
+            local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
+            if displayTitle then
+                local Title = mk("TextLabel", {
+                    Parent = contentParent,
+                    Size = UDim2.new(1, 0, 0, 20),
+                    BackgroundTransparency = 1,
+                    Text = displayTitle,
+                    TextColor3 = Theme.Text,
+                    TextSize = 13,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 9,
+                })
+                Title:SetAttribute("ThemeTextRole", "Text")
+                Title:SetAttribute("TextSpanish", titleSpanish)
+                Title:SetAttribute("TextEnglish", titleEnglish)
+            end
+
+            local GridHolder = mk("Frame", {
+                Parent = contentParent,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ZIndex = 9,
+            })
+            mk("UIGridLayout", {
+                Parent = GridHolder,
+                CellSize = UDim2.new(0.485, 0, 0, 180),
+                CellPadding = UDim2.new(0.03, 0, 0, 10),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                HorizontalAlignment = Enum.HorizontalAlignment.Left,
+            })
+
+            local selectedIndex = nil
+            local cards = {}
+
+            local function refreshSelection()
+                for i, c in ipairs(cards) do
+                    local isSel = selectable and (i == selec

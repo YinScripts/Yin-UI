@@ -1,131 +1,4 @@
-80)
-                            StatusLabel.Text = GetText("Error al cargar", "Load failed")
-                            StatusLabel.TextColor3 = errColor
-                            StatusDot.BackgroundColor3 = errColor
-                            StatusBadge.BackgroundColor3 = errColor
-                            StatusBadge.BackgroundTransparency = 0.78
-                            StatusBadge.Size = UDim2.fromOffset(104, 20)
-                            task.delay(2.5, function()
-                                StatusBadge.Size = UDim2.fromOffset(78, 20)
-                                if not active and not loading then setVisualState("idle") end
-                            end)
-                            warn("[YinYang] CreateScriptToggle: error al cargar '" .. tostring(scriptKey) .. "': " .. tostring(err))
-                        end
-                    end)
-                else
-                    active = false
-                    setVisualState("idle")
-                    local stopKey = "_YY_STOP_" .. tostring(scriptKey)
-                    if _G[stopKey] then
-                        pcall(_G[stopKey])
-                    end
-                end
-            end)
-
-            Window._RegisterGlobalOption(self, {
-                Id = nameSpanish .. "::" .. textSpanish,
-                NameSpanish = textSpanish,
-                NameEnglish = textEnglish,
-                Holder = Holder,
-                Kind = "Script",
-            })
-
-            return Holder
-        end
-
-        function Tab:CreateLabel(textSpanish, textEnglishOrSize, fontSize)
-            local contentParent = self._ContentParent or TabPage
-            local textEnglish = textSpanish
-            if type(textEnglishOrSize) == "number" then
-                fontSize = textEnglishOrSize
-                textEnglish = textSpanish
-            elseif type(textEnglishOrSize) == "string" then
-                textEnglish = textEnglishOrSize
-            end
-            
-            fontSize = fontSize or 14
-            local displayText = GetText(textSpanish, textEnglish)
-            
-            local Label = mk("TextLabel", {
-                Parent = contentParent,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                Text = displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold,
-                TextSize = fontSize,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true,
-                ZIndex = 9
-            })
-            Label:SetAttribute("ThemeTextRole", "Text")
-            Label:SetAttribute("TextSpanish", textSpanish)
-            Label:SetAttribute("TextEnglish", textEnglish)
-            if contentParent == TabPage then resetScrollTop(TabPage) end
-            return Label
-        end
-
-        function Tab:CreateDivider()
-            local contentParent = self._ContentParent or TabPage
-            if self._homeBuilt then
-                return nil
-            end
-            local Divider = mk("Frame", {
-                Parent = contentParent,
-                Size = UDim2.new(1, 0, 0, 1),
-                BackgroundColor3 = Theme.Stroke,
-                ZIndex = 9
-            })
-            Divider:SetAttribute("ThemeRole", "Stroke")
-            return Divider
-        end
-
-        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
-            local contentParent = self._ContentParent or TabPage
-            if selectable == nil then selectable = true end
-            items = items or {}
-
-            local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
-            if displayTitle then
-                local Title = mk("TextLabel", {
-                    Parent = contentParent,
-                    Size = UDim2.new(1, 0, 0, 20),
-                    BackgroundTransparency = 1,
-                    Text = displayTitle,
-                    TextColor3 = Theme.Text,
-                    TextSize = 13,
-                    Font = Enum.Font.GothamBold,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    ZIndex = 9,
-                })
-                Title:SetAttribute("ThemeTextRole", "Text")
-                Title:SetAttribute("TextSpanish", titleSpanish)
-                Title:SetAttribute("TextEnglish", titleEnglish)
-            end
-
-            local GridHolder = mk("Frame", {
-                Parent = contentParent,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ZIndex = 9,
-            })
-            mk("UIGridLayout", {
-                Parent = GridHolder,
-                CellSize = UDim2.new(0.485, 0, 0, 180),
-                CellPadding = UDim2.new(0.03, 0, 0, 10),
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                HorizontalAlignment = Enum.HorizontalAlignment.Left,
-            })
-
-            local selectedIndex = nil
-            local cards = {}
-
-            local function refreshSelection()
-                for i, c in ipairs(cards) do
-                    local isSel = selectable and (i == selectedIndex)
+tedIndex)
                     c.Card.BackgroundColor3 = isSel and Theme.Accent or Theme.Secondary
                     c.Card.BackgroundTransparency = isSel and 0 or 0.4
                     c.Stroke.Color = isSel and Theme.Accent or Theme.Stroke
@@ -888,4 +761,99 @@
                         model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(180), 0))
                     end)
 
-                  
+                    local okBox, cf, size = pcall(function()
+                        return model:GetBoundingBox()
+                    end)
+                    if okBox and cf and size then
+                        local biggest = math.max(size.X, size.Y, size.Z)
+                        local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
+                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.30)
+                        Camera.CFrame = CFrame.new(camPos, focus)
+                    else
+                        Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
+                    end
+
+                    -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
+                    local animAcc = 0
+                    local function startAnimLoop()
+                        if HomeAnim.Loop then return end
+                        HomeAnim.Loop = RunService.RenderStepped:Connect(function(dt)
+                            if not Viewport.Parent then
+                                HomeAnim.Loop:Disconnect()
+                                return
+                            end
+                            if not TabPage.Visible or PerfOpt.Flags.NoHomeAvatar then return end
+                            animAcc += dt
+                            if animAcc < 1 / 30 then return end
+                            local step = math.min(animAcc, 0.1)
+                            animAcc = 0
+                            if HomeAnim.PlayerCtl then pcall(HomeAnim.PlayerCtl.Step, step) end
+                            if HomeAnim.OwnerCtl then pcall(HomeAnim.OwnerCtl.Step, step) end
+                            if HomeAnim.OwnerAfterStep then pcall(HomeAnim.OwnerAfterStep) end
+                        end)
+                        track(HomeAnim.Loop)
+                    end
+                    HomeAnim.StartLoop = startAnimLoop
+
+                    -- ---------- agarrar al owner con el dedo ----------
+                    -- Proyección propia (la cámara de la vista no está en workspace): FOV vertical + proporción de la vista.
+                    local function camInfo()
+                        local abs = Viewport.AbsoluteSize
+                        local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
+                        local tanV = math.tan(math.rad((tonumber(Camera.FieldOfView) or 70) / 2))
+                        return abs, aspect, tanV
+                    end
+                    function HomeAnim.SetupOwnerGrab(ctl, env)
+                        -- zona invisible que sigue al owner (encima del área para girar al jugador)
+                        local Grab = mk("TextButton", {
+                            Parent = ViewportWrap,
+                            Name = "OwnerGrab",
+                            Size = UDim2.fromOffset(0, 0),
+                            BackgroundTransparency = 1,
+                            Text = "",
+                            AutoButtonColor = false,
+                            ZIndex = 13,
+                        })
+                        local function project(p)
+                            local abs, aspect, tanV = camInfo()
+                            local cp = Camera.CFrame:PointToObjectSpace(p)
+                            local d = -cp.Z
+                            if d <= 0.01 then return nil end
+                            return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
+                        end
+                        -- punto de la pantalla -> punto en el plano donde está el owner (z de su lugar)
+                        local function unproject(screen)
+                            local abs, aspect, tanV = camInfo()
+                            if abs.X <= 0 or abs.Y <= 0 then return nil end
+                            local rel = screen - Viewport.AbsolutePosition
+                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
+                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
+                            local camPos = Camera.CFrame.Position
+                            if math.abs(dir.Z) < 1e-4 then return nil end
+                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
+                            if tt <= 0 then return nil end
+                            return camPos + dir * tt
+                        end
+                        local function updateGrab()
+                            local piv = env.model:GetPivot()
+                            local sitting = ctl.state == "sit"
+                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
+                            local sp, d, abs, tanV = project(center)
+                            if not sp then return end
+                            local hPx = env.H / (2 * d * tanV) * abs.Y
+                            local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
+                            Grab.Size = UDim2.fromOffset(w, h)
+                            Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
+                        end
+                        HomeAnim.OwnerAfterStep = updateGrab
+                        updateGrab()
+                        function HomeAnim.OwnerHit(pos)
+                            local a, sz = Grab.AbsolutePosition, Grab.AbsoluteSize
+                            return pos.X >= a.X and pos.X <= a.X + sz.X and pos.Y >= a.Y and pos.Y <= a.Y + sz.Y
+                        end
+                        local holdInput, prevScroll = nil, true
+                        local function screenOf(input) return Vector2.new(input.Position.X, input.Position.Y) end
+                        Grab.InputBegan:Connect(function(input)
+                            if holdInput then return end
+                            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                    

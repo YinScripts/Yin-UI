@@ -450,6 +450,48 @@
         ZIndex = 9,
     }, Body)
 
+    -- Iconos normales: descarga en segundo plano y conserva el recurso original si falla.
+    local YinIcons = { cache = {}, loading = {}, waiting = {} }
+    Window._YinIcons = YinIcons
+    function YinIcons.get(name, callback)
+        if YinIcons.cache[name] then callback(YinIcons.cache[name]); return end
+        if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
+        local queue = YinIcons.waiting[name] or {}
+        YinIcons.waiting[name] = queue
+        table.insert(queue, callback)
+        if YinIcons.loading[name] then return end
+        YinIcons.loading[name] = true
+        task.spawn(function()
+            local ok, asset = pcall(function()
+                local path = "YinUI_Icon_v1_" .. name .. ".png"
+                if type(isfile) ~= "function" or not isfile(path) then
+                    local data = game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/assets/iconos-yin/" .. name .. ".png")
+                    if type(data) ~= "string" or #data < 100 then return nil end
+                    writefile(path, data)
+                end
+                return getcustomasset(path)
+            end)
+            YinIcons.loading[name] = nil
+            local callbacks = YinIcons.waiting[name] or {}
+            YinIcons.waiting[name] = nil
+            if ok and type(asset) == "string" and asset ~= "" then
+                YinIcons.cache[name] = asset
+                for _, fn in ipairs(callbacks) do pcall(fn, asset) end
+            end
+        end)
+    end
+    function YinIcons.apply(image, name)
+        if not image or not name then return end
+        YinIcons.get(name, function(asset)
+            if image.Parent and Theme.ThemeName ~= "Navidad" then
+                image.Image = asset
+                image.ImageColor3 = Color3.new(1, 1, 1)
+            end
+        end)
+    end
+    YinIcons.tabs = { Home="home", Inicio="home", Favs="favorites", Favo="favorites", Themes="palette", Temas="palette", Effects="effects", Efectos="effects", Shaders="color_wheel", Settings="settings", Ajustes="settings", Chat="chat", Credits="info", ["Créditos"]="info", Logo="logo", Classic="diamonds", Spotify="music", ["Fan Art"]="fanart", All="all", Player="player", Players="players", Games="games", Map="map", Emotes="emotes", Movement="movement" }
+    YinIcons.stats = { ["rbxassetid://99086270459218"]="music", ["rbxassetid://90955646581059"]="players", ["rbxassetid://80031485123484"]="ping", ["rbxassetid://126144525731859"]="server", ["rbxassetid://128054256171328"]="time", ["rbxassetid://84609306530754"]="region", ["rbxassetid://88363727246005"]="status" }
+
     local function applyThemeExtras()
         CatImage.Visible = (Theme.ThemeName == "Dark") and not (Window and Window.CompactNavigation)
         TabListDivider.Visible = false -- v15: sin línea divisoria
@@ -472,6 +514,7 @@
             local key = controlKeys[control.Name]
             if key and control:IsA("ImageButton") then
                 control.Image = windowIcons[key] or control:GetAttribute("DefaultImage") or control.Image
+                if Theme.ThemeName ~= "Navidad" then YinIcons.apply(control, ({ Search="search", Minimize="minimize", Maximize="maximize", Close="close" })[key]) end
                 local controlPx = key == "Search" and searchSize or controlSize
                 control.Size = UDim2.fromOffset(controlPx, controlPx)
             end
@@ -763,6 +806,7 @@
         end
         local nav = Theme.ThemeName == "Navidad" and Window._NavidadIconMap[base] or nil
         img.Image = nav or base
+        if Theme.ThemeName ~= "Navidad" then YinIcons.apply(img, YinIcons.stats[base]) end
         return nav ~= nil
     end
 
@@ -810,7 +854,7 @@
         if Boom and Boom.Icon then
             local isNav = Window._ApplyNavidadIcon(Boom.Icon)
             Boom.Icon.Size = isNav and UDim2.new(0, 22, 0, 22) or UDim2.new(0, 14, 0, 14)
-            Boom.Icon.ImageColor3 = isNav and Color3.new(1, 1, 1) or getContrastColor(Theme.Accent)
+            Boom.Icon.ImageColor3 = Color3.new(1, 1, 1)
         end
         for _, img in ipairs(Window._NavidadIcons) do
             if img.Parent then Window._ApplyNavidadIcon(img) end

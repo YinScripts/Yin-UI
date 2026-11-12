@@ -1,297 +1,4 @@
-ror()
-        elseif self.Enabled then
-            self.MirrorScanElapsed = 0
-            self:_refreshMirror()
-        end
-    end
-
-    function ShaderReflections:SetContactStrength(value)
-        self.ContactStrength = math.clamp(tonumber(value) or self.ContactStrength, 0.05, 0.60)
-        self:_refreshContact()
-    end
-
-    function ShaderReflections:SetContactEnabled(enabled)
-        self.ContactEnabled = enabled == true
-        self:_refreshContact()
-    end
-
-    function ShaderReflections:SetModelDetailEnabled(enabled)
-        self.ModelDetailEnabled = enabled == true
-        if not self.ModelDetailEnabled then
-            for part in pairs(self.ModelApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-            end
-            self.ModelApplied = {}
-        end
-        if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetCharacterSpecularEnabled(enabled)
-        self.CharacterSpecularEnabled = enabled == true
-        if not self.CharacterSpecularEnabled then
-            for part in pairs(self.CharacterApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-                self.ModelApplied[part] = nil
-            end
-            self.CharacterApplied = {}
-        end
-        if self.Enabled then self:Refresh() end
-    end
-
-    function ShaderReflections:SetExcludeLocalAvatar(enabled)
-        self.ExcludeLocalAvatar = enabled == true
-        if self.ExcludeLocalAvatar then
-            for part in pairs(self.CharacterApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-                self.ModelApplied[part] = nil
-            end
-            self.CharacterApplied = {}
-        end
-        self:_refreshContact()
-        if self.Enabled then self:Refresh() end
-    end
-
-    function ShaderReflections:SetShadowEnabled(enabled)
-        enabled = enabled == true
-        if self.ShadowEnabled == enabled then
-            if enabled then self:_refreshSceneShadows() else self:_clearSceneShadows() end
-            return
-        end
-        self.ShadowEnabled = enabled
-        if not enabled then
-            self:_clearSceneShadows()
-            return
-        end
-        self.ShadowElapsed = 0
-        self.ShadowConnection = RunService.Heartbeat:Connect(function(delta)
-            self.ShadowElapsed = self.ShadowElapsed + delta
-            if self.ShadowElapsed >= 0.34 then
-                self.ShadowElapsed = 0
-                self:_refreshSceneShadows()
-            end
-        end)
-        self:_refreshSceneShadows()
-    end
-
-    function ShaderReflections:SetShadowStrength(value)
-        self.ShadowStrength = math.clamp(tonumber(value) or self.ShadowStrength, 0.05, 0.70)
-        self:_refreshSceneShadows()
-    end
-
-    function ShaderReflections:SetEnabled(enabled)
-        enabled = enabled == true
-        if self.Enabled == enabled then
-            if enabled then self:Refresh() end
-            return
-        end
-        self.Enabled = enabled
-        if not enabled then
-            if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
-            if self.CharacterConn then self.CharacterConn:Disconnect(); self.CharacterConn = nil end
-            self:Restore()
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            return
-        end
-        self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-        self:Refresh()
-        self:QueueSceneCoverage()
-        self.Elapsed = 0
-        self.Connection = RunService.Heartbeat:Connect(function(delta)
-            self.Elapsed = self.Elapsed + delta
-            self.ContactElapsed = self.ContactElapsed + delta
-            self.SceneElapsed = self.SceneElapsed + delta
-            if self.SceneElapsed >= 0.08 then
-                self.SceneElapsed = 0
-                self:_processSceneCoverage(90)
-            end
-            if self.ContactElapsed >= 0.12 then
-                self.ContactElapsed = 0
-                self:_refreshContact()
-            end
-            if self.ShadowElapsed >= 0.34 and not self.ShadowConnection then
-                self.ShadowElapsed = 0
-                self:_refreshSceneShadows()
-            end
-            self.MirrorScanElapsed = self.MirrorScanElapsed + delta
-            self.MirrorStepElapsed = self.MirrorStepElapsed + delta
-            if self.ObjectMirrorEnabled then
-                if self.MirrorScanElapsed >= 0.5 then
-                    self.MirrorScanElapsed, self.MirrorStepElapsed = 0, 0
-                    self:_refreshMirror()
-                elseif self.MirrorStepElapsed >= 1 / 30 then
-                    self.MirrorStepElapsed = 0
-                    self:_updateMirror()
-                end
-            end
-            if self.Elapsed >= 1.15 then
-                self.Elapsed = 0
-                self:Refresh()
-            end
-        end)
-        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.Position or nil end
-        if self.CharacterConn then self.CharacterConn:Disconnect() end
-        self.CharacterConn = LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(0.5) -- esperar a que cargue el mapa/cuerpo de la nueva ronda
-            if self.Enabled then self:_recover() end
-        end)
-    end
-
-    function ShaderReflections:ApplyGoldenFinish()
-        self.OilSheen = false
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetIntensity(0.46)
-        self:SetWetness(0.96)
-        self:SetContactStrength(0.38)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.46)
-        self:SetShadowEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    function ShaderReflections:ApplyOilFinish()
-        self.OilSheen = true
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetSkyMirrorEnabled(true)
-        self:SetStripTexturesEnabled(true)
-        self:SetIntensity(0.60)
-        self:SetWetness(1)
-        self:SetContactStrength(0.45)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.46)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    -- Espejo realista sin aceite (Ciudad Neón): piso espejo con copias sólidas, sin quitar texturas
-    function ShaderReflections:ApplyMirrorFinish()
-        self.OilSheen = false
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetStripTexturesEnabled(false)
-        self:SetSkyMirrorEnabled(true)
-        self:SetIntensity(0.50)
-        self:SetWetness(1)
-        self:SetContactStrength(0.40)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.40)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    local ShaderSolarTone = {
-        Hue = 0.10,
-        Saturation = 0.38,
-        Strength = 0.42,
-    }
-
-    function ShaderSolarTone:Apply()
-        local tint = Color3.fromHSV(self.Hue, self.Saturation, 1)
-        local top = Color3.new(1, 1, 1):Lerp(tint, self.Strength)
-        local bottomBase = Color3.fromRGB(176, 194, 226)
-        local bottom = bottomBase:Lerp(tint, self.Strength * 0.44)
-        return ShaderManager:Apply({Lighting = {ColorShift_Top = top, ColorShift_Bottom = bottom}}, {tween = true, duration = 0.28})
-    end
-
-    function ShaderSolarTone:SetHue(value)
-        self.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetSaturation(value)
-        self.Saturation = math.clamp(tonumber(value) or self.Saturation, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetStrength(value)
-        self.Strength = math.clamp(tonumber(value) or self.Strength, 0, 1)
-        return self:Apply()
-    end
-
-    local ShaderManualLighting = {
-        Brightness = ShaderLightingService.Brightness,
-        ExposureCompensation = ShaderLightingService.ExposureCompensation,
-    }
-
-    local ShaderSilhouette = {
-        Enabled = false,
-        Original = {},
-        ClothingOriginal = {},
-        TerrainOriginal = {},
-        TerrainWaterColor = nil,
-        Connection = nil,
-        ScanToken = 0,
-    }
-
-    function ShaderSilhouette:_applyPart(part)
-        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
-        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
-
-        if self.Original[part] == nil then
-            self.Original[part] = {}
-            pcall(function() self.Original[part].Color = part.Color end)
-            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
-        end
-
-        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
-        pcall(function() part.Reflectance = 0 end)
-
-        for _, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-                    self.Original[child] = {}
-                    pcall(function() self.Original[child].Color = child.Color end)
-                end
-                pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
-            end
-        end
-    end
-
-    function ShaderSilhouette:_applyClothing(instance)
-        if not self.Enabled or not instance or not instance.Parent then return end
-        local property
-        if instance:IsA("Shirt") then
-            property = "ShirtTemplate"
-        elseif instance:IsA("Pants") then
-            property = "PantsTemplate"
-        elseif instance:IsA("ShirtGraphic") then
-            property = "Graphic"
-        else
-            return
-        end
-
-        if self.ClothingOriginal[instance] == nil then
-            self.ClothingOriginal[instance] = {}
-            pcall(function() self.ClothingOriginal[instance][property] = instance[property] end)
-        end
-        pcall(function() instance[property] = "" end)
-    end
-
-    function ShaderSilhouette:_applyTerrain()
-        if not self.Enabled then return end
-        if self.TerrainWaterColor == nil then
-            pcall(function() self.TerrainWaterColor = ShaderTerrain.WaterColor end)
+       pcall(function() self.TerrainWaterColor = ShaderTerrain.WaterColor end)
         end
         for _, material in ipairs(Enum.Material:GetEnumItems()) do
             if self.TerrainOriginal[material] == nil then
@@ -969,4 +676,251 @@ ror()
                     lighting.Ambient = base.Ambient:Lerp(flashColor, 0.45 * k)
                 end)
                 setBolt(true)
-                ta
+                task.wait(self.Random:NextNumber(0.04, 0.09))
+                if token ~= self.FlashToken then break end
+                pcall(function()
+                    lighting.Brightness = base.Brightness + 0.35 * k
+                    lighting.ExposureCompensation = base.ExposureCompensation + 0.1 * k
+                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
+                    lighting.Ambient = base.Ambient
+                end)
+                setBolt(pulse == pulses)
+                task.wait(self.Random:NextNumber(0.05, 0.15))
+            end
+            if token ~= self.FlashToken then return end
+            setBolt(false)
+            if bolt then pcall(function() bolt:Destroy() end) end
+            if self.BoltFolder == bolt then self.BoltFolder = nil end
+            TweenService:Create(lighting, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), base):Play()
+            task.delay(0.55, function()
+                if token == self.FlashToken then self.FlashBase = nil end
+            end)
+        end)
+        self:_thunder(distance, strength, withBolt)
+    end
+
+    function ShaderRain:SetStormEnabled(enabled)
+        local wasStorm = self.StormEnabled
+        self.StormEnabled = enabled == true
+        self.StormToken = self.StormToken + 1
+        local token = self.StormToken
+        -- el cielo se pone más negro con tormenta (si el cielo lo puso la lluvia y no un preset)
+        if self.Enabled and self.SkySnapshot and wasStorm ~= self.StormEnabled then self:_applySky() end
+        if not self.Enabled or not self.StormEnabled then return end
+        task.spawn(function()
+            while self.Enabled and self.StormEnabled and token == self.StormToken do
+                task.wait(self.Random:NextNumber(self.StormGapMin or 5, self.StormGapMax or 12))
+                if self.Enabled and self.StormEnabled and token == self.StormToken then
+                    -- a veces rayo con canal visible, a veces relámpago dentro de las nubes
+                    local strike = self.Random:NextNumber() < 0.55
+                    self:Flash(strike and self.Random:NextNumber(0.85, 1.15) or self.Random:NextNumber(0.35, 0.6), strike)
+                end
+            end
+        end)
+    end
+
+    function ShaderRain:SetEnabled(enabled)
+        enabled = enabled == true
+        local was = self.Enabled
+        self.Enabled = enabled
+        if not self.Enabled then
+            self.StormToken = self.StormToken + 1
+            self:_endFlash(true)
+            self:_destroyRig()
+            if was then self:_restoreSky(true) end
+            return
+        end
+        self:_refreshDropColor()
+        self:_createRig()
+        self:_syncVisuals()
+        if not was then self:_applySky() end
+        if self.SoundEnabled then pcall(function() self:_ensureSound():Play() end) end
+        if self.StormEnabled then self:SetStormEnabled(true) end
+    end
+
+    function ShaderRain:Destroy()
+        self.Enabled, self.StormEnabled = false, false
+        self.StormToken = self.StormToken + 1
+        self:_endFlash(false)
+        self:_destroyRig()
+        -- cambio de preset: el preset nuevo ya puso su cielo, solo se descarta la foto
+        self:_restoreSky(false)
+    end
+
+    -- ==================== "Nivel 0": cámara de cinta perdida (found footage / VHS) ====================
+    -- Sin balanceo de cámara: solo cómo se ve y se siente. Lente abierto, grano, líneas de escaneo,
+    -- viñeta, parpadeo de exposición, auto-exposición al mirar las luces, desenfoque al girar rápido
+    -- y tirones de "tracking" de cinta cada tanto. Todo se restaura al cambiar de modo.
+    local ShaderFootage = {
+        Enabled = false,
+        Gui = nil,
+        Connection = nil,
+        SavedFov = nil,
+        TargetFov = 88,
+        BaseBlur = 2,
+        Grain = {},
+        Lines = nil,
+        Flicker = nil,
+        Band = nil,
+        LastLook = nil,
+        Blur = 2,
+        NextGlitch = 0,
+        GlitchT = nil,
+        Acc = 0,
+        Rng = Random.new(),
+        -- sonido de fondo propio: lo único que se escucha en "Nivel 0" (ID pendiente de Nick)
+        AmbientSoundId = "rbxassetid://120812539198119",
+        AmbientVolume = 0.7, -- 70 % (bajado un 30 %)
+        Ambient = nil,
+        Muted = {},
+        MuteConnections = {},
+        MuteToken = 0,
+    }
+
+    -- Silencio total: todos los sonidos del juego (y de la librería) a volumen 0, guardando el original.
+    -- Si el juego intenta subirles el volumen, se vuelven a silenciar al instante. Al salir, todo vuelve.
+    function ShaderFootage:_muteSound(sound)
+        if not self.Enabled or not sound or self.Muted[sound] ~= nil then return end
+        if PerfOpt.IsOwnInstance(sound) then return end
+        local ok = pcall(function()
+            self.Muted[sound] = sound.Volume
+            sound.Volume = 0
+        end)
+        if not ok then self.Muted[sound] = nil return end
+        local okSignal, connection = pcall(function()
+            return sound:GetPropertyChangedSignal("Volume"):Connect(function()
+                if self.Enabled and self.Muted[sound] ~= nil and sound.Volume > 0 then
+                    self.Muted[sound] = sound.Volume
+                    sound.Volume = 0
+                end
+            end)
+        end)
+        if okSignal and connection then table.insert(self.MuteConnections, connection) end
+    end
+
+    function ShaderFootage:_muteAll()
+        self.MuteToken = self.MuteToken + 1
+        local token = self.MuteToken
+        local okAdded, added = pcall(function()
+            return game.DescendantAdded:Connect(function(instance)
+                if instance:IsA("Sound") then task.defer(function() self:_muteSound(instance) end) end
+            end)
+        end)
+        if okAdded and added then table.insert(self.MuteConnections, added) end
+        task.spawn(function()
+            local okList, list = pcall(function() return game:GetDescendants() end)
+            if not okList then return end
+            for index, instance in ipairs(list) do
+                if token ~= self.MuteToken or not self.Enabled then return end
+                local isSound = false
+                pcall(function() isSound = instance:IsA("Sound") end)
+                if isSound then self:_muteSound(instance) end
+                if index % 500 == 0 then task.wait() end
+            end
+        end)
+    end
+
+    function ShaderFootage:_unmuteAll()
+        self.MuteToken = self.MuteToken + 1
+        for _, connection in ipairs(self.MuteConnections) do pcall(function() connection:Disconnect() end) end
+        self.MuteConnections = {}
+        for sound, volume in pairs(self.Muted) do
+            if sound.Parent then pcall(function() sound.Volume = volume end) end
+        end
+        self.Muted = {}
+    end
+
+    function ShaderFootage:_startAmbient()
+        if not self.AmbientSoundId then return end
+        local sound = Instance.new("Sound")
+        sound.Name = "YinYangShader_Level0Ambience"
+        sound.SoundId = self.AmbientSoundId
+        sound.Looped = true
+        sound.Volume = 0
+        sound.Parent = SoundService
+        pcall(function() sound:Play() end)
+        TweenService:Create(sound, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Volume = self.AmbientVolume}):Play()
+        self.Ambient = sound
+    end
+
+    function ShaderFootage:_stopAmbient()
+        local sound = self.Ambient
+        self.Ambient = nil
+        if not sound then return end
+        TweenService:Create(sound, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Volume = 0}):Play()
+        task.delay(0.9, function() pcall(function() sound:Destroy() end) end)
+    end
+
+    function ShaderFootage:_buildGui()
+        local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then return nil end
+        local old = playerGui:FindFirstChild("YinYangShader_Footage")
+        if old then old:Destroy() end
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "YinYangShader_Footage"
+        gui.IgnoreGuiInset = true
+        -- pantalla completa de verdad: sin esto quedaban sin cubrir las franjas de los costados
+        -- (zona segura del notch / cámara en celulares)
+        pcall(function() gui.ScreenInsets = Enum.ScreenInsets.None end)
+        pcall(function() gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None end)
+        gui.ResetOnSpawn = false
+        -- debajo de los menús del juego y de la librería: solo "ensucia" el mundo 3D
+        gui.DisplayOrder = -50
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        local function layer(name, props)
+            local frame = Instance.new("Frame")
+            frame.Name = name
+            frame.BorderSizePixel = 0
+            frame.Active = false
+            for key, value in pairs(props) do frame[key] = value end
+            frame.Parent = props.Parent or gui
+            return frame
+        end
+        -- viñeta: cuatro bordes con degradé hacia el centro
+        local edges = {
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0, 0), 90},
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0.74, 0), -90},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0.8, 0, 0, 0), 180},
+        }
+        for index, edge in ipairs(edges) do
+            local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
+            local gradient = Instance.new("UIGradient")
+            gradient.Rotation = edge[3]
+            gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(0.55, 0.86), NumberSequenceKeypoint.new(1, 1)})
+            gradient.Parent = frame
+        end
+        -- líneas de escaneo que bajan muy lento (rodado de la cinta)
+        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = false})
+        for index = 0, 119 do
+            layer("L", {Parent = lines, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, index / 120, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.9})
+        end
+        self.Lines = lines
+        -- grano: puntitos claros y oscuros que cambian de lugar cada cuadro
+        local lite = PerfOpt.Flags.LiteShaders
+        self.Grain = {}
+        for index = 1, lite and 40 or 110 do
+            local dark = index % 2 == 0
+            local size = self.Rng:NextInteger(1, 3)
+            table.insert(self.Grain, layer("G", {Size = UDim2.fromOffset(size, size), BackgroundColor3 = dark and Color3.new(0, 0, 0) or Color3.fromRGB(255, 250, 215), BackgroundTransparency = 0.75}))
+        end
+        -- parpadeo general de la imagen y banda de tracking
+        self.Flicker = layer("Flicker", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(20, 18, 6), BackgroundTransparency = 0.96})
+        local band = layer("Tracking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, -0.2, 0), BackgroundColor3 = Color3.fromRGB(235, 230, 200), BackgroundTransparency = 1})
+        local bandGradient = Instance.new("UIGradient")
+        bandGradient.Rotation = 90
+        bandGradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.45, 0.55), NumberSequenceKeypoint.new(0.55, 0.62), NumberSequenceKeypoint.new(1, 1)})
+        bandGradient.Parent = band
+        self.Band = band
+        gui.Parent = playerGui
+        return gui
+    end
+
+    function ShaderFootage:_step(delta)
+        local camera = workspace.CurrentCamera
+        if not camera then return end
+        -- lente abierto (se acerca suave al FOV objetivo)
+        pcall(function() camera.FieldOfView = camera.FieldOfView + (self.TargetFov - camera.FieldOfView) * math.min(1, delta * 4) end)
+        -- desenfoque de movimiento: cuanto más rápido gira la cámara, más borroso
+        local look = camera.CFrame.LookVector
+        local tur

@@ -1,237 +1,4 @@
-t.reactHold = {}
-    Chat.onlineMap = {}
-    Chat.onlineCount = 0
-    Chat.searchOpen = false
-    Chat.searchQuery = ""
-    Chat.lastInvite = -999
-    Chat.lastTypingPush = 0
-    Chat.inboxOk = true
-    Chat.order = 0
-    Chat.SETTINGS_FILE = "YinYang_ChatSettings.json"
-    Chat.settings = {
-        SideNotifs = true, MentionsEnabled = true,
-        MutedRooms = {}, StickerFavs = {}, RecentDMs = {}, DMLastSeen = {}, HiddenDMs = {},
-    }
-    Chat.loadSettings = function()
-        if readfile and isfile then
-            pcall(function()
-                if isfile(Chat.SETTINGS_FILE) then
-                    local data = HttpService:JSONDecode(readfile(Chat.SETTINGS_FILE))
-                    if type(data) == "table" then
-                        for k, v in pairs(data) do Chat.settings[k] = v end
-                    end
-                end
-            end)
-        end
-        for _, k in ipairs({"MutedRooms", "StickerFavs", "RecentDMs", "DMLastSeen", "HiddenDMs"}) do
-            if type(Chat.settings[k]) ~= "table" then Chat.settings[k] = {} end
-        end
-    end
-    Chat.saveSettings = function()
-        if not writefile then return end
-        pcall(function() writefile(Chat.SETTINGS_FILE, HttpService:JSONEncode(Chat.settings)) end)
-    end
-    Chat.loadSettings()
-    Chat.fbCall = function(method, path, body, query)
-        local ok, res = pcall(function()
-            return request({
-                Url = FIREBASE .. path .. ".json" .. (query and ("?" .. query) or ""),
-                Method = method,
-                Headers = {["Content-Type"] = "application/json"},
-                Body = body ~= nil and HttpService:JSONEncode(body) or nil,
-            })
-        end)
-        if not ok or type(res) ~= "table" then return false, nil, 0 end
-        local code = tonumber(res.StatusCode or res.Status) or 0
-        local success = (res.Success == true) or (code >= 200 and code < 300)
-        if code >= 400 then success = false end
-        local data = nil
-        if type(res.Body) == "string" and res.Body ~= "" then
-            local okD, d = pcall(HttpService.JSONDecode, HttpService, res.Body)
-            if okD then data = d end
-        end
-        return success, data, code
-    end
-    Chat.dmRoom = function(uid)
-        local a, b = tonumber(LocalPlayer.UserId), tonumber(uid)
-        if not b then return nil end
-        if a > b then a, b = b, a end
-        return "dm_" .. a .. "_" .. b
-    end
-    Chat.nextOrder = function()
-        Chat.order += 1
-        return Chat.order
-    end
-    Chat.clip = function(s, n)
-        s = tostring(s or "")
-        local okLen, len = pcall(utf8.len, s)
-        if not okLen or not len then return s:sub(1, n) end
-        if len <= n then return s end
-        local cut = utf8.offset(s, n + 1)
-        return (cut and s:sub(1, cut - 1) or s) .. "…"
-    end
-    Chat.esc = function(s)
-        return (tostring(s or ""):gsub("&", "&amp;"):gsub("<", "&lt;"):gsub(">", "&gt;"))
-    end
-    local open = false
-    local generation = 0
-    local REPLY_STORE_FILE = "YinYang_ChatReplies.json"
-    local storedReplies = {}
-    local function loadStoredReplies()
-        if not (readfile and isfile) then return end
-        pcall(function()
-            if isfile(REPLY_STORE_FILE) then
-                local data = HttpService:JSONDecode(readfile(REPLY_STORE_FILE))
-                if type(data) == "table" then storedReplies = data end
-            end
-        end)
-    end
-    local function saveStoredReplies()
-        if not writefile then return end
-        pcall(function() writefile(REPLY_STORE_FILE, HttpService:JSONEncode(storedReplies)) end)
-    end
-    local function rememberReply(text, ts, reply)
-        if type(reply) ~= "table" then return end
-        storedReplies[#storedReplies + 1] = {
-            uid = tostring(LocalPlayer.UserId),
-            text = tostring(text or ""),
-            ts = tonumber(ts) or os.time(),
-            reply = reply,
-        }
-        while #storedReplies > CONFIG.MAX_MESSAGES do table.remove(storedReplies, 1) end
-        saveStoredReplies()
-    end
-    local function findStoredReply(uid, text, ts)
-        local targetTs = tonumber(ts) or os.time()
-        local best, bestDelta
-        for i = #storedReplies, 1, -1 do
-            local item = storedReplies[i]
-            if type(item) == "table" and tostring(item.uid) == tostring(uid) and tostring(item.text) == tostring(text) then
-                local delta = math.abs((tonumber(item.ts) or 0) - targetTs)
-                if delta <= 15 and (not bestDelta or delta < bestDelta) then
-                    best, bestDelta = item.reply, delta
-                end
-            end
-        end
-        return best
-    end
-    loadStoredReplies()
-    local function avatar(userId)
-        return ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(userId) or 0)
-    end
-    local function scrollBottom()
-        task.defer(function()
-            pcall(function()
-                MessageScroll.CanvasPosition = Vector2.new(0, math.max(0, MessageLayout.AbsoluteContentSize.Y + 1000))
-            end)
-        end)
-    end
-    local function sourceKey(name, uid, text, ts, id)
-        if id then return "id:" .. tostring(id) end
-        return table.concat({tostring(name), tostring(uid), tostring(text), tostring(math.floor((tonumber(ts) or os.time()) / 3))}, "|")
-    end
-    local function addHistory(name, uid, text, ts, id, reply)
-        chatMessages[#chatMessages+1] = {
-            name=tostring(name or "Unknown"), uid=tonumber(uid) or 0,
-            text=tostring(text or ""), ts=tonumber(ts) or os.time(), id=id, reply=reply,
-        }
-        while #chatMessages > CONFIG.MAX_MESSAGES do table.remove(chatMessages, 1) end
-    end
-    local function playerNameColor(name, uid)
-        local seedText = tostring(uid or "") .. ":" .. tostring(name or "Unknown")
-        local hash = 0
-        for i = 1, #seedText do
-            hash = (hash * 31 + string.byte(seedText, i)) % 2147483647
-        end
-        local palette = {
-            Color3.fromRGB(255, 174, 96),
-            Color3.fromRGB(111, 205, 255),
-            Color3.fromRGB(255, 135, 166),
-            Color3.fromRGB(174, 225, 132),
-            Color3.fromRGB(202, 163, 255),
-            Color3.fromRGB(255, 218, 112),
-            Color3.fromRGB(105, 225, 204),
-            Color3.fromRGB(255, 155, 105),
-        }
-        return palette[(hash % #palette) + 1]
-    end
-    Chat.MD_STYLES = {
-        h1 = {size = 32, font = Enum.Font.GothamBlack},
-        h2 = {size = 26, font = Enum.Font.GothamBlack},
-        h3 = {size = 22, font = Enum.Font.GothamBold},
-        sub = {size = 14, font = Enum.Font.GothamMedium, color = "#A8A8A8"},
-    }
-    Chat.mdInline = function(s)
-        s = s:gsub("`([^`]+)`", '<font face="RobotoMono" color="#FFD59A">%1</font>')
-        s = s:gsub("%*%*(.-)%*%*", '<font weight="Heavy">%1</font>')
-        s = s:gsub("__(.-)__", "<u>%1</u>")
-        s = s:gsub("~~(.-)~~", "<s>%1</s>")
-        s = s:gsub("%*([^%*]+)%*", "<i>%1</i>")
-        return s
-    end
-    Chat.mdStrip = function(s)
-        return (s:gsub("`", ""):gsub("%*", ""):gsub("__", ""):gsub("~~", ""))
-    end
-    Chat.mdLine = function(line)
-        local hashes, rest = line:match("^(#+)%s*([^#%s].*)$")
-        if hashes and #hashes <= 3 then
-            return (#hashes == 1 and "h1") or (#hashes == 2 and "h2") or "h3", rest
-        end
-        local sub = line:match("^%-#%s+(.+)$")
-        if sub then return "sub", sub end
-        return nil, line
-    end
-    Chat.formatMessage = function(text, baseSize, baseFont, maxWidth)
-        local rich, w, h = {}, 0, 0
-        for line in (tostring(text) .. "\n"):gmatch("([^\n]*)\n") do
-            local style, body = Chat.mdLine(line)
-            local st = style and Chat.MD_STYLES[style]
-            local size = st and st.size or baseSize
-            local font = st and st.font or baseFont
-            local inner = Chat.mdInline(Chat.esc(body))
-            if st then
-                if style ~= "sub" then inner = "<b>" .. inner .. "</b>" end
-                inner = '<font size="' .. size .. '"' .. (st.color and (' color="' .. st.color .. '"') or "") .. ">" .. inner .. "</font>"
-            end
-            rich[#rich + 1] = inner
-            local plain = Chat.mdStrip(body)
-            if plain == "" then plain = " " end
-            local b = TextService:GetTextSize(plain, size, font, Vector2.new(maxWidth, 10000))
-            local extra = (font ~= baseFont or inner:find("<b>", 1, true)) and 1.07 or 1
-            w = math.max(w, b.X * extra)
-            h += b.Y + (st and 4 or 0)
-        end
-        return table.concat(rich, "\n"), math.ceil(w) + 2, math.ceil(h)
-    end
-    Chat.rainbowBody = function(text)
-        local body = tostring(text or ""):match("^%+%s*(.+)$")
-        if body and body:match("%a") then return body end
-        return nil
-    end
-    Chat.RAINBOW = ColorSequence.new({
-        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 70, 70)),
-        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 165, 40)),
-        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(255, 235, 60)),
-        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(70, 230, 110)),
-        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(60, 170, 255)),
-        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(170, 90, 255)),
-        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 70, 70)),
-    })
-    Chat.applyRainbow = function(label)
-        label.TextColor3 = Color3.new(1, 1, 1)
-        local g = mk("UIGradient", {Color = Chat.RAINBOW, Rotation = 0, Offset = Vector2.new(-0.5, 0)}, label)
-        task.spawn(function()
-            local t = 0
-            while label.Parent do
-                t = (t + 0.02) % 1
-                g.Offset = Vector2.new(t - 0.5, 0)
-                task.wait(0.05)
-            end
-        end)
-        return g
-    end
-    Chat.ownerNameFx = function(label)
-        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transparency = 0.72, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual}, label)
+rency = 0.72, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual}, label)
         local grad = mk("UIGradient", {
             Transparency = NumberSequence.new({
                 NumberSequenceKeypoint.new(0, 0.65),
@@ -848,4 +615,242 @@ t.reactHold = {}
                     uid=LocalPlayer.UserId, user=LocalPlayer.Name, dn=LocalPlayer.DisplayName,
                     text=Chat.previewText(payload), ts={ [".sv"]="timestamp" }, room=room,
                 })
-                if code == 401 or code == 403 then 
+                if code == 401 or code == 403 then Chat.inboxOk = false end
+            end
+        end)
+    end
+    local function sendText()
+        if sending then return end
+        local text = tostring(MessageBox.Text or ""):sub(1, CONFIG.MAX_CHAR)
+        text = text:match("^%s*(.-)%s*$") or ""
+        if text == "" then return end
+        sending = true
+        MessageBox.Text = ""
+        if Chat.editing then
+            Chat.submitEdit(text)
+        else
+            sendPayload(text)
+        end
+        task.delay(0.2, function() sending = false end)
+    end
+    Chat.sendText = sendText
+    Chat.isViewing = function(room)
+        return open and Chat.view == "chat" and Chat.room == room
+    end
+    Chat.setReactCounts = function(key, reacts)
+        if type(reacts) ~= "table" then localReactions[key] = nil return end
+        local counts = {}
+        for emoji, n in pairs(reacts) do
+            local v = tonumber(n)
+            if v and v > 0 then counts[tostring(emoji)] = math.floor(v) end
+        end
+        localReactions[key] = counts
+    end
+    Chat.applyServerReacts = function(meta, reacts)
+        if not meta then return end
+        local hold = Chat.reactHold[meta.key]
+        if hold and os.clock() < hold then return end
+        Chat.setReactCounts(meta.key, reacts)
+        refreshReactionChips(meta)
+    end
+    Chat.sendReaction = function(meta, emoji)
+        if not meta then return end
+        Chat.reactHold[meta.key] = os.clock() + 6
+        local room = Chat.room
+        task.spawn(function()
+            local t0 = os.clock()
+            while not meta.fbKey and os.clock() - t0 < 6 do task.wait(0.3) end
+            if not meta.fbKey then return end
+            local path = "chat/" .. room .. "/messages/" .. meta.fbKey .. "/reacts/" .. HttpService:UrlEncode(emoji)
+            local ok = Chat.fbCall("PUT", path, {[".sv"] = {increment = 1}})
+            if not ok then
+                local okGet, current = Chat.fbCall("GET", path)
+                Chat.fbCall("PUT", path, (okGet and tonumber(current) or 0) + 1)
+            end
+            Chat.reactHold[meta.key] = os.clock() + 1.5
+        end)
+    end
+    Chat.setStatus = function(meta, state)
+        if not meta or not meta.isMe or not meta.stamp then return end
+        local holder = meta.statusHolder
+        local ticks = holder and holder:FindFirstChild("Ticks")
+        local alert = holder and holder:FindFirstChild("Alert")
+        meta.stamp.Text = tostring(meta.timeText or "") .. (state == "pending" and " ·" or "")
+        if ticks then ticks.Visible = state ~= "pending" and state ~= "failed" end
+        if alert then alert.Visible = state == "failed" end
+        if state == "failed" then meta.stamp.TextColor3 = THEME.DANGER end
+        meta.state = state or "sent"
+    end
+    Chat.OWNER_AVATAR_NAMES = { v_orc = true, n_oqv = true }
+    Chat.avatarFor = function(uid, user)
+        if string.lower(tostring(user or "")) == "mousoza" then return UI.ICON.mousozaAvatar end
+        if Chat.OWNER_AVATAR_NAMES[string.lower(tostring(user or ""))] then return UI.ICON.ownerAvatar end
+        return ("rbxthumb://type=AvatarHeadShot&id=%d&w=150&h=150"):format(tonumber(uid) or 0)
+    end
+    Chat.scriptTag = function(script)
+        script = tostring(script or "")
+        if script == "" or string.lower(script) == "yinyang" or string.lower(script) == "yin yang" then return nil end
+        return "[" .. script .. "]"
+    end
+    UI.relTime = function(ts)
+        ts = tonumber(ts)
+        if not ts then return "" end
+        local d = math.max(0, os.time() - math.floor(ts))
+        if d < 60 then return "ahora" end
+        if d < 3600 then return math.floor(d / 60) .. " min" end
+        if d < 86400 then return math.floor(d / 3600) .. " h" end
+        if d < 604800 then return math.floor(d / 86400) .. " d" end
+        return math.floor(d / 604800) .. " sem"
+    end
+    UI.sepText = function(ts)
+        local t = os.date("*t", ts)
+        local now = os.date("*t")
+        local h = t.hour % 12
+        if h == 0 then h = 12 end
+        local hour = string.format("%d:%02d %s", h, t.min, t.hour < 12 and "A. M." or "P. M.")
+        if t.year == now.year and t.yday == now.yday then return "Hoy " .. hour end
+        if t.year == now.year and t.yday == now.yday - 1 then return "Ayer " .. hour end
+        return UI.fullDate(ts)
+    end
+    Chat.richName = function(name, info)
+        local user = tostring(name or "Unknown")
+        local dn = tostring(info.dn or "")
+        local out
+        if dn ~= "" and dn ~= user then
+            out = Chat.esc(dn) .. ' <font transparency="0.45">@' .. Chat.esc(user) .. "</font>"
+        else
+            out = Chat.esc(user)
+        end
+        if type(info.ownerTag) == "string" and info.ownerTag ~= "" then
+            out ..= '  <font color="#FFD700">' .. Chat.esc(info.ownerTag) .. "</font>"
+        end
+        return out
+    end
+    Chat.mentionsMe = function(text)
+        if not Chat.settings.MentionsEnabled then return false end
+        local t = string.lower(tostring(text or ""))
+        local function hasFull(n)
+            if not n or n == "" or n == "@" then return false end
+            local pos = 1
+            while true do
+                local s, e = string.find(t, n, pos, true)
+                if not s then return false end
+                local before = s == 1 or string.sub(t, s - 1, s - 1):match("[%s%p]") ~= nil
+                local after = e == #t or string.sub(t, e + 1, e + 1):match("[%s%p]") ~= nil
+                if before and after then return true end
+                pos = e + 1
+            end
+        end
+        return hasFull("@" .. string.lower(LocalPlayer.Name)) or hasFull("@" .. string.lower(LocalPlayer.DisplayName))
+    end
+    Chat.isReplyToMe = function(reply)
+        if type(reply) ~= "table" then return false end
+        if tonumber(reply.uid) == LocalPlayer.UserId then return true end
+        local me1, me2 = string.lower(LocalPlayer.Name), string.lower(LocalPlayer.DisplayName)
+        local ru = string.lower(tostring(reply.user or ""))
+        local rd = string.lower(tostring(reply.dn or ""))
+        if ru ~= "" and (ru == me1 or ru == me2) then return true end
+        if rd ~= "" and (rd == me1 or rd == me2) then return true end
+        return false
+    end
+    Chat.previewText = function(m)
+        if type(m) ~= "table" then return "" end
+        if m.t == "invite" then return "Invitación al servidor" end
+        local text = tostring(m.text or "")
+        if text:match("^%[%[STICKER:") then return "Sticker" end
+        text = Chat.rainbowBody(text) or text
+        local _, body = Chat.mdLine(text)
+        text = Chat.mdStrip(body)
+        text = text:gsub("%s+", " ")
+        return Chat.clip(text, 60)
+    end
+    Chat.setPreview = function(room, m, onlyIfNewer)
+        if not room or type(m) ~= "table" then return end
+        local tsSec = tonumber(m.ts)
+        tsSec = tsSec and (tsSec > 1e11 and tsSec / 1000 or tsSec) or os.time()
+        local prev = Chat.previews[room]
+        if onlyIfNewer and prev and (prev.ts or 0) >= tsSec then return end
+        local kind = "text"
+        if m.t == "invite" then kind = "invite" elseif tostring(m.text or ""):match("^%[%[STICKER:") then kind = "sticker" end
+        Chat.previews[room] = {
+            name = tostring(m.dn or m.user or "?"), uid = tonumber(m.uid),
+            text = Chat.previewText(m), ts = tsSec, kind = kind,
+        }
+    end
+    Chat.removeRow = function(meta)
+        if not meta then return end
+        if meta.row and meta.row.Parent then meta.row:Destroy() end
+        if messageRows[meta.key] == meta then messageRows[meta.key] = nil end
+        if meta.fbKey and Chat.byFbKey[meta.fbKey] == meta then Chat.byFbKey[meta.fbKey] = nil end
+        if actionTarget == meta then hideMessageActions() end
+    end
+    Chat.ownerDelete = function(meta)
+        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
+        local room = Chat.room
+        task.spawn(function()
+            local ok, _, code = Chat.fbCall("DELETE", "chat/" .. room .. "/messages/" .. meta.fbKey)
+            if ok then
+                Chat.removeRow(meta)
+            else
+                Chat.flash("Firebase rechazó el borrado (código " .. tostring(code) .. ")")
+            end
+        end)
+    end
+    Chat.pinMessage = function(meta)
+        if not (Chat.meIsOwner and meta and meta.fbKey) then return end
+        local room = Chat.room
+        local text = tostring(meta.text or "")
+        if text:match("^%[%[STICKER:") then text = "[Sticker]" end
+        local pin = {key = meta.fbKey, uid = meta.uid, user = meta.name, dn = meta.dn or meta.name, text = Chat.clip(text, 120)}
+        task.spawn(function()
+            local ok, _, code = Chat.fbCall("PUT", "chat/" .. room .. "/pin", pin)
+            if ok then
+                if room == Chat.room then
+                    Chat.pin = pin
+                    Chat.refreshPin()
+                end
+            else
+                Chat.flash("No se pudo fijar (código " .. tostring(code) .. ")")
+            end
+        end)
+    end
+    Chat.applySearch = function(meta)
+        if not meta or not meta.row then return end
+        local q = Chat.searchQuery
+        meta.row.Visible = q == "" or string.find(meta.searchText or "", q, 1, true) ~= nil
+    end
+    Chat.applySearchAll = function()
+        for _, meta in pairs(messageRows) do Chat.applySearch(meta) end
+    end
+    Chat.maskName = function(name)
+        name = tostring(name or "?"):gsub("[%c%z]", "")
+        local first = name:sub(1, 2)
+        if first == "" then first = "??" end
+        return first .. string.rep("*", math.clamp(#name - 2, 3, 8))
+    end
+    Chat.rememberDM = function(uid, name, user, bump)
+        uid = tonumber(uid)
+        if not uid or uid == LocalPlayer.UserId then return end
+        local list = Chat.settings.RecentDMs
+        local found
+        for i, e in ipairs(list) do
+            if type(e) == "table" and tonumber(e.uid) == uid then found = i break end
+        end
+        local entry = found and list[found] or {uid = uid}
+        local changed = not found
+        if name and tostring(name) ~= "" and entry.name ~= tostring(name) then entry.name = tostring(name) changed = true end
+        if user and tostring(user) ~= "" and entry.user ~= tostring(user) then entry.user = tostring(user) changed = true end
+        entry.name = entry.name or entry.user or tostring(uid)
+        if bump or not found then
+            if found then table.remove(list, found) end
+            table.insert(list, 1, entry)
+            entry.ts = os.time()
+            while #list > 12 do table.remove(list) end
+            changed = true
+        end
+        if changed then Chat.saveSettings() end
+    end
+    do
+        UI.BackButton = UI.iconButton(Header, UI.ICON.back, 34, 22, {Position = UDim2.fromOffset(8, 12), Visible = false, ZIndex = 3})
+        UI.BackCount = mk("TextLabel", {
+            Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vec
