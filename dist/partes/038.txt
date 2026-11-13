@@ -1,4 +1,10 @@
-ll(function()
+                SpotifyState.SoundEndedConnection:Disconnect()
+            end)
+            SpotifyState.SoundEndedConnection = nil
+        end
+
+        if SpotifyState.CurrentSound then
+            pcall(function()
                 SpotifyState.CurrentSound:Stop()
             end)
             safeDestroy(SpotifyState.CurrentSound)
@@ -1070,12 +1076,4 @@ ll(function()
             Image = image,
             ImageColor3 = Color3.fromRGB(255, 255, 255),
             ScaleType = Enum.ScaleType.Fit,
-            Rotation = rotation or 0,
-            ZIndex = 527,
-        })
-        return button, icon
-    end
-
-    FP.applyMode = function()
-        if not FloatingPlayer then return end
-        local size = FP
+         

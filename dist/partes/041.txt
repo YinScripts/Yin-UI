@@ -1,4 +1,10 @@
- de la librería UI llamada Yin Yang, específicamente dentro del script EVADE v5.2 Beta para el juego Roblox "Evade".
+  if not LocalPlayer then return end
+
+    local AI_BACKEND_URL = "https://yin-chat.onrender.com"
+    local PLAYER_NAME = LocalPlayer.Name
+
+    local SYSTEM_PROMPT = [[
+Eres Zero, una IA integrada dentro de la librería UI llamada Yin Yang, específicamente dentro del script EVADE v5.2 Beta para el juego Roblox "Evade".
 
 Estás sirviendo al jugador ]] .. PLAYER_NAME .. [[, quien es el desarrollador del script.
 

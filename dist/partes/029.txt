@@ -1,4 +1,13 @@
-    if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
+
+        ClothingOriginal = {},
+        TerrainOriginal = {},
+        TerrainWaterColor = nil,
+        Connection = nil,
+        ScanToken = 0,
+    }
+
+    function ShaderSilhouette:_applyPart(part)
+        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
         if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
 
         if self.Original[part] == nil then
@@ -937,6 +946,4 @@
             gradient.Parent = frame
         end
         -- líneas de escaneo que bajan muy lento (rodado de la cinta)
-        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = false})
-        for index = 0, 119 do
-            layer("L", {Parent = lines, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, index / 120, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTra
+        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = fal

@@ -1,4 +1,5 @@
-ibute("ThemeRole", "Background")
+ 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
+        stage:SetAttribute("ThemeRole", "Background")
         corner(stage, 999)
         local ring = stroke(stage, Theme.Stroke, 2, 0.7)
         composite(stage, icon, 54, 14)
@@ -1168,10 +1169,4 @@ ibute("ThemeRole", "Background")
         if not isSeeking then return end
         if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
         local pct = getSeekPercent(input.Position.X)
-        applySeekVisuals(pct)
-        ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if not isSeeking then return end
-        if input ~= seekInpu
+        applySe

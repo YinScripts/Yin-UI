@@ -306,8 +306,8 @@ ent = self._ContentParent or TabPage
             local function createViewport(parent)
                 local ViewportWrap = mk("Frame", {
                     Parent = parent,
-                    Size = UDim2.new(0.50, 0, 0, 290),
-                    Position = UDim2.new(0.5, 0, 0, -8),
+                    Size = UDim2.new(0.48, 0, 0, 290),
+                    Position = UDim2.new(0.245, 0, 0, -8),
                     AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -341,12 +341,14 @@ ent = self._ContentParent or TabPage
                     Size = UDim2.new(0, 120, 0, 16),
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 1, -22),
-                    BackgroundColor3 = Color3.new(0, 0, 0),
-                    BackgroundTransparency = 0.6,
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     ZIndex = 10,
                 })
                 corner(Floor, 999)
+                local floorRing = stroke(Floor, Theme.Accent, 2, 0.15)
+                floorRing:SetAttribute("ThemeRole", "Accent")
 
                 local Viewport = Instance.new("ViewportFrame")
                 Viewport.Name = "HomeAvatarViewport"

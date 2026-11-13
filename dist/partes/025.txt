@@ -1,4 +1,7 @@
- total + 1
+            local ok, val = pcall(item.entry.GetValue)
+                        if ok and type(val) == "number" then
+                            sliders[item.id] = val
+                            total = total + 1
                         end
                     end
                 end
@@ -1160,7 +1163,4 @@
     end)
     UserInputService.InputChanged:Connect(function(input)
         if draggingPicker and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSVAt(input.Position) end
-        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateHueAt(input.Position) end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserIn
+        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.Us

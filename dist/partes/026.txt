@@ -1,4 +1,7 @@
-putType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
+erInputType.Touch) then updateHueAt(input.Position) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
     end)
     PickerHex.FocusLost:Connect(function()
         local color = hexToColor(PickerHex.Text)
@@ -1016,9 +1019,4 @@ putType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, fa
 
     local function shaderCopy(value, seen)
         if type(value) ~= "table" then return value end
-        seen = seen or {}
-        if seen[value] then return seen[value] end
-        local result = {}
-        seen[value] = result
-        for key, item in pairs(value) do
-            result[shaderCopy(
+ 

@@ -1,4 +1,9 @@
-("ThemeTextRole", "Accent")
+       TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 315,
+        })
+        valueLabel:SetAttribute("ThemeRole", "Accent")
+        valueLabel:SetAttribute("ThemeTextRole", "Accent")
         valueLabel:SetAttribute("IgnoreTextEffect", true)
         corner(valueLabel, 999)
         mk("UIPadding", {Parent = valueLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
@@ -783,6 +788,4 @@
         {"Noche", "Night", "Night", "Azules profundos y ambiente nocturno"},
         {"Lluvia", "Rain", "Rain", "Niebla fría y cielo cubierto"},
         {"Tormenta", "Stormfront", "Stormfront", "Lluvia local, reflejos húmedos y relámpagos dinámicos", "Local rain, wet reflections and dynamic lightning"},
-        {"Cinemático", "Cinematic", "Cinematic", "Profundidad de campo y look de película"},
-        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
-        
+        {"Cinemático", "Cinematic", "Cinematic", "Profundidad de campo y loo

@@ -1,4 +1,9 @@
-mRGB(255, 255, 255)
+alpha = (math.sin(elapsed * 1.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "WhitePink" then
+            local colorA = Color3.fromRGB(255, 255, 255)
             local colorB = Color3.fromRGB(255, 130, 205)
             textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
                 elapsed = elapsed + dt
@@ -1016,7 +1021,4 @@ mRGB(255, 255, 255)
                 local sliders, total = {}, 0
                 for _, item in ipairs(buildIdMap()) do
                     if checked[item.tab] then
-                        local ok, val = pcall(item.entry.GetValue)
-                        if ok and type(val) == "number" then
-                            sliders[item.id] = val
-                            total =
+            

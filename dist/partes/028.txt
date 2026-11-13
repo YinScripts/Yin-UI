@@ -1,4 +1,7 @@
-return part.TopSurface end)
+Surface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
             self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
         end
         pcall(function()
@@ -958,12 +961,3 @@ return part.TopSurface end)
     local ShaderSilhouette = {
         Enabled = false,
         Original = {},
-        ClothingOriginal = {},
-        TerrainOriginal = {},
-        TerrainWaterColor = nil,
-        Connection = nil,
-        ScanToken = 0,
-    }
-
-    function ShaderSilhouette:_applyPart(part)
-    

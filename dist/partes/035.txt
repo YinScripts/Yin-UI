@@ -1,4 +1,10 @@
-       return c
+ion() return lay.Color end, function(col)
+            lay.Color = col
+            thumb.ImageColor3 = col or WHITE
+        end, "Original", "Original")
+        tint.Refresh()
+        refreshMovement()
+        return c
     end
 
     local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
@@ -750,5 +756,4 @@
         corner(c, 14)
         local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
         local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
-        stage:SetAttr
+        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58,

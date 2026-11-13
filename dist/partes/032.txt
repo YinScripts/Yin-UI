@@ -1,4 +1,6 @@
-{"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
+k de película"},
+        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
+        {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
         {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
         {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
         {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
@@ -870,7 +872,4 @@
         BackgroundColor3 = BLURPLE, BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 12,
     })
     corner(CopyBtn, 12)
-    local CopyScale = mk("UIScale", {Parent = CopyBtn, Scale = 1})
-    local CopyIcon = mk("ImageLabel", {
-        Parent = CopyBtn, Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 14, 0.5, -8),
-        BackgroundTransparenc
+    local CopyScale = mk("UISc

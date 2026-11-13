@@ -1,4 +1,9 @@
-key, seen)] = shaderCopy(item, seen)
+       seen = seen or {}
+        if seen[value] then return seen[value] end
+        local result = {}
+        seen[value] = result
+        for key, item in pairs(value) do
+            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
         end
         return result
     end
@@ -799,7 +804,4 @@ key, seen)] = shaderCopy(item, seen)
             and part.Size.Z >= 4
     end
 
-    function ShaderReflections:_applySkyMirrorSurface(part)
-        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
-        if self.SkyMirrorOriginal[part] == nil then
-            local ok, topSurface = pcall(function() 
+    function ShaderReflections:_applySkyMirror

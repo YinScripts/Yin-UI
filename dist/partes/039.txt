@@ -1,4 +1,12 @@
-.mini and FP.MINI or FP.EXPANDED
+   Rotation = rotation or 0,
+            ZIndex = 527,
+        })
+        return button, icon
+    end
+
+    FP.applyMode = function()
+        if not FloatingPlayer then return end
+        local size = FP.mini and FP.MINI or FP.EXPANDED
         TweenService:Create(FloatingPlayer, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(size.X, size.Y)}):Play()
         FP.Corner.CornerRadius = UDim.new(0, FP.mini and 24 or 18)
         FloatingPlayer.BackgroundTransparency = FP.mini and 1 or 0
@@ -1129,9 +1137,4 @@
         FavPage.Title.TextSize = narrow and 22 or (w < 760 and 30 or 38)
         FavPage.Title.Size = UDim2.new(1, 0, 0, math.max(40, cover - 64))
         FavPage.Kind.Position = UDim2.new(0, 0, 0, narrow and 2 or 14)
-        FavPage.SearchBox.Size = UDim2.fromOffset(narrow and math.clamp(w - 190, 70, 140) or 210, 32)
-        FavPage.HeadTime.Visible = not narrow
-    end
-    FavPage.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(FavPage.layout)
-    if Window._SpotifyAmbient then
-        Window._SpotifyAmbien
+        FavPage.SearchBox.Size = UDim2.fromOffset(narrow and math.clamp(w - 190, 70, 140) or 210, 32

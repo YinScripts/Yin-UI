@@ -260,8 +260,8 @@ xt = "",
             local greetEN = (hourNow >= 5 and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
-                Size = UDim2.new(0.38, 0, 0, 24),
-                Position = UDim2.new(0.31, 0, 0, 12),
+                Size = UDim2.new(0.48, 0, 0, 24),
+                Position = UDim2.new(0.005, 0, 0, 12),
                 BackgroundTransparency = 1,
                 Text = GetText(greetES, greetEN),
                 Font = Enum.Font.GothamBold,
@@ -276,8 +276,8 @@ xt = "",
 
             local UserLabel = mk("TextLabel", {
                 Parent = HomeRoot,
-                Size = UDim2.new(0.38, 0, 0, 30),
-                Position = UDim2.new(0.31, 0, 0, 34),
+                Size = UDim2.new(0.48, 0, 0, 30),
+                Position = UDim2.new(0.005, 0, 0, 34),
                 BackgroundTransparency = 1,
                 Text = LocalPlayer.DisplayName or LocalPlayer.Name,
                 Font = Enum.Font.GothamBold,
@@ -296,7 +296,7 @@ xt = "",
                 Size = UDim2.new(0, 0, 0, 20),
                 AutomaticSize = Enum.AutomaticSize.X,
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 66),
+                Position = UDim2.new(0.245, 0, 0, 66),
                 BackgroundColor3 = Theme.Accent,
                 BackgroundTransparency = 0.86,
                 Text = "@" .. tostring(LocalPlayer.Name),
@@ -316,13 +316,14 @@ xt = "",
             local row1 = 4
             local row2 = 100
             local row3 = 196
-            local leftColX = 0.03
-            local rightColX = 0.71
-            local cardW = 0.26
+            -- Home option 1: avatar on the left, six stats in a compact 2 × 3 grid.
+            local leftColX = 0.50
+            local rightColX = 0.755
+            local cardW = 0.235
 
             local _, playersVal, playersSub = makeStatCard(HomeRoot, leftColX, row1, cardW, cardH, 90955646581059, "Jugadores", "Players", "1", "Conectado", "Connected")
             local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, leftColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
-            local _, idVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
+            local idCard, idVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
 
             local _, timeVal = makeStatCard(HomeRoot, rightColX, row1, cardW, cardH, 128054256171328, "Tiempo", "Time", "00:00:00", "Servidor en vivo", "Server live")
             local _, regionVal = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 84609306530754, "Región", "Region", "ES-ES", "Detectado automáticamente", "Automatically detected")
@@ -366,9 +367,9 @@ xt = "",
             idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
 
             local copyButton = mk("TextButton", {
-                Parent = HomeRoot,
-                Size = UDim2.new(cardW, 0, 0, cardH),
-                Position = UDim2.new(leftColX, 0, 0, row3),
+                Parent = idCard,
+                Size = UDim2.fromScale(1, 1),
+                Position = UDim2.fromScale(0, 0),
                 BackgroundTransparency = 1,
                 Text = "",
                 ZIndex = 12,

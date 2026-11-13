@@ -1,4 +1,10 @@
-t then return end
+ekVisuals(pct)
+        ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
+    end)
+
+    UserInputService.InputEnded:Connect(function(input)
+        if not isSeeking then return end
+        if input ~= seekInput then return end
         isSeeking = false
         seekInput = nil
         SeekThumb.Visible = false
@@ -1125,10 +1131,3 @@ t then return end
 
         if SpotifyState.SoundEndedConnection then
             pcall(function()
-                SpotifyState.SoundEndedConnection:Disconnect()
-            end)
-            SpotifyState.SoundEndedConnection = nil
-        end
-
-        if SpotifyState.CurrentSound then
-            pca

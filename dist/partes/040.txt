@@ -1,4 +1,9 @@
-t.LayoutFavorites = function()
+)
+        FavPage.HeadTime.Visible = not narrow
+    end
+    FavPage.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(FavPage.layout)
+    if Window._SpotifyAmbient then
+        Window._SpotifyAmbient.LayoutFavorites = function()
             if FavPage.open then FavPage.layout() end
         end
     end
@@ -1065,10 +1070,4 @@ local _ZeroAI = (function()
     local HttpService = game:GetService("HttpService")
     local StarterGui  = game:GetService("StarterGui")
     local LocalPlayer = Players.LocalPlayer
-    if not LocalPlayer then return end
-
-    local AI_BACKEND_URL = "https://yin-chat.onrender.com"
-    local PLAYER_NAME = LocalPlayer.Name
-
-    local SYSTEM_PROMPT = [[
-Eres Zero, una IA integrada dentro
+  
