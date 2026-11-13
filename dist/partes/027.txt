@@ -1,4 +1,49 @@
-nd = "class", className = "Sky", parent = "Lighting"},
+tPreviewElapsed)
+        local heroColor = current or Theme.Text
+        EffectsUI.HeroText.TextColor3 = heroColor
+        EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
+    end))
+
+    refreshEffectRows()
+
+    function Window:InitializeShaderSystem()
+    local ShaderLightingService = game:GetService("Lighting")
+    local ShaderTerrain = workspace:FindFirstChildOfClass("Terrain") or workspace.Terrain
+    local ShaderCore = {}
+    ShaderCore.__index = ShaderCore
+
+    local function shaderCopy(value, seen)
+        if type(value) ~= "table" then return value end
+        seen = seen or {}
+        if seen[value] then return seen[value] end
+        local result = {}
+        seen[value] = result
+        for key, item in pairs(value) do
+            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
+        end
+        return result
+    end
+
+    local function shaderSafe(callback)
+        local ok, result = pcall(callback)
+        return ok, result
+    end
+
+    local function shaderParent(spec)
+        if spec.parent == "Lighting" then
+            return ShaderLightingService
+        elseif spec.parent == "Terrain" then
+            return ShaderTerrain
+        elseif spec.parent == "CurrentCamera" then
+            return workspace.CurrentCamera
+        end
+        return spec.parent
+    end
+
+    local ShaderTargets = {
+        Lighting = {kind = "service", serviceName = "Lighting"},
+        Terrain = {kind = "direct", instance = ShaderTerrain},
+        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
         Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
         Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
         BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
@@ -761,39 +806,4 @@ nd = "class", className = "Sky", parent = "Lighting"},
         if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
         if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
         if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
-        if material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
-        if material == Enum.Material.Water then return 0.96 end
-        if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
-        return 0.72
-    end
-
-    function ShaderReflections:_isSkyMirrorFloor(part, inModel)
-        return self.SkyMirrorEnabled
-            and not inModel
-            and math.abs(part.CFrame.UpVector.Y) >= 0.75
-            and part.Size.X >= 4
-            and part.Size.Z >= 4
-    end
-
-    function ShaderReflections:_applySkyMirrorSurface(part)
-        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
-        if self.SkyMirrorOriginal[part] == nil then
-            local ok, topSurface = pcall(function() return part.TopSurface end)
-            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
-        end
-        pcall(function()
-            part.TopSurface = Enum.SurfaceType.Smooth
-        end)
-        self.SkyMirrorApplied[part] = true
-    end
-
-    function ShaderReflections:_restoreSkyMirror()
-        for part, original in pairs(self.SkyMirrorOriginal) do
-            if part and part.Parent and original and original.TopSurface ~= nil then
-                pcall(function() part.TopSurface = original.TopSurface end)
-            end
-        end
-        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
-    end
-
-    -- Quita texturas de una parte de forma reversible (guarda todo pa
+        if 

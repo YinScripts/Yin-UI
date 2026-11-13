@@ -171,6 +171,34 @@ ent = self._ContentParent or TabPage
             })
             self._homeRoot = HomeRoot
 
+            -- Marco central de la opción 4. Se dimensiona desde el ancho disponible
+            -- para mantener libre el espacio de las tarjetas también en teléfonos.
+            local diamond = mk("Frame", {
+                Name = "HomeDiamond", Parent = HomeRoot,
+                AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 144),
+                Size = UDim2.fromOffset(120, 120), Rotation = 45,
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.68,
+                BorderSizePixel = 0, ZIndex = 9,
+            })
+            diamond:SetAttribute("ThemeRole", "Secondary")
+            corner(diamond, 5)
+            local diamondBorder = stroke(diamond, Theme.Accent, 1.5, 0.12)
+            diamondBorder:SetAttribute("ThemeRole", "Accent")
+            local inner = mk("Frame", {
+                Name = "InnerDiamond", Parent = diamond, AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -9, 1, -9),
+                BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9,
+            })
+            corner(inner, 3)
+            local innerBorder = stroke(inner, Theme.Accent, 1, 0.48)
+            innerBorder:SetAttribute("ThemeRole", "Accent")
+            local function layoutDiamond()
+                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.30, 36, 160)
+                diamond.Size = UDim2.fromOffset(size, size)
+            end
+            track(HomeRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutDiamond))
+            layoutDiamond()
+
             local function makeStatCard(parent, xScale, y, wScale, h, iconId, titleES, titleEN, valueText, subES, subEN)
                 local Card = mk("Frame", {
                     Parent = parent,
@@ -306,8 +334,8 @@ ent = self._ContentParent or TabPage
             local function createViewport(parent)
                 local ViewportWrap = mk("Frame", {
                     Parent = parent,
-                    Size = UDim2.new(0.48, 0, 0, 290),
-                    Position = UDim2.new(0.245, 0, 0, -8),
+                    Size = UDim2.new(0.44, 0, 0, 186),
+                    Position = UDim2.new(0.5, 0, 0, 25),
                     AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -322,7 +350,7 @@ ent = self._ContentParent or TabPage
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.55, 0),
                     BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.82,
+                    BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     ZIndex = 10,
                 })

@@ -1,4 +1,40 @@
-, 0.7)
+                playSound(Sounds.Click, 0.4)
+                for _, name in ipairs(tabNames) do checked[name] = value end
+                for _, r in ipairs(rowsUI) do paintRow(r, true) end
+                refreshSummary()
+            end
+            AllBtn.MouseButton1Click:Connect(function() setAll(true) end)
+            NoneBtn.MouseButton1Click:Connect(function() setAll(false) end)
+            refreshSummary()
+
+            local CodeBox = nil
+            ExportBtn.MouseButton1Click:Connect(function()
+                local sliders, total = {}, 0
+                for _, item in ipairs(buildIdMap()) do
+                    if checked[item.tab] then
+                        local ok, val = pcall(item.entry.GetValue)
+                        if ok and type(val) == "number" then
+                            sliders[item.id] = val
+                            total = total + 1
+                        end
+                    end
+                end
+
+                if total == 0 then
+                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
+                    return
+                end
+
+                local ok, encoded = pcall(function()
+                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
+                end)
+                if not ok then
+                    setStatus("err", "Error al codificar", "Encoding error")
+                    return
+                end
+
+                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
+                playSound(Sounds.Click, 0.7)
                 if copied then
                     setStatus("ok",
                         total .. " ajuste(s) copiados al portapapeles",
@@ -1130,34 +1166,4 @@
     PickerArea.InputBegan:Connect(function(input)
         if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
             draggingPicker = true
-            updateSVAt(input.Position)
-        end
-    end)
-    HueBar.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingHue = true
-            updateHueAt(input.Position)
-        end
-    end)
-    UserInputService.InputChanged:Connect(function(input)
-        if draggingPicker and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSVAt(input.Position) end
-        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateHueAt(input.Position) end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
-    end)
-    PickerHex.FocusLost:Connect(function()
-        local color = hexToColor(PickerHex.Text)
-        if color then setPickerColor(color) else refreshPicker() end
-    end)
-    local function applyRGBFields()
-        local color = Color3.fromRGB(
-            math.clamp(tonumber(PickerRed.Text) or 0, 0, 255),
-            math.clamp(tonumber(PickerGreen.Text) or 0, 0, 255),
-            math.clamp(tonumber(PickerBlue.Text) or 0, 0, 255)
-        )
-        setPickerColor(color)
-    end
-    PickerRed.FocusLost:Connect(applyRGBFields)
-    PickerGreen.FocusLost:Connect(applyRGBFields)
-    PickerBlue.FocusLost:Connect(a
+  

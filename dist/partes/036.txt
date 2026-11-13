@@ -1,4 +1,24 @@
- 15 })
+ack, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            guardedOpen(nil)
+        end)
+    end
+
+    local function customCard(id, rec, order)
+        local key = CL.Key(id)
+        local icon = IconCatalog.Icons[key]
+        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 12 })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
+        local sc = mk("UIScale", { Parent = c, Scale = 1 })
+        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
+        stage:SetAttribute("ThemeRole", "Background")
+        corner(stage, 999)
+        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
+        composite(stage, icon, 54, 14)
+        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
+        name:SetAttribute("ThemeTextRole", "Text")
+        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
         badge:SetAttribute("ThemeRole", "Accent")
         corner(badge, 999)
         RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
@@ -1148,43 +1168,4 @@
         SeekTooltipLabel.Text = secondsToClock(seekSec)
     end
 
-    SeekHitbox.InputBegan:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        isSeeking = true
-        seekInput = input
-        SeekThumb.Visible = true
-        SeekTooltip.Visible = true
-        local pct = getSeekPercent(input.Position.X)
-        applySeekVisuals(pct)
-    end)
-
-    UserInputService.InputChanged:Connect(function(input)
-        if not isSeeking then return end
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        local pct = getSeekPercent(input.Position.X)
-        applySeekVisuals(pct)
-        ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if not isSeeking then return end
-        if input ~= seekInput then return end
-        isSeeking = false
-        seekInput = nil
-        SeekThumb.Visible = false
-        SeekTooltip.Visible = false
-        local pct = getSeekPercent(input.Position.X)
-        if SpotifyState.CurrentSound then
-            pcall(function()
-                local total = SpotifyState.CurrentSound.TimeLength
-                if total > 0 then
-                    local newPos = pct * total
-                    SpotifyState.CurrentSound.TimePosition = newPos
-                    SpotifyState.CurrentPausedPosition = newPos
-                    if SpotifyState.IsPlaying then
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
- 
+    SeekHitbox.InputBegan:Connect(function

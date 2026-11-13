@@ -1,4 +1,26 @@
-d
+Z
+                            if d <= 0.01 then return nil end
+                            return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
+                        end
+                        -- punto de la pantalla -> punto en el plano donde está el owner (z de su lugar)
+                        local function unproject(screen)
+                            local abs, aspect, tanV = camInfo()
+                            if abs.X <= 0 or abs.Y <= 0 then return nil end
+                            local rel = screen - Viewport.AbsolutePosition
+                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
+                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
+                            local camPos = Camera.CFrame.Position
+                            if math.abs(dir.Z) < 1e-4 then return nil end
+                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
+                            if tt <= 0 then return nil end
+                            return camPos + dir * tt
+                        end
+                        local function updateGrab()
+                            local piv = env.model:GetPivot()
+                            local sitting = ctl.state == "sit"
+                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
+                            local sp, d, abs, tanV = project(center)
+                            if not sp then return end
                             local hPx = env.H / (2 * d * tanV) * abs.Y
                             local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
                             Grab.Size = UDim2.fromOffset(w, h)
@@ -231,8 +253,8 @@ d
             local greetEN = (hourNow >= 5 and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
-                Size = UDim2.new(0.48, 0, 0, 24),
-                Position = UDim2.new(0.005, 0, 0, 12),
+                Size = UDim2.new(0.44, 0, 0, 20),
+                Position = UDim2.new(0.28, 0, 0, 210),
                 BackgroundTransparency = 1,
                 Text = GetText(greetES, greetEN),
                 Font = Enum.Font.GothamBold,
@@ -247,8 +269,8 @@ d
 
             local UserLabel = mk("TextLabel", {
                 Parent = HomeRoot,
-                Size = UDim2.new(0.48, 0, 0, 30),
-                Position = UDim2.new(0.005, 0, 0, 34),
+                Size = UDim2.new(0.44, 0, 0, 30),
+                Position = UDim2.new(0.28, 0, 0, 229),
                 BackgroundTransparency = 1,
                 Text = LocalPlayer.DisplayName or LocalPlayer.Name,
                 Font = Enum.Font.GothamBold,
@@ -267,7 +289,7 @@ d
                 Size = UDim2.new(0, 0, 0, 20),
                 AutomaticSize = Enum.AutomaticSize.X,
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.245, 0, 0, 66),
+                Position = UDim2.new(0.5, 0, 0, 260),
                 BackgroundColor3 = Theme.Accent,
                 BackgroundTransparency = 0.86,
                 Text = "@" .. tostring(LocalPlayer.Name),
@@ -287,17 +309,17 @@ d
             local row1 = 4
             local row2 = 100
             local row3 = 196
-            -- Home option 1: avatar on the left, six stats in a compact 2 × 3 grid.
-            local leftColX = 0.50
-            local rightColX = 0.755
-            local cardW = 0.235
+            -- Opción 4: el avatar queda al centro y las estadísticas a ambos lados.
+            local leftColX = 0.01
+            local rightColX = 0.73
+            local cardW = 0.26
 
             local _, playersVal, playersSub = makeStatCard(HomeRoot, leftColX, row1, cardW, cardH, 90955646581059, "Jugadores", "Players", "1", "Conectado", "Connected")
-            local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, leftColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
-            local idCard, idVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
+            local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
+            local idCard, idVal = makeStatCard(HomeRoot, leftColX, row2, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
 
             local _, timeVal = makeStatCard(HomeRoot, rightColX, row1, cardW, cardH, 128054256171328, "Tiempo", "Time", "00:00:00", "Servidor en vivo", "Server live")
-            local _, regionVal = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 84609306530754, "Región", "Region", "ES-ES", "Detectado automáticamente", "Automatically detected")
+            local _, regionVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 84609306530754, "Región", "Region", "ES-ES", "Detectado automáticamente", "Automatically detected")
             local _, statusVal, statusSub, statusDot = makeStatCard(HomeRoot, rightColX, row3, cardW, cardH, 88363727246005, "Estado", "Status", "Healthy", "Todo funcionando", "All systems operational")
 
             for _, dynamic in ipairs({playersSub, pingSub, statusSub}) do
@@ -878,43 +900,4 @@ d
 
         if mode == "Off" then
             for _, obj in ipairs(getAllTextObjects()) do
-                local role = obj:GetAttribute("ThemeTextRole")
-                if role and Theme[role] then
-                    obj.TextColor3 = Theme[role]
-                elseif not role then
-                    obj.TextColor3 = Theme.Text
-                end
-            end
-            return
-        end
-
-        local elapsed = 0
-        local RunService = game:GetService("RunService")
-
-        if mode == "WhiteCyan" then
-            local colorA = Color3.fromRGB(255, 255, 255)
-            local colorB = Color3.fromRGB(120, 225, 255)
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "WhitePink" then
-            local colorA = Color3.fromRGB(255, 255, 255)
-            local colorB = Color3.fromRGB(255, 130, 205)
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "Rainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local hue = (elapsed * 0.12) % 1
-                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
-            end))
-
-        elseif mode == "CatRainbow" then
-            textEffectConnectio
+                loca

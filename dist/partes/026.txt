@@ -1,4 +1,34 @@
-pplyRGBFields)
+          updateSVAt(input.Position)
+        end
+    end)
+    HueBar.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingHue = true
+            updateHueAt(input.Position)
+        end
+    end)
+    UserInputService.InputChanged:Connect(function(input)
+        if draggingPicker and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateSVAt(input.Position) end
+        if draggingHue and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then updateHueAt(input.Position) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then draggingPicker, draggingHue = false, false end
+    end)
+    PickerHex.FocusLost:Connect(function()
+        local color = hexToColor(PickerHex.Text)
+        if color then setPickerColor(color) else refreshPicker() end
+    end)
+    local function applyRGBFields()
+        local color = Color3.fromRGB(
+            math.clamp(tonumber(PickerRed.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerGreen.Text) or 0, 0, 255),
+            math.clamp(tonumber(PickerBlue.Text) or 0, 0, 255)
+        )
+        setPickerColor(color)
+    end
+    PickerRed.FocusLost:Connect(applyRGBFields)
+    PickerGreen.FocusLost:Connect(applyRGBFields)
+    PickerBlue.FocusLost:Connect(applyRGBFields)
     PickerClose.MouseButton1Click:Connect(closeColorPicker)
     PickerCancel.MouseButton1Click:Connect(closeColorPicker)
     PickerApply.MouseButton1Click:Connect(function()
@@ -984,49 +1014,4 @@ pplyRGBFields)
                 end
             end
         end
-        local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
-        local heroColor = current or Theme.Text
-        EffectsUI.HeroText.TextColor3 = heroColor
-        EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
-    end))
-
-    refreshEffectRows()
-
-    function Window:InitializeShaderSystem()
-    local ShaderLightingService = game:GetService("Lighting")
-    local ShaderTerrain = workspace:FindFirstChildOfClass("Terrain") or workspace.Terrain
-    local ShaderCore = {}
-    ShaderCore.__index = ShaderCore
-
-    local function shaderCopy(value, seen)
-        if type(value) ~= "table" then return value end
-        seen = seen or {}
-        if seen[value] then return seen[value] end
-        local result = {}
-        seen[value] = result
-        for key, item in pairs(value) do
-            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
-        end
-        return result
-    end
-
-    local function shaderSafe(callback)
-        local ok, result = pcall(callback)
-        return ok, result
-    end
-
-    local function shaderParent(spec)
-        if spec.parent == "Lighting" then
-            return ShaderLightingService
-        elseif spec.parent == "Terrain" then
-            return ShaderTerrain
-        elseif spec.parent == "CurrentCamera" then
-            return workspace.CurrentCamera
-        end
-        return spec.parent
-    end
-
-    local ShaderTargets = {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {ki
+        local current = getEffectPreviewColor(Window.CurrentTextEffect, effec

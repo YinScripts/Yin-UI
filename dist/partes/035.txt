@@ -1,4 +1,30 @@
-     if ch:IsA("Frame") then ch:Destroy() end
+ "Clockwise" }, { -1, "Antihorario", "Counter-clockwise" } }, 6, function(k) lay.Direction = k changed() end, 26)
+        styleChips = chips(c, { { "Organic", "Orgánico (acelera y frena)", "Organic (speeds up & slows)" }, { "Constant", "Constante", "Constant" } }, 7, function(k) lay.Style = k changed() end, 26)
+        slider(c, 8, "Tamaño", "Size", { 0.4, 4, 0.05, 1.6, "x" }, lay.Scale, function(v) lay.Scale = v changed() end)
+        slider(c, 9, "Transparencia", "Transparency", { 0, 0.9, 0.05, 0, "" }, lay.Transparency or 0, function(v) lay.Transparency = v changed() end)
+        local tint = swatchRow(c, 10, "Teñir la imagen", "Tint the image", function() return lay.Color end, function(col)
+            lay.Color = col
+            thumb.ImageColor3 = col or WHITE
+        end, "Original", "Original")
+        tint.Refresh()
+        refreshMovement()
+        return c
+    end
+
+    local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
+    AddLayerBtn.MouseButton1Click:Connect(function()
+        if #ED.rec.Layers >= 3 then return end
+        table.insert(ED.rec.Layers, blankLayer(""))
+        rebuildLayerCards()
+        changed()
+        task.defer(function()
+            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
+        end)
+    end)
+    rebuildLayerCards = function()
+        activeSlider = nil
+        for _, ch in ipairs(LayersHolder:GetChildren()) do
+            if ch:IsA("Frame") then ch:Destroy() end
         end
         for i = 1, #ED.rec.Layers do
             layerCard(i)
@@ -721,24 +747,4 @@
         hit.MouseButton1Click:Connect(function()
             playSound(Sounds.Click, 0.5)
             sc.Scale = 0.93
-            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            guardedOpen(nil)
-        end)
-    end
-
-    local function customCard(id, rec, order)
-        local key = CL.Key(id)
-        local icon = IconCatalog.Icons[key]
-        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 12 })
-        c:SetAttribute("ThemeRole", "Secondary")
-        corner(c, 14)
-        local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
-        local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
-        stage:SetAttribute("ThemeRole", "Background")
-        corner(stage, 999)
-        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
-        composite(stage, icon, 54, 14)
-        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
-        name:SetAttribute("ThemeTextRole", "Text")
-        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex =
+            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.B

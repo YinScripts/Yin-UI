@@ -1,4 +1,50 @@
-le con slider de 1 a 50
+  ArtStatus.Visible = false
+                    Skeleton.Visible = false
+                    viewBtn.Visible = true
+                else
+                    setArtStatus("No se pudo cargar la imagen", "Could not load the image")
+                end
+            end)
+        end
+    end
+    Window:CreateFanArtTab()
+
+    return Window
+
+end
+
+
+print(" Yin Yang v24 CON TEMA CAT V1  - ¡Librería cargada y lista para usar!")
+
+
+local _ZeroAI = (function()
+    local Players     = game:GetService("Players")
+    local HttpService = game:GetService("HttpService")
+    local StarterGui  = game:GetService("StarterGui")
+    local LocalPlayer = Players.LocalPlayer
+    if not LocalPlayer then return end
+
+    local AI_BACKEND_URL = "https://yin-chat.onrender.com"
+    local PLAYER_NAME = LocalPlayer.Name
+
+    local SYSTEM_PROMPT = [[
+Eres Zero, una IA integrada dentro de la librería UI llamada Yin Yang, específicamente dentro del script EVADE v5.2 Beta para el juego Roblox "Evade".
+
+Estás sirviendo al jugador ]] .. PLAYER_NAME .. [[, quien es el desarrollador del script.
+
+SOBRE QUIÉN ERES:
+- Tu nombre es Zero
+- Eres parte de la librería Yin Yang UI v28
+- Fuiste diseñada para asistir a quien usa el script EVADE v5.2 Beta
+- Hablas de forma directa, casual y concisa — nunca eres robótica ni formal
+- Eres inteligente, sabes exactamente lo que hace cada opción del script
+
+CONOCIMIENTO COMPLETO DEL SCRIPT EVADE v5.2 Beta:
+
+PESTAÑA MOVEMENT:
+1. Teleport Walk (FloatingToggle)
+   - Mueve al jugador hacia adelante teletransportándolo en lugar de caminar normalmente
+   - Velocidad ajustable con slider de 1 a 50
    - Se desactiva automáticamente si se activa Jump Frontal
 
 2. Enhanced Jump (FloatingToggle)

@@ -1,4 +1,43 @@
-n = track(RunService.Heartbeat:Connect(function(dt)
+l role = obj:GetAttribute("ThemeTextRole")
+                if role and Theme[role] then
+                    obj.TextColor3 = Theme[role]
+                elseif not role then
+                    obj.TextColor3 = Theme.Text
+                end
+            end
+            return
+        end
+
+        local elapsed = 0
+        local RunService = game:GetService("RunService")
+
+        if mode == "WhiteCyan" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(120, 225, 255)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "WhitePink" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(255, 130, 205)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "Rainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local hue = (elapsed * 0.12) % 1
+                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
+            end))
+
+        elseif mode == "CatRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
                 elapsed = elapsed + dt
                 local cycle = (elapsed * 5) % 1
                 
@@ -986,40 +1025,3 @@ n = track(RunService.Heartbeat:Connect(function(dt)
             end
 
             local function setAll(value)
-                playSound(Sounds.Click, 0.4)
-                for _, name in ipairs(tabNames) do checked[name] = value end
-                for _, r in ipairs(rowsUI) do paintRow(r, true) end
-                refreshSummary()
-            end
-            AllBtn.MouseButton1Click:Connect(function() setAll(true) end)
-            NoneBtn.MouseButton1Click:Connect(function() setAll(false) end)
-            refreshSummary()
-
-            local CodeBox = nil
-            ExportBtn.MouseButton1Click:Connect(function()
-                local sliders, total = {}, 0
-                for _, item in ipairs(buildIdMap()) do
-                    if checked[item.tab] then
-                        local ok, val = pcall(item.entry.GetValue)
-                        if ok and type(val) == "number" then
-                            sliders[item.id] = val
-                            total = total + 1
-                        end
-                    end
-                end
-
-                if total == 0 then
-                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
-                    return
-                end
-
-                local ok, encoded = pcall(function()
-                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
-                end)
-                if not ok then
-                    setStatus("err", "Error al codificar", "Encoding error")
-                    return
-                end
-
-                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
-                playSound(Sounds.Click

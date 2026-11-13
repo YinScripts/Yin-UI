@@ -1,4 +1,49 @@
-                 self.Original[child] = {}
+lf.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
+        return self:Apply()
+    end
+
+    function ShaderSolarTone:SetSaturation(value)
+        self.Saturation = math.clamp(tonumber(value) or self.Saturation, 0, 1)
+        return self:Apply()
+    end
+
+    function ShaderSolarTone:SetStrength(value)
+        self.Strength = math.clamp(tonumber(value) or self.Strength, 0, 1)
+        return self:Apply()
+    end
+
+    local ShaderManualLighting = {
+        Brightness = ShaderLightingService.Brightness,
+        ExposureCompensation = ShaderLightingService.ExposureCompensation,
+    }
+
+    local ShaderSilhouette = {
+        Enabled = false,
+        Original = {},
+        ClothingOriginal = {},
+        TerrainOriginal = {},
+        TerrainWaterColor = nil,
+        Connection = nil,
+        ScanToken = 0,
+    }
+
+    function ShaderSilhouette:_applyPart(part)
+        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
+        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
+
+        if self.Original[part] == nil then
+            self.Original[part] = {}
+            pcall(function() self.Original[part].Color = part.Color end)
+            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
+        end
+
+        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
+        pcall(function() part.Reflectance = 0 end)
+
+        for _, child in ipairs(part:GetChildren()) do
+            if child:IsA("SurfaceAppearance") then
+                if self.Original[child] == nil then
+                    self.Original[child] = {}
                     pcall(function() self.Original[child].Color = child.Color end)
                 end
                 pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
@@ -915,25 +960,4 @@
             {UDim2.new(0.2, 0, 1, 0), UDim2.new(0.8, 0, 0, 0), 180},
         }
         for index, edge in ipairs(edges) do
-            local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
-            local gradient = Instance.new("UIGradient")
-            gradient.Rotation = edge[3]
-            gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(0.55, 0.86), NumberSequenceKeypoint.new(1, 1)})
-            gradient.Parent = frame
-        end
-        -- líneas de escaneo que bajan muy lento (rodado de la cinta)
-        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = false})
-        for index = 0, 119 do
-            layer("L", {Parent = lines, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, index / 120, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.9})
-        end
-        self.Lines = lines
-        -- grano: puntitos claros y oscuros que cambian de lugar cada cuadro
-        local lite = PerfOpt.Flags.LiteShaders
-        self.Grain = {}
-        for index = 1, lite and 40 or 110 do
-            local dark = index % 2 == 0
-            local size = self.Rng:NextInteger(1, 3)
-            table.insert(self.Grain, layer("G", {Size = UDim2.fromOffset(size, size), BackgroundColor3 = dark and Color3.new(0, 0, 0) or Color3.fromRGB(255, 250, 215), BackgroundTransparency = 0.75}))
-        end
-        -- parpadeo general de la imagen y banda de tracking
-        self.Flicker = layer("Flicker", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3
+ 

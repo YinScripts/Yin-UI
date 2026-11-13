@@ -1,4 +1,39 @@
-ra restaurarlo): SurfaceAppearance, MaterialVariant,
+material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
+        if material == Enum.Material.Water then return 0.96 end
+        if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
+        return 0.72
+    end
+
+    function ShaderReflections:_isSkyMirrorFloor(part, inModel)
+        return self.SkyMirrorEnabled
+            and not inModel
+            and math.abs(part.CFrame.UpVector.Y) >= 0.75
+            and part.Size.X >= 4
+            and part.Size.Z >= 4
+    end
+
+    function ShaderReflections:_applySkyMirrorSurface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
     -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
     function ShaderReflections:_stripPartTextures(part)
         if self.TextureOriginal[part] ~= nil then return end
@@ -918,49 +953,4 @@ ra restaurarlo): SurfaceAppearance, MaterialVariant,
     end
 
     function ShaderSolarTone:SetHue(value)
-        self.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetSaturation(value)
-        self.Saturation = math.clamp(tonumber(value) or self.Saturation, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetStrength(value)
-        self.Strength = math.clamp(tonumber(value) or self.Strength, 0, 1)
-        return self:Apply()
-    end
-
-    local ShaderManualLighting = {
-        Brightness = ShaderLightingService.Brightness,
-        ExposureCompensation = ShaderLightingService.ExposureCompensation,
-    }
-
-    local ShaderSilhouette = {
-        Enabled = false,
-        Original = {},
-        ClothingOriginal = {},
-        TerrainOriginal = {},
-        TerrainWaterColor = nil,
-        Connection = nil,
-        ScanToken = 0,
-    }
-
-    function ShaderSilhouette:_applyPart(part)
-        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
-        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
-
-        if self.Original[part] == nil then
-            self.Original[part] = {}
-            pcall(function() self.Original[part].Color = part.Color end)
-            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
-        end
-
-        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
-        pcall(function() part.Reflectance = 0 end)
-
-        for _, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-   
+        se

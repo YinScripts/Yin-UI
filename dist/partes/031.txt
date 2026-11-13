@@ -1,4 +1,43 @@
-ton, 999)
+         ZIndex = 314,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", spec.es)
+        label:SetAttribute("TextEnglish", spec.en)
+
+        local valueLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 0, 0, 22),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -46, 0, 8),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.82,
+            Text = shaderFormatValue(value),
+            TextColor3 = Theme.Accent,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 315,
+        })
+        valueLabel:SetAttribute("ThemeRole", "Accent")
+        valueLabel:SetAttribute("ThemeTextRole", "Accent")
+        valueLabel:SetAttribute("IgnoreTextEffect", true)
+        corner(valueLabel, 999)
+        mk("UIPadding", {Parent = valueLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        local resetButton = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.fromOffset(26, 22),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -12, 0, 8),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.2,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 315,
+        })
+        resetButton:SetAttribute("ThemeRole", "AccentOff")
+        corner(resetButton, 999)
         RowKit.Icon(resetButton, 125802172782007, 13, 316, "Text")
 
         local bar = mk("Frame", {
@@ -757,19 +796,4 @@ ton, 999)
             shaderSetModeLabel("Custom")
             shaderOpenCustomWindow()
         end,
-    })
-
-    local shaderPresetButtons = {
-        {"Mañana", "Morning", "Morning", "Luz suave y cálida para comenzar"},
-        {"Mediodía", "Midday", "Midday", "Claridad alta y sombras definidas"},
-        {"Atardecer", "Sunset", "Sunset", "Tonos dorados con contraste cinematográfico"},
-        {"Noche", "Night", "Night", "Azules profundos y ambiente nocturno"},
-        {"Lluvia", "Rain", "Rain", "Niebla fría y cielo cubierto"},
-        {"Tormenta", "Stormfront", "Stormfront", "Lluvia local, reflejos húmedos y relámpagos dinámicos", "Local rain, wet reflections and dynamic lightning"},
-        {"Cinemático", "Cinematic", "Cinematic", "Profundidad de campo y look de película"},
-        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
-        {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
-        {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
-        {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
-        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
-        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp sh
+  

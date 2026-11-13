@@ -1,4 +1,19 @@
-adows and subtly glossy floors"},
+  })
+
+    local shaderPresetButtons = {
+        {"Mañana", "Morning", "Morning", "Luz suave y cálida para comenzar"},
+        {"Mediodía", "Midday", "Midday", "Claridad alta y sombras definidas"},
+        {"Atardecer", "Sunset", "Sunset", "Tonos dorados con contraste cinematográfico"},
+        {"Noche", "Night", "Night", "Azules profundos y ambiente nocturno"},
+        {"Lluvia", "Rain", "Rain", "Niebla fría y cielo cubierto"},
+        {"Tormenta", "Stormfront", "Stormfront", "Lluvia local, reflejos húmedos y relámpagos dinámicos", "Local rain, wet reflections and dynamic lightning"},
+        {"Cinemático", "Cinematic", "Cinematic", "Profundidad de campo y look de película"},
+        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
+        {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
+        {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
+        {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
+        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
+        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
         {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
         {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
         {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
@@ -855,29 +870,4 @@ adows and subtly glossy floors"},
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11,
     }, "Únete a nuestro Discord", "Join our Discord", "Text")
     text({
-        Parent = DC, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 66, 0, 34),
-        Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.TextDim,
-        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = true, ZIndex = 11,
-    }, "Soporte, actualizaciones, sorteos y mucho más.", "Support, updates, giveaways and much more.", "TextDim")
-
-    local CopyBtn = mk("TextButton", {
-        Parent = DC, Size = UDim2.new(1, -32, 0, 40), Position = UDim2.new(0, 16, 1, -52),
-        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 12,
-    })
-    corner(CopyBtn, 12)
-    local CopyScale = mk("UIScale", {Parent = CopyBtn, Scale = 1})
-    local CopyIcon = mk("ImageLabel", {
-        Parent = CopyBtn, Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 14, 0.5, -8),
-        BackgroundTransparency = 1, Image = "rbxassetid://127734233169485",
-        ImageColor3 = Color3.new(1, 1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 13,
-    })
-    local CopyLabel = text({
-        Parent = CopyBtn, Size = UDim2.new(1, -120, 1, 0), Position = UDim2.new(0, 38, 0, 0),
-        Font = Enum.Font.GothamBlack, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
-        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
-    }, "Copiar invitación", "Copy invite", nil)
-    text({
-        Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
-        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "di
+        Parent = DC, Size = UDim2.new(1, -80, 0, 30), Po

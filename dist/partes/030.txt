@@ -1,4 +1,25 @@
-.fromRGB(20, 18, 6), BackgroundTransparency = 0.96})
+           local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
+            local gradient = Instance.new("UIGradient")
+            gradient.Rotation = edge[3]
+            gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(0.55, 0.86), NumberSequenceKeypoint.new(1, 1)})
+            gradient.Parent = frame
+        end
+        -- líneas de escaneo que bajan muy lento (rodado de la cinta)
+        local lines = layer("Scanlines", {Size = UDim2.new(1, 0, 1, 8), BackgroundTransparency = 1, ClipsDescendants = false})
+        for index = 0, 119 do
+            layer("L", {Parent = lines, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, index / 120, 0), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.9})
+        end
+        self.Lines = lines
+        -- grano: puntitos claros y oscuros que cambian de lugar cada cuadro
+        local lite = PerfOpt.Flags.LiteShaders
+        self.Grain = {}
+        for index = 1, lite and 40 or 110 do
+            local dark = index % 2 == 0
+            local size = self.Rng:NextInteger(1, 3)
+            table.insert(self.Grain, layer("G", {Size = UDim2.fromOffset(size, size), BackgroundColor3 = dark and Color3.new(0, 0, 0) or Color3.fromRGB(255, 250, 215), BackgroundTransparency = 0.75}))
+        end
+        -- parpadeo general de la imagen y banda de tracking
+        self.Flicker = layer("Flicker", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(20, 18, 6), BackgroundTransparency = 0.96})
         local band = layer("Tracking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new(0, 0, -0.2, 0), BackgroundColor3 = Color3.fromRGB(235, 230, 200), BackgroundTransparency = 1})
         local bandGradient = Instance.new("UIGradient")
         bandGradient.Rotation = 90
@@ -1003,43 +1024,4 @@
             TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
             TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 314,
-        })
-        label:SetAttribute("ThemeTextRole", "Text")
-        label:SetAttribute("TextSpanish", spec.es)
-        label:SetAttribute("TextEnglish", spec.en)
-
-        local valueLabel = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(0, 0, 0, 22),
-            AutomaticSize = Enum.AutomaticSize.X,
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -46, 0, 8),
-            BackgroundColor3 = Theme.Accent,
-            BackgroundTransparency = 0.82,
-            Text = shaderFormatValue(value),
-            TextColor3 = Theme.Accent,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Center,
-            ZIndex = 315,
-        })
-        valueLabel:SetAttribute("ThemeRole", "Accent")
-        valueLabel:SetAttribute("ThemeTextRole", "Accent")
-        valueLabel:SetAttribute("IgnoreTextEffect", true)
-        corner(valueLabel, 999)
-        mk("UIPadding", {Parent = valueLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-        local resetButton = mk("TextButton", {
-            Parent = holder,
-            Size = UDim2.fromOffset(26, 22),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 8),
-            BackgroundColor3 = Theme.AccentOff,
-            BackgroundTransparency = 0.2,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 315,
-        })
-        resetButton:SetAttribute("ThemeRole", "AccentOff")
-        corner(resetBut
+   

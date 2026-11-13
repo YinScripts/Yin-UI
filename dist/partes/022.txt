@@ -154,6 +154,34 @@
             })
             self._homeRoot = HomeRoot
 
+            -- Marco central de la opción 4. Se dimensiona desde el ancho disponible
+            -- para mantener libre el espacio de las tarjetas también en teléfonos.
+            local diamond = mk("Frame", {
+                Name = "HomeDiamond", Parent = HomeRoot,
+                AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 144),
+                Size = UDim2.fromOffset(120, 120), Rotation = 45,
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.68,
+                BorderSizePixel = 0, ZIndex = 9,
+            })
+            diamond:SetAttribute("ThemeRole", "Secondary")
+            corner(diamond, 5)
+            local diamondBorder = stroke(diamond, Theme.Accent, 1.5, 0.12)
+            diamondBorder:SetAttribute("ThemeRole", "Accent")
+            local inner = mk("Frame", {
+                Name = "InnerDiamond", Parent = diamond, AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.fromScale(0.5, 0.5), Size = UDim2.new(1, -9, 1, -9),
+                BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 9,
+            })
+            corner(inner, 3)
+            local innerBorder = stroke(inner, Theme.Accent, 1, 0.48)
+            innerBorder:SetAttribute("ThemeRole", "Accent")
+            local function layoutDiamond()
+                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.30, 36, 160)
+                diamond.Size = UDim2.fromOffset(size, size)
+            end
+            track(HomeRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutDiamond))
+            layoutDiamond()
+
             local function makeStatCard(parent, xScale, y, wScale, h, iconId, titleES, titleEN, valueText, subES, subEN)
                 local Card = mk("Frame", {
                     Parent = parent,
@@ -289,8 +317,8 @@
             local function createViewport(parent)
                 local ViewportWrap = mk("Frame", {
                     Parent = parent,
-                    Size = UDim2.new(0.48, 0, 0, 290),
-                    Position = UDim2.new(0.245, 0, 0, -8),
+                    Size = UDim2.new(0.44, 0, 0, 186),
+                    Position = UDim2.new(0.5, 0, 0, 25),
                     AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -305,7 +333,7 @@
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.55, 0),
                     BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.82,
+                    BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     ZIndex = 10,
                 })
@@ -847,26 +875,4 @@
                         local function project(p)
                             local abs, aspect, tanV = camInfo()
                             local cp = Camera.CFrame:PointToObjectSpace(p)
-                            local d = -cp.Z
-                            if d <= 0.01 then return nil end
-                            return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
-                        end
-                        -- punto de la pantalla -> punto en el plano donde está el owner (z de su lugar)
-                        local function unproject(screen)
-                            local abs, aspect, tanV = camInfo()
-                            if abs.X <= 0 or abs.Y <= 0 then return nil end
-                            local rel = screen - Viewport.AbsolutePosition
-                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
-                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
-                            local camPos = Camera.CFrame.Position
-                            if math.abs(dir.Z) < 1e-4 then return nil end
-                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
-                            if tt <= 0 then return nil end
-                            return camPos + dir * tt
-                        end
-                        local function updateGrab()
-                            local piv = env.model:GetPivot()
-                            local sitting = ctl.state == "sit"
-                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
-                            local sp, d, abs, tanV = project(center)
-                            if not sp then return en
+                            local d = -cp.

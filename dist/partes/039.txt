@@ -1,4 +1,44 @@
-      Parent = Window.ScreenGui,
+n = UDim2.new(0, x, 0, 0),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 526,
+        })
+        corner(button, 999)
+        local icon = mk("ImageLabel", {
+            Parent = button,
+            Size = UDim2.fromOffset(iconSize, iconSize),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = image,
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            ScaleType = Enum.ScaleType.Fit,
+            Rotation = rotation or 0,
+            ZIndex = 527,
+        })
+        return button, icon
+    end
+
+    FP.applyMode = function()
+        if not FloatingPlayer then return end
+        local size = FP.mini and FP.MINI or FP.EXPANDED
+        TweenService:Create(FloatingPlayer, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(size.X, size.Y)}):Play()
+        FP.Corner.CornerRadius = UDim.new(0, FP.mini and 24 or 18)
+        FloatingPlayer.BackgroundTransparency = FP.mini and 1 or 0
+        FP.Backdrop.Visible = not FP.mini
+        FP.Shade.Visible = not FP.mini
+        FP.Outline.Enabled = not FP.mini
+        FP.Full.Visible = not FP.mini
+        FP.Disc.Visible = FP.mini
+        FP.Ring.Enabled = FP.mini
+    end
+
+    local function createFloatingPlayer()
+        if FloatingPlayer and FloatingPlayer.Parent then return end
+        FloatingPlayer = mk("Frame", {
+            Parent = Window.ScreenGui,
             Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
             Position = UDim2.new(0.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
             BackgroundColor3 = Color3.fromRGB(14, 14, 16),
@@ -1105,36 +1145,4 @@
         FavPage.MiniTitle.Position = UDim2.new(0, 98 + inset, 0, 0)
         FavPage.MiniTitle.Size = UDim2.new(1, -110 - inset, 1, 0)
         local cover = narrow and 104 or 136
-        FavPage.Cover.Size = UDim2.fromOffset(cover, cover)
-        FavPage.Cover.AnchorPoint = Vector2.new(0, 0)
-        FavPage.Cover.Position = UDim2.fromOffset(20, 64)
-        FavPage.Info.AnchorPoint = Vector2.new(0, 0)
-        FavPage.Info.Position = UDim2.fromOffset(20 + cover + 16, 64)
-        FavPage.Info.Size = UDim2.new(1, -(20 + cover + 16 + 16), 0, cover)
-        FavPage.Title.TextSize = narrow and 22 or (w < 760 and 30 or 38)
-        FavPage.Title.Size = UDim2.new(1, 0, 0, math.max(40, cover - 64))
-        FavPage.Kind.Position = UDim2.new(0, 0, 0, narrow and 2 or 14)
-        FavPage.SearchBox.Size = UDim2.fromOffset(narrow and math.clamp(w - 190, 70, 140) or 210, 32)
-        FavPage.HeadTime.Visible = not narrow
-    end
-    FavPage.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(FavPage.layout)
-    if Window._SpotifyAmbient then
-        Window._SpotifyAmbient.LayoutFavorites = function()
-            if FavPage.open then FavPage.layout() end
-        end
-    end
-
-    FavPage.Scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-        local y = FavPage.Scroll.CanvasPosition.Y
-        local solid = y > FavPage.HERO_H - 40
-        FavPage.TopBar.BackgroundTransparency = solid and 0.35 or math.clamp(1 - 0.65 * (y / (FavPage.HERO_H - 40)), 0.35, 1)
-        FavPage.MiniPlay.Visible = solid and FavPage.PlayAll.Visible
-        FavPage.MiniTitle.Visible = solid
-    end)
-
-    FavPage.isCurrent = function(index)
-        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
-    end
-
-    FavPage.paintRow = function(row)
-        local curren
+        FavPage.Cover.Size = UDim
