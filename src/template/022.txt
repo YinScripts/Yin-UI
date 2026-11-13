@@ -261,12 +261,12 @@ xt = "",
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 20),
-                Position = UDim2.new(0.28, 0, 0, 210),
+                Position = UDim2.new(0.28, 0, 0, 194),
                 BackgroundTransparency = 1,
                 Text = GetText(greetES, greetEN),
                 Font = Enum.Font.GothamBold,
                 TextSize = 13,
-                TextColor3 = Theme.Accent,
+                TextColor3 = Theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 ZIndex = 11,
             })
@@ -277,7 +277,7 @@ xt = "",
             local UserLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 30),
-                Position = UDim2.new(0.28, 0, 0, 229),
+                Position = UDim2.new(0.28, 0, 0, 213),
                 BackgroundTransparency = 1,
                 Text = LocalPlayer.DisplayName or LocalPlayer.Name,
                 Font = Enum.Font.GothamBold,
@@ -296,7 +296,7 @@ xt = "",
                 Size = UDim2.new(0, 0, 0, 20),
                 AutomaticSize = Enum.AutomaticSize.X,
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 260),
+                Position = UDim2.new(0.5, 0, 0, 245),
                 BackgroundColor3 = Theme.Accent,
                 BackgroundTransparency = 0.86,
                 Text = "@" .. tostring(LocalPlayer.Name),
@@ -312,10 +312,10 @@ xt = "",
 
             createViewport(HomeRoot)
 
-            local cardH = 92
-            local row1 = 4
-            local row2 = 100
-            local row3 = 196
+            local cardH = 70
+            local row1 = 34
+            local row2 = 110
+            local row3 = 186
             -- Opción 4: el avatar queda al centro y las estadísticas a ambos lados.
             local leftColX = 0.01
             local rightColX = 0.73
@@ -334,8 +334,9 @@ xt = "",
                 dynamic:SetAttribute("TextEnglish", nil)
             end
             statusDot.Visible = true
-            statusSub.Position = UDim2.new(0, 22, 1, -26)
-            statusSub.Size = UDim2.new(1, -32, 0, 24)
+            statusSub.Visible = true
+            statusSub.Position = UDim2.new(0, 52, 1, -21)
+            statusSub.Size = UDim2.new(1, -60, 0, 15)
             local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
             pcall(function()
                 TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
@@ -344,18 +345,18 @@ xt = "",
             local pingBars = {}
             local BarsHolder = mk("Frame", {
                 Parent = pingCard,
-                Size = UDim2.fromOffset(22, 16),
+                Size = UDim2.fromOffset(18, 13),
                 AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -10, 0, 48),
+                Position = UDim2.new(1, -9, 0, 49),
                 BackgroundTransparency = 1,
                 ZIndex = 11,
             })
             for b = 1, 4 do
                 local bar = mk("Frame", {
                     Parent = BarsHolder,
-                    Size = UDim2.new(0, 4, b / 4, 0),
+                    Size = UDim2.new(0, 3, b / 4, 0),
                     AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, (b - 1) * 6, 1, 0),
+                    Position = UDim2.new(0, (b - 1) * 5, 1, 0),
                     BackgroundColor3 = Theme.TextDim,
                     BorderSizePixel = 0,
                     ZIndex = 11,

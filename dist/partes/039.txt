@@ -1,4 +1,52 @@
-n = UDim2.new(0, x, 0, 0),
+()
+            local homeColor = not SpotifyState.MySongsView and spotifyText or spotifyDim
+            local libraryColor = SpotifyState.MySongsView and spotifyText or spotifyDim
+            N.homeLabel.TextColor3, N.homeIcon.ImageColor3, N.homeGlyph.TextColor3 = homeColor, homeColor, homeColor
+            N.searchLabel.TextColor3, N.searchIcon.ImageColor3, N.searchGlyph.TextColor3 = spotifyDim, spotifyDim, spotifyDim
+            N.libraryLabel.TextColor3, N.libraryIcon.ImageColor3, N.libraryGlyph.TextColor3 = libraryColor, libraryColor, libraryColor
+        end
+        function N.openView(mySongs, focus)
+            if FavPage.hide then FavPage.hide() end
+            if UserSongForm.Visible then closeUserSongForm() end
+            SpotifyState.FavoritesView = false
+            SpotifyState.MySongsView = mySongs
+            SongSearchBox.Text = ""
+            SongList.CanvasPosition = Vector2.new(0, 0)
+            refreshSpotifyCatalogMode()
+            if focus then pcall(function() SongSearchBox:CaptureFocus() end) end
+        end
+        N.home.Activated:Connect(function() N.openView(false, false) end)
+        N.search.Activated:Connect(function() N.openView(false, true) end)
+        N.library.Activated:Connect(function() N.openView(true, false) end)
+        SpotifyState.RefreshMiniPlayer = function(progress)
+            if N.title.Text ~= PlayerSongTitle.Text then N.title.Text = PlayerSongTitle.Text end
+            if N.artist.Text ~= PlayerSongArtist.Text then N.artist.Text = PlayerSongArtist.Text end
+            if N.cover.Image ~= AlbumArt.Image then N.cover.Image = AlbumArt.Image end
+            local icon = SpotifyState.CurrentSound and SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+            if N.play.Image ~= icon then N.play.Image = icon end
+            if progress then
+                local p = math.floor(math.clamp(progress, 0, 1) * 1000 + 0.5) / 1000
+                if p ~= N.lastProgress then N.lastProgress = p N.progress.Size = UDim2.new(p, 0, 0, 2) end
+            end
+        end
+        SpotifyState.RefreshMiniPlayer(0)
+        SpotifyState.RefreshCatalogNavigation()
+    end
+
+    local function setFloatingVisible(visible)
+        SpotifyState.FloatingPlayerVisible = visible == true
+        if FloatingPlayer then FloatingPlayer.Visible = SpotifyState.FloatingPlayerVisible end
+        refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
+    end
+
+    FP.EXPANDED = Vector2.new(312, 112)
+    FP.MINI = Vector2.new(48, 48)
+
+    FP.iconButton = function(parent, image, size, iconSize, x, rotation)
+        local button = mk("TextButton", {
+            Parent = parent,
+            Size = UDim2.fromOffset(size, size),
+            Position = UDim2.new(0, x, 0, 0),
             BackgroundColor3 = Color3.fromRGB(255, 255, 255),
             BackgroundTransparency = 1,
             Text = "",
@@ -1067,82 +1115,4 @@ n = UDim2.new(0, x, 0, 0),
     mk("UIPadding", {
         Parent = FavPage.Body,
         PaddingLeft = UDim.new(0, 12),
-        PaddingRight = UDim.new(0, 12),
-        PaddingBottom = UDim.new(0, 24),
-    })
-
-    FavPage.TopBar = mk("Frame", {
-        Parent = FavPage.Root,
-        Size = UDim2.new(1, 0, 0, 52),
-        BackgroundColor3 = Color3.fromRGB(48, 34, 98),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 50,
-    })
-    FavPage.Back = mk("TextButton", {
-        Parent = FavPage.TopBar,
-        Size = UDim2.fromOffset(32, 32),
-        Position = UDim2.new(0, 12, 0.5, -16),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.3,
-        BorderSizePixel = 0,
-        Text = "‹",
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 26,
-        AutoButtonColor = false,
-        ZIndex = 52,
-    })
-    corner(FavPage.Back, 999)
-    FavPage.MiniPlay = mk("TextButton", {
-        Parent = FavPage.TopBar,
-        Size = UDim2.fromOffset(34, 34),
-        Position = UDim2.new(0, 54, 0.5, -17),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-        Visible = false,
-        ZIndex = 52,
-    })
-    corner(FavPage.MiniPlay, 999)
-    FavPage.MiniIcon = mk("ImageLabel", {
-        Parent = FavPage.MiniPlay,
-        Size = UDim2.fromOffset(15, 15),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        BackgroundTransparency = 1,
-        Image = FavPage.PLAY,
-        ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 53,
-    })
-    FavPage.MiniTitle = mk("TextLabel", {
-        Parent = FavPage.TopBar,
-        Size = UDim2.new(1, -110, 1, 0),
-        Position = UDim2.new(0, 98, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamBold,
-        TextSize = 17,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        Visible = false,
-        ZIndex = 52,
-    })
-    FavPage.text(FavPage.MiniTitle, "Canciones que te gustan", "Liked Songs")
-
-    FavPage.layout = function()
-        local w = spotifyLogicalSize(FavPage.Root).X
-        if w <= 0 then
-            return
-        end
-        local narrow = w < 520
-        local inset = Window.CompactNavigation and 60 or 0
-        FavPage.Back.Position = UDim2.new(0, 12 + inset, 0.5, -16)
-        FavPage.MiniPlay.Position = UDim2.new(0, 54 + inset, 0.5, -17)
-        FavPage.MiniTitle.Position = UDim2.new(0, 98 + inset, 0, 0)
-        FavPage.MiniTitle.Size = UDim2.new(1, -110 - inset, 1, 0)
-        local cover = narrow and 104 or 136
-        FavPage.Cover.Size = UDim
+        Pa

@@ -160,12 +160,12 @@
                 Name = "HomeDiamond", Parent = HomeRoot,
                 AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 144),
                 Size = UDim2.fromOffset(120, 120), Rotation = 45,
-                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.68,
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.30,
                 BorderSizePixel = 0, ZIndex = 9,
             })
             diamond:SetAttribute("ThemeRole", "Secondary")
             corner(diamond, 5)
-            local diamondBorder = stroke(diamond, Theme.Accent, 1.5, 0.12)
+            local diamondBorder = stroke(diamond, Theme.Accent, 2, 0.04)
             diamondBorder:SetAttribute("ThemeRole", "Accent")
             local inner = mk("Frame", {
                 Name = "InnerDiamond", Parent = diamond, AnchorPoint = Vector2.new(0.5, 0.5),
@@ -175,59 +175,86 @@
             corner(inner, 3)
             local innerBorder = stroke(inner, Theme.Accent, 1, 0.48)
             innerBorder:SetAttribute("ThemeRole", "Accent")
+            local crest = mk("TextLabel", {
+                Name = "HomeCrest", Parent = HomeRoot, AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.05,
+                BorderSizePixel = 0, Text = "☯", TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold, TextSize = 20, ZIndex = 14,
+                Size = UDim2.fromOffset(30, 30),
+            })
+            crest:SetAttribute("ThemeRole", "Secondary")
+            crest:SetAttribute("ThemeTextRole", "Text")
+            corner(crest, 999)
+            local crestBorder = stroke(crest, Theme.Accent, 1.5, 0.08)
+            crestBorder:SetAttribute("ThemeRole", "Accent")
             local function layoutDiamond()
-                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.30, 36, 160)
+                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.30, 36, 185)
                 diamond.Size = UDim2.fromOffset(size, size)
+                crest.Position = UDim2.new(0.5, 0, 0, math.max(15, 144 - size / math.sqrt(2)))
             end
             track(HomeRoot:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutDiamond))
             layoutDiamond()
 
             local function makeStatCard(parent, xScale, y, wScale, h, iconId, titleES, titleEN, valueText, subES, subEN)
                 local Card = mk("Frame", {
-                    Parent = parent,
-                    Size = UDim2.new(wScale, 0, 0, h),
-                    Position = UDim2.new(xScale, 0, 0, y),
-                    BackgroundColor3 = Theme.Secondary,
-                    BackgroundTransparency = 0.08,
-                    BorderSizePixel = 0,
-                    ClipsDescendants = true,
-                    ZIndex = 9,
+                    Parent = parent, Size = UDim2.new(wScale, 0, 0, h),
+                    Position = UDim2.new(xScale, 0, 0, y), BackgroundTransparency = 1,
+                    BorderSizePixel = 0, ClipsDescendants = false, ZIndex = 9,
                 })
-                Card:SetAttribute("ThemeRole", "Secondary")
-                corner(Card, 16)
-                stroke(Card, Theme.Stroke, 1.2, 0.45)
-                mk("UIGradient", {
-                    Parent = Card,
-                    Rotation = 90,
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 0),
-                        NumberSequenceKeypoint.new(1, 0.22),
-                    }),
-                })
-
-                local Glow = mk("Frame", {
-                    Parent = Card,
-                    Size = UDim2.new(1, 0, 0, 2),
-                    BackgroundColor3 = Theme.Accent,
-                    BorderSizePixel = 0,
-                    ZIndex = 10,
-                })
-                Glow:SetAttribute("ThemeRole", "Accent")
-                mk("UIGradient", {
-                    Parent = Glow,
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 1),
-                        NumberSequenceKeypoint.new(0.5, 0.15),
-                        NumberSequenceKeypoint.new(1, 1),
-                    }),
-                })
+                -- Hexágono con piezas nativas y contorno continuo; no depende de imágenes.
+                local middle = mk("Frame", {Parent = Card, BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 9})
+                middle:SetAttribute("ThemeRole", "Secondary")
+                local wedges = {}
+                for i = 1, 2 do
+                    local clip = mk("Frame", {Parent = Card, BackgroundTransparency = 1,
+                        BorderSizePixel = 0, ClipsDescendants = true, ZIndex = 9})
+                    local fill = mk("Frame", {Parent = clip, AnchorPoint = Vector2.new(0.5, 0.5),
+                        BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.08,
+                        Rotation = 45, BorderSizePixel = 0, ZIndex = 9})
+                    fill:SetAttribute("ThemeRole", "Secondary")
+                    wedges[i] = {clip = clip, fill = fill}
+                end
+                local edges = {}
+                for i = 1, 6 do
+                    local edge = mk("Frame", {Parent = Card, AnchorPoint = Vector2.new(0.5, 0.5),
+                        BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.24,
+                        BorderSizePixel = 0, ZIndex = 10})
+                    edge:SetAttribute("ThemeRole", "Accent")
+                    edges[i] = edge
+                end
+                local function layoutHex()
+                    local w, ht = Card.AbsoluteSize.X, Card.AbsoluteSize.Y
+                    if w <= 0 or ht <= 0 then return end
+                    local cut = math.min(ht / 2, w / 2)
+                    middle.Position = UDim2.fromOffset(cut, 0)
+                    middle.Size = UDim2.fromOffset(math.max(0, w - 2 * cut), ht)
+                    for i, wedge in ipairs(wedges) do
+                        local left = i == 1
+                        wedge.clip.Position = UDim2.fromOffset(left and 0 or w - cut, 0)
+                        wedge.clip.Size = UDim2.fromOffset(cut, ht)
+                        wedge.fill.Position = UDim2.fromOffset(left and cut or 0, ht / 2)
+                        wedge.fill.Size = UDim2.fromOffset(ht / math.sqrt(2), ht / math.sqrt(2))
+                    end
+                    local points = {{cut, 0}, {w-cut, 0}, {w, ht/2},
+                        {w-cut, ht}, {cut, ht}, {0, ht/2}}
+                    for i, edge in ipairs(edges) do
+                        local a, b = points[i], points[i % 6 + 1]
+                        local dx, dy = b[1]-a[1], b[2]-a[2]
+                        edge.Size = UDim2.fromOffset(math.sqrt(dx*dx + dy*dy) + 1, 1)
+                        edge.Position = UDim2.fromOffset((a[1]+b[1])/2, (a[2]+b[2])/2)
+                        edge.Rotation = math.deg(math.atan2(dy, dx))
+                    end
+                end
+                track(Card:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutHex))
+                layoutHex()
 
                 local Badge = mk("Frame", {
                     Parent = Card,
-                    Size = UDim2.new(0, 34, 0, 34),
-                    Position = UDim2.new(0, 10, 0, 10),
+                    Size = UDim2.new(0, 28, 0, 28),
+                    Position = UDim2.new(0, 12, 0.5, -14),
                     BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.86,
+                    BackgroundTransparency = 1,
                     BorderSizePixel = 0,
                     ZIndex = 10,
                 })
@@ -251,13 +278,14 @@
 
                 local Title = mk("TextLabel", {
                     Parent = Card,
-                    Size = UDim2.new(1, -58, 0, 34),
-                    Position = UDim2.new(0, 52, 0, 10),
+                    Size = UDim2.new(1, -54, 0, 17),
+                    Position = UDim2.new(0, 42, 0, 9),
                     BackgroundTransparency = 1,
                     Text = GetText(titleES, titleEN),
                     Font = Enum.Font.GothamBold,
-                    TextSize = 12,
-                    TextWrapped = true,
+                    TextSize = 11,
+                    TextWrapped = false,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
                     TextColor3 = Theme.TextDim,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     ZIndex = 10,
@@ -268,8 +296,8 @@
 
                 local Value = mk("TextLabel", {
                     Parent = Card,
-                    Size = UDim2.new(1, -20, 0, 24),
-                    Position = UDim2.new(0, 10, 0, 46),
+                    Size = UDim2.new(1, -52, 0, 22),
+                    Position = UDim2.new(0, 42, 0, 28),
                     BackgroundTransparency = 1,
                     Text = valueText or "...",
                     Font = Enum.Font.GothamBlack,
@@ -280,12 +308,14 @@
                     ZIndex = 10,
                 })
                 Value:SetAttribute("ThemeTextRole", "Text")
+                Value.TextScaled = true
+                mk("UITextSizeConstraint", {Parent = Value, MaxTextSize = 16, MinTextSize = 9})
 
                 local Dot = mk("Frame", {
                     Parent = Card,
                     Size = UDim2.fromOffset(6, 6),
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Position = UDim2.new(0, 10, 1, -13),
+                    Position = UDim2.new(0, 42, 1, -12),
                     BackgroundColor3 = Color3.fromRGB(46, 213, 115),
                     BorderSizePixel = 0,
                     Visible = false,
@@ -305,6 +335,7 @@
                     TextColor3 = Theme.TextDim,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextYAlignment = Enum.TextYAlignment.Bottom,
+                    Visible = false,
                     ZIndex = 10,
                 })
                 Subtitle:SetAttribute("ThemeTextRole", "TextDim")
@@ -317,8 +348,8 @@
             local function createViewport(parent)
                 local ViewportWrap = mk("Frame", {
                     Parent = parent,
-                    Size = UDim2.new(0.44, 0, 0, 186),
-                    Position = UDim2.new(0.5, 0, 0, 25),
+                    Size = UDim2.new(0.44, 0, 0, 166),
+                    Position = UDim2.new(0.5, 0, 0, 34),
                     AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -829,50 +860,4 @@
                         Camera.CFrame = CFrame.new(camPos, focus)
                     else
                         Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
-                    end
-
-                    -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
-                    local animAcc = 0
-                    local function startAnimLoop()
-                        if HomeAnim.Loop then return end
-                        HomeAnim.Loop = RunService.RenderStepped:Connect(function(dt)
-                            if not Viewport.Parent then
-                                HomeAnim.Loop:Disconnect()
-                                return
-                            end
-                            if not TabPage.Visible or PerfOpt.Flags.NoHomeAvatar then return end
-                            animAcc += dt
-                            if animAcc < 1 / 30 then return end
-                            local step = math.min(animAcc, 0.1)
-                            animAcc = 0
-                            if HomeAnim.PlayerCtl then pcall(HomeAnim.PlayerCtl.Step, step) end
-                            if HomeAnim.OwnerCtl then pcall(HomeAnim.OwnerCtl.Step, step) end
-                            if HomeAnim.OwnerAfterStep then pcall(HomeAnim.OwnerAfterStep) end
-                        end)
-                        track(HomeAnim.Loop)
-                    end
-                    HomeAnim.StartLoop = startAnimLoop
-
-                    -- ---------- agarrar al owner con el dedo ----------
-                    -- Proyección propia (la cámara de la vista no está en workspace): FOV vertical + proporción de la vista.
-                    local function camInfo()
-                        local abs = Viewport.AbsoluteSize
-                        local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
-                        local tanV = math.tan(math.rad((tonumber(Camera.FieldOfView) or 70) / 2))
-                        return abs, aspect, tanV
-                    end
-                    function HomeAnim.SetupOwnerGrab(ctl, env)
-                        -- zona invisible que sigue al owner (encima del área para girar al jugador)
-                        local Grab = mk("TextButton", {
-                            Parent = ViewportWrap,
-                            Name = "OwnerGrab",
-                            Size = UDim2.fromOffset(0, 0),
-                            BackgroundTransparency = 1,
-                            Text = "",
-                            AutoButtonColor = false,
-                            ZIndex = 13,
-                        })
-                        local function project(p)
-                            local abs, aspect, tanV = camInfo()
-                            local cp = Camera.CFrame:PointToObjectSpace(p)
-                            local d = -cp.
+ 

@@ -1,4 +1,79 @@
-l role = obj:GetAttribute("ThemeTextRole")
+  applyImages()
+                    print("Imagen de fondo actualizada")
+                end
+            end)
+        end
+
+        SavedConfig.CurrentTheme = themeName
+        SaveConfig()
+
+        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
+        if themeData and themeData.Sound then
+            CurrentClickSound = themeData.Sound
+        elseif ThemeClickSounds[themeName] then
+            CurrentClickSound = ThemeClickSounds[themeName]
+            print("Tema " .. themeName .. " - Sonido de click personalizado activado")
+        else
+            CurrentClickSound = Sounds.Click
+        end
+
+        local autoEffect = (themeData and themeData.Effect) or ThemeAutoEffects[themeName]
+        if autoEffect and autoEffect ~= "Off" then
+            self:SetTextEffect(autoEffect)
+        else
+            self:SetTextEffect("Off")
+        end
+
+        if TopBarArt then
+            pcall(function()
+                local img = (themeData and themeData.TitleBarImage) or ThemeTitleBarImages[themeName] or ""
+                TopBarArt.Image = img
+            end)
+        end
+
+        if TabListArt then
+            pcall(function()
+                local img = (themeData and themeData.TabListImage) or ThemeTabListImages[themeName] or ""
+                TabListArt.Image = img
+                TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or (img ~= "" and 0.5 or 0)
+            end)
+        end
+
+        CurrentTheme = themeName
+
+        buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
+
+        for _, floatData in ipairs(Window.FloatingToggles or {}) do
+            if floatData.Window and floatData.Window.Parent and not floatData.Window:GetAttribute("YYPillV5") then
+                buildAnimatedBorder(floatData.Window, Theme.Border, UDim.new(1, 0), true)
+            end
+        end
+
+        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
+            if obj:GetAttribute("IsSliderHolder") then
+                buildAnimatedBorder(obj, Theme.Border, UDim.new(0, 12), true)
+            end
+        end
+
+        if self._refreshEffectRows then
+            self._refreshEffectRows()
+        end
+        if self._refreshShaderCustomTheme then
+            self._refreshShaderCustomTheme()
+        end
+    end
+
+    function Window:SetTextEffect(mode)
+        stopTextEffect()
+        Window.CurrentTextEffect = mode
+        SavedConfig.CurrentEffect = mode
+        SaveConfig()
+        -- Optimización: el efecto elegido queda guardado, pero no corre su loop
+        if PerfOpt.Flags.NoTextEffects then mode = "Off" end
+
+        if mode == "Off" then
+            for _, obj in ipairs(getAllTextObjects()) do
+                local role = obj:GetAttribute("ThemeTextRole")
                 if role and Theme[role] then
                     obj.TextColor3 = Theme[role]
                 elseif not role then
@@ -964,64 +1039,4 @@ l role = obj:GetAttribute("ThemeTextRole")
                     TextSize = 13,
                     ZIndex = 504,
                 })
-                Mono:SetAttribute("ThemeRole", "Background")
-                Mono:SetAttribute("ThemeTextRole", "Accent")
-                Mono:SetAttribute("IgnoreTextEffect", true)
-                corner(Mono, 9)
-
-                local RL = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.new(1, -170, 1, 0),
-                    Position = UDim2.new(0, 82, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = tabName,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 13,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    ZIndex = 504,
-                })
-                RL:SetAttribute("ThemeTextRole", "Text")
-
-                local n = tabCount[tabName] or 0
-                local CountChip = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.new(0, 0, 0, 22),
-                    AutomaticSize = Enum.AutomaticSize.X,
-                    AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, -10, 0.5, 0),
-                    BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 0.82,
-                    Text = GetText(n .. (n == 1 and " slider" or " sliders"), n .. (n == 1 and " slider" or " sliders")),
-                    TextColor3 = Theme.Accent,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = 10,
-                    ZIndex = 504,
-                })
-                CountChip:SetAttribute("ThemeRole", "Accent")
-                CountChip:SetAttribute("ThemeTextRole", "Accent")
-                CountChip:SetAttribute("IgnoreTextEffect", true)
-                corner(CountChip, 999)
-                mk("UIPadding", {Parent = CountChip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
-
-                local RowBtn = mk("TextButton", {
-                    Parent = Row,
-                    Size = UDim2.new(1, 0, 1, 0),
-                    BackgroundTransparency = 1,
-                    Text = "",
-                    AutoButtonColor = false,
-                    ZIndex = 506,
-                })
-                local r = {name = tabName, row = Row, box = Box, mark = Mark, stroke = rowStroke}
-                rowsUI[#rowsUI + 1] = r
-                RowBtn.MouseButton1Click:Connect(function()
-                    playSound(Sounds.Click, 0.4)
-                    checked[tabName] = not checked[tabName]
-                    paintRow(r, true)
-                    refreshSummary()
-                end)
-                paintRow(r, false)
-            end
-
-            local function setAll(value)
+                Mono:SetAttribute("ThemeR

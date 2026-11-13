@@ -1,4 +1,83 @@
-material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
+files[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
+    end
+
+    local ShaderReflections = {
+        Enabled = false,
+        Intensity = 0.28,
+        Wetness = 0.82,
+        SurfaceMode = "All",
+        SceneCoverage = true,
+        SceneQueue = {},
+        SceneCursor = 1,
+        SceneElapsed = 0,
+        SceneBuilding = false,
+        SceneComplete = false,
+        ContactEnabled = false,
+        ContactStrength = 0.24,
+        ContactRig = nil,
+        ContactParts = {},
+        ContactCore = nil,
+        ContactElapsed = 0,
+        ModelDetailEnabled = true,
+        ModelApplied = {},
+        CharacterSpecularEnabled = false,
+        CharacterApplied = {},
+        ExcludeLocalAvatar = false,
+        SkyMirrorEnabled = true,
+        SkyMirrorStrength = 0.78,
+        SkyMirrorOriginal = {},
+        SkyMirrorApplied = {},
+        StripTextures = false,
+        OilSheen = false,
+        ObjectMirrorEnabled = false,
+        MirrorRig = nil,
+        MirrorProxies = {},
+        MirrorFloors = {},
+        MirrorPlanePos = nil,
+        MirrorPlaneNormal = nil,
+        MirrorScanElapsed = 0,
+        MirrorStepElapsed = 0,
+        MirrorFloorTransparency = 0.38,
+        MirrorBacking = nil,
+        MirrorLostAt = nil,
+        MirrorLast = {},
+        TextureOriginal = {},
+        ShadowEnabled = false,
+        ShadowStrength = 0.30,
+        ShadowRig = nil,
+        ShadowParts = {},
+        ShadowElapsed = 0,
+        ShadowConnection = nil,
+        Original = {},
+        Applied = {},
+        Connection = nil,
+        CharacterConn = nil,
+        SceneAnchor = nil,
+        Elapsed = 0,
+    }
+
+    function ShaderReflections:_root()
+        local character = LocalPlayer and LocalPlayer.Character
+        return character, character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    end
+
+    function ShaderReflections:_scan(origin, radius, character)
+        local ok, parts = pcall(function()
+            local params = OverlapParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = character and {character} or {}
+            return workspace:GetPartBoundsInRadius(origin, radius, params)
+        end)
+        if ok and type(parts) == "table" then return parts end
+        return {}
+    end
+
+    function ShaderReflections:_surfaceMultiplier(part)
+        local material = part.Material
+        if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
+        if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
+        if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
+        if material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
         if material == Enum.Material.Water then return 0.96 end
         if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
         return 0.72
@@ -878,79 +957,4 @@ material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or m
                 self:Refresh()
             end
         end)
-        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.Position or nil end
-        if self.CharacterConn then self.CharacterConn:Disconnect() end
-        self.CharacterConn = LocalPlayer.CharacterAdded:Connect(function()
-            task.wait(0.5) -- esperar a que cargue el mapa/cuerpo de la nueva ronda
-            if self.Enabled then self:_recover() end
-        end)
-    end
-
-    function ShaderReflections:ApplyGoldenFinish()
-        self.OilSheen = false
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetIntensity(0.46)
-        self:SetWetness(0.96)
-        self:SetContactStrength(0.38)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.46)
-        self:SetShadowEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    function ShaderReflections:ApplyOilFinish()
-        self.OilSheen = true
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetSkyMirrorEnabled(true)
-        self:SetStripTexturesEnabled(true)
-        self:SetIntensity(0.60)
-        self:SetWetness(1)
-        self:SetContactStrength(0.45)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.46)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    -- Espejo realista sin aceite (Ciudad Neón): piso espejo con copias sólidas, sin quitar texturas
-    function ShaderReflections:ApplyMirrorFinish()
-        self.OilSheen = false
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetStripTexturesEnabled(false)
-        self:SetSkyMirrorEnabled(true)
-        self:SetIntensity(0.50)
-        self:SetWetness(1)
-        self:SetContactStrength(0.40)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.40)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    local ShaderSolarTone = {
-        Hue = 0.10,
-        Saturation = 0.38,
-        Strength = 0.42,
-    }
-
-    function ShaderSolarTone:Apply()
-        local tint = Color3.fromHSV(self.Hue, self.Saturation, 1)
-        local top = Color3.new(1, 1, 1):Lerp(tint, self.Strength)
-        local bottomBase = Color3.fromRGB(176, 194, 226)
-        local bottom = bottomBase:Lerp(tint, self.Strength * 0.44)
-        return ShaderManager:Apply({Lighting = {ColorShift_Top = top, ColorShift_Bottom = bottom}}, {tween = true, duration = 0.28})
-    end
-
-    function ShaderSolarTone:SetHue(value)
-        se
+        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.P

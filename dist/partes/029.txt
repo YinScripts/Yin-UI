@@ -1,4 +1,79 @@
-lf.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
+osition or nil end
+        if self.CharacterConn then self.CharacterConn:Disconnect() end
+        self.CharacterConn = LocalPlayer.CharacterAdded:Connect(function()
+            task.wait(0.5) -- esperar a que cargue el mapa/cuerpo de la nueva ronda
+            if self.Enabled then self:_recover() end
+        end)
+    end
+
+    function ShaderReflections:ApplyGoldenFinish()
+        self.OilSheen = false
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetIntensity(0.46)
+        self:SetWetness(0.96)
+        self:SetContactStrength(0.38)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.46)
+        self:SetShadowEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    function ShaderReflections:ApplyOilFinish()
+        self.OilSheen = true
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetSkyMirrorEnabled(true)
+        self:SetStripTexturesEnabled(true)
+        self:SetIntensity(0.60)
+        self:SetWetness(1)
+        self:SetContactStrength(0.45)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.46)
+        self:SetShadowEnabled(true)
+        self:SetObjectMirrorEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    -- Espejo realista sin aceite (Ciudad Neón): piso espejo con copias sólidas, sin quitar texturas
+    function ShaderReflections:ApplyMirrorFinish()
+        self.OilSheen = false
+        self:SetSceneCoverage(false)
+        self:SetSurfaceMode("All")
+        self:SetModelDetailEnabled(true)
+        self:SetCharacterSpecularEnabled(true)
+        self:SetStripTexturesEnabled(false)
+        self:SetSkyMirrorEnabled(true)
+        self:SetIntensity(0.50)
+        self:SetWetness(1)
+        self:SetContactStrength(0.40)
+        self:SetContactEnabled(true)
+        self:SetShadowStrength(0.40)
+        self:SetShadowEnabled(true)
+        self:SetObjectMirrorEnabled(true)
+        self:SetEnabled(true)
+    end
+
+    local ShaderSolarTone = {
+        Hue = 0.10,
+        Saturation = 0.38,
+        Strength = 0.42,
+    }
+
+    function ShaderSolarTone:Apply()
+        local tint = Color3.fromHSV(self.Hue, self.Saturation, 1)
+        local top = Color3.new(1, 1, 1):Lerp(tint, self.Strength)
+        local bottomBase = Color3.fromRGB(176, 194, 226)
+        local bottom = bottomBase:Lerp(tint, self.Strength * 0.44)
+        return ShaderManager:Apply({Lighting = {ColorShift_Top = top, ColorShift_Bottom = bottom}}, {tween = true, duration = 0.28})
+    end
+
+    function ShaderSolarTone:SetHue(value)
+        self.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
         return self:Apply()
     end
 
@@ -900,64 +975,4 @@ lf.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
         self.MuteToken = self.MuteToken + 1
         for _, connection in ipairs(self.MuteConnections) do pcall(function() connection:Disconnect() end) end
         self.MuteConnections = {}
-        for sound, volume in pairs(self.Muted) do
-            if sound.Parent then pcall(function() sound.Volume = volume end) end
-        end
-        self.Muted = {}
-    end
-
-    function ShaderFootage:_startAmbient()
-        if not self.AmbientSoundId then return end
-        local sound = Instance.new("Sound")
-        sound.Name = "YinYangShader_Level0Ambience"
-        sound.SoundId = self.AmbientSoundId
-        sound.Looped = true
-        sound.Volume = 0
-        sound.Parent = SoundService
-        pcall(function() sound:Play() end)
-        TweenService:Create(sound, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Volume = self.AmbientVolume}):Play()
-        self.Ambient = sound
-    end
-
-    function ShaderFootage:_stopAmbient()
-        local sound = self.Ambient
-        self.Ambient = nil
-        if not sound then return end
-        TweenService:Create(sound, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Volume = 0}):Play()
-        task.delay(0.9, function() pcall(function() sound:Destroy() end) end)
-    end
-
-    function ShaderFootage:_buildGui()
-        local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
-        if not playerGui then return nil end
-        local old = playerGui:FindFirstChild("YinYangShader_Footage")
-        if old then old:Destroy() end
-        local gui = Instance.new("ScreenGui")
-        gui.Name = "YinYangShader_Footage"
-        gui.IgnoreGuiInset = true
-        -- pantalla completa de verdad: sin esto quedaban sin cubrir las franjas de los costados
-        -- (zona segura del notch / cámara en celulares)
-        pcall(function() gui.ScreenInsets = Enum.ScreenInsets.None end)
-        pcall(function() gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None end)
-        gui.ResetOnSpawn = false
-        -- debajo de los menús del juego y de la librería: solo "ensucia" el mundo 3D
-        gui.DisplayOrder = -50
-        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
-        local function layer(name, props)
-            local frame = Instance.new("Frame")
-            frame.Name = name
-            frame.BorderSizePixel = 0
-            frame.Active = false
-            for key, value in pairs(props) do frame[key] = value end
-            frame.Parent = props.Parent or gui
-            return frame
-        end
-        -- viñeta: cuatro bordes con degradé hacia el centro
-        local edges = {
-            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0, 0), 90},
-            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0.74, 0), -90},
-            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0},
-            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0.8, 0, 0, 0), 180},
-        }
-        for index, edge in ipairs(edges) do
- 
+        for sound, volum

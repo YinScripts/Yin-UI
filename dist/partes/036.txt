@@ -1,4 +1,42 @@
-ack, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+.Accent, ZIndex = 13 })
+        circle:SetAttribute("ThemeRole", "Accent")
+        corner(circle, 999)
+        local plus = mk("TextLabel", { Parent = circle, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font = Enum.Font.GothamBold, ZIndex = 14 })
+        plus:SetAttribute("ThemeTextRole", "AccentText")
+        plus:SetAttribute("IgnoreTextEffect", true)
+        TweenService:Create(circle, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Size = UDim2.fromOffset(56, 56) }):Play()
+        local t = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 30), Position = UDim2.fromOffset(5, 76), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBlack, TextWrapped = true, ZIndex = 14 })
+        t:SetAttribute("ThemeTextRole", "Text")
+        L(t, "Crear logo", "Create logo")
+        -- candado dorado + chip PREMIUM mientras la cuenta no tenga el pase
+        local lockBadge = mk("Frame", { Parent = c, Size = UDim2.fromOffset(24, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = 15 })
+        corner(lockBadge, 999)
+        local lbStroke = mk("UIStroke", { Parent = lockBadge, Color = WHITE, Thickness = 1.2 })
+        goldGradient(lbStroke, 45)
+        drawLock(lockBadge, 13, 16)
+        local chip = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(0, 14), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 100), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 8, Font = Enum.Font.GothamBlack, ZIndex = 15 })
+        chip:SetAttribute("IgnoreTextEffect", true)
+        corner(chip, 999)
+        pad(chip, 0, 7, 7, 0)
+        goldGradient(chip, 0)
+        local function paintLock(owned)
+            lockBadge.Visible = not owned
+            chip.Visible = not owned
+            if PR.checking then
+                L(chip, "VERIFICANDO", "CHECKING")
+            else
+                L(chip, "PREMIUM", "PREMIUM")
+            end
+            circle.BackgroundTransparency = owned and 0 or 0.45
+        end
+        table.insert(PR.listeners, paintLock)
+        paintLock(PR.owned)
+        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
+        local sc = mk("UIScale", { Parent = c, Scale = 1 })
+        hit.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            sc.Scale = 0.93
+            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
             guardedOpen(nil)
         end)
     end
@@ -1100,72 +1138,4 @@ ack, Enum.EasingDirection.Out), { Scale = 1 }):Play()
             or input.Position.Y < pos.Y or input.Position.Y > pos.Y + size.Y then
             return
         end
-        local seekPos = SeekHitbox.AbsolutePosition
-        local seekSize = SeekHitbox.AbsoluteSize
-        if input.Position.X >= seekPos.X and input.Position.X <= seekPos.X + seekSize.X
-            and input.Position.Y >= seekPos.Y and input.Position.Y <= seekPos.Y + seekSize.Y then
-            return
-        end
-        spotifySwipe.input = input
-        spotifySwipe.start = input.Position
-        spotifySwipe.moved = false
-    end))
-
-    track(UserInputService.InputChanged:Connect(function(input)
-        if not spotifySwipe.input or not spotifySwipe.start then
-            return
-        end
-        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseMovement then
-            return
-        end
-        local delta = input.Position - spotifySwipe.start
-        if math.abs(delta.X) >= spotifySwipe.threshold and math.abs(delta.X) > math.abs(delta.Y) * 1.15 then
-            spotifySwipe.moved = true
-        end
-    end))
-
-    track(UserInputService.InputEnded:Connect(function(input)
-        if not spotifySwipe.input or not spotifySwipe.start then
-            return
-        end
-        if input ~= spotifySwipe.input and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
-            return
-        end
-
-        local delta = input.Position - spotifySwipe.start
-        local horizontal = math.abs(delta.X)
-        local vertical = math.abs(delta.Y)
-        if not isSeeking and not SpotifyState.BlockSwipe and (spotifySwipe.moved or (horizontal >= spotifySwipe.threshold and horizontal > vertical * 1.15)) then
-            if delta.X < 0 then
-                SpotifyPages:Next()
-            else
-                SpotifyPages:Previous()
-            end
-        end
-
-        spotifySwipe.input = nil
-        spotifySwipe.start = nil
-        spotifySwipe.moved = false
-    end))
-
-    local function getSeekPercent(inputX)
-        local trackPos = ProgressTrack.AbsolutePosition.X
-        local trackWidth = ProgressTrack.AbsoluteSize.X
-        if trackWidth <= 0 then return 0 end
-        return math.clamp((inputX - trackPos) / trackWidth, 0, 1)
-    end
-
-    local function applySeekVisuals(pct)
-        SeekThumb.Position = UDim2.new(pct, 0, 0.5, 0)
-        SeekTooltip.Position = UDim2.new(pct, 0, 0, -8)
-        local total = 0
-        if SpotifyState.CurrentSound and SpotifyState.CurrentSound.TimeLength > 0 then
-            total = SpotifyState.CurrentSound.TimeLength
-        elseif SpotifyState.CurrentTrack then
-            total = durationToSeconds(SpotifyState.CurrentTrack.Duration)
-        end
-        local seekSec = math.floor(pct * math.max(total, 1))
-        SeekTooltipLabel.Text = secondsToClock(seekSec)
-    end
-
-    SeekHitbox.InputBegan:Connect(function
+        local seek

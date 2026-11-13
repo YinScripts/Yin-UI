@@ -1,4 +1,50 @@
-Z
+                   end
+
+                    -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
+                    local animAcc = 0
+                    local function startAnimLoop()
+                        if HomeAnim.Loop then return end
+                        HomeAnim.Loop = RunService.RenderStepped:Connect(function(dt)
+                            if not Viewport.Parent then
+                                HomeAnim.Loop:Disconnect()
+                                return
+                            end
+                            if not TabPage.Visible or PerfOpt.Flags.NoHomeAvatar then return end
+                            animAcc += dt
+                            if animAcc < 1 / 30 then return end
+                            local step = math.min(animAcc, 0.1)
+                            animAcc = 0
+                            if HomeAnim.PlayerCtl then pcall(HomeAnim.PlayerCtl.Step, step) end
+                            if HomeAnim.OwnerCtl then pcall(HomeAnim.OwnerCtl.Step, step) end
+                            if HomeAnim.OwnerAfterStep then pcall(HomeAnim.OwnerAfterStep) end
+                        end)
+                        track(HomeAnim.Loop)
+                    end
+                    HomeAnim.StartLoop = startAnimLoop
+
+                    -- ---------- agarrar al owner con el dedo ----------
+                    -- Proyección propia (la cámara de la vista no está en workspace): FOV vertical + proporción de la vista.
+                    local function camInfo()
+                        local abs = Viewport.AbsoluteSize
+                        local aspect = (abs.X > 0 and abs.Y > 0) and (abs.X / abs.Y) or 0.7
+                        local tanV = math.tan(math.rad((tonumber(Camera.FieldOfView) or 70) / 2))
+                        return abs, aspect, tanV
+                    end
+                    function HomeAnim.SetupOwnerGrab(ctl, env)
+                        -- zona invisible que sigue al owner (encima del área para girar al jugador)
+                        local Grab = mk("TextButton", {
+                            Parent = ViewportWrap,
+                            Name = "OwnerGrab",
+                            Size = UDim2.fromOffset(0, 0),
+                            BackgroundTransparency = 1,
+                            Text = "",
+                            AutoButtonColor = false,
+                            ZIndex = 13,
+                        })
+                        local function project(p)
+                            local abs, aspect, tanV = camInfo()
+                            local cp = Camera.CFrame:PointToObjectSpace(p)
+                            local d = -cp.Z
                             if d <= 0.01 then return nil end
                             return Vector2.new((cp.X / (d * tanV * aspect) + 1) / 2 * abs.X, (1 - cp.Y / (d * tanV)) / 2 * abs.Y), d, abs, tanV
                         end
@@ -254,12 +300,12 @@ Z
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 20),
-                Position = UDim2.new(0.28, 0, 0, 210),
+                Position = UDim2.new(0.28, 0, 0, 194),
                 BackgroundTransparency = 1,
                 Text = GetText(greetES, greetEN),
                 Font = Enum.Font.GothamBold,
                 TextSize = 13,
-                TextColor3 = Theme.Accent,
+                TextColor3 = Theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Center,
                 ZIndex = 11,
             })
@@ -270,7 +316,7 @@ Z
             local UserLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 30),
-                Position = UDim2.new(0.28, 0, 0, 229),
+                Position = UDim2.new(0.28, 0, 0, 213),
                 BackgroundTransparency = 1,
                 Text = LocalPlayer.DisplayName or LocalPlayer.Name,
                 Font = Enum.Font.GothamBold,
@@ -289,7 +335,7 @@ Z
                 Size = UDim2.new(0, 0, 0, 20),
                 AutomaticSize = Enum.AutomaticSize.X,
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 260),
+                Position = UDim2.new(0.5, 0, 0, 245),
                 BackgroundColor3 = Theme.Accent,
                 BackgroundTransparency = 0.86,
                 Text = "@" .. tostring(LocalPlayer.Name),
@@ -305,10 +351,10 @@ Z
 
             createViewport(HomeRoot)
 
-            local cardH = 92
-            local row1 = 4
-            local row2 = 100
-            local row3 = 196
+            local cardH = 70
+            local row1 = 34
+            local row2 = 110
+            local row3 = 186
             -- Opción 4: el avatar queda al centro y las estadísticas a ambos lados.
             local leftColX = 0.01
             local rightColX = 0.73
@@ -327,8 +373,9 @@ Z
                 dynamic:SetAttribute("TextEnglish", nil)
             end
             statusDot.Visible = true
-            statusSub.Position = UDim2.new(0, 22, 1, -26)
-            statusSub.Size = UDim2.new(1, -32, 0, 24)
+            statusSub.Visible = true
+            statusSub.Position = UDim2.new(0, 52, 1, -21)
+            statusSub.Size = UDim2.new(1, -60, 0, 15)
             local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
             pcall(function()
                 TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
@@ -337,18 +384,18 @@ Z
             local pingBars = {}
             local BarsHolder = mk("Frame", {
                 Parent = pingCard,
-                Size = UDim2.fromOffset(22, 16),
+                Size = UDim2.fromOffset(18, 13),
                 AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -10, 0, 48),
+                Position = UDim2.new(1, -9, 0, 49),
                 BackgroundTransparency = 1,
                 ZIndex = 11,
             })
             for b = 1, 4 do
                 local bar = mk("Frame", {
                     Parent = BarsHolder,
-                    Size = UDim2.new(0, 4, b / 4, 0),
+                    Size = UDim2.new(0, 3, b / 4, 0),
                     AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, (b - 1) * 6, 1, 0),
+                    Position = UDim2.new(0, (b - 1) * 5, 1, 0),
                     BackgroundColor3 = Theme.TextDim,
                     BorderSizePixel = 0,
                     ZIndex = 11,
@@ -825,79 +872,4 @@ Z
 
                     tryNextVideo()
                 else
-                    applyImages()
-                    print("Imagen de fondo actualizada")
-                end
-            end)
-        end
-
-        SavedConfig.CurrentTheme = themeName
-        SaveConfig()
-
-        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
-        if themeData and themeData.Sound then
-            CurrentClickSound = themeData.Sound
-        elseif ThemeClickSounds[themeName] then
-            CurrentClickSound = ThemeClickSounds[themeName]
-            print("Tema " .. themeName .. " - Sonido de click personalizado activado")
-        else
-            CurrentClickSound = Sounds.Click
-        end
-
-        local autoEffect = (themeData and themeData.Effect) or ThemeAutoEffects[themeName]
-        if autoEffect and autoEffect ~= "Off" then
-            self:SetTextEffect(autoEffect)
-        else
-            self:SetTextEffect("Off")
-        end
-
-        if TopBarArt then
-            pcall(function()
-                local img = (themeData and themeData.TitleBarImage) or ThemeTitleBarImages[themeName] or ""
-                TopBarArt.Image = img
-            end)
-        end
-
-        if TabListArt then
-            pcall(function()
-                local img = (themeData and themeData.TabListImage) or ThemeTabListImages[themeName] or ""
-                TabListArt.Image = img
-                TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or (img ~= "" and 0.5 or 0)
-            end)
-        end
-
-        CurrentTheme = themeName
-
-        buildAnimatedBorder(Main, Theme.Border, UDim.new(0, 10))
-
-        for _, floatData in ipairs(Window.FloatingToggles or {}) do
-            if floatData.Window and floatData.Window.Parent and not floatData.Window:GetAttribute("YYPillV5") then
-                buildAnimatedBorder(floatData.Window, Theme.Border, UDim.new(1, 0), true)
-            end
-        end
-
-        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
-            if obj:GetAttribute("IsSliderHolder") then
-                buildAnimatedBorder(obj, Theme.Border, UDim.new(0, 12), true)
-            end
-        end
-
-        if self._refreshEffectRows then
-            self._refreshEffectRows()
-        end
-        if self._refreshShaderCustomTheme then
-            self._refreshShaderCustomTheme()
-        end
-    end
-
-    function Window:SetTextEffect(mode)
-        stopTextEffect()
-        Window.CurrentTextEffect = mode
-        SavedConfig.CurrentEffect = mode
-        SaveConfig()
-        -- Optimización: el efecto elegido queda guardado, pero no corre su loop
-        if PerfOpt.Flags.NoTextEffects then mode = "Off" end
-
-        if mode == "Off" then
-            for _, obj in ipairs(getAllTextObjects()) do
-                loca
+                  

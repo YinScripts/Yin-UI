@@ -1,4 +1,65 @@
-          updateSVAt(input.Position)
+pply:SetAttribute("ThemeRole", "Accent")
+    PickerApply:SetAttribute("ThemeTextRole", "AccentText")
+    PickerApply:SetAttribute("TextSpanish", "Aplicar")
+    PickerApply:SetAttribute("TextEnglish", "Apply")
+    corner(PickerApply, 8)
+
+    local pickerTarget = nil
+    local pickerHue, pickerSaturation, pickerValue = 0, 0, 1
+    local draggingPicker, draggingHue = false, false
+    local function pickerColor()
+        return Color3.fromHSV(pickerHue, pickerSaturation, pickerValue)
+    end
+    local function refreshPicker()
+        local selected = pickerColor()
+        PickerArea.BackgroundColor3 = Color3.fromHSV(pickerHue, 1, 1)
+        PickerPreview.BackgroundColor3 = selected
+        SVHandle.Position = UDim2.new(pickerSaturation, 0, 1 - pickerValue, 0)
+        HueHandle.Position = UDim2.new(0.5, 0, pickerHue, 0)
+        PickerHex.Text = colorToHex(selected)
+        PickerRed.Text = tostring(math.floor(selected.R * 255 + 0.5))
+        PickerGreen.Text = tostring(math.floor(selected.G * 255 + 0.5))
+        PickerBlue.Text = tostring(math.floor(selected.B * 255 + 0.5))
+    end
+    local function setPickerColor(color)
+        pickerHue, pickerSaturation, pickerValue = color:ToHSV()
+        refreshPicker()
+    end
+    local function updateSVAt(position)
+        local size = PickerArea.AbsoluteSize
+        if size.X <= 0 or size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        local localPosition = pointer - PickerArea.AbsolutePosition
+        pickerSaturation = math.clamp(localPosition.X / size.X, 0, 1)
+        pickerValue = math.clamp(1 - localPosition.Y / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function updateHueAt(position)
+        local size = HueBar.AbsoluteSize
+        if size.Y <= 0 then return end
+        local pointer = Vector2.new(position.X, position.Y)
+        pickerHue = math.clamp((pointer.Y - HueBar.AbsolutePosition.Y) / size.Y, 0, 1)
+        refreshPicker()
+    end
+    local function closeColorPicker()
+        draggingPicker, draggingHue = false, false
+        ColorPickerOverlay.Visible = false
+        pickerTarget = nil
+    end
+    openThemeColorPicker = function(role)
+        local field = colorFields[role]
+        if not field then return end
+        local current = hexToColor(field.Box.Text) or field.Swatch.BackgroundColor3
+        pickerTarget = field
+        ColorPickerOverlay.Visible = true
+        task.defer(function()
+            if pickerTarget then setPickerColor(current) end
+        end)
+    end
+    PickerArea.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            draggingPicker = true
+            updateSVAt(input.Position)
         end
     end)
     HueBar.InputBegan:Connect(function(input)
@@ -980,38 +1041,4 @@
         {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle", accent = Color3.fromRGB(255, 200, 0)},
         {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
         {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
-        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
-        {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
-        {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
-        {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
-        {mode = "IceBlue", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
-        {mode = "PurpleGlow", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
-        {mode = "MatrixGreen", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
-        {mode = "Sunset", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
-    }
-
-    for i, spec in ipairs(effectSpecs) do
-        createEffectRow(spec.mode, spec.titleES, spec.titleEN, spec.descES, spec.descEN, spec.accent, i)
-    end
-
-    -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
-    EffectsUI.Acc = 0
-    track(RunService.Heartbeat:Connect(function(dt)
-        effectPreviewElapsed = effectPreviewElapsed + dt
-        EffectsUI.Acc = EffectsUI.Acc + dt
-        if EffectsUI.Acc < 1 / 30 or not EffectsPage.Visible or PerfOpt.Flags.NoDecorAnim then return end
-        EffectsUI.Acc = 0
-        for index = #effectPreviews, 1, -1 do
-            local previewData = effectPreviews[index]
-            if not previewData.frame or not previewData.frame.Parent then
-                table.remove(effectPreviews, index)
-            else
-                local first = getEffectPreviewColor(previewData.mode, effectPreviewElapsed)
-                if first then
-                    local second = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.33)
-                    local third = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.66)
-                    setPreviewStripColors(previewData, first, second, third)
-                end
-            end
-        end
-        local current = getEffectPreviewColor(Window.CurrentTextEffect, effec
+        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 

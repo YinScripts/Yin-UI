@@ -1,4 +1,62 @@
-imeRight.Text = track.Duration
+               local countLabel = mySongsTile:FindFirstChild("MySongsCount")
+                if countLabel then
+                    local count = tostring(#SpotifyState.UserSongs)
+                    countLabel.Text = GetText(count .. " canciones propias", count .. " personal songs")
+                    countLabel:SetAttribute("TextSpanish", count .. " canciones propias")
+                    countLabel:SetAttribute("TextEnglish", count .. " personal songs")
+                end
+            end
+        end
+
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            if track and not SpotifyState.HiddenRows[index] then
+                local rowData = SpotifyState.RowButtons[index]
+                if rowData and rowData.Row and rowData.Row.Parent then
+                    rowData.Row.LayoutOrder = displayOrder
+                    if not rowData.Row.Visible then rowData.Row.Visible = true end
+                else
+                    pcall(createSongRow, track, index, displayOrder)
+                end
+                displayOrder = displayOrder + 1
+            end
+        end
+        updateSongListCanvas()
+        updateSpotifyCanvas()
+        task.defer(function()
+            pcall(updateSongListCanvas)
+            pcall(updateSpotifyCanvas)
+        end)
+    end
+
+    local function updatePlayerFromTrack(track, index, statusText)
+        if not track then
+            return
+        end
+
+        local seed = tostring(track.Id or track.Name or index or "spotify")
+        local hash = 0
+        for i = 1, #seed do
+            hash = (hash * 31 + string.byte(seed, i)) % 360
+        end
+        local fallbackColor = Color3.fromHSV(hash / 360, 0.52, 0.28)
+        local resolvedCover = resolveTrackCoverImage(track)
+        local hasCover = trim(resolvedCover or "") ~= ""
+
+        NowPlayingBackdrop.Image = hasCover and resolvedCover or ""
+        NowPlayingBackdrop.ImageTransparency = hasCover and 0.55 or 1
+        NowPlayingBackdrop.BackgroundColor3 = hasCover and Color3.fromRGB(8, 8, 10) or fallbackColor
+        NowPlayingBackdrop.BackgroundTransparency = hasCover and 0.12 or 0.06
+        NowPlayingShade.BackgroundTransparency = hasCover and 0.52 or 0.30
+        AlbumArt.Image = hasCover and resolvedCover or ""
+        AlbumArt.BackgroundColor3 = hasCover and Color3.fromRGB(0, 0, 0) or fallbackColor
+        AlbumFallback.Visible = not hasCover
+        if Window._SpotifyAmbient then Window._SpotifyAmbient.SetCover(resolvedCover) end
+
+        PlayerSongTitle.Text = track.Name
+        PlayerSongArtist.Text = track.Artist
+        PlayerMeta.Text = statusText or (SpotifyState.IsPlaying and "Reproducción activa" or "Reproducción lista")
+        ProgressTimeRight.Text = track.Duration
 
         if index and SpotifyState.Catalog[index] then
             SpotifyState.SelectedIndex = index
@@ -1032,52 +1090,4 @@ imeRight.Text = track.Duration
         N.home, N.homeLabel, N.homeIcon, N.homeGlyph = N.button(1, "home", "⌂", "Inicio", "Home")
         N.search, N.searchLabel, N.searchIcon, N.searchGlyph = N.button(2, "search", "⌕", "Buscar", "Search")
         N.library, N.libraryLabel, N.libraryIcon, N.libraryGlyph = N.button(3, "music", "♫", "Mis canciones", "My songs")
-        SpotifyState.RefreshCatalogNavigation = function()
-            local homeColor = not SpotifyState.MySongsView and spotifyText or spotifyDim
-            local libraryColor = SpotifyState.MySongsView and spotifyText or spotifyDim
-            N.homeLabel.TextColor3, N.homeIcon.ImageColor3, N.homeGlyph.TextColor3 = homeColor, homeColor, homeColor
-            N.searchLabel.TextColor3, N.searchIcon.ImageColor3, N.searchGlyph.TextColor3 = spotifyDim, spotifyDim, spotifyDim
-            N.libraryLabel.TextColor3, N.libraryIcon.ImageColor3, N.libraryGlyph.TextColor3 = libraryColor, libraryColor, libraryColor
-        end
-        function N.openView(mySongs, focus)
-            if FavPage.hide then FavPage.hide() end
-            if UserSongForm.Visible then closeUserSongForm() end
-            SpotifyState.FavoritesView = false
-            SpotifyState.MySongsView = mySongs
-            SongSearchBox.Text = ""
-            SongList.CanvasPosition = Vector2.new(0, 0)
-            refreshSpotifyCatalogMode()
-            if focus then pcall(function() SongSearchBox:CaptureFocus() end) end
-        end
-        N.home.Activated:Connect(function() N.openView(false, false) end)
-        N.search.Activated:Connect(function() N.openView(false, true) end)
-        N.library.Activated:Connect(function() N.openView(true, false) end)
-        SpotifyState.RefreshMiniPlayer = function(progress)
-            if N.title.Text ~= PlayerSongTitle.Text then N.title.Text = PlayerSongTitle.Text end
-            if N.artist.Text ~= PlayerSongArtist.Text then N.artist.Text = PlayerSongArtist.Text end
-            if N.cover.Image ~= AlbumArt.Image then N.cover.Image = AlbumArt.Image end
-            local icon = SpotifyState.CurrentSound and SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
-            if N.play.Image ~= icon then N.play.Image = icon end
-            if progress then
-                local p = math.floor(math.clamp(progress, 0, 1) * 1000 + 0.5) / 1000
-                if p ~= N.lastProgress then N.lastProgress = p N.progress.Size = UDim2.new(p, 0, 0, 2) end
-            end
-        end
-        SpotifyState.RefreshMiniPlayer(0)
-        SpotifyState.RefreshCatalogNavigation()
-    end
-
-    local function setFloatingVisible(visible)
-        SpotifyState.FloatingPlayerVisible = visible == true
-        if FloatingPlayer then FloatingPlayer.Visible = SpotifyState.FloatingPlayerVisible end
-        refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
-    end
-
-    FP.EXPANDED = Vector2.new(312, 112)
-    FP.MINI = Vector2.new(48, 48)
-
-    FP.iconButton = function(parent, image, size, iconSize, x, rotation)
-        local button = mk("TextButton", {
-            Parent = parent,
-            Size = UDim2.fromOffset(size, size),
-            Positio
+        SpotifyState.RefreshCatalogNavigation = function

@@ -1,4 +1,63 @@
-  ArtStatus.Visible = false
+etAttribute("ThemeRole", "Accent")
+            viewBtn:SetAttribute("ThemeTextRole", "AccentText")
+            viewBtn:SetAttribute("TextSpanish", "Ver en grande")
+            viewBtn:SetAttribute("TextEnglish", "View large")
+            mk("UIPadding", {Parent = viewBtn, PaddingLeft = UDim.new(0, 18)})
+            RowKit.IconAt(viewBtn, 100435796827759, 13, UDim2.new(0, -6, 0.5, -6), 14, "AccentText")
+            viewBtn:SetAttribute("IgnoreTextEffect", true)
+            corner(viewBtn, 999)
+            RowKit.Control(viewBtn, true)
+            viewBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                FA.open(ArtImage.Image, artTitle.Text)
+            end)
+
+            local function setArtStatus(es, en)
+                ArtStatus.Text = GetText(es, en)
+                ArtStatus:SetAttribute("TextSpanish", es)
+                ArtStatus:SetAttribute("TextEnglish", en)
+            end
+
+            task.spawn(function()
+                if not fanArtExecutorOk then
+                    shimmerTween:Cancel()
+                    setArtStatus("Tu ejecutor no soporta la descarga de imágenes", "Your executor does not support image downloads")
+                    return
+                end
+
+                local assetId = nil
+                pcall(function()
+                    local needDownload = true
+                    local cachedOk, cachedExists = pcall(isfile, art.name)
+                    if cachedOk and cachedExists then
+                        needDownload = false
+                        if type(readfile) == "function" then
+                            local readOk, cachedData = pcall(readfile, art.name)
+                            if not (readOk and fanArtLooksLikeImage(cachedData)) then
+                                needDownload = true
+                            end
+                        end
+                    end
+
+                    if needDownload then
+                        local dlOk, data = pcall(game.HttpGet, game, art.url, true)
+                        if not dlOk or not fanArtLooksLikeImage(data) then return end
+                        local writeOk = pcall(writefile, art.name, data)
+                        if not writeOk then return end
+                    end
+
+                    local assetOk, result = pcall(getcustomasset, art.name)
+                    if assetOk and type(result) == "string" and result ~= "" then
+                        assetId = result
+                    end
+                end)
+
+                shimmerTween:Cancel()
+                if assetId then
+                    ArtImage.Image = assetId
+                    Ambient.Image = assetId
+                    ArtImage.Visible = true
+                    ArtStatus.Visible = false
                     Skeleton.Visible = false
                     viewBtn.Visible = true
                 else

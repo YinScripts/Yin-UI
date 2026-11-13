@@ -1,4 +1,82 @@
-2.fromOffset(cover, cover)
+ddingRight = UDim.new(0, 12),
+        PaddingBottom = UDim.new(0, 24),
+    })
+
+    FavPage.TopBar = mk("Frame", {
+        Parent = FavPage.Root,
+        Size = UDim2.new(1, 0, 0, 52),
+        BackgroundColor3 = Color3.fromRGB(48, 34, 98),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 50,
+    })
+    FavPage.Back = mk("TextButton", {
+        Parent = FavPage.TopBar,
+        Size = UDim2.fromOffset(32, 32),
+        Position = UDim2.new(0, 12, 0.5, -16),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        Text = "‹",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 26,
+        AutoButtonColor = false,
+        ZIndex = 52,
+    })
+    corner(FavPage.Back, 999)
+    FavPage.MiniPlay = mk("TextButton", {
+        Parent = FavPage.TopBar,
+        Size = UDim2.fromOffset(34, 34),
+        Position = UDim2.new(0, 54, 0.5, -17),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        Visible = false,
+        ZIndex = 52,
+    })
+    corner(FavPage.MiniPlay, 999)
+    FavPage.MiniIcon = mk("ImageLabel", {
+        Parent = FavPage.MiniPlay,
+        Size = UDim2.fromOffset(15, 15),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Image = FavPage.PLAY,
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 53,
+    })
+    FavPage.MiniTitle = mk("TextLabel", {
+        Parent = FavPage.TopBar,
+        Size = UDim2.new(1, -110, 1, 0),
+        Position = UDim2.new(0, 98, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamBold,
+        TextSize = 17,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        Visible = false,
+        ZIndex = 52,
+    })
+    FavPage.text(FavPage.MiniTitle, "Canciones que te gustan", "Liked Songs")
+
+    FavPage.layout = function()
+        local w = spotifyLogicalSize(FavPage.Root).X
+        if w <= 0 then
+            return
+        end
+        local narrow = w < 520
+        local inset = Window.CompactNavigation and 60 or 0
+        FavPage.Back.Position = UDim2.new(0, 12 + inset, 0.5, -16)
+        FavPage.MiniPlay.Position = UDim2.new(0, 54 + inset, 0.5, -17)
+        FavPage.MiniTitle.Position = UDim2.new(0, 98 + inset, 0, 0)
+        FavPage.MiniTitle.Size = UDim2.new(1, -110 - inset, 1, 0)
+        local cover = narrow and 104 or 136
+        FavPage.Cover.Size = UDim2.fromOffset(cover, cover)
         FavPage.Cover.AnchorPoint = Vector2.new(0, 0)
         FavPage.Cover.Position = UDim2.fromOffset(20, 64)
         FavPage.Info.AnchorPoint = Vector2.new(0, 0)
@@ -996,63 +1074,4 @@ clearSongRows = function()
                 BackgroundColor3 = Theme.Accent, Text = GetText("Ver en grande", "View large"), TextColor3 = Theme.AccentText,
                 Font = Enum.Font.GothamBlack, TextSize = 11, AutoButtonColor = false, Visible = false, ZIndex = 13,
             })
-            viewBtn:SetAttribute("ThemeRole", "Accent")
-            viewBtn:SetAttribute("ThemeTextRole", "AccentText")
-            viewBtn:SetAttribute("TextSpanish", "Ver en grande")
-            viewBtn:SetAttribute("TextEnglish", "View large")
-            mk("UIPadding", {Parent = viewBtn, PaddingLeft = UDim.new(0, 18)})
-            RowKit.IconAt(viewBtn, 100435796827759, 13, UDim2.new(0, -6, 0.5, -6), 14, "AccentText")
-            viewBtn:SetAttribute("IgnoreTextEffect", true)
-            corner(viewBtn, 999)
-            RowKit.Control(viewBtn, true)
-            viewBtn.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.5)
-                FA.open(ArtImage.Image, artTitle.Text)
-            end)
-
-            local function setArtStatus(es, en)
-                ArtStatus.Text = GetText(es, en)
-                ArtStatus:SetAttribute("TextSpanish", es)
-                ArtStatus:SetAttribute("TextEnglish", en)
-            end
-
-            task.spawn(function()
-                if not fanArtExecutorOk then
-                    shimmerTween:Cancel()
-                    setArtStatus("Tu ejecutor no soporta la descarga de imágenes", "Your executor does not support image downloads")
-                    return
-                end
-
-                local assetId = nil
-                pcall(function()
-                    local needDownload = true
-                    local cachedOk, cachedExists = pcall(isfile, art.name)
-                    if cachedOk and cachedExists then
-                        needDownload = false
-                        if type(readfile) == "function" then
-                            local readOk, cachedData = pcall(readfile, art.name)
-                            if not (readOk and fanArtLooksLikeImage(cachedData)) then
-                                needDownload = true
-                            end
-                        end
-                    end
-
-                    if needDownload then
-                        local dlOk, data = pcall(game.HttpGet, game, art.url, true)
-                        if not dlOk or not fanArtLooksLikeImage(data) then return end
-                        local writeOk = pcall(writefile, art.name, data)
-                        if not writeOk then return end
-                    end
-
-                    local assetOk, result = pcall(getcustomasset, art.name)
-                    if assetOk and type(result) == "string" and result ~= "" then
-                        assetId = result
-                    end
-                end)
-
-                shimmerTween:Cancel()
-                if assetId then
-                    ArtImage.Image = assetId
-                    Ambient.Image = assetId
-                    ArtImage.Visible = true
-                  
+            viewBtn:S

@@ -1,4 +1,64 @@
-           local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
+e in pairs(self.Muted) do
+            if sound.Parent then pcall(function() sound.Volume = volume end) end
+        end
+        self.Muted = {}
+    end
+
+    function ShaderFootage:_startAmbient()
+        if not self.AmbientSoundId then return end
+        local sound = Instance.new("Sound")
+        sound.Name = "YinYangShader_Level0Ambience"
+        sound.SoundId = self.AmbientSoundId
+        sound.Looped = true
+        sound.Volume = 0
+        sound.Parent = SoundService
+        pcall(function() sound:Play() end)
+        TweenService:Create(sound, TweenInfo.new(3, Enum.EasingStyle.Sine, Enum.EasingDirection.Out), {Volume = self.AmbientVolume}):Play()
+        self.Ambient = sound
+    end
+
+    function ShaderFootage:_stopAmbient()
+        local sound = self.Ambient
+        self.Ambient = nil
+        if not sound then return end
+        TweenService:Create(sound, TweenInfo.new(0.8, Enum.EasingStyle.Sine, Enum.EasingDirection.In), {Volume = 0}):Play()
+        task.delay(0.9, function() pcall(function() sound:Destroy() end) end)
+    end
+
+    function ShaderFootage:_buildGui()
+        local playerGui = LocalPlayer and LocalPlayer:FindFirstChildOfClass("PlayerGui")
+        if not playerGui then return nil end
+        local old = playerGui:FindFirstChild("YinYangShader_Footage")
+        if old then old:Destroy() end
+        local gui = Instance.new("ScreenGui")
+        gui.Name = "YinYangShader_Footage"
+        gui.IgnoreGuiInset = true
+        -- pantalla completa de verdad: sin esto quedaban sin cubrir las franjas de los costados
+        -- (zona segura del notch / cámara en celulares)
+        pcall(function() gui.ScreenInsets = Enum.ScreenInsets.None end)
+        pcall(function() gui.SafeAreaCompatibility = Enum.SafeAreaCompatibility.None end)
+        gui.ResetOnSpawn = false
+        -- debajo de los menús del juego y de la librería: solo "ensucia" el mundo 3D
+        gui.DisplayOrder = -50
+        gui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+        local function layer(name, props)
+            local frame = Instance.new("Frame")
+            frame.Name = name
+            frame.BorderSizePixel = 0
+            frame.Active = false
+            for key, value in pairs(props) do frame[key] = value end
+            frame.Parent = props.Parent or gui
+            return frame
+        end
+        -- viñeta: cuatro bordes con degradé hacia el centro
+        local edges = {
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0, 0), 90},
+            {UDim2.new(1, 0, 0.26, 0), UDim2.new(0, 0, 0.74, 0), -90},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0, 0, 0, 0), 0},
+            {UDim2.new(0.2, 0, 1, 0), UDim2.new(0.8, 0, 0, 0), 180},
+        }
+        for index, edge in ipairs(edges) do
+            local frame = layer("Vignette" .. index, {Size = edge[1], Position = edge[2], BackgroundColor3 = Color3.fromRGB(14, 12, 4), BackgroundTransparency = 0})
             local gradient = Instance.new("UIGradient")
             gradient.Rotation = edge[3]
             gradient.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.38), NumberSequenceKeypoint.new(0.55, 0.86), NumberSequenceKeypoint.new(1, 1)})
@@ -956,72 +1016,4 @@
         local function applyVisual(animate)
             local tweenInfo = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
             local color = state and Theme.ToggleOn or Theme.AccentOff
-            local position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
-            TweenService:Create(switch, tweenInfo, {BackgroundColor3 = color}):Play()
-            TweenService:Create(accent, tweenInfo, {BackgroundColor3 = color}):Play()
-            TweenService:Create(knob, tweenInfo, {Position = position}):Play()
-            switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-            accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-            status.Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")
-            status.TextColor3 = state and Theme.ToggleOn or Theme.TextDim
-            status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
-        end
-
-        local function setValue(newValue, invoke)
-            state = newValue == true
-            applyVisual(true)
-            if invoke then
-                ShaderCustomOverrides[spec.id] = state
-                if type(spec.onChange) == "function" then
-                    pcall(spec.onChange, state)
-                else
-                    shaderApplySingle(spec.target, spec.property, state)
-                end
-                shaderQueuePersistence()
-            end
-        end
-
-        click.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.45)
-            setValue(not state, true)
-        end)
-
-        ShaderCustomControls[spec.id] = {
-            refresh = function()
-                local refreshed = shaderReadCustomValue(spec, state, "boolean")
-                state = refreshed
-                applyVisual(false)
-            end,
-            set = function(value)
-                setValue(value, false)
-            end,
-        }
-    end
-
-    local function shaderCreateSlider(parent, spec)
-        local value = shaderReadCustomValue(spec, spec.default, "number")
-        local holder = mk("Frame", {
-            Parent = parent,
-            Size = UDim2.new(1, 0, 0, 78),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.12,
-            BorderSizePixel = 0,
-            ZIndex = 313,
-        })
-        holder:SetAttribute("ThemeRole", "Background")
-        holder:SetAttribute("IsShaderCustomSlider", true)
-        corner(holder, 12)
-        stroke(holder, Theme.Stroke, 1.1, 0.62)
-
-        local label = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(1, -140, 0, 18),
-            Position = UDim2.new(0, 14, 0, 10),
-            BackgroundTransparency = 1,
-            Text = GetText(spec.es, spec.en),
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.GothamBold,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-   
+            local position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5,

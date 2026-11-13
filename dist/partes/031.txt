@@ -1,4 +1,72 @@
-         ZIndex = 314,
+ -10)
+            TweenService:Create(switch, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(accent, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(knob, tweenInfo, {Position = position}):Play()
+            switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            status.Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")
+            status.TextColor3 = state and Theme.ToggleOn or Theme.TextDim
+            status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+        end
+
+        local function setValue(newValue, invoke)
+            state = newValue == true
+            applyVisual(true)
+            if invoke then
+                ShaderCustomOverrides[spec.id] = state
+                if type(spec.onChange) == "function" then
+                    pcall(spec.onChange, state)
+                else
+                    shaderApplySingle(spec.target, spec.property, state)
+                end
+                shaderQueuePersistence()
+            end
+        end
+
+        click.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            setValue(not state, true)
+        end)
+
+        ShaderCustomControls[spec.id] = {
+            refresh = function()
+                local refreshed = shaderReadCustomValue(spec, state, "boolean")
+                state = refreshed
+                applyVisual(false)
+            end,
+            set = function(value)
+                setValue(value, false)
+            end,
+        }
+    end
+
+    local function shaderCreateSlider(parent, spec)
+        local value = shaderReadCustomValue(spec, spec.default, "number")
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, 0, 0, 78),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            ZIndex = 313,
+        })
+        holder:SetAttribute("ThemeRole", "Background")
+        holder:SetAttribute("IsShaderCustomSlider", true)
+        corner(holder, 12)
+        stroke(holder, Theme.Stroke, 1.1, 0.62)
+
+        local label = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -140, 0, 18),
+            Position = UDim2.new(0, 14, 0, 10),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.es, spec.en),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 314,
         })
         label:SetAttribute("ThemeTextRole", "Text")
         label:SetAttribute("TextSpanish", spec.es)
@@ -732,68 +800,4 @@
     heroSub:SetAttribute("TextSpanish", "Elegí un modo visual o abrí Personalizado para ajustar cada parámetro sin tocar los sliders del resto de la librería.")
     heroSub:SetAttribute("TextEnglish", "Choose a visual mode or open Custom to tune every parameter without touching the library's other sliders.")
 
-    ShaderModeLabel = AutoTabShaders:CreateLabel("Modo activo: Morning", "Active mode: Morning", 11)
-    ShaderModeLabel:SetAttribute("ThemeTextRole", "Accent")
-    ShaderModeLabel.Parent = ShaderHero
-    ShaderModeLabel.AutomaticSize = Enum.AutomaticSize.X
-    ShaderModeLabel.TextWrapped = false
-    ShaderModeLabel.Size = UDim2.new(0, 0, 0, 22)
-    ShaderModeLabel.Position = UDim2.new(0, 16, 1, -32)
-    ShaderModeLabel.BackgroundColor3 = Color3.new(0, 0, 0)
-    ShaderModeLabel.BackgroundTransparency = 0.4
-    ShaderModeLabel.ZIndex = 13
-    corner(ShaderModeLabel, 999)
-    mk("UIPadding", {Parent = ShaderModeLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-    AutoTabShaders:CreateButton("Restablecer todo por defecto", "Reset everything to default", function()
-        playSound(Sounds.Click, 0.55)
-        ShaderDemoEnabled = false
-        local report = shaderRestoreAll()
-        ShaderReflections.OilSheen = false
-        ShaderReflections:SetObjectMirrorEnabled(false)
-        ShaderReflections:SetStripTexturesEnabled(false)
-        ShaderReflections:SetSkyMirrorEnabled(false)
-        ShaderReflections:SetContactEnabled(false)
-        ShaderReflections:SetShadowEnabled(false)
-        ShaderReflections:SetCharacterSpecularEnabled(false)
-        shaderWarn(report, "Restablecer todo")
-        shaderSetModeLabel("Original")
-        ShaderCustomRefresh()
-        shaderQueuePersistence()
-    end)
-
-    AutoTabShaders:CreateDivider()
-    AutoTabShaders:CreateLabel("Modos visuales", "Visual modes", 13)
-    AutoTabShaders:CreateLabel(
-        "Cada tarjeta muestra el cielo, la hora y la luz del modo · tocá para aplicarlo.",
-        "Each card shows the mode's sky, time and light · tap to apply it.",
-        10
-    )
-    local ShaderModeGrid = mk("Frame", {
-        Parent = AutoTabShaders.Page,
-        Size = UDim2.new(1, -8, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        ZIndex = 9,
-    })
-    mk("UIGridLayout", {
-        Parent = ShaderModeGrid,
-        CellSize = UDim2.new(0.5, -5, 0, 156),
-        CellPadding = UDim2.fromOffset(10, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    mk("UIPadding", {Parent = ShaderModeGrid, PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4)})
-
-    shaderCreateModeCard(ShaderModeGrid, {
-        key = "Custom",
-        labelES = "Personalizado",
-        labelEN = "Custom",
-        descES = "Ajustá cada shader en tiempo real",
-        descEN = "Tune every shader in real time",
-        callback = function()
-            playSound(Sounds.Click, 0.55)
-            ShaderDemoEnabled = true
-            shaderSetModeLabel("Custom")
-            shaderOpenCustomWindow()
-        end,
-  
+    Shader

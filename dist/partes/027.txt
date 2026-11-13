@@ -1,4 +1,38 @@
-tPreviewElapsed)
+90, 90)},
+        {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
+        {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
+        {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
+        {mode = "IceBlue", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
+        {mode = "PurpleGlow", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
+        {mode = "MatrixGreen", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
+        {mode = "Sunset", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
+    }
+
+    for i, spec in ipairs(effectSpecs) do
+        createEffectRow(spec.mode, spec.titleES, spec.titleEN, spec.descES, spec.descEN, spec.accent, i)
+    end
+
+    -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
+    EffectsUI.Acc = 0
+    track(RunService.Heartbeat:Connect(function(dt)
+        effectPreviewElapsed = effectPreviewElapsed + dt
+        EffectsUI.Acc = EffectsUI.Acc + dt
+        if EffectsUI.Acc < 1 / 30 or not EffectsPage.Visible or PerfOpt.Flags.NoDecorAnim then return end
+        EffectsUI.Acc = 0
+        for index = #effectPreviews, 1, -1 do
+            local previewData = effectPreviews[index]
+            if not previewData.frame or not previewData.frame.Parent then
+                table.remove(effectPreviews, index)
+            else
+                local first = getEffectPreviewColor(previewData.mode, effectPreviewElapsed)
+                if first then
+                    local second = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.33)
+                    local third = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.66)
+                    setPreviewStripColors(previewData, first, second, third)
+                end
+            end
+        end
+        local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
         local heroColor = current or Theme.Text
         EffectsUI.HeroText.TextColor3 = heroColor
         EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
@@ -727,83 +761,4 @@ tPreviewElapsed)
     local ShaderSceneQuality = "Balanced"
 
     local function shaderQualityProfile()
-        return ShaderQualityProfiles[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
-    end
-
-    local ShaderReflections = {
-        Enabled = false,
-        Intensity = 0.28,
-        Wetness = 0.82,
-        SurfaceMode = "All",
-        SceneCoverage = true,
-        SceneQueue = {},
-        SceneCursor = 1,
-        SceneElapsed = 0,
-        SceneBuilding = false,
-        SceneComplete = false,
-        ContactEnabled = false,
-        ContactStrength = 0.24,
-        ContactRig = nil,
-        ContactParts = {},
-        ContactCore = nil,
-        ContactElapsed = 0,
-        ModelDetailEnabled = true,
-        ModelApplied = {},
-        CharacterSpecularEnabled = false,
-        CharacterApplied = {},
-        ExcludeLocalAvatar = false,
-        SkyMirrorEnabled = true,
-        SkyMirrorStrength = 0.78,
-        SkyMirrorOriginal = {},
-        SkyMirrorApplied = {},
-        StripTextures = false,
-        OilSheen = false,
-        ObjectMirrorEnabled = false,
-        MirrorRig = nil,
-        MirrorProxies = {},
-        MirrorFloors = {},
-        MirrorPlanePos = nil,
-        MirrorPlaneNormal = nil,
-        MirrorScanElapsed = 0,
-        MirrorStepElapsed = 0,
-        MirrorFloorTransparency = 0.38,
-        MirrorBacking = nil,
-        MirrorLostAt = nil,
-        MirrorLast = {},
-        TextureOriginal = {},
-        ShadowEnabled = false,
-        ShadowStrength = 0.30,
-        ShadowRig = nil,
-        ShadowParts = {},
-        ShadowElapsed = 0,
-        ShadowConnection = nil,
-        Original = {},
-        Applied = {},
-        Connection = nil,
-        CharacterConn = nil,
-        SceneAnchor = nil,
-        Elapsed = 0,
-    }
-
-    function ShaderReflections:_root()
-        local character = LocalPlayer and LocalPlayer.Character
-        return character, character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
-    end
-
-    function ShaderReflections:_scan(origin, radius, character)
-        local ok, parts = pcall(function()
-            local params = OverlapParams.new()
-            params.FilterType = Enum.RaycastFilterType.Exclude
-            params.FilterDescendantsInstances = character and {character} or {}
-            return workspace:GetPartBoundsInRadius(origin, radius, params)
-        end)
-        if ok and type(parts) == "table" then return parts end
-        return {}
-    end
-
-    function ShaderReflections:_surfaceMultiplier(part)
-        local material = part.Material
-        if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
-        if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
-        if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
-        if 
+        return ShaderQualityPro

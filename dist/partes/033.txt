@@ -1,4 +1,58 @@
-sition = UDim2.new(0, 66, 0, 34),
+ddress.FocusLost:Connect(function() address.Visible = false copy.Visible = true end)
+        copy:SetAttribute("Link", link)
+        task.spawn(function()
+            if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
+            local ok, asset = pcall(function()
+                local localName = "YinCredits_" .. imageName
+                if type(isfile) ~= "function" or not isfile(localName) then
+                    local data = game:HttpGet("https://raw.githubusercontent.com/YinScripts/Yin-UI/refs/heads/main/docs/assets/" .. imageName)
+                    if type(data) ~= "string" or #data < 100 then return nil end
+                    writefile(localName, data)
+                end
+                return getcustomasset(localName)
+            end)
+            if ok and type(asset) == "string" and asset ~= "" and portrait.Parent then
+                portrait.Image = asset
+                portrait.ImageRectOffset = offset
+                portrait.ImageRectSize = dimensions
+            end
+        end)
+    end
+    socialCard(5, "YOUTUBE", "Yin yang | New Script", "@Yin-Yang-Hub",
+        "https://youtube.com/@yin-yang-hub?si=lX7-WkyujSdjX7i7", "credit-youtube.jpg",
+        Vector2.new(42, 310), Vector2.new(188, 188))
+    socialCard(6, "TIKTOK", "Yin yang", "@natsuyong",
+        "https://vm.tiktok.com/ZS9fuBBTjnLqg-3jf52/", "credit-tiktok.jpg",
+        Vector2.new(226, 25), Vector2.new(249, 249))
+
+
+    sectionLabel(7, 132202203337109, "COMUNIDAD", "COMMUNITY")
+
+    local DC = card(8, 128)
+    DC.ClipsDescendants = true
+    local Stripe = mk("Frame", {
+        Parent = DC, Size = UDim2.new(0, 4, 1, -24), Position = UDim2.new(0, 0, 0, 12),
+        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, ZIndex = 11,
+    })
+    corner(Stripe, 999)
+    local DCBadge = mk("Frame", {
+        Parent = DC, Size = UDim2.new(0, 40, 0, 40), Position = UDim2.new(0, 16, 0, 14),
+        BackgroundColor3 = BLURPLE, BorderSizePixel = 0, ZIndex = 11,
+    })
+    corner(DCBadge, 12)
+    mk("ImageLabel", {
+        Parent = DCBadge, Size = UDim2.new(0, 22, 0, 22), AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0), BackgroundTransparency = 1,
+        Image = "rbxassetid://132202203337109", ImageColor3 = Color3.new(1, 1, 1),
+        ScaleType = Enum.ScaleType.Fit, ZIndex = 12,
+    })
+    text({
+        Parent = DC, Size = UDim2.new(1, -80, 0, 20), Position = UDim2.new(0, 66, 0, 14),
+        Font = Enum.Font.GothamBlack, TextSize = 15, TextColor3 = Theme.Text,
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11,
+    }, "Únete a nuestro Discord", "Join our Discord", "Text")
+    text({
+        Parent = DC, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 66, 0, 34),
         Font = Enum.Font.GothamMedium, TextSize = 11, TextColor3 = Theme.TextDim,
         TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
         TextWrapped = true, ZIndex = 11,
@@ -860,28 +914,4 @@ sition = UDim2.new(0, 66, 0, 34),
         vgrad(ground, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
         for i = 1, 4 do
             local y = (i / 5) ^ 1.6
-            sframe(ground, { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromScale(0, y), BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.7, ZIndex = SZ + 6 })
-        end
-        for _, a in ipairs({ -62, -40, 40, 62 }) do
-            sframe(ground, { Size = UDim2.new(0, 1, 1.6, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Rotation = a, BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.75, ZIndex = SZ + 6 })
-        end
-        -- personaje de bloques (genérico) con sombra
-        local char = sframe(s, { Size = UDim2.fromOffset(22, 40), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.55, 0.84), BackgroundTransparency = 1, ZIndex = SZ + 7 })
-        round(sframe(s, { Size = UDim2.fromOffset(26, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.55, 0.845), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.7, ZIndex = SZ + 6 }))
-        corner(sframe(char, { Size = UDim2.fromOffset(10, 10), Position = UDim2.fromOffset(6, 0), BackgroundColor3 = Color3.fromRGB(245, 205, 48), ZIndex = SZ + 9 }), 3)
-        sframe(char, { Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(4, 11), BackgroundColor3 = Color3.fromRGB(40, 110, 200), ZIndex = SZ + 8 })
-        sframe(char, { Size = UDim2.fromOffset(4, 13), Position = UDim2.fromOffset(0, 11), BackgroundColor3 = Color3.fromRGB(245, 205, 48), ZIndex = SZ + 8 })
-        sframe(char, { Size = UDim2.fromOffset(4, 13), Position = UDim2.fromOffset(18, 11), BackgroundColor3 = Color3.fromRGB(245, 205, 48), ZIndex = SZ + 8 })
-        sframe(char, { Size = UDim2.fromOffset(6, 15), Position = UDim2.fromOffset(5, 25), BackgroundColor3 = Color3.fromRGB(70, 80, 95), ZIndex = SZ + 8 })
-        sframe(char, { Size = UDim2.fromOffset(6, 15), Position = UDim2.fromOffset(11, 25), BackgroundColor3 = Color3.fromRGB(70, 80, 95), ZIndex = SZ + 8 })
-        TweenService:Create(char, TweenInfo.new(1.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.55, 0, 0.84, -2) }):Play()
-        return s
-    end
-    -- Noche: degradado azul, luna, estrellas que titilan, colinas oscuras
-    function Scenes.night()
-        local s = sframe(Stage, { Name = "SceneNight", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
-        vgrad(s, Color3.fromRGB(8, 10, 32), Color3.fromRGB(48, 36, 92))
-        for i = 1, 22 do
-            local x, y = ((i * 37) % 97) / 100, ((i * 53) % 55) / 100
-            local star = round(sframe(s, { Size = UDim2.fromOffset(i % 3 == 0 and 3 or 2, i % 3 == 0 and 3 or 2), Position = UDim2.fromScale(x, y), BackgroundColor3 = WHITE, BackgroundTransparency = 0.2, ZIndex = SZ + 1 }))
-            TweenService:Create(star, TweenInfo.new(0.8 + (i % 5) * 0.35, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { BackgroundTransparency = 0.85 }):Pla
+            sframe(ground, { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromScale(0, y), BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.7, ZIndex = SZ 

@@ -1,3 +1,64 @@
+ole", "Background")
+                Mono:SetAttribute("ThemeTextRole", "Accent")
+                Mono:SetAttribute("IgnoreTextEffect", true)
+                corner(Mono, 9)
+
+                local RL = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(1, -170, 1, 0),
+                    Position = UDim2.new(0, 82, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = tabName,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 13,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 504,
+                })
+                RL:SetAttribute("ThemeTextRole", "Text")
+
+                local n = tabCount[tabName] or 0
+                local CountChip = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.new(0, 0, 0, 22),
+                    AutomaticSize = Enum.AutomaticSize.X,
+                    AnchorPoint = Vector2.new(1, 0.5),
+                    Position = UDim2.new(1, -10, 0.5, 0),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 0.82,
+                    Text = GetText(n .. (n == 1 and " slider" or " sliders"), n .. (n == 1 and " slider" or " sliders")),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 10,
+                    ZIndex = 504,
+                })
+                CountChip:SetAttribute("ThemeRole", "Accent")
+                CountChip:SetAttribute("ThemeTextRole", "Accent")
+                CountChip:SetAttribute("IgnoreTextEffect", true)
+                corner(CountChip, 999)
+                mk("UIPadding", {Parent = CountChip, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
+
+                local RowBtn = mk("TextButton", {
+                    Parent = Row,
+                    Size = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    AutoButtonColor = false,
+                    ZIndex = 506,
+                })
+                local r = {name = tabName, row = Row, box = Box, mark = Mark, stroke = rowStroke}
+                rowsUI[#rowsUI + 1] = r
+                RowBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.4)
+                    checked[tabName] = not checked[tabName]
+                    paintRow(r, true)
+                    refreshSummary()
+                end)
+                paintRow(r, false)
+            end
+
+            local function setAll(value)
                 playSound(Sounds.Click, 0.4)
                 for _, name in ipairs(tabNames) do checked[name] = value end
                 for _, r in ipairs(rowsUI) do paintRow(r, true) end
@@ -1105,65 +1166,4 @@
         Font = Enum.Font.GothamBold,
         ZIndex = 262,
     })
-    PickerApply:SetAttribute("ThemeRole", "Accent")
-    PickerApply:SetAttribute("ThemeTextRole", "AccentText")
-    PickerApply:SetAttribute("TextSpanish", "Aplicar")
-    PickerApply:SetAttribute("TextEnglish", "Apply")
-    corner(PickerApply, 8)
-
-    local pickerTarget = nil
-    local pickerHue, pickerSaturation, pickerValue = 0, 0, 1
-    local draggingPicker, draggingHue = false, false
-    local function pickerColor()
-        return Color3.fromHSV(pickerHue, pickerSaturation, pickerValue)
-    end
-    local function refreshPicker()
-        local selected = pickerColor()
-        PickerArea.BackgroundColor3 = Color3.fromHSV(pickerHue, 1, 1)
-        PickerPreview.BackgroundColor3 = selected
-        SVHandle.Position = UDim2.new(pickerSaturation, 0, 1 - pickerValue, 0)
-        HueHandle.Position = UDim2.new(0.5, 0, pickerHue, 0)
-        PickerHex.Text = colorToHex(selected)
-        PickerRed.Text = tostring(math.floor(selected.R * 255 + 0.5))
-        PickerGreen.Text = tostring(math.floor(selected.G * 255 + 0.5))
-        PickerBlue.Text = tostring(math.floor(selected.B * 255 + 0.5))
-    end
-    local function setPickerColor(color)
-        pickerHue, pickerSaturation, pickerValue = color:ToHSV()
-        refreshPicker()
-    end
-    local function updateSVAt(position)
-        local size = PickerArea.AbsoluteSize
-        if size.X <= 0 or size.Y <= 0 then return end
-        local pointer = Vector2.new(position.X, position.Y)
-        local localPosition = pointer - PickerArea.AbsolutePosition
-        pickerSaturation = math.clamp(localPosition.X / size.X, 0, 1)
-        pickerValue = math.clamp(1 - localPosition.Y / size.Y, 0, 1)
-        refreshPicker()
-    end
-    local function updateHueAt(position)
-        local size = HueBar.AbsoluteSize
-        if size.Y <= 0 then return end
-        local pointer = Vector2.new(position.X, position.Y)
-        pickerHue = math.clamp((pointer.Y - HueBar.AbsolutePosition.Y) / size.Y, 0, 1)
-        refreshPicker()
-    end
-    local function closeColorPicker()
-        draggingPicker, draggingHue = false, false
-        ColorPickerOverlay.Visible = false
-        pickerTarget = nil
-    end
-    openThemeColorPicker = function(role)
-        local field = colorFields[role]
-        if not field then return end
-        local current = hexToColor(field.Box.Text) or field.Swatch.BackgroundColor3
-        pickerTarget = field
-        ColorPickerOverlay.Visible = true
-        task.defer(function()
-            if pickerTarget then setPickerColor(current) end
-        end)
-    end
-    PickerArea.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-            draggingPicker = true
-  
+    PickerA
