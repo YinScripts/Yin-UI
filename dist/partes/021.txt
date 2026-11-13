@@ -1,4 +1,20 @@
-rdWidth * 0.86
+shDots()
+                        return
+                    end
+
+                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
+                    local cardHeight = 96
+                    local step = cardWidth * 0.78
+                    local centerX = viewportWidth * 0.5 - cardWidth * 0.5
+
+                    for i, cardData in ipairs(Carousel.Cards) do
+                        local card = cardData.Holder
+                        if card and card.Parent then
+                            local offset = (i - Carousel.ActiveIndex) * step
+                            local distance = math.abs(i - Carousel.ActiveIndex)
+                            local targetX = centerX + offset
+                            local targetWidth = distance == 0 and cardWidth or cardWidth * 0.86
                             local targetHeight = distance == 0 and cardHeight or cardHeight * 0.90
                             local targetY = 4 + (cardHeight - targetHeight) * 0.5
                             local isActive = distance == 0
@@ -1012,24 +1028,4 @@ rdWidth * 0.86
                 BackgroundColor3 = Theme.Stroke,
                 ZIndex = 9
             })
-            Divider:SetAttribute("ThemeRole", "Stroke")
-            return Divider
-        end
-
-        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
-            local contentParent = self._ContentParent or TabPage
-            if selectable == nil then selectable = true end
-            items = items or {}
-
-            local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
-            if displayTitle then
-                local Title = mk("TextLabel", {
-                    Parent = contentParent,
-                    Size = UDim2.new(1, 0, 0, 20),
-                    BackgroundTransparency = 1,
-                    Text = displayTitle,
-                    TextColor3 = Theme.Text,
-                    TextSize = 13,
-                    Font = Enum.Font.GothamBold,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-    
+            Divider:SetAttribute("The

@@ -1,4 +1,21 @@
-.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
+.mini and FP.MINI or FP.EXPANDED
+        TweenService:Create(FloatingPlayer, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(size.X, size.Y)}):Play()
+        FP.Corner.CornerRadius = UDim.new(0, FP.mini and 24 or 18)
+        FloatingPlayer.BackgroundTransparency = FP.mini and 1 or 0
+        FP.Backdrop.Visible = not FP.mini
+        FP.Shade.Visible = not FP.mini
+        FP.Outline.Enabled = not FP.mini
+        FP.Full.Visible = not FP.mini
+        FP.Disc.Visible = FP.mini
+        FP.Ring.Enabled = FP.mini
+    end
+
+    local function createFloatingPlayer()
+        if FloatingPlayer and FloatingPlayer.Parent then return end
+        FloatingPlayer = mk("Frame", {
+            Parent = Window.ScreenGui,
+            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
+            Position = UDim2.new(0.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
             BackgroundColor3 = Color3.fromRGB(14, 14, 16),
             BackgroundTransparency = 0,
             BorderSizePixel = 0,
@@ -1117,24 +1134,4 @@
     end
     FavPage.Root:GetPropertyChangedSignal("AbsoluteSize"):Connect(FavPage.layout)
     if Window._SpotifyAmbient then
-        Window._SpotifyAmbient.LayoutFavorites = function()
-            if FavPage.open then FavPage.layout() end
-        end
-    end
-
-    FavPage.Scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
-        local y = FavPage.Scroll.CanvasPosition.Y
-        local solid = y > FavPage.HERO_H - 40
-        FavPage.TopBar.BackgroundTransparency = solid and 0.35 or math.clamp(1 - 0.65 * (y / (FavPage.HERO_H - 40)), 0.35, 1)
-        FavPage.MiniPlay.Visible = solid and FavPage.PlayAll.Visible
-        FavPage.MiniTitle.Visible = solid
-    end)
-
-    FavPage.isCurrent = function(index)
-        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
-    end
-
-    FavPage.paintRow = function(row)
-        local current = FavPage.isCurrent(row.Index)
-        local playing = current and SpotifyState.IsPlaying and SpotifyState.CurrentSound ~= nil
-     
+        Window._SpotifyAmbien

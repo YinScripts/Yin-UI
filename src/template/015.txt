@@ -821,8 +821,8 @@ v == "Float" then
         BackgroundColor3=Color3.fromRGB(23,15,28), BackgroundTransparency=0.18,
         BorderSizePixel=0, ZIndex=9})
     corner(TopBarCounter, 999)
-    local counterOutline = mk("UIStroke", {Parent=TopBarCounter, Color=Color3.new(1,1,1), Thickness=1, Transparency=0.10})
-    mk("UIGradient", {Parent=counterOutline, Color=ColorSequence.new({
+    local counterOutline = mk("UIStroke", {Name="CounterOutline", Parent=TopBarCounter, Color=Color3.new(1,1,1), Thickness=1, Transparency=0.10})
+    mk("UIGradient", {Name="CounterGradient", Parent=counterOutline, Color=ColorSequence.new({
         ColorSequenceKeypoint.new(0, Color3.fromRGB(238,105,187)),
         ColorSequenceKeypoint.new(0.55, Color3.fromRGB(221,155,218)),
         ColorSequenceKeypoint.new(1, Color3.fromRGB(94,214,243))})})

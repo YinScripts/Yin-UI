@@ -423,7 +423,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             CatImage.Visible = false
             local rail = Body:FindFirstChild("CompactTabRail")
             if rail then rail.BackgroundTransparency = 0.68 end
-            local side = compact and 58 or 118
+            local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, -56)
             ContentArea.Size = UDim2.new(1, -side, 1, 56)
             if A.LayoutCatalog then A.LayoutCatalog(compact) end
@@ -481,7 +481,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             CatImage.Visible = (not compact) and Theme.ThemeName == "Dark"
             local rail = Body:FindFirstChild("CompactTabRail")
             if rail then rail.BackgroundTransparency = 0.10 end
-            local side = compact and 58 or 118
+            local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, 0)
             ContentArea.Size = UDim2.new(1, -side, 1, 0)
             for _, tab in ipairs(Window.Tabs or {}) do

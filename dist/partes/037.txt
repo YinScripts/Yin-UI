@@ -1,4 +1,28 @@
-   Position = UDim2.new(0, 14, 0, 319),
+t then return end
+        isSeeking = false
+        seekInput = nil
+        SeekThumb.Visible = false
+        SeekTooltip.Visible = false
+        local pct = getSeekPercent(input.Position.X)
+        if SpotifyState.CurrentSound then
+            pcall(function()
+                local total = SpotifyState.CurrentSound.TimeLength
+                if total > 0 then
+                    local newPos = pct * total
+                    SpotifyState.CurrentSound.TimePosition = newPos
+                    SpotifyState.CurrentPausedPosition = newPos
+                    if SpotifyState.IsPlaying then
+                        SpotifyState.CurrentSound:Play()
+                    end
+                end
+            end)
+        end
+    end)
+
+    local ProgressTimeLeft = mk("TextLabel", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(0, 72, 0, 16),
+        Position = UDim2.new(0, 14, 0, 319),
         BackgroundTransparency = 1,
         Text = "0:00",
         Font = Enum.Font.GothamMedium,
@@ -1107,27 +1131,4 @@
         end
 
         if SpotifyState.CurrentSound then
-            pcall(function()
-                SpotifyState.CurrentSound:Stop()
-            end)
-            safeDestroy(SpotifyState.CurrentSound)
-            SpotifyState.CurrentSound = nil
-        end
-    end
-
-    local function syncPlaybackUI()
-        if SpotifyState.CurrentSound then
-            PlayPauseBtn.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
-        else
-            PlayPauseBtn.Image = asset(135609604299893)
-        end
-
-        RepeatBtn.ImageColor3 = SpotifyState.IsRepeat and spotifyGreen or spotifyText
-        LikeBtn.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
-
-        if isLiked(SpotifyState.SelectedIndex) then
-            LikeBtn.Image = asset(116559368303288)
-        else
-            LikeBtn.Image = asset(116559368303288)
-        end
-        refreshSpotifyFloating
+            pca

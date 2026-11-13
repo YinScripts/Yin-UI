@@ -533,12 +533,25 @@
                 control.Size = UDim2.fromOffset(controlPx, controlPx)
             end
         end
+        -- Aplicar la paleta tanto al iniciar como al cambiar de tema.
+        TopBarCounter.BackgroundColor3 = Theme.PillBackground or Theme.Secondary or Theme.Background
+        local outline = TopBarCounter:FindFirstChild("CounterOutline")
+        local gradient = outline and outline:FindFirstChild("CounterGradient")
+        if gradient then
+            local accent = Theme.Border or Theme.Accent
+            local light = Theme.BorderLight or Theme.Accent
+            gradient.Color = ColorSequence.new(accent, light)
+        end
+        local divider = TopBarCounter:FindFirstChild("CounterDivider")
+        if divider then divider.BackgroundColor3 = Theme.Accent end
+        TopBarOnlineLabel.TextColor3 = Theme.Text
         local counterIcon = TopBarCounter:FindFirstChild("CounterIcon")
         if counterIcon then
-            YinIcons.get("online-crest", function(asset)
+            counterIcon.ImageColor3 = Theme.Counter or Theme.Accent
+            YinIcons.get("online-crest-mono", function(asset)
                 if counterIcon.Parent then
                     counterIcon.Image = asset
-                    counterIcon.ImageColor3 = Color3.new(1,1,1)
+                    counterIcon.ImageColor3 = Theme.Counter or Theme.Accent
                 end
             end)
         end
@@ -547,8 +560,8 @@
     applyThemeExtras()
 
     local ContentArea = mk("Frame", {
-        Size = UDim2.new(1, -118, 1, 0),
-        Position = UDim2.new(0, 118, 0, 0),
+        Size = UDim2.new(1, -110, 1, 0),
+        Position = UDim2.new(0, 110, 0, 0),
         BackgroundTransparency = 1,
         ZIndex = 7
     }, Body)
@@ -782,8 +795,8 @@
             nav.Rail.Visible = nav.Compact
             nav.Open.Visible = not nav.Compact
             nav.Close.Visible = nav.Compact
-            ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 118, 0, 0)
-            ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -118, 1, 0)
+            ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 110, 0, 0)
+            ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -110, 1, 0)
             Window._RefreshCompactNavigation()
             if self._SpotifyAmbient and self._SpotifyAmbient.Active then self._SpotifyAmbient.Layout() end
             if self._ChatAmbient and self._ChatAmbient.Active then self._ChatAmbient.Layout() end

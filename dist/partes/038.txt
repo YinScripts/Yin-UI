@@ -1,4 +1,27 @@
-Player()
+ll(function()
+                SpotifyState.CurrentSound:Stop()
+            end)
+            safeDestroy(SpotifyState.CurrentSound)
+            SpotifyState.CurrentSound = nil
+        end
+    end
+
+    local function syncPlaybackUI()
+        if SpotifyState.CurrentSound then
+            PlayPauseBtn.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+        else
+            PlayPauseBtn.Image = asset(135609604299893)
+        end
+
+        RepeatBtn.ImageColor3 = SpotifyState.IsRepeat and spotifyGreen or spotifyText
+        LikeBtn.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
+
+        if isLiked(SpotifyState.SelectedIndex) then
+            LikeBtn.Image = asset(116559368303288)
+        else
+            LikeBtn.Image = asset(116559368303288)
+        end
+        refreshSpotifyFloatingPlayer()
         if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
         if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
         if SpotifyState.OnPlaybackChanged then
@@ -1055,21 +1078,4 @@ Player()
 
     FP.applyMode = function()
         if not FloatingPlayer then return end
-        local size = FP.mini and FP.MINI or FP.EXPANDED
-        TweenService:Create(FloatingPlayer, TweenInfo.new(0.22, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Size = UDim2.fromOffset(size.X, size.Y)}):Play()
-        FP.Corner.CornerRadius = UDim.new(0, FP.mini and 24 or 18)
-        FloatingPlayer.BackgroundTransparency = FP.mini and 1 or 0
-        FP.Backdrop.Visible = not FP.mini
-        FP.Shade.Visible = not FP.mini
-        FP.Outline.Enabled = not FP.mini
-        FP.Full.Visible = not FP.mini
-        FP.Disc.Visible = FP.mini
-        FP.Ring.Enabled = FP.mini
-    end
-
-    local function createFloatingPlayer()
-        if FloatingPlayer and FloatingPlayer.Parent then return end
-        FloatingPlayer = mk("Frame", {
-            Parent = Window.ScreenGui,
-            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
-            Position = UDim2.new(0
+        local size = FP

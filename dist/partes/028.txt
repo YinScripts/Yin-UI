@@ -1,4 +1,23 @@
-ara no borrar caras/ropa.
+return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
     function ShaderReflections:_stripPartTextures(part)
         if self.TextureOriginal[part] ~= nil then return end
         local owner = part:FindFirstAncestorOfClass("Model")
@@ -947,21 +966,4 @@ ara no borrar caras/ropa.
     }
 
     function ShaderSilhouette:_applyPart(part)
-        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
-        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
-
-        if self.Original[part] == nil then
-            self.Original[part] = {}
-            pcall(function() self.Original[part].Color = part.Color end)
-            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
-        end
-
-        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
-        pcall(function() part.Reflectance = 0 end)
-
-        for _, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-                    self.Original[child] = {}
-                    pcall(function() self.Original[child].Color = child.Color end)
-                end
+    

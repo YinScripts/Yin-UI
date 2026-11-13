@@ -1,4 +1,24 @@
-                ZIndex = 9,
+meRole", "Stroke")
+            return Divider
+        end
+
+        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
+            local contentParent = self._ContentParent or TabPage
+            if selectable == nil then selectable = true end
+            items = items or {}
+
+            local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
+            if displayTitle then
+                local Title = mk("TextLabel", {
+                    Parent = contentParent,
+                    Size = UDim2.new(1, 0, 0, 20),
+                    BackgroundTransparency = 1,
+                    Text = displayTitle,
+                    TextColor3 = Theme.Text,
+                    TextSize = 13,
+                    Font = Enum.Font.GothamBold,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    ZIndex = 9,
                 })
                 Title:SetAttribute("ThemeTextRole", "Text")
                 Title:SetAttribute("TextSpanish", titleSpanish)
@@ -855,17 +875,4 @@
                             if abs.X <= 0 or abs.Y <= 0 then return nil end
                             local rel = screen - Viewport.AbsolutePosition
                             local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
-                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
-                            local camPos = Camera.CFrame.Position
-                            if math.abs(dir.Z) < 1e-4 then return nil end
-                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
-                            if tt <= 0 then return nil end
-                            return camPos + dir * tt
-                        end
-                        local function updateGrab()
-                            local piv = env.model:GetPivot()
-                            local sitting = ctl.state == "sit"
-                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
-                            local sp, d, abs, tanV = project(center)
-                            if not sp then return end
-                            local hPx = env.H / (2 * d * tanV) * abs
+                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * 

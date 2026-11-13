@@ -1,4 +1,7 @@
-serInputService.InputChanged:Connect(function(input)
+on
+            end
+        end)
+        track(UserInputService.InputChanged:Connect(function(input)
             if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local delta = input.Position - dragStart
                 Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
@@ -178,12 +181,25 @@ serInputService.InputChanged:Connect(function(input)
                 control.Size = UDim2.fromOffset(controlPx, controlPx)
             end
         end
+        -- Aplicar la paleta tanto al iniciar como al cambiar de tema.
+        TopBarCounter.BackgroundColor3 = Theme.PillBackground or Theme.Secondary or Theme.Background
+        local outline = TopBarCounter:FindFirstChild("CounterOutline")
+        local gradient = outline and outline:FindFirstChild("CounterGradient")
+        if gradient then
+            local accent = Theme.Border or Theme.Accent
+            local light = Theme.BorderLight or Theme.Accent
+            gradient.Color = ColorSequence.new(accent, light)
+        end
+        local divider = TopBarCounter:FindFirstChild("CounterDivider")
+        if divider then divider.BackgroundColor3 = Theme.Accent end
+        TopBarOnlineLabel.TextColor3 = Theme.Text
         local counterIcon = TopBarCounter:FindFirstChild("CounterIcon")
         if counterIcon then
-            YinIcons.get("online-crest", function(asset)
+            counterIcon.ImageColor3 = Theme.Counter or Theme.Accent
+            YinIcons.get("online-crest-mono", function(asset)
                 if counterIcon.Parent then
                     counterIcon.Image = asset
-                    counterIcon.ImageColor3 = Color3.new(1,1,1)
+                    counterIcon.ImageColor3 = Theme.Counter or Theme.Accent
                 end
             end)
         end
@@ -192,8 +208,8 @@ serInputService.InputChanged:Connect(function(input)
     applyThemeExtras()
 
     local ContentArea = mk("Frame", {
-        Size = UDim2.new(1, -118, 1, 0),
-        Position = UDim2.new(0, 118, 0, 0),
+        Size = UDim2.new(1, -110, 1, 0),
+        Position = UDim2.new(0, 110, 0, 0),
         BackgroundTransparency = 1,
         ZIndex = 7
     }, Body)
@@ -427,8 +443,8 @@ serInputService.InputChanged:Connect(function(input)
             nav.Rail.Visible = nav.Compact
             nav.Open.Visible = not nav.Compact
             nav.Close.Visible = nav.Compact
-            ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 118, 0, 0)
-            ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -118, 1, 0)
+            ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 110, 0, 0)
+            ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -110, 1, 0)
             Window._RefreshCompactNavigation()
             if self._SpotifyAmbient and self._SpotifyAmbient.Active then self._SpotifyAmbient.Layout() end
             if self._ChatAmbient and self._ChatAmbient.Active then self._ChatAmbient.Layout() end
@@ -1003,22 +1019,4 @@ serInputService.InputChanged:Connect(function(input)
         TabIconCarousel.LastOffset = TabIconCarousel.Offset
         TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
 
-        for index, item in ipairs(TabIconCarousel.Items) do
-            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
-            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
-            local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
-            local edge = math.clamp((d - 0.6) / 0.4, 0, 1)
-            item.Scale.Scale = 1 - 0.2 * edge
-            item.Dist = math.clamp(d, 0, 1)
-        end
-        applyTabCarouselSpin()
-    end
-
-    local function focusTabCarousel(tab, animate)
-        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
-        local index
-        for i, item in ipairs(TabIconCarousel.Items) do
-            if item.Tab == tab then
-                index = i
-                break
-           
+ 

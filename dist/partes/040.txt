@@ -1,4 +1,24 @@
-   row.Title.TextColor3 = current and spotifyGreen or spotifyText
+t.LayoutFavorites = function()
+            if FavPage.open then FavPage.layout() end
+        end
+    end
+
+    FavPage.Scroll:GetPropertyChangedSignal("CanvasPosition"):Connect(function()
+        local y = FavPage.Scroll.CanvasPosition.Y
+        local solid = y > FavPage.HERO_H - 40
+        FavPage.TopBar.BackgroundTransparency = solid and 0.35 or math.clamp(1 - 0.65 * (y / (FavPage.HERO_H - 40)), 0.35, 1)
+        FavPage.MiniPlay.Visible = solid and FavPage.PlayAll.Visible
+        FavPage.MiniTitle.Visible = solid
+    end)
+
+    FavPage.isCurrent = function(index)
+        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
+    end
+
+    FavPage.paintRow = function(row)
+        local current = FavPage.isCurrent(row.Index)
+        local playing = current and SpotifyState.IsPlaying and SpotifyState.CurrentSound ~= nil
+        row.Title.TextColor3 = current and spotifyGreen or spotifyText
         row.Number.TextColor3 = current and spotifyGreen or Color3.fromRGB(179, 179, 179)
         row.Number.Visible = not playing and not row.Hover
         row.Bars.Visible = playing and not row.Hover
@@ -1051,24 +1071,4 @@ local _ZeroAI = (function()
     local PLAYER_NAME = LocalPlayer.Name
 
     local SYSTEM_PROMPT = [[
-Eres Zero, una IA integrada dentro de la librería UI llamada Yin Yang, específicamente dentro del script EVADE v5.2 Beta para el juego Roblox "Evade".
-
-Estás sirviendo al jugador ]] .. PLAYER_NAME .. [[, quien es el desarrollador del script.
-
-SOBRE QUIÉN ERES:
-- Tu nombre es Zero
-- Eres parte de la librería Yin Yang UI v28
-- Fuiste diseñada para asistir a quien usa el script EVADE v5.2 Beta
-- Hablas de forma directa, casual y concisa — nunca eres robótica ni formal
-- Eres inteligente, sabes exactamente lo que hace cada opción del script
-
-CONOCIMIENTO COMPLETO DEL SCRIPT EVADE v5.2 Beta:
-
-PESTAÑA MOVEMENT:
-1. Teleport Walk (FloatingToggle)
-   - Mueve al jugador hacia adelante teletransportándolo en lugar de caminar normalmente
-   - Velocidad ajustable con slider de 1 a 50
-   - Se desactiva automáticamente si se activa Jump Frontal
-
-2. Enhanced Jump (FloatingToggle)
-   - Aumenta la
+Eres Zero, una IA integrada dentro

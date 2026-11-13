@@ -1,4 +1,13 @@
-entText")
+ibute("ThemeRole", "Background")
+        corner(stage, 999)
+        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
+        composite(stage, icon, 54, 14)
+        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
+        name:SetAttribute("ThemeTextRole", "Text")
+        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
+        badge:SetAttribute("ThemeRole", "Accent")
+        corner(badge, 999)
+        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
         local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
         -- acciones: editar / borrar (borrar pide un segundo toque)
         local edit = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0, 6, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
@@ -365,7 +374,7 @@ entText")
             CatImage.Visible = false
             local rail = Body:FindFirstChild("CompactTabRail")
             if rail then rail.BackgroundTransparency = 0.68 end
-            local side = compact and 58 or 118
+            local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, -56)
             ContentArea.Size = UDim2.new(1, -side, 1, 56)
             if A.LayoutCatalog then A.LayoutCatalog(compact) end
@@ -423,7 +432,7 @@ entText")
             CatImage.Visible = (not compact) and Theme.ThemeName == "Dark"
             local rail = Body:FindFirstChild("CompactTabRail")
             if rail then rail.BackgroundTransparency = 0.10 end
-            local side = compact and 58 or 118
+            local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, 0)
             ContentArea.Size = UDim2.new(1, -side, 1, 0)
             for _, tab in ipairs(Window.Tabs or {}) do
@@ -1165,28 +1174,4 @@ entText")
 
     UserInputService.InputEnded:Connect(function(input)
         if not isSeeking then return end
-        if input ~= seekInput then return end
-        isSeeking = false
-        seekInput = nil
-        SeekThumb.Visible = false
-        SeekTooltip.Visible = false
-        local pct = getSeekPercent(input.Position.X)
-        if SpotifyState.CurrentSound then
-            pcall(function()
-                local total = SpotifyState.CurrentSound.TimeLength
-                if total > 0 then
-                    local newPos = pct * total
-                    SpotifyState.CurrentSound.TimePosition = newPos
-                    SpotifyState.CurrentPausedPosition = newPos
-                    if SpotifyState.IsPlaying then
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
-    end)
-
-    local ProgressTimeLeft = mk("TextLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 72, 0, 16),
-     
+        if input ~= seekInpu

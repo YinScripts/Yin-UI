@@ -1,4 +1,18 @@
-       KnobShadow.Position = newState and shadowON or shadowOFF
+lderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
+
+                if animate then
+                    local squishSize = newState and knobSquishON or knobSquishOFF
+                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+                        {Size = squishSize}):Play()
+                    task.delay(0.08, function()
+                        TweenService:Create(Knob,       ti, {Size = knobNormal,
+                            Position = newState and knobON or knobOFF}):Play()
+                        TweenService:Create(KnobShadow, ti, {Position = newState and shadowON or shadowOFF}):Play()
+                    end)
+                else
+                    Knob.Size     = knobNormal
+                    Knob.Position = newState and knobON or knobOFF
+                    KnobShadow.Position = newState and shadowON or shadowOFF
                 end
             end
 
@@ -1014,20 +1028,4 @@
                 local function reflow()
                     local count = #Carousel.Cards
                     if count == 0 then
-                        refreshDots()
-                        return
-                    end
-
-                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
-                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
-                    local cardHeight = 96
-                    local step = cardWidth * 0.78
-                    local centerX = viewportWidth * 0.5 - cardWidth * 0.5
-
-                    for i, cardData in ipairs(Carousel.Cards) do
-                        local card = cardData.Holder
-                        if card and card.Parent then
-                            local offset = (i - Carousel.ActiveIndex) * step
-                            local distance = math.abs(i - Carousel.ActiveIndex)
-                            local targetX = centerX + offset
-                            local targetWidth = distance == 0 and cardWidth or ca
+                        refre
