@@ -1,10 +1,4 @@
-,
-                    TextYAlignment = Enum.TextYAlignment.Center,
-                    TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
-                    ZIndex = 5,
-                })
-                FloatLabel:SetAttribute("ThemeTextRole", "Text")
-                FloatLabel:SetAttribute("TextSpanish", textSpanish)
+         FloatLabel:SetAttribute("TextSpanish", textSpanish)
                 FloatLabel:SetAttribute("TextEnglish", textEnglish)
 
                 local pillV5 = nil
@@ -967,4 +961,10 @@
                         {Size = squishSize}):Play()
                     task.delay(0.08, function()
                         TweenService:Create(Knob,       ti, {Size = knobNormal,
-                            Position = newState and knobON or knobOFF}):Pl
+                            Position = newState and knobON or knobOFF}):Play()
+                        TweenService:Create(KnobShadow, ti, {Position = newState and shadowON or shadowOFF}):Play()
+                    end)
+                else
+                    Knob.Size     = knobNormal
+                    Knob.Position = newState and knobON or knobOFF
+             

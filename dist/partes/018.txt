@@ -1,11 +1,4 @@
-nction focusTabCarousel(tab, animate)
-        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
-        local index
-        for i, item in ipairs(TabIconCarousel.Items) do
-            if item.Tab == tab then
-                index = i
-                break
-            end
+ end
         end
         if not index then return end
 
@@ -970,4 +963,10 @@ nction focusTabCarousel(tab, animate)
                     Font = Enum.Font.GothamBlack,
                     TextSize = isCircleStyle and 11 or (hasLinkedSlider and 17 or 21),
                     TextWrapped = isCircleStyle,
-                    TextXAlignment = Enum.TextXAlignment.Center
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    TextYAlignment = Enum.TextYAlignment.Center,
+                    TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
+                    ZIndex = 5,
+                })
+                FloatLabel:SetAttribute("ThemeTextRole", "Text")
+       

@@ -1,13 +1,4 @@
-    AutoButtonColor = false,
-            ZIndex = 315,
-        })
-        resetButton:SetAttribute("ThemeRole", "AccentOff")
-        corner(resetButton, 999)
-        RowKit.Icon(resetButton, 125802172782007, 13, 316, "Text")
-
-        local bar = mk("Frame", {
-            Parent = holder,
-            Size = UDim2.new(1, -36, 0, 8),
+       Size = UDim2.new(1, -36, 0, 8),
             Position = UDim2.new(0, 18, 0, 44),
             BackgroundColor3 = Theme.AccentOff,
             BorderSizePixel = 0,
@@ -775,4 +766,6 @@
         {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
         {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
         {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
-        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and 
+        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
+        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
+        {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dus

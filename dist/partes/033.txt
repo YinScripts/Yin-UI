@@ -1,9 +1,4 @@
-,
-        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
-        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/NmV4sUQan",
-        TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
-    })
-    CopyBtn.MouseEnter:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1.02}):Play() end)
+yBtn.MouseEnter:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1.02}):Play() end)
     CopyBtn.MouseLeave:Connect(function() TweenService:Create(CopyScale, TweenInfo.new(0.12), {Scale = 1}):Play() end)
     local copyToken = 0
     CopyBtn.MouseButton1Click:Connect(function()
@@ -876,4 +871,10 @@
         local s = sframe(Stage, { Name = "SceneLight", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
         vgrad(s, Color3.fromRGB(246, 247, 251), Color3.fromRGB(222, 226, 236))
         for i = 1, 3 do
-            corner(sframe(s, { Size = UDim2.new(0.5, 0, 0, 14), Position = UDim2.new(0.38, 0, 0.3 + i * 0.13, 0), Backg
+            corner(sframe(s, { Size = UDim2.new(0.5, 0, 0, 14), Position = UDim2.new(0.38, 0, 0.3 + i * 0.13, 0), BackgroundColor3 = Color3.fromRGB(205, 210, 222), ZIndex = SZ + 1 }), 7)
+        end
+        return s
+    end
+    -- Transparente: tablero de ajedrez para ver los bordes reales de cada imagen
+    function Scenes.checker()
+        local s = sframe(Stage, { Name = "SceneChecker", Size = UDim2.fromSca

@@ -1,9 +1,4 @@
-  end
-        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
-    end
-
-    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
-    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+ara no borrar caras/ropa.
     function ShaderReflections:_stripPartTextures(part)
         if self.TextureOriginal[part] ~= nil then return end
         local owner = part:FindFirstAncestorOfClass("Model")
@@ -964,4 +959,9 @@
         pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
         pcall(function() part.Reflectance = 0 end)
 
-        for 
+        for _, child in ipairs(part:GetChildren()) do
+            if child:IsA("SurfaceAppearance") then
+                if self.Original[child] == nil then
+                    self.Original[child] = {}
+                    pcall(function() self.Original[child].Color = child.Color end)
+                end

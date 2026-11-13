@@ -1,7 +1,4 @@
-                        local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
-                            local sp, d, abs, tanV = project(center)
-                            if not sp then return end
-                            local hPx = env.H / (2 * d * tanV) * abs.Y
+.Y
                             local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
                             Grab.Size = UDim2.fromOffset(w, h)
                             Grab.Position = UDim2.fromOffset(sp.X - w / 2, sp.Y - h / 2)
@@ -914,4 +911,11 @@
             textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
                 elapsed = elapsed + dt
                 local hue = (elapsed * 0.12) % 1
-         
+                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
+            end))
+
+        elseif mode == "CatRainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local cycle = (elapsed * 5) % 1
+       

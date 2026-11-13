@@ -1,11 +1,4 @@
-(color)
-    end
-    PickerRed.FocusLost:Connect(applyRGBFields)
-    PickerGreen.FocusLost:Connect(applyRGBFields)
-    PickerBlue.FocusLost:Connect(applyRGBFields)
-    PickerClose.MouseButton1Click:Connect(closeColorPicker)
-    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
-    PickerApply.MouseButton1Click:Connect(function()
+Apply.MouseButton1Click:Connect(function()
         if pickerTarget then
             local selected = pickerColor()
             pickerTarget.Box.Text = colorToHex(selected)
@@ -1030,4 +1023,9 @@
         return spec.parent
     end
 
-    local ShaderTargets =
+    local ShaderTargets = {
+        Lighting = {kind = "service", serviceName = "Lighting"},
+        Terrain = {kind = "direct", instance = ShaderTerrain},
+        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
+        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
+     

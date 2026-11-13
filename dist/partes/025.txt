@@ -1,10 +1,3 @@
-        end
-
-                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
-                playSound(Sounds.Click, 0.7)
-                if copied then
-                    setStatus("ok",
-                        total .. " ajuste(s) copiados al portapapeles",
                         total .. " setting(s) copied to clipboard")
                     if CodeBox then CodeBox.Visible = false end
                 else
@@ -1159,4 +1152,11 @@
             math.clamp(tonumber(PickerGreen.Text) or 0, 0, 255),
             math.clamp(tonumber(PickerBlue.Text) or 0, 0, 255)
         )
-        setPickerColor
+        setPickerColor(color)
+    end
+    PickerRed.FocusLost:Connect(applyRGBFields)
+    PickerGreen.FocusLost:Connect(applyRGBFields)
+    PickerBlue.FocusLost:Connect(applyRGBFields)
+    PickerClose.MouseButton1Click:Connect(closeColorPicker)
+    PickerCancel.MouseButton1Click:Connect(closeColorPicker)
+    Picker

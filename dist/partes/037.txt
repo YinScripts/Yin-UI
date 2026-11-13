@@ -1,15 +1,4 @@
- SpotifyState.IsPlaying then
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
-    end)
-
-    local ProgressTimeLeft = mk("TextLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 72, 0, 16),
-        Position = UDim2.new(0, 14, 0, 319),
+   Position = UDim2.new(0, 14, 0, 319),
         BackgroundTransparency = 1,
         Text = "0:00",
         Font = Enum.Font.GothamMedium,
@@ -1134,4 +1123,11 @@
         end
 
         RepeatBtn.ImageColor3 = SpotifyState.IsRepeat and spotifyGreen or spotifyText
-        LikeBt
+        LikeBtn.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
+
+        if isLiked(SpotifyState.SelectedIndex) then
+            LikeBtn.Image = asset(116559368303288)
+        else
+            LikeBtn.Image = asset(116559368303288)
+        end
+        refreshSpotifyFloating

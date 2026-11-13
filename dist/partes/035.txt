@@ -1,15 +1,4 @@
-0))
-        end)
-    end)
-    rebuildLayerCards = function()
-        activeSlider = nil
-        for _, ch in ipairs(LayersHolder:GetChildren()) do
-            if ch:IsA("Frame") then ch:Destroy() end
-        end
-        for i = 1, #ED.rec.Layers do
-            layerCard(i)
-        end
-        AddLayerBtn.Visible = #ED.rec.Layers < 3
+AddLayerBtn.Visible = #ED.rec.Layers < 3
     end
 
     -- =====================================================================
@@ -747,4 +736,7 @@
         composite(stage, icon, 54, 14)
         local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
         name:SetAttribute("ThemeTextRole", "Text")
-        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fro
+        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
+        badge:SetAttribute("ThemeRole", "Accent")
+        corner(badge, 999)
+        RowKit.Icon(badge, 103456899356871, 12, 16, "Acc

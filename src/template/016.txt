@@ -535,10 +535,12 @@
         end
         local counterIcon = TopBarCounter:FindFirstChild("CounterIcon")
         if counterIcon then
-            local counterSize = math.clamp(tonumber(sizes.Counter) or 24, 14, 28)
-            counterIcon.Size = UDim2.fromOffset(counterSize, counterSize)
-            counterIcon.Position = UDim2.new(0, 0, 0.5, -(counterSize / 2))
-            TopBarOnlineLabel.Position = UDim2.new(0, counterSize + 4, 0.5, -9)
+            YinIcons.get("online-crest", function(asset)
+                if counterIcon.Parent then
+                    counterIcon.Image = asset
+                    counterIcon.ImageColor3 = Color3.new(1,1,1)
+                end
+            end)
         end
         Boom.Paint()
     end

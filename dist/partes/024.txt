@@ -1,11 +1,4 @@
-       applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
-            end))
-
-        elseif mode == "CatRainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local cycle = (elapsed * 5) % 1
-                
+         
                 local color
                 if cycle < 0.5 then
                     local t = cycle * 2
@@ -1023,4 +1016,10 @@
                 if not ok then
                     setStatus("err", "Error al codificar", "Encoding error")
                     return
-        
+                end
+
+                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
+                playSound(Sounds.Click, 0.7)
+                if copied then
+                    setStatus("ok",
+                        total .. " ajuste(s) copiados al portapapeles",

@@ -1,11 +1,4 @@
-n.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
-
-        if isLiked(SpotifyState.SelectedIndex) then
-            LikeBtn.Image = asset(116559368303288)
-        else
-            LikeBtn.Image = asset(116559368303288)
-        end
-        refreshSpotifyFloatingPlayer()
+Player()
         if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
         if SpotifyState.RefreshBoombox then SpotifyState.RefreshBoombox() end
         if SpotifyState.OnPlaybackChanged then
@@ -1072,4 +1065,11 @@ n.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyT
         FP.Full.Visible = not FP.mini
         FP.Disc.Visible = FP.mini
         FP.Ring.Enabled = FP.mini
-    
+    end
+
+    local function createFloatingPlayer()
+        if FloatingPlayer and FloatingPlayer.Parent then return end
+        FloatingPlayer = mk("Frame", {
+            Parent = Window.ScreenGui,
+            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
+            Position = UDim2.new(0

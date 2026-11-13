@@ -1,9 +1,4 @@
- {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
-        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
-        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
+   Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
         BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
         BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
         ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
@@ -795,4 +790,9 @@
             if part and part.Parent and original and original.TopSurface ~= nil then
                 pcall(function() part.TopSurface = original.TopSurface end)
             end
-      
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) p

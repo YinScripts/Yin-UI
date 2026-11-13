@@ -815,63 +815,32 @@ v == "Float" then
         end)
     end
 
-    local TopBarCounter = mk("Frame", {
-        Parent = TopBar,
-        AnchorPoint = Vector2.new(1, 0),
-        Position = UDim2.new(1, -27, 0, 31),
-        Size = UDim2.fromOffset(66, 24),
-        BackgroundTransparency = 1,
-        ZIndex = 9,
-    })
-    mk("ImageLabel", {
-        Name = "CounterIcon",
-        Parent = TopBarCounter,
-        Size = UDim2.fromOffset(24, 24),
-        Position = UDim2.new(0, 0, 0.5, -12),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://74246983577629",
-        ImageColor3 = Theme.Counter,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 10,
-    })
-    TopBarCounter.CounterIcon:SetAttribute("ThemeImageRole", "Counter")
-    local TopBarOnlineLabel = mk("TextLabel", {
-        Parent = TopBarCounter,
-        Size = UDim2.fromOffset(36, 18),
-        Position = UDim2.new(0, 28, 0.5, -9),
-        BackgroundTransparency = 1,
-        Text = "0",
-        Font = Enum.Font.GothamBold,
-        TextSize = 14,
-        TextColor3 = Theme.Counter,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 10,
-    })
-    TopBarOnlineLabel:SetAttribute("ThemeTextRole", "Counter")
-    do
-        TopBarCounter.Size = UDim2.fromOffset(82, 22)
-        TopBarCounter.Position = UDim2.new(1, -12, 0, 33)
-        TopBarCounter.BackgroundColor3 = Theme.Secondary
-        TopBarCounter.BackgroundTransparency = 0.45
-        TopBarCounter:SetAttribute("ThemeRole", "Secondary")
-        corner(TopBarCounter, 999)
-        mk("UIPadding", {PaddingLeft = UDim.new(0, 16)}, TopBarCounter)
-        local live = mk("Frame", {
-            Name = "LiveDot",
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0, -8, 0.5, 0),
-            Size = UDim2.fromOffset(6, 6),
-            BackgroundColor3 = Color3.fromRGB(46, 213, 115),
-            BorderSizePixel = 0,
-            ZIndex = 11,
-        }, TopBarCounter)
-        corner(live, 999)
-        local halo = mk("UIStroke", {Color = Color3.fromRGB(46, 213, 115), Thickness = 0, Transparency = 0.2}, live)
-        TweenService:Create(halo,
-            TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.3),
-            { Thickness = 4, Transparency = 1 }
-        ):Play()
-    end
+    -- Contador online: diseño laureado de la opción 4.
+    local TopBarCounter = mk("Frame", {Parent=TopBar, AnchorPoint=Vector2.new(1,0),
+        Position=UDim2.new(1,-12,0,33), Size=UDim2.fromOffset(104,22),
+        BackgroundColor3=Color3.fromRGB(23,15,28), BackgroundTransparency=0.18,
+        BorderSizePixel=0, ZIndex=9})
+    corner(TopBarCounter, 999)
+    local counterOutline = mk("UIStroke", {Parent=TopBarCounter, Color=Color3.new(1,1,1), Thickness=1, Transparency=0.10})
+    mk("UIGradient", {Parent=counterOutline, Color=ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(238,105,187)),
+        ColorSequenceKeypoint.new(0.55, Color3.fromRGB(221,155,218)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(94,214,243))})})
+    local live = mk("Frame", {Name="LiveDot", Parent=TopBarCounter, AnchorPoint=Vector2.new(0.5,0.5),
+        Position=UDim2.new(0,12,0.5,0), Size=UDim2.fromOffset(6,6),
+        BackgroundColor3=Color3.fromRGB(33,229,102), BorderSizePixel=0, ZIndex=11})
+    corner(live, 999)
+    local counterIcon = mk("ImageLabel", {Name="CounterIcon", Parent=TopBarCounter,
+        AnchorPoint=Vector2.new(0.5,0.5), Position=UDim2.new(0,39,0.5,0),
+        Size=UDim2.fromOffset(23,23), BackgroundTransparency=1, Image="rbxassetid://74246983577629",
+        ImageColor3=Color3.new(1,1,1), ScaleType=Enum.ScaleType.Fit, ZIndex=10})
+    mk("Frame", {Name="CounterDivider", Parent=TopBarCounter, AnchorPoint=Vector2.new(0,0.5),
+        Position=UDim2.new(0,57,0.5,0), Size=UDim2.fromOffset(1,12),
+        BackgroundColor3=Color3.fromRGB(210,128,185), BackgroundTransparency=0.18, BorderSizePixel=0, ZIndex=10})
+    local TopBarOnlineLabel = mk("TextLabel", {Parent=TopBarCounter,
+        Size=UDim2.new(1,-64,1,0), Position=UDim2.fromOffset(64,0), BackgroundTransparency=1,
+        Text="0", Font=Enum.Font.GothamBold, TextSize=14, TextColor3=Color3.fromRGB(255,250,255),
+        TextXAlignment=Enum.TextXAlignment.Left, TextTruncate=Enum.TextTruncate.AtEnd, ZIndex=10})
 
     local isMaximized = false
     local normalWindowSize = Main.Size

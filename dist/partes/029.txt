@@ -1,9 +1,3 @@
-_, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-                    self.Original[child] = {}
-                    pcall(function() self.Original[child].Color = child.Color end)
-                end
                 pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
             end
         end
@@ -938,4 +932,6 @@ _, child in ipairs(part:GetChildren()) do
             local size = self.Rng:NextInteger(1, 3)
             table.insert(self.Grain, layer("G", {Size = UDim2.fromOffset(size, size), BackgroundColor3 = dark and Color3.new(0, 0, 0) or Color3.fromRGB(255, 250, 215), BackgroundTransparency = 0.75}))
         end
-        -
+        -- parpadeo general de la imagen y banda de tracking
+        self.Flicker = layer("Flicker", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(20, 18, 6), BackgroundTransparency = 0.96})
+        local band = layer("Tracking", {Size = UDim2.new(1, 0, 0.08, 0), Position = UDim2.new

@@ -1,11 +1,4 @@
-TAÑA MOVEMENT:
-1. Teleport Walk (FloatingToggle)
-   - Mueve al jugador hacia adelante teletransportándolo en lugar de caminar normalmente
-   - Velocidad ajustable con slider de 1 a 50
-   - Se desactiva automáticamente si se activa Jump Frontal
-
-2. Enhanced Jump (FloatingToggle)
-   - Aumenta la altura del salto modificando JumpPower y UseJumpPower en el Humanoid
+ altura del salto modificando JumpPower y UseJumpPower en el Humanoid
    - Altura ajustable con slider de 20 a 300
    - Se desactiva automáticamente si se activa Jump Frontal
 

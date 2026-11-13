@@ -1,10 +1,4 @@
-ay()
-                        TweenService:Create(KnobShadow, ti, {Position = newState and shadowON or shadowOFF}):Play()
-                    end)
-                else
-                    Knob.Size     = knobNormal
-                    Knob.Position = newState and knobON or knobOFF
-                    KnobShadow.Position = newState and shadowON or shadowOFF
+       KnobShadow.Position = newState and shadowON or shadowOFF
                 end
             end
 
@@ -1033,4 +1027,7 @@ ay()
                     for i, cardData in ipairs(Carousel.Cards) do
                         local card = cardData.Holder
                         if card and card.Parent then
-     
+                            local offset = (i - Carousel.ActiveIndex) * step
+                            local distance = math.abs(i - Carousel.ActiveIndex)
+                            local targetX = centerX + offset
+                            local targetWidth = distance == 0 and cardWidth or ca

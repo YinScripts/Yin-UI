@@ -1,6 +1,4 @@
-atmosphere"},
-        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
-        {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
+k with soft bloom"},
         {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
         {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
         {"Ciudad Neón", "Neon City", "NeonNight", "Noche magenta y cian con piso espejo realista", "Magenta and cyan night with realistic mirror floor"},
@@ -879,4 +877,9 @@ atmosphere"},
         TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
     }, "Copiar invitación", "Copy invite", nil)
     text({
-        Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0)
+        Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
+        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "discord.gg/NmV4sUQan",
+        TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 13,
+    })
+    Cop

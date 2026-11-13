@@ -1,11 +1,4 @@
-ndex)
-        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
-    end
-
-    FavPage.paintRow = function(row)
-        local current = FavPage.isCurrent(row.Index)
-        local playing = current and SpotifyState.IsPlaying and SpotifyState.CurrentSound ~= nil
-        row.Title.TextColor3 = current and spotifyGreen or spotifyText
+   row.Title.TextColor3 = current and spotifyGreen or spotifyText
         row.Number.TextColor3 = current and spotifyGreen or Color3.fromRGB(179, 179, 179)
         row.Number.Visible = not playing and not row.Hover
         row.Bars.Visible = playing and not row.Hover
@@ -1071,4 +1064,11 @@ SOBRE QUIÉN ERES:
 
 CONOCIMIENTO COMPLETO DEL SCRIPT EVADE v5.2 Beta:
 
-PES
+PESTAÑA MOVEMENT:
+1. Teleport Walk (FloatingToggle)
+   - Mueve al jugador hacia adelante teletransportándolo en lugar de caminar normalmente
+   - Velocidad ajustable con slider de 1 a 50
+   - Se desactiva automáticamente si se activa Jump Frontal
+
+2. Enhanced Jump (FloatingToggle)
+   - Aumenta la

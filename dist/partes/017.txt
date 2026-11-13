@@ -1,10 +1,4 @@
-nput.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
-                drag = true
-                dragStart = input.Position
-                startPos = Main.Position
-            end
-        end)
-        track(UserInputService.InputChanged:Connect(function(input)
+serInputService.InputChanged:Connect(function(input)
             if drag and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
                 local delta = input.Position - dragStart
                 Main.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
@@ -186,10 +180,12 @@ nput.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
         end
         local counterIcon = TopBarCounter:FindFirstChild("CounterIcon")
         if counterIcon then
-            local counterSize = math.clamp(tonumber(sizes.Counter) or 24, 14, 28)
-            counterIcon.Size = UDim2.fromOffset(counterSize, counterSize)
-            counterIcon.Position = UDim2.new(0, 0, 0.5, -(counterSize / 2))
-            TopBarOnlineLabel.Position = UDim2.new(0, counterSize + 4, 0.5, -9)
+            YinIcons.get("online-crest", function(asset)
+                if counterIcon.Parent then
+                    counterIcon.Image = asset
+                    counterIcon.ImageColor3 = Color3.new(1,1,1)
+                end
+            end)
         end
         Boom.Paint()
     end
@@ -1018,4 +1014,11 @@ nput.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
         applyTabCarouselSpin()
     end
 
-    local fu
+    local function focusTabCarousel(tab, animate)
+        if not TabIconCarousel.Enabled or TabIconCarousel.ViewW <= 0 then return end
+        local index
+        for i, item in ipairs(TabIconCarousel.Items) do
+            if item.Tab == tab then
+                index = i
+                break
+           

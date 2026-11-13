@@ -1,11 +1,4 @@
-end
-
-    local function createFloatingPlayer()
-        if FloatingPlayer and FloatingPlayer.Parent then return end
-        FloatingPlayer = mk("Frame", {
-            Parent = Window.ScreenGui,
-            Size = UDim2.fromOffset(FP.EXPANDED.X, FP.EXPANDED.Y),
-            Position = UDim2.new(0.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
+.5, -math.floor(FP.EXPANDED.X / 2), 1, -(FP.EXPANDED.Y + 24)),
             BackgroundColor3 = Color3.fromRGB(14, 14, 16),
             BackgroundTransparency = 0,
             BorderSizePixel = 0,
@@ -1137,4 +1130,11 @@ end
         FavPage.MiniTitle.Visible = solid
     end)
 
-    FavPage.isCurrent = function(i
+    FavPage.isCurrent = function(index)
+        return SpotifyState.CurrentTrack ~= nil and SpotifyState.SelectedIndex == index
+    end
+
+    FavPage.paintRow = function(row)
+        local current = FavPage.isCurrent(row.Index)
+        local playing = current and SpotifyState.IsPlaying and SpotifyState.CurrentSound ~= nil
+     
