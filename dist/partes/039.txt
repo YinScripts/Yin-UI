@@ -1,4 +1,15 @@
-()
+              if image.Parent then
+                    image.Image = assetId
+                    image.Visible = true
+                    glyph.Visible = false
+                end
+            end)
+            return button, label, image, glyph
+        end
+        N.home, N.homeLabel, N.homeIcon, N.homeGlyph = N.button(1, "home", "⌂", "Inicio", "Home")
+        N.search, N.searchLabel, N.searchIcon, N.searchGlyph = N.button(2, "search", "⌕", "Buscar", "Search")
+        N.library, N.libraryLabel, N.libraryIcon, N.libraryGlyph = N.button(3, "music", "♫", "Mis canciones", "My songs")
+        SpotifyState.RefreshCatalogNavigation = function()
             local homeColor = not SpotifyState.MySongsView and spotifyText or spotifyDim
             local libraryColor = SpotifyState.MySongsView and spotifyText or spotifyDim
             N.homeLabel.TextColor3, N.homeIcon.ImageColor3, N.homeGlyph.TextColor3 = homeColor, homeColor, homeColor
@@ -1092,27 +1103,4 @@
         Size = UDim2.new(1, -40, 0, 1),
         Position = UDim2.new(0, 20, 1, -4),
         BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 0.88,
-        BorderSizePixel = 0,
-        ZIndex = 42,
-    })
-
-    FavPage.Body = mk("Frame", {
-        Parent = FavPage.Scroll,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
-        BackgroundTransparency = 0.55,
-        BorderSizePixel = 0,
-        LayoutOrder = 4,
-        ZIndex = 41,
-    })
-    mk("UIListLayout", {
-        Parent = FavPage.Body,
-        Padding = UDim.new(0, 2),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    mk("UIPadding", {
-        Parent = FavPage.Body,
-        PaddingLeft = UDim.new(0, 12),
-        Pa
+        BackgroundTransparen

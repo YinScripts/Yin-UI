@@ -1,4 +1,15 @@
-ddress.FocusLost:Connect(function() address.Visible = false copy.Visible = true end)
+ if this == serial and copy.Parent then label.Text = GetText("Copiar enlace", "Copy link") end
+            end)
+        end)
+        -- El enlace también queda disponible para selección manual sin portapapeles.
+        address = mk("TextBox", {
+            Parent = c, Name = platform .. "Link", Position = UDim2.new(0, 14, 1, -37),
+            Size = UDim2.new(1, -28, 0, 26), BackgroundColor3 = Theme.Background,
+            Text = link, TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 10,
+            ClearTextOnFocus = false, TextEditable = false, Visible = false, ZIndex = 14,
+        })
+        corner(address, 8)
+        address.FocusLost:Connect(function() address.Visible = false copy.Visible = true end)
         copy:SetAttribute("Link", link)
         task.spawn(function()
             if type(writefile) ~= "function" or type(getcustomasset) ~= "function" then return end
@@ -908,10 +919,4 @@ ddress.FocusLost:Connect(function() address.Visible = false copy.Visible = true 
             TweenService:Create(cloud, TweenInfo.new(14 + i * 5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(c[1] + 0.12, c[2]) }):Play()
         end
         for _, m in ipairs({ { 0.12, 120, Color3.fromRGB(96, 128, 170) }, { 0.42, 150, Color3.fromRGB(84, 116, 160) }, { 0.78, 130, Color3.fromRGB(104, 138, 178) } }) do
-            sframe(s, { Size = UDim2.fromOffset(m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 0.62, m[2] * 0.2), Rotation = 45, BackgroundColor3 = m[3], ZIndex = SZ + 4 })
-        end
-        local ground = sframe(s, { Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.6), BackgroundColor3 = WHITE, ZIndex = SZ + 5 })
-        vgrad(ground, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
-        for i = 1, 4 do
-            local y = (i / 5) ^ 1.6
-            sframe(ground, { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromScale(0, y), BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.7, ZIndex = SZ 
+            sframe(s, { Size = UDim2.fromOffset(

@@ -1,4 +1,21 @@
-pply:SetAttribute("ThemeRole", "Accent")
+hemeRole", "Secondary")
+    PickerCancel:SetAttribute("ThemeTextRole", "Text")
+    PickerCancel:SetAttribute("TextSpanish", "Cancelar")
+    PickerCancel:SetAttribute("TextEnglish", "Cancel")
+    corner(PickerCancel, 8)
+    local PickerApply = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0.56, -10, 1, -45),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Aplicar", "Apply"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerApply:SetAttribute("ThemeRole", "Accent")
     PickerApply:SetAttribute("ThemeTextRole", "AccentText")
     PickerApply:SetAttribute("TextSpanish", "Aplicar")
     PickerApply:SetAttribute("TextEnglish", "Apply")
@@ -1038,7 +1055,4 @@ pply:SetAttribute("ThemeRole", "Accent")
         {mode = "Off", titleES = "Normal (Blanco)", titleEN = "Normal (White)", descES = "Sin efecto - color del tema", descEN = "No effect - theme color", accent = Color3.fromRGB(200, 200, 200)},
         {mode = "WhiteCyan", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
         {mode = "WhitePink", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
-        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle", accent = Color3.fromRGB(255, 200, 0)},
-        {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
-        {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
-        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 
+        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle", accent = Color3.fromRGB(

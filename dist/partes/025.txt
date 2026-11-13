@@ -1,4 +1,18 @@
-ole", "Background")
+im2.new(0.5, -7, 0.5, -7), 505, "AccentText")
+
+                local Mono = mk("TextLabel", {
+                    Parent = Row,
+                    Size = UDim2.fromOffset(28, 28),
+                    Position = UDim2.new(0, 44, 0.5, -14),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.25,
+                    Text = string.upper(string.sub(tabName, 1, 1)),
+                    TextColor3 = Theme.Accent,
+                    Font = Enum.Font.GothamBlack,
+                    TextSize = 13,
+                    ZIndex = 504,
+                })
+                Mono:SetAttribute("ThemeRole", "Background")
                 Mono:SetAttribute("ThemeTextRole", "Accent")
                 Mono:SetAttribute("IgnoreTextEffect", true)
                 corner(Mono, 9)
@@ -1149,21 +1163,4 @@ ole", "Background")
         Font = Enum.Font.GothamBold,
         ZIndex = 262,
     })
-    PickerCancel:SetAttribute("ThemeRole", "Secondary")
-    PickerCancel:SetAttribute("ThemeTextRole", "Text")
-    PickerCancel:SetAttribute("TextSpanish", "Cancelar")
-    PickerCancel:SetAttribute("TextEnglish", "Cancel")
-    corner(PickerCancel, 8)
-    local PickerApply = mk("TextButton", {
-        Parent = ColorPickerPanel,
-        Size = UDim2.new(0.44, -4, 0, 34),
-        Position = UDim2.new(0.56, -10, 1, -45),
-        BackgroundColor3 = Theme.Accent,
-        BorderSizePixel = 0,
-        Text = GetText("Aplicar", "Apply"),
-        TextColor3 = Theme.AccentText,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 262,
-    })
-    PickerA
+    PickerCancel:SetAttribute("T

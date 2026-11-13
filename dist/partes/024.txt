@@ -1,4 +1,19 @@
-  applyImages()
+             if BackgroundVideo.IsLoaded then
+                                activateVideo()
+                            else
+                                markFailure(videoId)
+                                if self._videoConnection then
+                                    pcall(function() self._videoConnection:Disconnect() end)
+                                    self._videoConnection = nil
+                                end
+                                tryNextVideo()
+                            end
+                        end)
+                    end
+
+                    tryNextVideo()
+                else
+                    applyImages()
                     print("Imagen de fondo actualizada")
                 end
             end)
@@ -1025,18 +1040,4 @@
                 })
                 corner(Box, 7)
                 stroke(Box, Theme.Stroke, 1, 0.5)
-                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UDim2.new(0.5, -7, 0.5, -7), 505, "AccentText")
-
-                local Mono = mk("TextLabel", {
-                    Parent = Row,
-                    Size = UDim2.fromOffset(28, 28),
-                    Position = UDim2.new(0, 44, 0.5, -14),
-                    BackgroundColor3 = Theme.Background,
-                    BackgroundTransparency = 0.25,
-                    Text = string.upper(string.sub(tabName, 1, 1)),
-                    TextColor3 = Theme.Accent,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = 13,
-                    ZIndex = 504,
-                })
-                Mono:SetAttribute("ThemeR
+                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UD

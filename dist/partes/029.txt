@@ -1,4 +1,19 @@
-osition or nil end
+apsed = self.MirrorStepElapsed + delta
+            if self.ObjectMirrorEnabled then
+                if self.MirrorScanElapsed >= 0.5 then
+                    self.MirrorScanElapsed, self.MirrorStepElapsed = 0, 0
+                    self:_refreshMirror()
+                elseif self.MirrorStepElapsed >= 1 / 30 then
+                    self.MirrorStepElapsed = 0
+                    self:_updateMirror()
+                end
+            end
+            if self.Elapsed >= 1.15 then
+                self.Elapsed = 0
+                self:Refresh()
+            end
+        end)
+        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.Position or nil end
         if self.CharacterConn then self.CharacterConn:Disconnect() end
         self.CharacterConn = LocalPlayer.CharacterAdded:Connect(function()
             task.wait(0.5) -- esperar a que cargue el mapa/cuerpo de la nueva ronda
@@ -961,18 +976,4 @@ osition or nil end
         task.spawn(function()
             local okList, list = pcall(function() return game:GetDescendants() end)
             if not okList then return end
-            for index, instance in ipairs(list) do
-                if token ~= self.MuteToken or not self.Enabled then return end
-                local isSound = false
-                pcall(function() isSound = instance:IsA("Sound") end)
-                if isSound then self:_muteSound(instance) end
-                if index % 500 == 0 then task.wait() end
-            end
-        end)
-    end
-
-    function ShaderFootage:_unmuteAll()
-        self.MuteToken = self.MuteToken + 1
-        for _, connection in ipairs(self.MuteConnections) do pcall(function() connection:Disconnect() end) end
-        self.MuteConnections = {}
-        for sound, volum
+      

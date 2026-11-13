@@ -1,4 +1,18 @@
-e in pairs(self.Muted) do
+      for index, instance in ipairs(list) do
+                if token ~= self.MuteToken or not self.Enabled then return end
+                local isSound = false
+                pcall(function() isSound = instance:IsA("Sound") end)
+                if isSound then self:_muteSound(instance) end
+                if index % 500 == 0 then task.wait() end
+            end
+        end)
+    end
+
+    function ShaderFootage:_unmuteAll()
+        self.MuteToken = self.MuteToken + 1
+        for _, connection in ipairs(self.MuteConnections) do pcall(function() connection:Disconnect() end) end
+        self.MuteConnections = {}
+        for sound, volume in pairs(self.Muted) do
             if sound.Parent then pcall(function() sound.Volume = volume end) end
         end
         self.Muted = {}
@@ -999,21 +1013,4 @@ e in pairs(self.Muted) do
             Size = UDim2.new(0, 21, 0, 21),
             Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10),
             BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePixel = 0,
-            ZIndex = 315,
-        })
-        corner(knob, 99)
-
-        local click = mk("TextButton", {
-            Parent = holder,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 316,
-        })
-
-        local function applyVisual(animate)
-            local tweenInfo = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-            local color = state and Theme.ToggleOn or Theme.AccentOff
-            local position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5,
+            BorderSizePi

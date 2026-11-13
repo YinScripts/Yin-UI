@@ -1,4 +1,13 @@
-etAttribute("ThemeRole", "Accent")
+Font.GothamBlack, TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+            })
+            artTitle:SetAttribute("IgnoreTextEffect", true)
+            local viewBtn = mk("TextButton", {
+                Parent = bar, Size = UDim2.fromOffset(128, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -6, 0.5, 0),
+                BackgroundColor3 = Theme.Accent, Text = GetText("Ver en grande", "View large"), TextColor3 = Theme.AccentText,
+                Font = Enum.Font.GothamBlack, TextSize = 11, AutoButtonColor = false, Visible = false, ZIndex = 13,
+            })
+            viewBtn:SetAttribute("ThemeRole", "Accent")
             viewBtn:SetAttribute("ThemeTextRole", "AccentText")
             viewBtn:SetAttribute("TextSpanish", "Ver en grande")
             viewBtn:SetAttribute("TextEnglish", "View large")

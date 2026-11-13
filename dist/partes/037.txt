@@ -1,4 +1,23 @@
-Pos = SeekHitbox.AbsolutePosition
+
+
+    local spotifySwipe = {
+        input = nil,
+        start = nil,
+        moved = false,
+        threshold = 24,
+    }
+
+    track(UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+        local pos = SpotifyShell.AbsolutePosition
+        local size = SpotifyShell.AbsoluteSize
+        if input.Position.X < pos.X or input.Position.X > pos.X + size.X
+            or input.Position.Y < pos.Y or input.Position.Y > pos.Y + size.Y then
+            return
+        end
+        local seekPos = SeekHitbox.AbsolutePosition
         local seekSize = SeekHitbox.AbsoluteSize
         if input.Position.X >= seekPos.X and input.Position.X <= seekPos.X + seekSize.X
             and input.Position.Y >= seekPos.Y and input.Position.Y <= seekPos.Y + seekSize.Y then
@@ -1116,22 +1135,4 @@ Pos = SeekHitbox.AbsolutePosition
             if showTiles and (not card or not card.Parent) then
                 local ok, result = pcall(create, position)
                 if ok then
-                    card = result
-                    SpotifyState[key] = card
-                else
-                    warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
-                end
-            end
-            if card and card.Parent then
-                card.Visible = showTiles
-                if showTiles then card.LayoutOrder = position end
-            end
-            return card
-        end
-
-        tile("_FavoritesTile", createFavoritesTile, 1)
-        local mySongsTile = tile("_MySongsTile", createMySongsTile, 2)
-        if showTiles then
-            displayOrder = 3
-            if mySongsTile then
- 
+     

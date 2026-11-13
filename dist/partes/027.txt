@@ -1,4 +1,7 @@
-90, 90)},
+255, 200, 0)},
+        {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
+        {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
+        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
         {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
         {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
         {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
@@ -754,11 +757,4 @@
 
     local ShaderQualityProfiles = {
         Lite = {reflectionRadius = 56, reflectionLimit = 60, shadowRadius = 34, shadowLimit = 8, rainRate = 42, rainRadius = 25, mirrorRadius = 40, mirrorLimit = 52, rainDrops = 36, rainSplashes = 10},
-        Balanced = {reflectionRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
-        Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
-        Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
-    }
-    local ShaderSceneQuality = "Balanced"
-
-    local function shaderQualityProfile()
-        return ShaderQualityPro
+        Balanced = {reflectionRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate

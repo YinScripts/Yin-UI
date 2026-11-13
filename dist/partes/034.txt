@@ -1,4 +1,10 @@
-+ 6 })
+m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 0.62, m[2] * 0.2), Rotation = 45, BackgroundColor3 = m[3], ZIndex = SZ + 4 })
+        end
+        local ground = sframe(s, { Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.6), BackgroundColor3 = WHITE, ZIndex = SZ + 5 })
+        vgrad(ground, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
+        for i = 1, 4 do
+            local y = (i / 5) ^ 1.6
+            sframe(ground, { Size = UDim2.new(1, 0, 0, 1), Position = UDim2.fromScale(0, y), BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.7, ZIndex = SZ + 6 })
         end
         for _, a in ipairs({ -62, -40, 40, 62 }) do
             sframe(ground, { Size = UDim2.new(0, 1, 1.6, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0), Rotation = a, BackgroundColor3 = Color3.fromRGB(30, 70, 34), BackgroundTransparency = 0.75, ZIndex = SZ + 6 })
@@ -741,15 +747,4 @@
             TextSize = 11,
             Font = Enum.Font.Code,
             ClearTextOnFocus = false,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = Z + 4,
-        })
-        idBox:SetAttribute("ThemeRole", "Background")
-        idBox:SetAttribute("ThemeTextRole", "Text")
-        idBox:SetAttribute("PlaceholderSpanish", "ID de la imagen")
-        idBox:SetAttribute("PlaceholderEnglish", "Image ID")
-        idBox.PlaceholderText = GetText("ID de la imagen", "Image ID")
-        corner(idBox, 9)
-        pad(idBox, 0, 10, 10, 0)
-        local thumbBtn = button(imgRow, "Miniatura", "Thumbnail", "Background", { Size = UDim2.fromOffset(76, 32), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0
+            TextXAlignment = Enum.TextXAlig

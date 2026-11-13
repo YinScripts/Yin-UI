@@ -1,4 +1,22 @@
-               local countLabel = mySongsTile:FindFirstChild("MySongsCount")
+               card = result
+                    SpotifyState[key] = card
+                else
+                    warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
+                end
+            end
+            if card and card.Parent then
+                card.Visible = showTiles
+                if showTiles then card.LayoutOrder = position end
+            end
+            return card
+        end
+
+        tile("_FavoritesTile", createFavoritesTile, 1)
+        local mySongsTile = tile("_MySongsTile", createMySongsTile, 2)
+        if showTiles then
+            displayOrder = 3
+            if mySongsTile then
+                local countLabel = mySongsTile:FindFirstChild("MySongsCount")
                 if countLabel then
                     local count = tostring(#SpotifyState.UserSongs)
                     countLabel.Text = GetText(count .. " canciones propias", count .. " personal songs")
@@ -1079,15 +1097,4 @@
             label:SetAttribute("TextSpanish", es)
             label:SetAttribute("TextEnglish", en)
             YinIcons.get(iconName, function(assetId)
-                if image.Parent then
-                    image.Image = assetId
-                    image.Visible = true
-                    glyph.Visible = false
-                end
-            end)
-            return button, label, image, glyph
-        end
-        N.home, N.homeLabel, N.homeIcon, N.homeGlyph = N.button(1, "home", "⌂", "Inicio", "Home")
-        N.search, N.searchLabel, N.searchIcon, N.searchGlyph = N.button(2, "search", "⌕", "Buscar", "Search")
-        N.library, N.libraryLabel, N.libraryIcon, N.libraryGlyph = N.button(3, "music", "♫", "Mis canciones", "My songs")
-        SpotifyState.RefreshCatalogNavigation = function
+  

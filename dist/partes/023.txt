@@ -1,4 +1,7 @@
-                   end
+, focus)
+                    else
+                        Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
+                    end
 
                     -- un solo RenderStepped para los dos personajes, solo con la pestaña Inicio a la vista (30 fps)
                     local animAcc = 0
@@ -300,7 +303,7 @@
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 20),
-                Position = UDim2.new(0.28, 0, 0, 194),
+                Position = UDim2.new(0.28, 0, 0, 207),
                 BackgroundTransparency = 1,
                 Text = GetText(greetES, greetEN),
                 Font = Enum.Font.GothamBold,
@@ -316,7 +319,7 @@
             local UserLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 30),
-                Position = UDim2.new(0.28, 0, 0, 213),
+                Position = UDim2.new(0.28, 0, 0, 226),
                 BackgroundTransparency = 1,
                 Text = LocalPlayer.DisplayName or LocalPlayer.Name,
                 Font = Enum.Font.GothamBold,
@@ -328,14 +331,14 @@
             })
             UserLabel:SetAttribute("ThemeTextRole", "Text")
             UserLabel.Font = Enum.Font.GothamBlack
-            UserLabel.TextSize = 26
+            UserLabel.TextSize = 21
 
             local Handle = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0, 0, 0, 20),
                 AutomaticSize = Enum.AutomaticSize.X,
                 AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 245),
+                Position = UDim2.new(0.5, 0, 0, 255),
                 BackgroundColor3 = Theme.Accent,
                 BackgroundTransparency = 0.86,
                 Text = "@" .. tostring(LocalPlayer.Name),
@@ -351,14 +354,14 @@
 
             createViewport(HomeRoot)
 
-            local cardH = 70
-            local row1 = 34
-            local row2 = 110
-            local row3 = 186
+            local cardH = 50
+            local row1 = 55
+            local row2 = 119
+            local row3 = 183
             -- Opción 4: el avatar queda al centro y las estadísticas a ambos lados.
             local leftColX = 0.01
-            local rightColX = 0.73
-            local cardW = 0.26
+            local rightColX = 0.70
+            local cardW = 0.29
 
             local _, playersVal, playersSub = makeStatCard(HomeRoot, leftColX, row1, cardW, cardH, 90955646581059, "Jugadores", "Players", "1", "Conectado", "Connected")
             local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
@@ -373,9 +376,12 @@
                 dynamic:SetAttribute("TextEnglish", nil)
             end
             statusDot.Visible = true
+            statusVal.Position = UDim2.new(0, 38, 0, 18)
+            statusVal.Size = UDim2.new(1, -46, 0, 15)
             statusSub.Visible = true
-            statusSub.Position = UDim2.new(0, 52, 1, -21)
-            statusSub.Size = UDim2.new(1, -60, 0, 15)
+            statusSub.TextSize = 9
+            statusSub.Position = UDim2.new(0, 48, 1, -15)
+            statusSub.Size = UDim2.new(1, -55, 0, 12)
             local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
             pcall(function()
                 TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
@@ -386,10 +392,17 @@
                 Parent = pingCard,
                 Size = UDim2.fromOffset(18, 13),
                 AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -9, 0, 49),
+                Position = UDim2.new(1, -18, 0, 23),
                 BackgroundTransparency = 1,
                 ZIndex = 11,
             })
+            local function layoutPing()
+                local showBars = pingCard.AbsoluteSize.X >= 130
+                BarsHolder.Visible = showBars
+                pingVal.Size = UDim2.new(1, showBars and -66 or -46, 0, 19)
+            end
+            track(pingCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutPing))
+            layoutPing()
             for b = 1, 4 do
                 local bar = mk("Frame", {
                     Parent = BarsHolder,
@@ -857,19 +870,4 @@
                                 task.wait(0.15)
                             end
                             if self._videoToken ~= mediaToken or activated then return end
-                            if BackgroundVideo.IsLoaded then
-                                activateVideo()
-                            else
-                                markFailure(videoId)
-                                if self._videoConnection then
-                                    pcall(function() self._videoConnection:Disconnect() end)
-                                    self._videoConnection = nil
-                                end
-                                tryNextVideo()
-                            end
-                        end)
-                    end
-
-                    tryNextVideo()
-                else
-                  
+               

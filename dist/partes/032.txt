@@ -1,4 +1,16 @@
-ModeLabel = AutoTabShaders:CreateLabel("Modo activo: Morning", "Active mode: Morning", 11)
+       TextColor3 = Color3.fromRGB(225, 222, 240),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Top,
+        ZIndex = 12,
+    })
+    heroSub:SetAttribute("IgnoreTextEffect", true)
+    heroSub:SetAttribute("TextSpanish", "Elegí un modo visual o abrí Personalizado para ajustar cada parámetro sin tocar los sliders del resto de la librería.")
+    heroSub:SetAttribute("TextEnglish", "Choose a visual mode or open Custom to tune every parameter without touching the library's other sliders.")
+
+    ShaderModeLabel = AutoTabShaders:CreateLabel("Modo activo: Morning", "Active mode: Morning", 11)
     ShaderModeLabel:SetAttribute("ThemeTextRole", "Accent")
     ShaderModeLabel.Parent = ShaderHero
     ShaderModeLabel.AutomaticSize = Enum.AutomaticSize.X
@@ -869,15 +881,4 @@ ModeLabel = AutoTabShaders:CreateLabel("Modo activo: Morning", "Active mode: Mor
             label.Text = copied and GetText("✓ Enlace copiado", "✓ Link copied")
                 or GetText("No se pudo copiar", "Could not copy")
             task.delay(2.5, function()
-                if this == serial and copy.Parent then label.Text = GetText("Copiar enlace", "Copy link") end
-            end)
-        end)
-        -- El enlace también queda disponible para selección manual sin portapapeles.
-        address = mk("TextBox", {
-            Parent = c, Name = platform .. "Link", Position = UDim2.new(0, 14, 1, -37),
-            Size = UDim2.new(1, -28, 0, 26), BackgroundColor3 = Theme.Background,
-            Text = link, TextColor3 = Theme.Text, Font = Enum.Font.Gotham, TextSize = 10,
-            ClearTextOnFocus = false, TextEditable = false, Visible = false, ZIndex = 14,
-        })
-        corner(address, 8)
-        a
+               

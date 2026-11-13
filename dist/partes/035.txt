@@ -1,4 +1,15 @@
-, 0.5, 0), TextSize = 10 })
+nment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = Z + 4,
+        })
+        idBox:SetAttribute("ThemeRole", "Background")
+        idBox:SetAttribute("ThemeTextRole", "Text")
+        idBox:SetAttribute("PlaceholderSpanish", "ID de la imagen")
+        idBox:SetAttribute("PlaceholderEnglish", "Image ID")
+        idBox.PlaceholderText = GetText("ID de la imagen", "Image ID")
+        corner(idBox, 9)
+        pad(idBox, 0, 10, 10, 0)
+        local thumbBtn = button(imgRow, "Miniatura", "Thumbnail", "Background", { Size = UDim2.fromOffset(76, 32), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), TextSize = 10 })
         local function applyImage(raw)
             lay.Image = CL.CleanAsset(raw)
             idBox.Text = lay.Image
@@ -749,12 +760,4 @@
         local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
         c:SetAttribute("ThemeRole", "Secondary")
         corner(c, 14)
-        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickness = 1.5, Transparency = 0.1 })
-        local g = mk("UIGradient", {
-            Parent = cs,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Theme.Accent), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Theme.Accent),
-            }),
-        })
-        TweenService:Create(g, TweenInfo.new(3.5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
-        local circle = mk("Frame", { Parent = c, Size = UDim2.fromOffset(52, 52), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 14), BackgroundColor3 = Theme
+        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickn

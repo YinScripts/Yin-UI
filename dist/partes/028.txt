@@ -1,4 +1,11 @@
-files[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
+ = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
+        Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
+        Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
+    }
+    local ShaderSceneQuality = "Balanced"
+
+    local function shaderQualityProfile()
+        return ShaderQualityProfiles[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
     end
 
     local ShaderReflections = {
@@ -942,19 +949,4 @@ files[ShaderSceneQuality] or ShaderQualityProfiles.Balanced
                 self:_refreshSceneShadows()
             end
             self.MirrorScanElapsed = self.MirrorScanElapsed + delta
-            self.MirrorStepElapsed = self.MirrorStepElapsed + delta
-            if self.ObjectMirrorEnabled then
-                if self.MirrorScanElapsed >= 0.5 then
-                    self.MirrorScanElapsed, self.MirrorStepElapsed = 0, 0
-                    self:_refreshMirror()
-                elseif self.MirrorStepElapsed >= 1 / 30 then
-                    self.MirrorStepElapsed = 0
-                    self:_updateMirror()
-                end
-            end
-            if self.Elapsed >= 1.15 then
-                self.Elapsed = 0
-                self:Refresh()
-            end
-        end)
-        do local _, r0 = self:_root(); self.SceneAnchor = r0 and r0.P
+            self.MirrorStepEl

@@ -175,20 +175,25 @@
             corner(inner, 3)
             local innerBorder = stroke(inner, Theme.Accent, 1, 0.48)
             innerBorder:SetAttribute("ThemeRole", "Accent")
-            local crest = mk("TextLabel", {
+            local crest = mk("ImageLabel", {
                 Name = "HomeCrest", Parent = HomeRoot, AnchorPoint = Vector2.new(0.5, 0.5),
-                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.05,
-                BorderSizePixel = 0, Text = "☯", TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold, TextSize = 20, ZIndex = 14,
-                Size = UDim2.fromOffset(30, 30),
+                BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.08, BorderSizePixel = 0,
+                Size = UDim2.fromOffset(34, 34), ScaleType = Enum.ScaleType.Fit,
+                ImageColor3 = Color3.new(1, 1, 1), ZIndex = 14,
             })
             crest:SetAttribute("ThemeRole", "Secondary")
-            crest:SetAttribute("ThemeTextRole", "Text")
             corner(crest, 999)
-            local crestBorder = stroke(crest, Theme.Accent, 1.5, 0.08)
+            local crestBorder = stroke(crest, Theme.Accent, 1, 0.15)
             crestBorder:SetAttribute("ThemeRole", "Accent")
+            -- Se usa el mismo cargador de recursos de Yin UI para todos los temas.
+            YinIcons.get("home-yinyang-crest-v1", function(asset)
+                if crest.Parent then
+                    crest.Image = asset
+                    crest.ImageColor3 = Color3.new(1, 1, 1)
+                end
+            end)
             local function layoutDiamond()
-                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.30, 36, 185)
+                local size = math.clamp(HomeRoot.AbsoluteSize.X * 0.40, 36, 185)
                 diamond.Size = UDim2.fromOffset(size, size)
                 crest.Position = UDim2.new(0.5, 0, 0, math.max(15, 144 - size / math.sqrt(2)))
             end
@@ -251,8 +256,8 @@
 
                 local Badge = mk("Frame", {
                     Parent = Card,
-                    Size = UDim2.new(0, 28, 0, 28),
-                    Position = UDim2.new(0, 12, 0.5, -14),
+                    Size = UDim2.new(0, 24, 0, 24),
+                    Position = UDim2.new(0, 10, 0.5, -12),
                     BackgroundColor3 = Theme.Accent,
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -262,7 +267,7 @@
                 corner(Badge, 11)
                 local StatIcon = mk("ImageLabel", {
                     Parent = Badge,
-                    Size = UDim2.new(0, 24, 0, 24),
+                    Size = UDim2.new(1, 0, 1, 0),
                     AnchorPoint = Vector2.new(0.5, 0.5),
                     Position = UDim2.new(0.5, 0, 0.5, 0),
                     BackgroundTransparency = 1,
@@ -278,8 +283,8 @@
 
                 local Title = mk("TextLabel", {
                     Parent = Card,
-                    Size = UDim2.new(1, -54, 0, 17),
-                    Position = UDim2.new(0, 42, 0, 9),
+                    Size = UDim2.new(1, -46, 0, 15),
+                    Position = UDim2.new(0, 38, 0, 5),
                     BackgroundTransparency = 1,
                     Text = GetText(titleES, titleEN),
                     Font = Enum.Font.GothamBold,
@@ -296,26 +301,25 @@
 
                 local Value = mk("TextLabel", {
                     Parent = Card,
-                    Size = UDim2.new(1, -52, 0, 22),
-                    Position = UDim2.new(0, 42, 0, 28),
+                    Size = UDim2.new(1, -46, 0, 19),
+                    Position = UDim2.new(0, 38, 0, 21),
                     BackgroundTransparency = 1,
                     Text = valueText or "...",
                     Font = Enum.Font.GothamBlack,
-                    TextSize = 18,
+                    TextSize = 14,
+                    TextWrapped = false,
                     TextColor3 = Theme.Text,
                     TextXAlignment = Enum.TextXAlignment.Left,
                     TextTruncate = Enum.TextTruncate.AtEnd,
                     ZIndex = 10,
                 })
                 Value:SetAttribute("ThemeTextRole", "Text")
-                Value.TextScaled = true
-                mk("UITextSizeConstraint", {Parent = Value, MaxTextSize = 16, MinTextSize = 9})
 
                 local Dot = mk("Frame", {
                     Parent = Card,
                     Size = UDim2.fromOffset(6, 6),
                     AnchorPoint = Vector2.new(0, 0.5),
-                    Position = UDim2.new(0, 42, 1, -12),
+                    Position = UDim2.new(0, 38, 1, -8),
                     BackgroundColor3 = Color3.fromRGB(46, 213, 115),
                     BorderSizePixel = 0,
                     Visible = false,
@@ -348,8 +352,8 @@
             local function createViewport(parent)
                 local ViewportWrap = mk("Frame", {
                     Parent = parent,
-                    Size = UDim2.new(0.44, 0, 0, 166),
-                    Position = UDim2.new(0.5, 0, 0, 34),
+                    Size = UDim2.new(0.44, 0, 0, 190),
+                    Position = UDim2.new(0.5, 0, 0, 23),
                     AnchorPoint = Vector2.new(0.5, 0),
                     BackgroundTransparency = 1,
                     BorderSizePixel = 0,
@@ -856,8 +860,5 @@
                     if okBox and cf and size then
                         local biggest = math.max(size.X, size.Y, size.Z)
                         local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
-                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.30)
-                        Camera.CFrame = CFrame.new(camPos, focus)
-                    else
-                        Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
- 
+                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.08)
+                        Camera.CFrame = CFrame.new(camPos
