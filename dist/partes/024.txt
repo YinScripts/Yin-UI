@@ -1,25 +1,4 @@
-alpha = (math.sin(elapsed * 1.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "WhitePink" then
-            local colorA = Color3.fromRGB(255, 255, 255)
-            local colorB = Color3.fromRGB(255, 130, 205)
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
-                applyTextColorToAll(colorA:Lerp(colorB, alpha))
-            end))
-
-        elseif mode == "Rainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
-                elapsed = elapsed + dt
-                local hue = (elapsed * 0.12) % 1
-                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
-            end))
-
-        elseif mode == "CatRainbow" then
-            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+n = track(RunService.Heartbeat:Connect(function(dt)
                 elapsed = elapsed + dt
                 local cycle = (elapsed * 5) % 1
                 
@@ -1021,4 +1000,26 @@ alpha = (math.sin(elapsed * 1.6) + 1) / 2
                 local sliders, total = {}, 0
                 for _, item in ipairs(buildIdMap()) do
                     if checked[item.tab] then
-            
+                        local ok, val = pcall(item.entry.GetValue)
+                        if ok and type(val) == "number" then
+                            sliders[item.id] = val
+                            total = total + 1
+                        end
+                    end
+                end
+
+                if total == 0 then
+                    setStatus("warn", "No hay ajustes seleccionados", "No settings selected")
+                    return
+                end
+
+                local ok, encoded = pcall(function()
+                    return HttpService:JSONEncode({ version = 1, sliders = sliders })
+                end)
+                if not ok then
+                    setStatus("err", "Error al codificar", "Encoding error")
+                    return
+                end
+
+                local copied = type(setclipboard) == "function" and pcall(setclipboard, encoded)
+                playSound(Sounds.Click

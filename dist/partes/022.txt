@@ -1,11 +1,4 @@
-meRole", "Stroke")
-            return Divider
-        end
-
-        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
-            local contentParent = self._ContentParent or TabPage
-            if selectable == nil then selectable = true end
-            items = items or {}
+ items or {}
 
             local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
             if displayTitle then
@@ -326,19 +319,6 @@ meRole", "Stroke")
                         NumberSequenceKeypoint.new(1, 1),
                     }),
                 })
-                local Floor = mk("Frame", {
-                    Parent = ViewportWrap,
-                    Size = UDim2.new(0, 120, 0, 16),
-                    AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(0.5, 0, 1, -22),
-                    BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 10,
-                })
-                corner(Floor, 999)
-                local floorRing = stroke(Floor, Theme.Accent, 2, 0.15)
-                floorRing:SetAttribute("ThemeRole", "Accent")
 
                 local Viewport = Instance.new("ViewportFrame")
                 Viewport.Name = "HomeAvatarViewport"
@@ -876,4 +856,17 @@ meRole", "Stroke")
                             local abs, aspect, tanV = camInfo()
                             if abs.X <= 0 or abs.Y <= 0 then return nil end
                             local rel = screen - Viewport.AbsolutePosition
-                            local nx, ny = rel.X / abs.X * 
+                            local nx, ny = rel.X / abs.X * 2 - 1, 1 - rel.Y / abs.Y * 2
+                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
+                            local camPos = Camera.CFrame.Position
+                            if math.abs(dir.Z) < 1e-4 then return nil end
+                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
+                            if tt <= 0 then return nil end
+                            return camPos + dir * tt
+                        end
+                        local function updateGrab()
+                            local piv = env.model:GetPivot()
+                            local sitting = ctl.state == "sit"
+                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
+                            local sp, d, abs, tanV = project(center)
+                            if not sp then return en

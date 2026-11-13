@@ -1,18 +1,4 @@
-      for _, m in ipairs({ { 0.2, 160 }, { 0.62, 190 }, { 0.95, 150 } }) do
-            round(sframe(s, { Size = UDim2.fromOffset(m[2] * 1.6, m[2]), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(m[1], 0.66), BackgroundColor3 = Color3.fromRGB(18, 22, 40), ZIndex = SZ + 5 }))
-        end
-        return s
-    end
-    -- Claro: fondo de app claro (para ver contraste en pantallas blancas)
-    function Scenes.light()
-        local s = sframe(Stage, { Name = "SceneLight", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
-        vgrad(s, Color3.fromRGB(246, 247, 251), Color3.fromRGB(222, 226, 236))
-        for i = 1, 3 do
-            corner(sframe(s, { Size = UDim2.new(0.5, 0, 0, 14), Position = UDim2.new(0.38, 0, 0.3 + i * 0.13, 0), BackgroundColor3 = Color3.fromRGB(205, 210, 222), ZIndex = SZ + 1 }), 7)
-        end
-        return s
-    end
-    -- Transparente: tablero de ajedrez para ver los bordes reales de cada imagen
+los bordes reales de cada imagen
     function Scenes.checker()
         local s = sframe(Stage, { Name = "SceneChecker", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(205, 205, 210) })
         -- solo los cuadros claros (el fondo ya es el gris): 12 filas x 24 columnas de 18 px
@@ -775,4 +761,26 @@
         styleChips = chips(c, { { "Organic", "Orgánico (acelera y frena)", "Organic (speeds up & slows)" }, { "Constant", "Constante", "Constant" } }, 7, function(k) lay.Style = k changed() end, 26)
         slider(c, 8, "Tamaño", "Size", { 0.4, 4, 0.05, 1.6, "x" }, lay.Scale, function(v) lay.Scale = v changed() end)
         slider(c, 9, "Transparencia", "Transparency", { 0, 0.9, 0.05, 0, "" }, lay.Transparency or 0, function(v) lay.Transparency = v changed() end)
-        local tint = swatchRow(c, 10, "Teñir la imagen", "Tint the image", funct
+        local tint = swatchRow(c, 10, "Teñir la imagen", "Tint the image", function() return lay.Color end, function(col)
+            lay.Color = col
+            thumb.ImageColor3 = col or WHITE
+        end, "Original", "Original")
+        tint.Refresh()
+        refreshMovement()
+        return c
+    end
+
+    local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
+    AddLayerBtn.MouseButton1Click:Connect(function()
+        if #ED.rec.Layers >= 3 then return end
+        table.insert(ED.rec.Layers, blankLayer(""))
+        rebuildLayerCards()
+        changed()
+        task.defer(function()
+            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
+        end)
+    end)
+    rebuildLayerCards = function()
+        activeSlider = nil
+        for _, ch in ipairs(LayersHolder:GetChildren()) do
+       

@@ -614,7 +614,7 @@
             TabListArt.Visible = false
             CatImage.Visible = false
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.68 end
+            if rail then rail.BackgroundTransparency = 1 end
             if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(compact and 66 or 0) end
         end
         function A.enter()
@@ -660,7 +660,7 @@
             TabListArt.Visible = not compact
             CatImage.Visible = not compact and Theme.ThemeName == "Dark"
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.10 end
+            if rail then rail.BackgroundTransparency = 1 end
             if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(0) end
         end
         track(ChatTabPage:GetPropertyChangedSignal("Visible"):Connect(function()

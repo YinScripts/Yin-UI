@@ -1,33 +1,4 @@
-       seen = seen or {}
-        if seen[value] then return seen[value] end
-        local result = {}
-        seen[value] = result
-        for key, item in pairs(value) do
-            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
-        end
-        return result
-    end
-
-    local function shaderSafe(callback)
-        local ok, result = pcall(callback)
-        return ok, result
-    end
-
-    local function shaderParent(spec)
-        if spec.parent == "Lighting" then
-            return ShaderLightingService
-        elseif spec.parent == "Terrain" then
-            return ShaderTerrain
-        elseif spec.parent == "CurrentCamera" then
-            return workspace.CurrentCamera
-        end
-        return spec.parent
-    end
-
-    local ShaderTargets = {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
+nd = "class", className = "Sky", parent = "Lighting"},
         Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
         Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
         BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
@@ -804,4 +775,25 @@
             and part.Size.Z >= 4
     end
 
-    function ShaderReflections:_applySkyMirror
+    function ShaderReflections:_applySkyMirrorSurface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo pa

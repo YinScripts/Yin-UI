@@ -422,7 +422,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             TabListArt.Visible = false
             CatImage.Visible = false
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.68 end
+            if rail then rail.BackgroundTransparency = 1 end
             local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, -56)
             ContentArea.Size = UDim2.new(1, -side, 1, 56)
@@ -480,7 +480,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
             TabListArt.Visible = not compact
             CatImage.Visible = (not compact) and Theme.ThemeName == "Dark"
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.10 end
+            if rail then rail.BackgroundTransparency = 1 end
             local side = compact and 58 or 110
             ContentArea.Position = UDim2.new(0, side, 0, 0)
             ContentArea.Size = UDim2.new(1, -side, 1, 0)

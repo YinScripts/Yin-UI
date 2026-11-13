@@ -1,9 +1,4 @@
- and UDim2.new(1, -24, 0, 34)
-                        or UDim2.new(1, -24, 1, 0),
-                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = displayText,
-                    TextColor3 = Theme.Text,
+or3 = Theme.Text,
                     Font = Enum.Font.GothamBlack,
                     TextSize = isCircleStyle and 11 or (hasLinkedSlider and 17 or 21),
                     TextWrapped = isCircleStyle,
@@ -968,4 +963,8 @@
                 StateLabel:SetAttribute("ThemeTextRole", newState and "ToggleOn" or "TextDim")
                 StateLabel:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
                 TweenService:Create(HolderStroke, ti, {Color = newState and Theme.ToggleOn or Theme.Stroke, Transparency = newState and 0.35 or 0.55}):Play()
-                Ho
+                HolderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
+
+                if animate then
+                    local squishSize = newState and knobSquishON or knobSquishOFF
+                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDi

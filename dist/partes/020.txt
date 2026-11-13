@@ -1,8 +1,4 @@
-lderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
-
-                if animate then
-                    local squishSize = newState and knobSquishON or knobSquishOFF
-                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+rection.In),
                         {Size = squishSize}):Play()
                     task.delay(0.08, function()
                         TweenService:Create(Knob,       ti, {Size = knobNormal,
@@ -1028,4 +1024,11 @@ lderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
                 local function reflow()
                     local count = #Carousel.Cards
                     if count == 0 then
-                        refre
+                        refreshDots()
+                        return
+                    end
+
+                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
+                    local cardHeight = 96
+                    local step = c

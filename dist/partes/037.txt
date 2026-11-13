@@ -1,29 +1,4 @@
-ekVisuals(pct)
-        ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
-    end)
-
-    UserInputService.InputEnded:Connect(function(input)
-        if not isSeeking then return end
-        if input ~= seekInput then return end
-        isSeeking = false
-        seekInput = nil
-        SeekThumb.Visible = false
-        SeekTooltip.Visible = false
-        local pct = getSeekPercent(input.Position.X)
-        if SpotifyState.CurrentSound then
-            pcall(function()
-                local total = SpotifyState.CurrentSound.TimeLength
-                if total > 0 then
-                    local newPos = pct * total
-                    SpotifyState.CurrentSound.TimePosition = newPos
-                    SpotifyState.CurrentPausedPosition = newPos
-                    if SpotifyState.IsPlaying then
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
-    end)
+   end)
 
     local ProgressTimeLeft = mk("TextLabel", {
         Parent = NowPlayingCard,
@@ -1131,3 +1106,29 @@ ekVisuals(pct)
 
         if SpotifyState.SoundEndedConnection then
             pcall(function()
+                SpotifyState.SoundEndedConnection:Disconnect()
+            end)
+            SpotifyState.SoundEndedConnection = nil
+        end
+
+        if SpotifyState.CurrentSound then
+            pcall(function()
+                SpotifyState.CurrentSound:Stop()
+            end)
+            safeDestroy(SpotifyState.CurrentSound)
+            SpotifyState.CurrentSound = nil
+        end
+    end
+
+    local function syncPlaybackUI()
+        if SpotifyState.CurrentSound then
+            PlayPauseBtn.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+        else
+            PlayPauseBtn.Image = asset(135609604299893)
+        end
+
+        RepeatBtn.ImageColor3 = SpotifyState.IsRepeat and spotifyGreen or spotifyText
+        LikeBtn.ImageColor3 = isLiked(SpotifyState.SelectedIndex) and spotifyGreen or spotifyText
+
+        if isLiked(SpotifyState.SelectedIndex) then
+            LikeBtn.Ima

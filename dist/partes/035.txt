@@ -1,26 +1,4 @@
-ion() return lay.Color end, function(col)
-            lay.Color = col
-            thumb.ImageColor3 = col or WHITE
-        end, "Original", "Original")
-        tint.Refresh()
-        refreshMovement()
-        return c
-    end
-
-    local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
-    AddLayerBtn.MouseButton1Click:Connect(function()
-        if #ED.rec.Layers >= 3 then return end
-        table.insert(ED.rec.Layers, blankLayer(""))
-        rebuildLayerCards()
-        changed()
-        task.defer(function()
-            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
-        end)
-    end)
-    rebuildLayerCards = function()
-        activeSlider = nil
-        for _, ch in ipairs(LayersHolder:GetChildren()) do
-            if ch:IsA("Frame") then ch:Destroy() end
+     if ch:IsA("Frame") then ch:Destroy() end
         end
         for i = 1, #ED.rec.Layers do
             layerCard(i)
@@ -756,4 +734,11 @@ ion() return lay.Color end, function(col)
         corner(c, 14)
         local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
         local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58,
+        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
+        stage:SetAttribute("ThemeRole", "Background")
+        corner(stage, 999)
+        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
+        composite(stage, icon, 54, 14)
+        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
+        name:SetAttribute("ThemeTextRole", "Text")
+        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex =

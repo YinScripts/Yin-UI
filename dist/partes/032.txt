@@ -1,10 +1,4 @@
-k de película"},
-        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
-        {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
-        {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
-        {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
-        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
-        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
+adows and subtly glossy floors"},
         {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
         {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
         {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
@@ -440,7 +434,7 @@ k de película"},
             TabListArt.Visible = false
             CatImage.Visible = false
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.68 end
+            if rail then rail.BackgroundTransparency = 1 end
             if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(compact and 66 or 0) end
         end
         function A.enter()
@@ -486,7 +480,7 @@ k de película"},
             TabListArt.Visible = not compact
             CatImage.Visible = not compact and Theme.ThemeName == "Dark"
             local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 0.10 end
+            if rail then rail.BackgroundTransparency = 1 end
             if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(0) end
         end
         track(ChatTabPage:GetPropertyChangedSignal("Visible"):Connect(function()
@@ -872,4 +866,18 @@ k de película"},
         BackgroundColor3 = BLURPLE, BorderSizePixel = 0, Text = "", AutoButtonColor = false, ZIndex = 12,
     })
     corner(CopyBtn, 12)
-    local CopyScale = mk("UISc
+    local CopyScale = mk("UIScale", {Parent = CopyBtn, Scale = 1})
+    local CopyIcon = mk("ImageLabel", {
+        Parent = CopyBtn, Size = UDim2.new(0, 16, 0, 16), Position = UDim2.new(0, 14, 0.5, -8),
+        BackgroundTransparency = 1, Image = "rbxassetid://127734233169485",
+        ImageColor3 = Color3.new(1, 1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 13,
+    })
+    local CopyLabel = text({
+        Parent = CopyBtn, Size = UDim2.new(1, -120, 1, 0), Position = UDim2.new(0, 38, 0, 0),
+        Font = Enum.Font.GothamBlack, TextSize = 13, TextColor3 = Color3.new(1, 1, 1),
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+    }, "Copiar invitación", "Copy invite", nil)
+    text({
+        Parent = CopyBtn, Size = UDim2.new(0, 120, 1, 0), AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -14, 0, 0), Font = Enum.Font.GothamMedium, TextSize = 10,
+        TextColor3 = Color3.fromRGB(220, 224, 255), Text = "di

@@ -1,17 +1,4 @@
-2 - 1, 1 - rel.Y / abs.Y * 2
-                            local dir = Camera.CFrame:VectorToWorldSpace(Vector3.new(nx * tanV * aspect, ny * tanV, -1))
-                            local camPos = Camera.CFrame.Position
-                            if math.abs(dir.Z) < 1e-4 then return nil end
-                            local tt = (env.home.Position.Z - camPos.Z) / dir.Z
-                            if tt <= 0 then return nil end
-                            return camPos + dir * tt
-                        end
-                        local function updateGrab()
-                            local piv = env.model:GetPivot()
-                            local sitting = ctl.state == "sit"
-                            local center = piv.Position + Vector3.new(0, sitting and -env.H * 0.2 or 0, 0)
-                            local sp, d, abs, tanV = project(center)
-                            if not sp then return end
+d
                             local hPx = env.H / (2 * d * tanV) * abs.Y
                             local w, h = hPx * 0.75, hPx * (sitting and 0.7 or 1)
                             Grab.Size = UDim2.fromOffset(w, h)
@@ -909,4 +896,25 @@
             local colorB = Color3.fromRGB(120, 225, 255)
             textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
                 elapsed = elapsed + dt
-                local 
+                local alpha = (math.sin(elapsed * 1.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "WhitePink" then
+            local colorA = Color3.fromRGB(255, 255, 255)
+            local colorB = Color3.fromRGB(255, 130, 205)
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local alpha = (math.sin(elapsed * 0.6) + 1) / 2
+                applyTextColorToAll(colorA:Lerp(colorB, alpha))
+            end))
+
+        elseif mode == "Rainbow" then
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                local hue = (elapsed * 0.12) % 1
+                applyTextColorToAll(Color3.fromHSV(hue, 0.85, 1))
+            end))
+
+        elseif mode == "CatRainbow" then
+            textEffectConnectio

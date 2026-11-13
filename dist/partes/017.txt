@@ -302,11 +302,9 @@ on
         nav.Rail = mk("Frame", {
             Name = "CompactTabRail", Parent = Body, Size = UDim2.new(0, 58, 1, 0),
             Position = UDim2.new(0, 0, 0, 0), BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.10, BorderSizePixel = 0, Visible = false, ZIndex = 16,
+            BackgroundTransparency = 1, BorderSizePixel = 0, Visible = false, ZIndex = 16,
         })
         nav.Rail:SetAttribute("ThemeRole", "Background")
-        corner(nav.Rail, 10)
-        stroke(nav.Rail, Theme.Stroke, 1.2, 0.20)
 
         nav.List = mk("ScrollingFrame", {
             Name = "CompactTabIcons", Parent = nav.Rail, Size = UDim2.new(1, 0, 1, -48),
@@ -367,11 +365,7 @@ on
                 if entry and entry.Parent then
                     local active = tab.Page and tab.Page.Visible
                     entry.BackgroundColor3 = active and Theme.TabActive or Theme.Background
-                    if Window._SpotifyAmbient and Window._SpotifyAmbient.Active then
-                        entry.BackgroundTransparency = active and 0.55 or 1
-                    else
-                        entry.BackgroundTransparency = active and 0.06 or 0.26
-                    end
+                    entry.BackgroundTransparency = active and 0.12 or 1
                     local icon = entry:FindFirstChild("Icon")
                     if icon then icon.ImageColor3 = active and Color3.fromRGB(255, 255, 255) or Theme.Text end
                     local fallback = entry:FindFirstChild("Fallback")
@@ -387,12 +381,11 @@ on
             local entry = mk("TextButton", {
                 Name = "CompactTab_" .. tostring(tab.NameSpanish or "Tab"), Parent = nav.List,
                 Size = UDim2.fromOffset(46, 46), BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.26, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
+                BackgroundTransparency = 1, BorderSizePixel = 0, Text = "", AutoButtonColor = false,
                 LayoutOrder = #Window.Tabs, ZIndex = 18,
             })
             entry:SetAttribute("ThemeRole", "Background")
             corner(entry, 11)
-            stroke(entry, Theme.Stroke, 1.0, 0.42)
             local icon = tab.IconAsset
             if type(icon) == "string" and icon ~= "" then
                 local compactIcon = mk("ImageLabel", {
@@ -419,16 +412,6 @@ on
             entry.MouseButton1Click:Connect(function()
                 if tab.Select then tab.Select() end
             end)
-            entry.MouseEnter:Connect(function()
-                if not (tab.Page and tab.Page.Visible) then
-                    TweenService:Create(entry, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.08}):Play()
-                end
-            end)
-            entry.MouseLeave:Connect(function()
-                if not (tab.Page and tab.Page.Visible) then
-                    TweenService:Create(entry, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.26}):Play()
-                end
-            end)
             tab.CompactButton = entry
             Window._RefreshCompactNavigation()
         end
@@ -446,6 +429,11 @@ on
             ContentArea.Position = nav.Compact and UDim2.new(0, 58, 0, 0) or UDim2.new(0, 110, 0, 0)
             ContentArea.Size = nav.Compact and UDim2.new(1, -58, 1, 0) or UDim2.new(1, -110, 1, 0)
             Window._RefreshCompactNavigation()
+            -- No reiniciar el fondo durante las vistas inmersivas de música o chat.
+            if self._ApplyFullBackground and not (self._SpotifyAmbient and self._SpotifyAmbient.Active)
+                and not (self._ChatAmbient and self._ChatAmbient.Active) then
+                self._ApplyFullBackground()
+            end
             if self._SpotifyAmbient and self._SpotifyAmbient.Active then self._SpotifyAmbient.Layout() end
             if self._ChatAmbient and self._ChatAmbient.Active then self._ChatAmbient.Layout() end
         end
@@ -508,9 +496,16 @@ on
         else
             BackgroundArt.Parent = ContentArea
             BackgroundArt.AnchorPoint = Vector2.new(0, 0.5)
-            BackgroundArt.Position = UDim2.new(0, 0, 0.5, 0)
-            BackgroundArt.Size = UDim2.new(1, 15, 1, 30)
+            local inset = Window.CompactNavigation and 58 or 0
+            BackgroundArt.Position = UDim2.new(0, -inset, 0.5, 0)
+            BackgroundArt.Size = UDim2.new(1, 15 + inset, 1, 30)
             if artCorner then artCorner.CornerRadius = UDim.new(0, 8) end
+        end
+        local video = Window.BackgroundVideo
+        if video then
+            local inset = Window.CompactNavigation and 58 or 0
+            video.Position = UDim2.new(0, -inset, 0.5, 0)
+            video.Size = UDim2.new(1, 15 + inset, 1, 30)
         end
         TopBar.BackgroundTransparency = full and 1 or 0
         -- textos legibles sobre la imagen (solo Navidad): contorno oscuro en el título, la insignia, el texto de
@@ -1019,4 +1014,7 @@ on
         TabIconCarousel.LastOffset = TabIconCarousel.Offset
         TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
 
- 
+        for index, item in ipairs(TabIconCarousel.Items) do
+            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
+            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
+            local d = math.abs((x + TAB
