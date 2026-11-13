@@ -1,6 +1,6 @@
 -- Yin UI: descarga concurrente con límite de trabajadores
 -- Versión fija: evita mezclar fragmentos de distintas actualizaciones en caché.
-local base = "https://raw.githubusercontent.com/YinScripts/Yin-UI/5a0bb17232f148db81cd51261d52a1e8dac702ff/dist/partes/"
+local base = "https://raw.githubusercontent.com/YinScripts/Yin-UI/459c2cf93c4554ac0ddf6f390669a4b110862588/dist/partes/"
 local total, workers = 41, 6
 local partes, nextIndex, completed, firstError = {}, 1, 0, nil
 for _ = 1, workers do
