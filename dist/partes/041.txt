@@ -1,4 +1,4 @@
-ew(0, 14, 0, 14),
+
                 BackgroundTransparency = 1,
                 Text = GetText("Cargando imagen...", "Loading image..."),
                 TextColor3 = Color3.fromRGB(220, 220, 225),

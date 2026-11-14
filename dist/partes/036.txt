@@ -520,7 +520,7 @@
         if SPage.Visible then A.enter() end
     end
 
-    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/nbritez672-tech/Yin-music/refs/heads/main/YinYang_Spotify_Catalog.lua"
+    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/YinScripts/Yin-music/refs/heads/main/YinYang_Spotify"
 
     local function asset(id)
         return "rbxassetid://" .. tostring(id)
@@ -1099,4 +1099,5 @@
         Size = UDim2.fromOffset(52, 26),
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0, 0, 0, -8),
-        BackgroundTranspar
+        BackgroundTransparency = 1,
+       

@@ -1,5 +1,4 @@
-ion()
-        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
+Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
         local order = getVisibleRenderOrder()
         local displayOrder = 1
         local query = normalizeSearchText(SpotifyState.SearchQuery or "")
@@ -1101,4 +1100,4 @@ ion()
                 SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
             })
             local glyph = mk("TextLabel", {
-                Pa
+                Parent = content, S

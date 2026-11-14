@@ -1,5 +1,4 @@
-ency = 1,
-        BorderSizePixel = 0,
+ BorderSizePixel = 0,
         ZIndex = 16,
         Visible = false,
     })
@@ -1152,4 +1151,5 @@ ency = 1,
         end
     end
 
-    renderSongRows = funct
+    renderSongRows = function()
+        -- 

@@ -499,7 +499,7 @@ Transparency = 1, Text = "+", TextColor3 = Theme.AccentText, TextSize = 30, Font
         if SPage.Visible then A.enter() end
     end
 
-    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/nbritez672-tech/Yin-music/refs/heads/main/YinYang_Spotify_Catalog.lua"
+    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/YinScripts/Yin-music/refs/heads/main/YinYang_Spotify"
 
     local function asset(id)
         return "rbxassetid://" .. tostring(id)
