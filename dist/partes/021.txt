@@ -1,4 +1,6 @@
-ardWidth * 0.78
+, 320)
+                    local cardHeight = 96
+                    local step = cardWidth * 0.78
                     local centerX = viewportWidth * 0.5 - cardWidth * 0.5
 
                     for i, cardData in ipairs(Carousel.Cards) do
@@ -1026,6 +1028,4 @@ ardWidth * 0.78
         end
 
         function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
-            local contentParent = self._ContentParent or TabPage
-            if selectable == nil then selectable = true end
-            items =
+            local contentParent = self._ContentParent or TabP

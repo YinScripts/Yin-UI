@@ -1,4 +1,11 @@
-m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 0.62, m[2] * 0.2), Rotation = 45, BackgroundColor3 = m[3], ZIndex = SZ + 4 })
+n = UDim2.fromScale(c[1], c[2]), BackgroundTransparency = 1, ZIndex = SZ + 2 })
+            round(sframe(cloud, { Size = UDim2.fromScale(0.62, 0.7), Position = UDim2.fromScale(0, 0.3), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            round(sframe(cloud, { Size = UDim2.fromScale(0.5, 1), Position = UDim2.fromScale(0.25, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            round(sframe(cloud, { Size = UDim2.fromScale(0.55, 0.62), Position = UDim2.fromScale(0.45, 0.38), BackgroundColor3 = WHITE, BackgroundTransparency = 0.08, ZIndex = SZ + 3 }))
+            TweenService:Create(cloud, TweenInfo.new(14 + i * 5, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.fromScale(c[1] + 0.12, c[2]) }):Play()
+        end
+        for _, m in ipairs({ { 0.12, 120, Color3.fromRGB(96, 128, 170) }, { 0.42, 150, Color3.fromRGB(84, 116, 160) }, { 0.78, 130, Color3.fromRGB(104, 138, 178) } }) do
+            sframe(s, { Size = UDim2.fromOffset(m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 0.62, m[2] * 0.2), Rotation = 45, BackgroundColor3 = m[3], ZIndex = SZ + 4 })
         end
         local ground = sframe(s, { Size = UDim2.fromScale(1, 0.4), Position = UDim2.fromScale(0, 0.6), BackgroundColor3 = WHITE, ZIndex = SZ + 5 })
         vgrad(ground, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
@@ -24,7 +31,8 @@ m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 
     -- Noche: degradado azul, luna, estrellas que titilan, colinas oscuras
     function Scenes.night()
         local s = sframe(Stage, { Name = "SceneNight", Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE })
-        vgrad(s, Color3.fromRGB(8, 10, 32), Color3.fromRGB(48, 36, 92))
+        vgrad(s, Color3.fromRGB(8
+, 10, 32), Color3.fromRGB(48, 36, 92))
         for i = 1, 22 do
             local x, y = ((i * 37) % 97) / 100, ((i * 53) % 55) / 100
             local star = round(sframe(s, { Size = UDim2.fromOffset(i % 3 == 0 and 3 or 2, i % 3 == 0 and 3 or 2), Position = UDim2.fromScale(x, y), BackgroundColor3 = WHITE, BackgroundTransparency = 0.2, ZIndex = SZ + 1 }))
@@ -730,21 +738,4 @@ m[2], m[2]), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(m[1], 0, 
         end
 
         -- imagen: miniatura + ID + botón de miniatura (rbxthumb) por si el ID es de un decal
-        local imgRow = mk("Frame", { Parent = c, Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
-        local thumbBox = mk("Frame", { Parent = imgRow, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = Color3.fromRGB(230, 230, 236), BorderSizePixel = 0, ZIndex = Z + 4 })
-        corner(thumbBox, 10)
-        local thumb = mk("ImageLabel", { Parent = thumbBox, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, Image = CL.CleanAsset(lay.Image), ImageColor3 = lay.Color or WHITE, ScaleType = Enum.ScaleType.Fit, ZIndex = Z + 5 })
-        local idBox = mk("TextBox", {
-            Parent = imgRow,
-            Size = UDim2.new(1, -140, 0, 32),
-            Position = UDim2.new(0, 56, 0.5, -16),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.2,
-            BorderSizePixel = 0,
-            Text = lay.Image or "",
-            PlaceholderColor3 = Theme.TextDim,
-            TextColor3 = Theme.Text,
-            TextSize = 11,
-            Font = Enum.Font.Code,
-            ClearTextOnFocus = false,
-            TextXAlignment = Enum.TextXAlig
+        local imgRow = mk("Frame", { Parent = c, Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, LayoutOrder = 2, ZInd

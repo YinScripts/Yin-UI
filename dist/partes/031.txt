@@ -1,4 +1,6 @@
-xel = 0,
+ -10),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
             ZIndex = 315,
         })
         corner(knob, 99)
@@ -804,5 +806,4 @@ xel = 0,
         BackgroundTransparency = 1,
         Text = GetText(
             "Elegí un modo visual o abrí Personalizado para ajustar cada parámetro sin tocar los sliders del resto de la librería.",
-            "Choose a visual mode or open Custom to tune every parameter without touching the library's other sliders."),
- 
+            "Choose a visual mode or ope

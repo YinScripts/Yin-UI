@@ -1,4 +1,6 @@
- items or {}
+age
+            if selectable == nil then selectable = true end
+            items = items or {}
 
             local displayTitle = titleSpanish and GetText(titleSpanish, titleEnglish)
             if displayTitle then
@@ -860,5 +862,4 @@
                     if okBox and cf and size then
                         local biggest = math.max(size.X, size.Y, size.Z)
                         local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
-                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.08)
-                        Camera.CFrame = CFrame.new(camPos
+                        local camPos = focus + Vector3.new(0.25, -bigges

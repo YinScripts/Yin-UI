@@ -1,4 +1,4 @@
- = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
+onRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
         Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
         Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
     }
@@ -948,5 +948,4 @@
                 self.ShadowElapsed = 0
                 self:_refreshSceneShadows()
             end
-            self.MirrorScanElapsed = self.MirrorScanElapsed + delta
-            self.MirrorStepEl
+            se

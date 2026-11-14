@@ -1,4 +1,7 @@
-hemeRole", "Secondary")
+Enum.Font.GothamBold,
+        ZIndex = 262,
+    })
+    PickerCancel:SetAttribute("ThemeRole", "Secondary")
     PickerCancel:SetAttribute("ThemeTextRole", "Text")
     PickerCancel:SetAttribute("TextSpanish", "Cancelar")
     PickerCancel:SetAttribute("TextEnglish", "Cancel")
@@ -1055,4 +1058,4 @@ hemeRole", "Secondary")
         {mode = "Off", titleES = "Normal (Blanco)", titleEN = "Normal (White)", descES = "Sin efecto - color del tema", descEN = "No effect - theme color", accent = Color3.fromRGB(200, 200, 200)},
         {mode = "WhiteCyan", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
         {mode = "WhitePink", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
-        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle", accent = Color3.fromRGB(
+        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del

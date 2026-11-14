@@ -72,6 +72,14 @@
     }, "© 2026 Yin Yang | Script Hub  •  Todos los derechos reservados.",
        "© 2026 Yin Yang | Script Hub  •  All rights reserved.", "Stroke")
 
+    local additionalCredits = TabCreditos:CreateContentContainer("AdditionalCredits")
+    additionalCredits.LayoutOrder = 100
+    TabCreditos:SetContentContainer(additionalCredits)
+    return TabCreditos
+    end
+
+    function Window:GetCreditsTab()
+        return self:CreateCreditsTab()
     end
 
     Window:CreateCreditsTab()

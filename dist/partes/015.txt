@@ -254,7 +254,8 @@ function YinYang:OnLanguageChanged(callback)
     end
 end
 
-function YinYang:CreateWindow(title_text, startTheme)
+function YinYang:CreateWindow(title_text, startTheme, options)
+    options = type(options) == "table" and options or {}
     startTheme = startTheme or "Senju"
     -- Halloween terminado: Dark queda bloqueado; si la config guardada lo trae se usa Senju
     if startTheme == "Dark" and ThemePalettes["Senju"] then startTheme = "Senju" end
@@ -792,7 +793,8 @@ function YinYang:CreateWindow(title_text, startTheme)
                     local angle  = st.time * math.rad(spd) * dir
                     lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
 
-                elseif mv == "Float" then
+                elseif m
+v == "Float" then
                     local sc  = def.Scale or 1.6
                     local off = -((sc - 1) / 2)
                     local oy  = math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4)
@@ -1105,5 +1107,4 @@ function YinYang:CreateWindow(title_text, startTheme)
         )
         local tw2 = TweenService:Create(
             Main,
-            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { BackgroundTranspar
+            TweenInfo.new(0.25, Enum.EasingStyl

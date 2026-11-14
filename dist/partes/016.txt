@@ -1,4 +1,5 @@
-ency = 1 }
+e.Cubic, Enum.EasingDirection.In),
+            { BackgroundTransparency = 1 }
         )
 
         activeWindowTween = tw1
@@ -505,7 +506,7 @@ ency = 1 }
     local TopBarCounter = mk("Frame", {Parent=TopBar, AnchorPoint=Vector2.new(1,0),
         Position=UDim2.new(1,-12,0,33), Size=UDim2.fromOffset(104,22),
         BackgroundColor3=Color3.fromRGB(23,15,28), BackgroundTransparency=0.18,
-        BorderSizePixel=0, ZIndex=9})
+        BorderSizePixel=0, Visible=false, ZIndex=9})
     corner(TopBarCounter, 999)
     local counterOutline = mk("UIStroke", {Name="CounterOutline", Parent=TopBarCounter, Color=Color3.new(1,1,1), Thickness=1, Transparency=0.10})
     mk("UIGradient", {Name="CounterGradient", Parent=counterOutline, Color=ColorSequence.new({
@@ -779,7 +780,8 @@ ency = 1 }
         Font = Enum.Font.GothamBlack,
         TextSize = 17,
         TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 1002,
+       
+ ZIndex = 1002,
     })
     GlobalSearch.Title:SetAttribute("ThemeTextRole", "Text")
 
@@ -1129,6 +1131,4 @@ ency = 1 }
         local dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
-                drag = true
-                dragStart = input.Position
-                startPos = Main.Positi
+                drag = tru

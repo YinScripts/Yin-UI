@@ -1,4 +1,6 @@
-      for index, instance in ipairs(list) do
+ return game:GetDescendants() end)
+            if not okList then return end
+            for index, instance in ipairs(list) do
                 if token ~= self.MuteToken or not self.Enabled then return end
                 local isSound = false
                 pcall(function() isSound = instance:IsA("Sound") end)
@@ -1011,6 +1013,4 @@
         local knob = mk("Frame", {
             Parent = switch,
             Size = UDim2.new(0, 21, 0, 21),
-            Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10),
-            BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePi
+            Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5,

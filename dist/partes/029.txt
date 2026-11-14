@@ -1,4 +1,5 @@
-apsed = self.MirrorStepElapsed + delta
+lf.MirrorScanElapsed = self.MirrorScanElapsed + delta
+            self.MirrorStepElapsed = self.MirrorStepElapsed + delta
             if self.ObjectMirrorEnabled then
                 if self.MirrorScanElapsed >= 0.5 then
                     self.MirrorScanElapsed, self.MirrorStepElapsed = 0, 0
@@ -974,6 +975,4 @@ apsed = self.MirrorStepElapsed + delta
         end)
         if okAdded and added then table.insert(self.MuteConnections, added) end
         task.spawn(function()
-            local okList, list = pcall(function() return game:GetDescendants() end)
-            if not okList then return end
-      
+            local okList, list = pcall(function()

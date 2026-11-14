@@ -1,4 +1,4 @@
-rection.In),
+Service:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
                         {Size = squishSize}):Play()
                     task.delay(0.08, function()
                         TweenService:Create(Knob,       ti, {Size = knobNormal,
@@ -1029,6 +1029,4 @@ rection.In),
                     end
 
                     local viewportWidth = Carousel.Viewport.AbsoluteSize.X
-                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
-                    local cardHeight = 96
-                    local step = c
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240

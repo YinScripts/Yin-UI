@@ -1,4 +1,33 @@
-cy = 0.88,
+0),
+        Position = UDim2.new(0, 64, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(179, 179, 179),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 42,
+    })
+    FavPage.text(FavPage.HeadTitle, "Título", "Title")
+    FavPage.HeadTime = mk("TextLabel", {
+        Parent = FavPage.TableHead,
+        Size = UDim2.fromOffset(80, 30),
+        Position = UDim2.new(1, -150, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(179, 179, 179),
+        TextXAlignment = Enum.TextXAlignment.Right,
+        ZIndex = 42,
+    })
+    FavPage.text(FavPage.HeadTime, "Duración", "Duration")
+    mk("Frame", {
+        Parent = FavPage.TableHead,
+        Size = UDim2.new(1, -40, 0, 1),
+        Position = UDim2.new(0, 20, 1, -4),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.88,
         BorderSizePixel = 0,
         ZIndex = 42,
     })
@@ -874,7 +903,11 @@ clearSongRows = function()
     end
 
     function Window:CreateFanArtTab()
+        if self.FanArtTab and self.FanArtTab.Page and self.FanArtTab.Page.Parent then
+            return self.FanArtTab
+        end
         local TabFanArt = Window:CreateTab("Fan Art", "Fan Art", "rbxassetid://91504176503119")
+        self.FanArtTab = TabFanArt
         local FanArtPage = TabFanArt.Page
 
         local FanArt_Items = {
@@ -1063,29 +1096,4 @@ clearSongRows = function()
             local ArtStatus = mk("TextLabel", {
                 Parent = Card,
                 Size = UDim2.new(1, -28, 1, -70),
-                Position = UDim2.new(0, 14, 0, 14),
-                BackgroundTransparency = 1,
-                Text = GetText("Cargando imagen...", "Loading image..."),
-                TextColor3 = Color3.fromRGB(220, 220, 225),
-                TextSize = 13,
-                Font = Enum.Font.GothamMedium,
-                TextWrapped = true,
-                ZIndex = 12,
-            })
-            ArtStatus:SetAttribute("TextSpanish", "Cargando imagen...")
-            ArtStatus:SetAttribute("TextEnglish", "Loading image...")
-            ArtStatus:SetAttribute("IgnoreTextEffect", true)
-
-            local bar = mk("Frame", {
-                Parent = Card,
-                Size = UDim2.new(1, -28, 0, 40),
-                Position = UDim2.new(0, 14, 1, -50),
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                BackgroundTransparency = 0.35,
-                BorderSizePixel = 0,
-                ZIndex = 12,
-            })
-            corner(bar, 12)
-            local artTitle = mk("TextLabel", {
-                Parent = bar, Size = UDim2.new(1, -150, 1, 0), Position = UDim2.new(0, 12, 0, 0), BackgroundTransparency = 1,
-                Text = "Fan Art #" .. artIndex, TextColor3 = Color3.new(1, 1, 1), Font = Enum.
+                Position = UDim2.n

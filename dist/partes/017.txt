@@ -1,4 +1,6 @@
-on
+e
+                dragStart = input.Position
+                startPos = Main.Position
             end
         end)
         track(UserInputService.InputChanged:Connect(function(input)
@@ -1016,5 +1018,4 @@ on
 
         for index, item in ipairs(TabIconCarousel.Items) do
             local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
-            item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
-            local d = math.abs((x + TAB
+            item.Button.Position = 

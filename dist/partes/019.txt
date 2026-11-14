@@ -1,4 +1,6 @@
-or3 = Theme.Text,
+ansparency = 1,
+                    Text = displayText,
+                    TextColor3 = Theme.Text,
                     Font = Enum.Font.GothamBlack,
                     TextSize = isCircleStyle and 11 or (hasLinkedSlider and 17 or 21),
                     TextWrapped = isCircleStyle,
@@ -967,4 +969,4 @@ or3 = Theme.Text,
 
                 if animate then
                     local squishSize = newState and knobSquishON or knobSquishOFF
-                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDi
+                    Tween

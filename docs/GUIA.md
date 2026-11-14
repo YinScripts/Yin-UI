@@ -14,6 +14,39 @@ local pagina = ventana:CreateTab("Principal", "Main")
 
 El cargador ejecuta la librería y esta asigna el objeto a `_G.YinYang`. El entorno debe proporcionar `loadstring` y `game:HttpGet`. Puedes agregar un icono a la pestaña: `ventana:CreateTab("Principal", "Main", "rbxassetid://ID")`.
 
+## Chat y Fan Art opcionales
+
+Chat global y Fan Art no se crean ni se inician por defecto. Para incluirlos desde el comienzo, activa las opciones deseadas:
+
+```lua
+local ventana = YinUI:CreateWindow("Mi interfaz", "Senju", {
+    Chat = true,
+    FanArt = true,
+})
+```
+
+Cada opción es independiente: omitirla o usar `false` deja esa pestaña desactivada. También puedes agregarlas más tarde:
+
+```lua
+local chat = ventana:CreateChatTab()
+local fanArt = ventana:CreateFanArtTab()
+```
+
+Llamar de nuevo a cualquiera de estos métodos devuelve la pestaña existente. El contador del chat se muestra cuando el chat se inicia correctamente.
+
+## Añadir contenido a Créditos
+
+Créditos se crea siempre y conserva su contenido original. Obtén la misma pestaña para añadir tus propios controles debajo:
+
+```lua
+local creditos = ventana:GetCreditsTab()
+creditos:CreateDivider()
+creditos:CreateLabel("Mi equipo", "My team", 16)
+creditos:CreateLabel("Creado por mi equipo", "Created by my team", 14)
+```
+
+`ventana:CreateCreditsTab()` también devuelve la pestaña existente, sin duplicarla ni borrar sus créditos originales.
+
 ## Activar y desactivar: toggle
 
 ```lua
@@ -133,8 +166,9 @@ ventana:Show()
 - `pagina:CreateScriptToggle(textoES, textoEN, url, clave)`: control para cargar un script externo.
 - `pagina:CreateContentContainer(nombre)`, `SetContentContainer(contenedor)`, `GetContentContainer()` y `ResetContentContainer()`: organización de contenido. La compatibilidad con contenedores depende del tipo de control.
 - `pagina:CreateWelcomeCard()` y `pagina:CreateServerInfoCard()`: tarjetas de inicio e información.
-- `ventana:CreateStatsSection(pagina)`, `CreateCreditsTab()`, `CreateClassicTab()`, `CreateSpotifyTab()` y `CreateFanArtTab()`: secciones incorporadas.
+- `ventana:CreateStatsSection(pagina)`, `GetCreditsTab()`, `CreateCreditsTab()`, `CreateClassicTab()`, `CreateSpotifyTab()`, `CreateChatTab()` y `CreateFanArtTab()`: secciones incorporadas. Chat y Fan Art son opcionales.
 - `ventana:SetLibraryVersion(isLarge)`, `SetCompactNavigation(enabled)`, `SetTabIconLayout(layout)` y `SetTextEffect(mode)`: opciones de presentación.
 - `YinUI.Kit`: herramientas de bajo nivel para crear ventanas, objetos y componentes visuales personalizados.
 
 Estas funciones adicionales tienen opciones y dependencias propias; consulta el código de la versión actual antes de integrarlas. Esta guía no pretende documentar cada opción del Kit ni de las secciones internas.
+

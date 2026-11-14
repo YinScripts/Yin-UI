@@ -1,4 +1,25 @@
-               card = result
+ion()
+        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
+        local order = getVisibleRenderOrder()
+        local displayOrder = 1
+        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
+        local showTiles = not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == ""
+        local visible = {}
+        for _, index in ipairs(order) do visible[index] = true end
+
+        for index, rowData in pairs(SpotifyState.RowButtons) do
+            if rowData.Row and rowData.Row.Parent then
+                local shouldShow = visible[index] == true and not SpotifyState.HiddenRows[index]
+                if rowData.Row.Visible ~= shouldShow then rowData.Row.Visible = shouldShow end
+            end
+        end
+
+        local function tile(key, create, position)
+            local card = SpotifyState[key]
+            if showTiles and (not card or not card.Parent) then
+                local ok, result = pcall(create, position)
+                if ok then
+                    card = result
                     SpotifyState[key] = card
                 else
                     warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
@@ -1080,21 +1101,4 @@
                 SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
             })
             local glyph = mk("TextLabel", {
-                Parent = content, Size = UDim2.fromOffset(16, 16), LayoutOrder = 1,
-                BackgroundTransparency = 1, Text = fallback, Font = Enum.Font.GothamBold,
-                TextColor3 = spotifyDim, TextSize = 15, ZIndex = 58,
-            })
-            local image = mk("ImageLabel", {
-                Parent = content, Size = UDim2.fromOffset(16, 16), LayoutOrder = 1,
-                BackgroundTransparency = 1, Image = "", ImageColor3 = spotifyDim,
-                ScaleType = Enum.ScaleType.Fit, Visible = false, ZIndex = 58,
-            })
-            local label = mk("TextLabel", {
-                Parent = content, Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X,
-                LayoutOrder = 2, BackgroundTransparency = 1, Text = GetText(es, en),
-                Font = Enum.Font.GothamBold, TextColor3 = spotifyDim, TextSize = 11, ZIndex = 58,
-            })
-            label:SetAttribute("TextSpanish", es)
-            label:SetAttribute("TextEnglish", en)
-            YinIcons.get(iconName, function(assetId)
-  
+                Pa

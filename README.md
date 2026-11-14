@@ -35,6 +35,8 @@ La versión principal incluye las mejoras probadas para reducir el tirón de la 
 
 La librería queda disponible en `_G.YinYang`; la interfaz y sus funciones se configuran desde el proyecto que la utiliza. Consulta la [guía de uso y controles](docs/GUIA.md) para ver ejemplos. La disponibilidad de `loadstring` y `game:HttpGet` depende del entorno de ejecución.
 
+Chat y Fan Art son opcionales: actívalos con `CreateWindow("Mi interfaz", "Senju", {Chat = true, FanArt = true})` o créalos después con sus métodos. Créditos siempre se incluye y admite contenido adicional; la guía explica cómo hacerlo.
+
 ## Organización del proyecto
 
 - `src/modules/` contiene el código fuente separado por partes.

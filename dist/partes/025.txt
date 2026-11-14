@@ -1,4 +1,5 @@
-im2.new(0.5, -7, 0.5, -7), 505, "AccentText")
+Stroke, 1, 0.5)
+                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UDim2.new(0.5, -7, 0.5, -7), 505, "AccentText")
 
                 local Mono = mk("TextLabel", {
                     Parent = Row,
@@ -1160,7 +1161,4 @@ im2.new(0.5, -7, 0.5, -7), 505, "AccentText")
         Text = GetText("Cancelar", "Cancel"),
         TextColor3 = Theme.Text,
         TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 262,
-    })
-    PickerCancel:SetAttribute("T
+        Font = 

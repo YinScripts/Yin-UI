@@ -495,7 +495,8 @@ function YinYang:OnLanguageChanged(callback)
     end
 end
 
-function YinYang:CreateWindow(title_text, startTheme)
+function YinYang:CreateWindow(title_text, startTheme, options)
+    options = type(options) == "table" and options or {}
     startTheme = startTheme or "Senju"
     -- Halloween terminado: Dark queda bloqueado; si la config guardada lo trae se usa Senju
     if startTheme == "Dark" and ThemePalettes["Senju"] then startTheme = "Senju" end

@@ -1,4 +1,14 @@
-ess = 1.5, Transparency = 0.1 })
+ local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
+    local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
+    mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
+    header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
+
+    -- tarjeta "Crear": círculo con + y aro de colores girando
+    do
+        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
+        c:SetAttribute("ThemeRole", "Secondary")
+        corner(c, 14)
+        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickness = 1.5, Transparency = 0.1 })
         local g = mk("UIGradient", {
             Parent = cs,
             Color = ColorSequence.new({
@@ -1089,42 +1099,4 @@ ess = 1.5, Transparency = 0.1 })
         Size = UDim2.fromOffset(52, 26),
         AnchorPoint = Vector2.new(0.5, 1),
         Position = UDim2.new(0, 0, 0, -8),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 16,
-        Visible = false,
-    })
-    corner(SeekTooltip, 6)
-    local SeekTooltipLabel = mk("TextLabel", {
-        Parent = SeekTooltip,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = "0:00",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 14,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Center,
-        ZIndex = 17,
-    })
-
-    local ProgressFill = mk("Frame", {
-        Parent = ProgressTrack,
-        Size = UDim2.new(0, 0, 1, 0),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        ZIndex = 13,
-    })
-    corner(ProgressFill, 999)
-
-    SeekHitbox = mk("TextButton", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 28),
-        Position = UDim2.new(0, 14, 0, 295),
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButtonColor = false,
-        ZIndex = 22,
-    })
-
-    isSeeking = false
-    local seekInput = nil
+        BackgroundTranspar

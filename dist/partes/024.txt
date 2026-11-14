@@ -1,4 +1,5 @@
-             if BackgroundVideo.IsLoaded then
+     if self._videoToken ~= mediaToken or activated then return end
+                            if BackgroundVideo.IsLoaded then
                                 activateVideo()
                             else
                                 markFailure(videoId)
@@ -1039,5 +1040,4 @@
                     ZIndex = 504,
                 })
                 corner(Box, 7)
-                stroke(Box, Theme.Stroke, 1, 0.5)
-                local Mark = RowKit.IconAt(Box, STATS_CHECK, 14, UD
+                stroke(Box, Theme.

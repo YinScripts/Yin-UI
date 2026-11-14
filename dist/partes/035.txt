@@ -1,4 +1,21 @@
-nment.Left,
+ex = Z + 3 })
+        local thumbBox = mk("Frame", { Parent = imgRow, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = Color3.fromRGB(230, 230, 236), BorderSizePixel = 0, ZIndex = Z + 4 })
+        corner(thumbBox, 10)
+        local thumb = mk("ImageLabel", { Parent = thumbBox, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, Image = CL.CleanAsset(lay.Image), ImageColor3 = lay.Color or WHITE, ScaleType = Enum.ScaleType.Fit, ZIndex = Z + 5 })
+        local idBox = mk("TextBox", {
+            Parent = imgRow,
+            Size = UDim2.new(1, -140, 0, 32),
+            Position = UDim2.new(0, 56, 0.5, -16),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            Text = lay.Image or "",
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Left,
             TextTruncate = Enum.TextTruncate.AtEnd,
             ZIndex = Z + 4,
         })
@@ -750,14 +767,4 @@ nment.Left,
         L(d, subEs, subEn)
         return h, d
     end
-    local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
-    local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
-    mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
-    header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
-
-    -- tarjeta "Crear": círculo con + y aro de colores girando
-    do
-        local c = mk("Frame", { Parent = MineGrid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.4, BorderSizePixel = 0, LayoutOrder = 0, ZIndex = 12 })
-        c:SetAttribute("ThemeRole", "Secondary")
-        corner(c, 14)
-        local cs = mk("UIStroke", { Parent = c, Color = WHITE, Thickn
+   

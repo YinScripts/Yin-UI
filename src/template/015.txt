@@ -819,7 +819,7 @@ v == "Float" then
     local TopBarCounter = mk("Frame", {Parent=TopBar, AnchorPoint=Vector2.new(1,0),
         Position=UDim2.new(1,-12,0,33), Size=UDim2.fromOffset(104,22),
         BackgroundColor3=Color3.fromRGB(23,15,28), BackgroundTransparency=0.18,
-        BorderSizePixel=0, ZIndex=9})
+        BorderSizePixel=0, Visible=false, ZIndex=9})
     corner(TopBarCounter, 999)
     local counterOutline = mk("UIStroke", {Name="CounterOutline", Parent=TopBarCounter, Color=Color3.new(1,1,1), Thickness=1, Transparency=0.10})
     mk("UIGradient", {Name="CounterGradient", Parent=counterOutline, Color=ColorSequence.new({

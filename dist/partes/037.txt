@@ -1,4 +1,42 @@
+ency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 16,
+        Visible = false,
+    })
+    corner(SeekTooltip, 6)
+    local SeekTooltipLabel = mk("TextLabel", {
+        Parent = SeekTooltip,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "0:00",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 17,
+    })
 
+    local ProgressFill = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        ZIndex = 13,
+    })
+    corner(ProgressFill, 999)
+
+    SeekHitbox = mk("TextButton", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 28),
+        Position = UDim2.new(0, 14, 0, 295),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 22,
+    })
+
+    isSeeking = false
+    local seekInput = nil
 
     local spotifySwipe = {
         input = nil,
@@ -1114,25 +1152,4 @@
         end
     end
 
-    renderSongRows = function()
-        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
-        local order = getVisibleRenderOrder()
-        local displayOrder = 1
-        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
-        local showTiles = not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == ""
-        local visible = {}
-        for _, index in ipairs(order) do visible[index] = true end
-
-        for index, rowData in pairs(SpotifyState.RowButtons) do
-            if rowData.Row and rowData.Row.Parent then
-                local shouldShow = visible[index] == true and not SpotifyState.HiddenRows[index]
-                if rowData.Row.Visible ~= shouldShow then rowData.Row.Visible = shouldShow end
-            end
-        end
-
-        local function tile(key, create, position)
-            local card = SpotifyState[key]
-            if showTiles and (not card or not card.Parent) then
-                local ok, result = pcall(create, position)
-                if ok then
-     
+    renderSongRows = funct

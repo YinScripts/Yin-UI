@@ -214,7 +214,11 @@
     end
 
     function Window:CreateFanArtTab()
+        if self.FanArtTab and self.FanArtTab.Page and self.FanArtTab.Page.Parent then
+            return self.FanArtTab
+        end
         local TabFanArt = Window:CreateTab("Fan Art", "Fan Art", "rbxassetid://91504176503119")
+        self.FanArtTab = TabFanArt
         local FanArtPage = TabFanArt.Page
 
         local FanArt_Items = {
@@ -504,8 +508,9 @@
                 end
             end)
         end
+        return TabFanArt
     end
-    Window:CreateFanArtTab()
+    if options.FanArt == true then Window:CreateFanArtTab() end
 
     return Window
 

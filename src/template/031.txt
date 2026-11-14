@@ -513,8 +513,13 @@
     function Window:SetUserBubbleStyle() end
     function Window:InitializeChatStickers() end
 
-    -- ===== CHAT GLOBAL (v14 integrado) =====
+    -- ===== CHAT GLOBAL (opcional) =====
+    function Window:CreateChatTab()
+    if self.ChatTab and self.ChatTab.Page and self.ChatTab.Page.Parent then
+        return self.ChatTab
+    end
     local ChatTab = Window:CreateTab("Chat", "Chat", "rbxassetid://82910060656954")
+    self.ChatTab = ChatTab
     local ChatTabPage = ChatTab.Page
     ChatTabPage.AutomaticCanvasSize = Enum.AutomaticSize.None
     ChatTabPage.CanvasSize = UDim2.new()
@@ -589,6 +594,12 @@
     })
     if okChat and type(chatResult) == "table" then
         ChatApi = chatResult
+        local spotify = Window._SpotifyAmbient
+        if spotify and spotify.Active and spotify.Saved and spotify.Saved.visible then
+            spotify.Saved.visible[TopBarCounter] = true
+        else
+            TopBarCounter.Visible = true
+        end
         if SavedConfig.ChatCornerMessages == false then
             pcall(ChatApi.SetSideNotifs, false)
         end
@@ -672,6 +683,10 @@
         end))
         if ChatTabPage.Visible then A.enter() end
     end
+    return ChatTab
+    end
+
+    if options.Chat == true then Window:CreateChatTab() end
 
     RefreshLibraryLanguage = function()
         for _, el in ipairs(Window.ScreenGui:GetDescendants()) do
@@ -710,7 +725,11 @@
     end)
 
     function Window:CreateCreditsTab()
+    if self.CreditsTab and self.CreditsTab.Page and self.CreditsTab.Page.Parent then
+        return self.CreditsTab
+    end
     local TabCreditos = Window:CreateTab("Créditos", "Credits", "rbxassetid://99086270459218")
+    self.CreditsTab = TabCreditos
     local CredPage = TabCreditos.Page
 
     CredPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
