@@ -578,7 +578,7 @@ ion = UDim2.new(0, 64, 0, 0),
             Parent = Row, Size = UDim2.fromOffset(coverSize, coverSize),
             Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad),
             BackgroundColor3 = Color3.fromRGB(18, 18, 18), BackgroundTransparency = 0,
-            BorderSizePixel = 0, Image = resolveTrackCoverImage(track),
+            BorderSizePixel = 0, Image = "",
             ScaleType = Enum.ScaleType.Crop, AutoButtonColor = false, ZIndex = 15,
         })
         corner(Cover, 9)
