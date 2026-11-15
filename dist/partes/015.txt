@@ -793,8 +793,7 @@ function YinYang:CreateWindow(title_text, startTheme, options)
                     local angle  = st.time * math.rad(spd) * dir
                     lbl.Position = UDim2.new(off, math.cos(angle) * radius, off, math.sin(angle) * radius)
 
-                elseif m
-v == "Float" then
+                elseif mv == "Float" then
                     local sc  = def.Scale or 1.6
                     local off = -((sc - 1) / 2)
                     local oy  = math.sin(st.time * (2 * math.pi / spd)) * (amt ~= 0 and amt or 4)
