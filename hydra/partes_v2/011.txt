@@ -1,0 +1,242 @@
+ePixel = 0,
+        Visible = false, ZIndex = 3, Parent = preview})
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = scan})
+    TweenService:Create(scan, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Position = UDim2.new(0.5, 0, 0, 132)}):Play()
+    -- textos centrados
+    local displayLabel = mk("TextLabel", {Size = UDim2.new(1, -24, 0, 20), Position = UDim2.fromOffset(12, 150), BackgroundTransparency = 1, Text = "", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBlack, TextSize = 16, TextTruncate = Enum.TextTruncate.AtEnd, Parent = preview})
+    local userLabel = mk("TextLabel", {Size = UDim2.new(1, -24, 0, 14), Position = UDim2.fromOffset(12, 171), BackgroundTransparency = 1, Text = "", TextColor3 = C.Dim,
+        Font = Enum.Font.GothamSemibold, TextSize = 11, TextTruncate = Enum.TextTruncate.AtEnd, Parent = preview})
+    -- estado: texto chico + barra fina
+    local statusLabel = mk("TextLabel", {Size = UDim2.new(1, -28, 0, 12), Position = UDim2.fromOffset(14, 189), BackgroundTransparency = 1, Text = "", TextColor3 = C.Dim,
+        Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = preview})
+    local track_ = mk("Frame", {Size = UDim2.new(1, -28, 0, 3), Position = UDim2.fromOffset(14, 204), BackgroundColor3 = C.Field, BorderSizePixel = 0, ClipsDescendants = true, Parent = preview})
+    corner(track_, 99)
+    local fill = mk("Frame", {Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = track_})
+    corner(fill, 99)
+    local fillLoop = nil
+    -- la vieja variable "chip" la usa el resto: ahora es el texto de estado
+    local chip = statusLabel
+
+    local function show(open)
+        if open then
+            if not preview.Visible then
+                preview.Size = UDim2.new(1, 0, 0, 0)
+                preview.Visible = true
+            end
+            tween(preview, 0.3, {Size = UDim2.new(1, 0, 0, OPEN)})
+        elseif preview.Visible then
+            local t = tween(preview, 0.2, {Size = UDim2.new(1, 0, 0, 0)}, Enum.EasingStyle.Quad)
+            t.Completed:Connect(function(state)
+                if state == Enum.PlaybackState.Completed and preview.Size.Y.Offset == 0 then preview.Visible = false end
+            end)
+        end
+    end
+    local KIND = {ok = C.Good, bad = C.Bad, busy = C.Accent}
+    local function setChip(textValue, kind)
+        local color = KIND[kind] or C.Accent
+        chip.Text = tr(textValue)
+        chip.TextColor3 = (kind == "ok" or kind == "bad") and color or C.Dim
+        if fillLoop then fillLoop:Cancel() fillLoop = nil end
+        fill.BackgroundColor3 = color
+        if kind == "busy" then
+            -- barra que corre de un lado al otro (esperando)
+            fill.Size = UDim2.fromScale(0.3, 1)
+            fill.Position = UDim2.fromScale(-0.3, 0)
+            fillLoop = TweenService:Create(fill, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1), {Position = UDim2.fromScale(1, 0)})
+            fillLoop:Play()
+        else
+            fill.Position = UDim2.fromScale(0, 0)
+            fill.Size = UDim2.fromScale(0, 1)
+            tween(fill, 0.45, {Size = UDim2.fromScale(1, 1)})
+        end
+        tween(base, 0.3, {BackgroundColor3 = color})
+        tween(glow, 0.3, {BackgroundColor3 = color})
+        tween(cardStroke, 0.25, {Color = (kind == "ok" or kind == "bad") and color or C.Stroke, Transparency = (kind == "ok" or kind == "bad") and 0.35 or 0.5})
+    end
+    local function setLoading(name)
+        scan.Visible = true
+        tween(body, 0.2, {ImageTransparency = 0.75})
+        displayLabel.TextColor3 = C.Text
+        displayLabel.Text = name
+        userLabel.Text = tr("Buscando\226\128\166")
+        setChip("Buscando\226\128\166", "busy")
+        show(true)
+    end
+    local function setFound(info)
+        scan.Visible = false
+        body.Image = "rbxthumb://type=Avatar&id=" .. tostring(info.id) .. "&w=420&h=420"
+        -- entra subiendo desde la base
+        body.ImageTransparency = 1
+        body.Position = UDim2.new(0.5, 0, 0, 14)
+        tween(body, 0.45, {ImageTransparency = 0, Position = UDim2.new(0.5, 0, 0, 2)})
+        displayLabel.TextColor3 = C.Text
+        displayLabel.Text = info.display or info.user
+        userLabel.Text = "@" .. info.user .. "  \194\183  ID " .. tostring(info.id)
+        setChip("\226\156\147 Listo para aplicar")
+        show(true)
+    end
+    local function setMissing(name)
+        scan.Visible = false
+        tween(body, 0.2, {ImageTransparency = 1})
+        displayLabel.Text = name
+        displayLabel.TextColor3 = C.Bad
+        userLabel.Text = tr("No existe ese usuario")
+        setChip("\226\156\149 Revis\195\161 el nombre", "bad")
+        show(true)
+    end
+    -- busca el usuario (con cache: cada nombre se pide una sola vez)
+    local function lookup(name)
+        local key = string.lower(name)
+        local cached = S.cache[key]
+        if cached == nil then
+            local okId, id = pcall(function() return Players:GetUserIdFromNameAsync(name) end)
+            if not okId or not id then
+                cached = false
+            else
+                local info = {id = id, user = name, display = nil}
+                pcall(function()
+                    local list = UserService:GetUserInfosByUserIdsAsync({id})
+                    local u = list and list[1]
+                    if u then info.user, info.display = u.Username or name, u.DisplayName end
+                end)
+                cached = info
+            end
+            S.cache[key] = cached
+        end
+        return cached
+    end
+    local function cleanName() return (tostring(box.Text or ""):match("^%s*(.-)%s*$")) end
+    local function validName(name) return #name >= 3 and #name <= 20 and not name:find("[^%w_]") end
+    box:GetPropertyChangedSignal("Text"):Connect(function()
+        S.gen = S.gen + 1
+        local gen = S.gen
+        local name = cleanName()
+        S.info = nil
+        -- los nombres de Roblox tienen de 3 a 20 caracteres: letras, numeros y _
+        if not validName(name) then show(false) return end
+        task.delay(0.55, function()
+            if gen ~= S.gen then return end
+            setLoading(name)
+            local info = lookup(name)
+            if gen ~= S.gen then return end -- ya escribio otra cosa
+            S.info = info or nil
+            if info then setFound(info) else setMissing(name) end
+        end)
+    end)
+
+    function obj:SetStatus(textValue, kind) setChip(textValue, kind) show(true) end
+    function obj:Fill(name) box.Text = tostring(name or "") end
+    function obj:Get() return S.info end
+    local function run()
+        if S.busy then return end
+        local name = cleanName()
+        if not validName(name) then toast(tr("Escrib\195\173 un nombre primero"), C.Bad) return end
+        S.busy = true
+        tween(applyScale, 0.08, {Scale = 0.94})
+        task.delay(0.1, function() tween(applyScale, 0.25, {Scale = 1}, Enum.EasingStyle.Back) end)
+        applyLabel.Text = tr("Aplicando\226\128\166")
+        task.spawn(function()
+            local info = S.info
+            if not info then
+                setLoading(name)
+                info = lookup(name)
+                if info then setFound(info) S.info = info else setMissing(name) end
+            end
+            if info and o.Callback then
+                setChip("Aplicando\226\128\166", "busy")
+                local okRun, ok, message = pcall(o.Callback, info)
+                if not okRun then ok, message = false, tostring(ok) end
+                if message then setChip(message, ok and "ok" or "bad") end
+            end
+            applyLabel.Text = tr(o.ButtonText or "Aplicar")
+            S.busy = false
+        end)
+    end
+    apply.MouseButton1Click:Connect(run)
+    box.FocusLost:Connect(function(enter) if enter then run() end end)
+
+    -- 3) jugadores del servidor: toca uno y se completa el nombre
+    local serverHead = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, Text = "En el servidor", TextColor3 = C.Dim, Font = Enum.Font.GothamBlack,
+        TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 3, Parent = card})
+    local strip = mk("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 66), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 2, ScrollBarImageColor3 = C.Accent,
+        ScrollingDirection = Enum.ScrollingDirection.X, CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.X, LayoutOrder = 4, Parent = card})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = strip})
+    local empty = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, Text = "No hay nadie m\195\161s en el servidor", TextColor3 = C.Dim,
+        Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Visible = false, LayoutOrder = 0, Parent = strip})
+    local bubbles = {}
+    local function addPlayer(player)
+        if player == LocalPlayer or bubbles[player] then return end
+        local b = mk("TextButton", {Size = UDim2.fromOffset(54, 62), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", LayoutOrder = #strip:GetChildren(), Parent = strip})
+        local face = mk("ImageLabel", {Size = UDim2.fromOffset(42, 42), Position = UDim2.fromOffset(6, 2), BackgroundColor3 = C.Field, BorderSizePixel = 0,
+            Image = "rbxthumb://type=AvatarHeadShot&id=" .. tostring(player.UserId) .. "&w=150&h=150", Parent = b})
+        corner(face, 99)
+        local faceStroke = stroke(face, C.Stroke, 0.5)
+        mk("TextLabel", {Size = UDim2.new(1, 0, 0, 14), Position = UDim2.fromOffset(0, 47), BackgroundTransparency = 1, Text = player.DisplayName, TextColor3 = C.Text,
+            Font = Enum.Font.GothamBold, TextSize = 10, TextTruncate = Enum.TextTruncate.AtEnd, Parent = b})
+        local faceScale = mk("UIScale", {Scale = 1, Parent = face})
+        b.MouseEnter:Connect(function() tween(faceStroke, 0.15, {Color = C.Accent, Transparency = 0.1}) end)
+        b.MouseLeave:Connect(function() tween(faceStroke, 0.2, {Color = C.Stroke, Transparency = 0.5}) end)
+        b.MouseButton1Click:Connect(function()
+            tween(faceScale, 0.08, {Scale = 0.9})
+            task.delay(0.1, function() tween(faceScale, 0.3, {Scale = 1}, Enum.EasingStyle.Back) end)
+            -- ya se sabe quien es: se guarda en la cache para no buscarlo
+            S.cache[string.lower(player.Name)] = {id = player.UserId, user = player.Name, display = player.DisplayName}
+            box.Text = player.Name
+        end)
+        bubbles[player] = b
+        empty.Visible = false
+    end
+    local function removePlayer(player)
+        if bubbles[player] then bubbles[player]:Destroy() bubbles[player] = nil end
+        empty.Visible = next(bubbles) == nil
+    end
+    for _, player in ipairs(Players:GetPlayers()) do addPlayer(player) end
+    empty.Visible = next(bubbles) == nil
+    track(Players.PlayerAdded:Connect(addPlayer))
+    track(Players.PlayerRemoving:Connect(removePlayer))
+    -- al cambiar el idioma: el texto de ayuda de la caja
+    local previous = Lang.onChange
+    Lang.onChange = function()
+        if previous then previous() end
+        box.PlaceholderText = tr(o.Placeholder or "Nombre de usuario")
+        if not S.busy then applyLabel.Text = tr(o.ButtonText or "Aplicar") end
+    end
+    obj.Holder = card
+    obj.header = serverHead
+    return obj
+end
+
+-- ---------- Ajustes: teclado con las teclas asignadas ----------
+-- Dibuja un teclado y marca las teclas que tienen una opcion (las de los chips de tecla de cada toggle).
+-- Las teclas tienen relieve y se hunden cuando las apretas; las asignadas quedan plateadas con un brillo que pasa.
+-- Debajo, la lista "tecla -> opcion" (traducida). Se actualiza cuando asignas o borras una tecla y al cambiar el idioma.
+EN["Teclado"] = "Keyboard"
+EN["en uso"] = "in use"
+EN["Abrir / cerrar Hydra"] = "Open / close Hydra"
+EN["Toc\195\161 el chip de tecla de cualquier opci\195\179n para asignarle una"] = "Tap the key chip of any option to give it a key"
+Hydra.Keyboard = {keys = {}, ROWS = {
+    {{"`", "Backquote"}, {"1", "One"}, {"2", "Two"}, {"3", "Three"}, {"4", "Four"}, {"5", "Five"}, {"6", "Six"}, {"7", "Seven"}, {"8", "Eight"}, {"9", "Nine"}, {"0", "Zero"}, {"-", "Minus"}, {"=", "Equals"}, {"Back", "Backspace", 2}},
+    {{"Tab", "Tab", 1.5}, {"Q", "Q"}, {"W", "W"}, {"E", "E"}, {"R", "R"}, {"T", "T"}, {"Y", "Y"}, {"U", "U"}, {"I", "I"}, {"O", "O"}, {"P", "P"}, {"[", "LeftBracket"}, {"]", "RightBracket"}, {"\\", "BackSlash", 1.5}},
+    {{"Caps", "CapsLock", 1.75}, {"A", "A"}, {"S", "S"}, {"D", "D"}, {"F", "F"}, {"G", "G"}, {"H", "H"}, {"J", "J"}, {"K", "K"}, {"L", "L"}, {";", "Semicolon"}, {"'", "Quote"}, {"Enter", "Return", 2.25}},
+    {{"Shift", "LeftShift", 2.25}, {"Z", "Z"}, {"X", "X"}, {"C", "C"}, {"V", "V"}, {"B", "B"}, {"N", "N"}, {"M", "M"}, {",", "Comma"}, {".", "Period"}, {"/", "Slash"}, {"Shift", "RightShift", 2.75}},
+    {{"Ctrl", "LeftControl", 1.5}, {"Alt", "LeftAlt", 1.5}, {"", "Space", 9}, {"Alt", "RightAlt", 1.5}, {"Ctrl", "RightControl", 1.5}},
+}}
+-- brillo que cruza la tecla (lo mueve TweenService en bucle, sin codigo corriendo cada frame)
+Hydra.Keyboard.SHEEN = TweenInfo.new(2.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.8)
+Hydra.Keyboard.TOP_LIGHT = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(178, 183, 195))
+do
+    local KB = Hydra.Keyboard
+    section(TabSettings, "Teclas", "\226\150\162")
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA,
+        BorderSizePixel = 0, LayoutOrder = nextOrder(TabSettings), Parent = TabSettings.page})
+    corner(card, 14)
+    stroke(card, C.Stroke, 0.5)
+    mk("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = card})
+    mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    -- cabecera: titulo y contador de teclas en uso
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, 20), BackgroundTransparency = 1, LayoutOrder = 0, Parent = card})
+    mk("TextLabel", {Size = UDim2.new(1, -90, 1, 0), BackgroundTransparency = 1, Text = "Teclado", TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left, Parent = head})
+    KB.counter = mk("TextLabel", {Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = C.Accent, BackgroundTransparency = 0.82, Te
