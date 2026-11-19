@@ -1,0 +1,513 @@
+--[[
+    HYDRA - interfaz
+
+    VENTANA
+    - Arrastra la ventana desde la cabecera. Las pestanas de abajo son un carrusel: arrastralo de costado o toca una pestana.
+    - "-" esconde la ventana y deja un boton flotante; tocalo para volver a abrirla. En PC tambien con la tecla K.
+    - "" cierra el script.
+
+    IDIOMA
+    Detecta el idioma del jugador (primero el del dispositivo, despues el que eligio en Roblox). Espanol e ingles completos;
+    otros idiomas usan el traductor de Roblox. Se puede forzar en AJUSTES -> Idioma.
+
+    COMPONENTES (para armar las pestanas de Hydra en la seccion "pestanas y opciones")
+    createTab, section, toggle, slider, actionButton, dropdown, infoCard, note, toast.
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- AJUSTES OPCIONALES: el script que usa la libreria puede definirlos ANTES de cargarla. Sin ellos todo queda como siempre.
+--   getgenv().HydraSettings = {Name = "MiHub", ConfigFile = "MiHub.json", Logo = "rbxassetid://...", Background = false,
+--       ToggleKey = Enum.KeyCode.RightShift, OnlineCounter = true, OnlineUrl = "https://..."}
+-- Name: titulo y nombre de la ventana | ConfigFile: archivo donde se guardan las opciones (usa uno propio para no pisar a otros scripts)
+-- Logo / Background: imagen (texto rbxassetid://...) o false para no usar ninguna | ToggleKey: tecla que muestra u oculta la ventana
+-- OnlineCounter: true muestra el contador de jugadores en linea (por defecto NO: envia el UserId a OnlineUrl, solo se activa si el script lo pide)
+-- Components: pestana "Componentes" con todos los elementos. Por defecto aparece sola y desaparece cuando otro script agrega sus pestanas;
+--   false = nunca se crea, true = se queda siempre
+local Settings = {}
+pcall(function()
+    local genv = (type(getgenv) == "function" and getgenv()) or _G
+    if type(genv.HydraSettings) == "table" then Settings = genv.HydraSettings end
+end)
+local TITLE = tostring(Settings.Name or "Hydra")
+local INITIAL = string.upper(TITLE:match("^[\1-\127\194-\244][\128-\191]*") or "H")
+
+-- ==================== CONFIGURACION (se guarda en el executor) ====================
+local CONFIG_FILE = tostring(Settings.ConfigFile or "Hydra.json")
+local Config = {
+    language = "auto", -- "auto" (idioma de Roblox), "es" o "en"
+    flags = {}, binds = {}, floats = {}, -- valores de las opciones, teclas de atajo y botones flotantes (API de Hydra)
+}
+local function loadConfig()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" then return end
+    pcall(function()
+        if not isfile(CONFIG_FILE) then return end
+        local data = game:GetService("HttpService"):JSONDecode(readfile(CONFIG_FILE))
+        for key, value in pairs(data) do
+            if Config[key] ~= nil and type(value) == type(Config[key]) then Config[key] = value end
+        end
+    end)
+end
+local saveToken = 0
+local function saveConfig()
+    if type(writefile) ~= "function" then return end
+    saveToken = saveToken + 1
+    local token = saveToken
+    task.delay(0.5, function()
+        if token ~= saveToken then return end
+        pcall(function() writefile(CONFIG_FILE, game:GetService("HttpService"):JSONEncode(Config)) end)
+    end)
+end
+loadConfig()
+
+-- ==================== IDIOMA (detecta el idioma del jugador) ====================
+-- Espanol e ingles vienen completos. Para otros idiomas se usa el traductor de Roblox;
+-- si Roblox no tiene esa frase traducida, se muestra en ingles.
+local LocalizationService = game:GetService("LocalizationService")
+local Lang = {current = "en", system = "en", translator = nil, cache = {}, registry = setmetatable({}, {__mode = "k"}), onChange = nil}
+local EN = {
+    -- pestanas y titulos
+    -- pestanas y titulos
+    ["AJUSTES"] = "SETTINGS", ["Ajustes"] = "Settings", ["No hay nada para elegir"] = "Nothing to choose",
+    ["RIESGO"] = "RISK",
+    -- ajustes
+    ["Idioma"] = "Language", ["Autom\195\161tico = el idioma de tu Roblox"] = "Automatic = your Roblox language", ["Autom\195\161tico"] = "Automatic",
+    ["Ventana"] = "Window", ["Teclas"] = "Keys",
+    -- inicio
+    ["INICIO"] = "HOME", ["Inicio"] = "Home",
+    ["Buenos d\195\173as"] = "Good morning", ["Buenas tardes"] = "Good afternoon", ["Buenas noches"] = "Good evening",
+    ["Sesi\195\179n"] = "Session", ["En l\195\173nea"] = "Online",
+    ["Rendimiento"] = "Performance", ["Ping"] = "Ping", ["Jugadores"] = "Players", ["Servidor abierto hace"] = "Server up for",
+    ["Partida"] = "Match", ["Juego"] = "Game", ["Ejecutor"] = "Executor", ["Versi\195\179n"] = "Version",
+    ["Accesos r\195\161pidos"] = "Quick actions", ["Copiar servidor"] = "Copy server", ["Reentrar"] = "Rejoin",
+    ["ID del servidor copiado"] = "Server ID copied", ["Tu ejecutor no puede copiar"] = "Your executor can't copy",
+    ["Reentrando..."] = "Rejoining...", ["No se pudo reentrar"] = "Couldn't rejoin",
+    ["Bot\195\179n \226\128\147 : esconde la ventana. Toc\195\161 el bot\195\179n flotante para volver a abrirla. En PC tambi\195\169n con la tecla K. La \226\156\149 cierra el script."] = "\226\128\147 button: hides the window. Tap the floating button to open it again. On PC you can also press K. The \226\156\149 closes the script.",
+}
+local function normalizeLocale(localeId)
+    return string.lower(tostring(localeId or "en")):match("^(%a+)") or "en"
+end
+local function tr(spanish)
+    if Lang.current == "es" then return spanish end
+    local english = EN[spanish] or spanish
+    if Lang.current == "en" or not Lang.translator then return english end
+    local cached = Lang.cache[english]
+    if cached ~= nil then return cached or english end
+    local translated
+    pcall(function() translated = Lang.translator:Translate(game, english) end)
+    if translated and translated ~= "" and translated ~= english then
+        Lang.cache[english] = translated
+        return translated
+    end
+    Lang.cache[english] = false
+    return english
+end
+local function resolveLanguage()
+    local mode = Config.language
+    if mode == "es" or mode == "en" then return mode end
+    return Lang.system
+end
+local function applyLanguage(force)
+    local language = resolveLanguage()
+    if language == Lang.current and not force then return end
+    Lang.current, Lang.cache = language, {}
+    for inst, key in pairs(Lang.registry) do
+        if inst.Parent then inst.Text = tr(key) end
+    end
+    if Lang.onChange then pcall(Lang.onChange) end
+end
+pcall(function()
+    local locale = LocalizationService.SystemLocaleId
+    if locale and locale ~= "" then Lang.system = normalizeLocale(locale) end
+end)
+Lang.current = resolveLanguage()
+-- el idioma que el jugador eligio en Roblox manda sobre el del sistema
+task.spawn(function()
+    local ok, translator = pcall(function() return LocalizationService:GetTranslatorForPlayerAsync(LocalPlayer) end)
+    if not ok or not translator then return end
+    Lang.translator = translator
+    Lang.system = normalizeLocale(translator.LocaleId)
+    Lang.cache = {}
+    applyLanguage(true)
+    pcall(function()
+        translator:GetPropertyChangedSignal("LocaleId"):Connect(function()
+            Lang.system = normalizeLocale(translator.LocaleId)
+            applyLanguage()
+        end)
+    end)
+end)
+
+
+-- colores
+local C = {
+    -- tema oscuro tipo glass: fondo casi negro translucido, tarjetas de vidrio claro, acento blanco/plateado
+    Bg = Color3.fromRGB(12, 14, 19), Card = Color3.fromRGB(30, 34, 43), Field = Color3.fromRGB(38, 43, 54),
+    Glass = Color3.fromRGB(255, 255, 255),
+    Stroke = Color3.fromRGB(150, 156, 172), Text = Color3.fromRGB(248, 249, 252), Dim = Color3.fromRGB(212, 216, 226),
+    Accent = Color3.fromRGB(236, 239, 245), AccentDark = Color3.fromRGB(140, 146, 160), AccentSoft = Color3.fromRGB(62, 66, 78),
+    On = Color3.fromRGB(236, 239, 245), Off = Color3.fromRGB(70, 75, 88),
+    Warn = Color3.fromRGB(255, 176, 86),
+    Good = Color3.fromRGB(46, 214, 170), Mid = Color3.fromRGB(255, 190, 80), Bad = Color3.fromRGB(255, 96, 110),
+}
+
+-- contenedor propio (fuera del Workspace del juego)
+local guiParent = LocalPlayer:WaitForChild("PlayerGui")
+pcall(function()
+    if typeof(gethui) == "function" then
+        local hidden = gethui()
+        if hidden then guiParent = hidden end
+    end
+end)
+for _, name in ipairs({TITLE}) do
+    local old = guiParent:FindFirstChild(name)
+    if old then old:Destroy() end
+end
+
+local Connections = {}
+local function track(connection) table.insert(Connections, connection) return connection end
+
+-- ==================== UTILIDADES ====================
+local function mk(class, props)
+    local inst = Instance.new(class)
+    for key, value in pairs(props) do
+        if key ~= "Parent" then inst[key] = value end
+    end
+    -- si el texto es una frase conocida, se traduce y se anota para cambiarla si cambia el idioma
+    local text = props.Text
+    if type(text) == "string" and EN[text] then
+        Lang.registry[inst] = text
+        inst.Text = tr(text)
+    end
+    -- contorno oscuro suave en los textos: se leen bien aunque detras haya partes claras del fondo
+    if class == "TextLabel" or class == "TextBox" then
+        local outline = Instance.new("UIStroke")
+        outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        outline.Color = Color3.new(0, 0, 0)
+        outline.Thickness = 1.2
+        outline.Transparency = 0.45
+        outline.Parent = inst
+    end
+    inst.Parent = props.Parent
+    return inst
+end
+local function corner(parent, radius) return mk("UICorner", {CornerRadius = UDim.new(0, radius), Parent = parent}) end
+local function stroke(parent, color, transparency)
+    return mk("UIStroke", {Color = color, Thickness = 1, Transparency = transparency or 0, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = parent})
+end
+local function tween(inst, time, goals, style)
+    local t = TweenService:Create(inst, TweenInfo.new(time, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out), goals)
+    t:Play()
+    return t
+end
+
+-- iconos: las letras     salen como cuadros en algunos celulares, asi que se dibujan como imagenes (ids del script Sapphire).
+-- La clave es la letra que ya usa cada pestana/seccion; si una letra no esta aca se sigue dibujando como texto.
+local ICON_IMAGES = {
+    ["\226\158\164"] = "rbxassetid://7734058599", -- Blatant
+    ["\226\156\166"] = "rbxassetid://7733954760", -- World
+    ["\226\151\142"] = "rbxassetid://7734056608", -- Detection
+    ["\226\156\142"] = "rbxassetid://7733917120", -- Misc
+    ["\226\154\153"] = "rbxassetid://82447077635685", -- Ajustes
+    ["\226\151\183"] = "rbxassetid://7733774602", -- Visual
+    ["\226\150\162"] = "rbxassetid://7734053495", -- GUI
+    ["\226\140\130"] = "rbxassetid://131051652075705", -- Inicio
+}
+local function mkIcon(glyph, color, imageProps, textProps)
+    local image = ICON_IMAGES[glyph] or ((type(glyph) == "string" and string.sub(glyph, 1, 13) == "rbxassetid://") and glyph or nil)
+    if image then
+        imageProps.Image, imageProps.ImageColor3, imageProps.BackgroundTransparency = image, color, 1
+        return mk("ImageLabel", imageProps), "ImageColor3"
+    end
+    textProps.Text, textProps.TextColor3 = glyph, color
+    return mk("TextLabel", textProps), "TextColor3"
+end
+
+-- ==================== INTERFAZ ====================
+local Gui = mk("ScreenGui", {Name = TITLE, ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 60, Parent = guiParent})
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local WIDTH, HEIGHT = isMobile and 480 or 590, isMobile and 350 or 445
+
+local Window = mk("Frame", {
+    Size = UDim2.fromOffset(WIDTH, HEIGHT), Position = UDim2.new(0.5, -WIDTH / 2, 0.5, -HEIGHT / 2),
+    BackgroundColor3 = C.Bg, BackgroundTransparency = 0.06, BorderSizePixel = 0, ClipsDescendants = true, Parent = Gui,
+})
+-- brillo de vidrio: arriba un poco mas claro
+mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 176, 190)), Parent = Window})
+corner(Window, 18)
+stroke(Window, C.Stroke, 0.1)
+local WindowScale = mk("UIScale", {Scale = 0.9, Parent = Window})
+-- imagen de fondo de la ventana: va detras de todo y un poco transparente para que el texto se lea
+local BG_IMAGE_ID, BG_IMAGE_TRANSPARENCY = "rbxassetid://104092388902076", 0.3
+if type(Settings.Background) == "string" then BG_IMAGE_ID = Settings.Background elseif Settings.Background == false then BG_IMAGE_ID = "" end
+local CARD_ALPHA, BAR_ALPHA = 0.9, 0.4 -- transparencia de las tarjetas de opciones y de la barra de pestanas (0 = blanco opaco, 1 = invisible)
+local WindowBg = mk("ImageLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = BG_IMAGE_ID, ImageTransparency = BG_IMAGE_TRANSPARENCY, ScaleType = Enum.ScaleType.Crop, ZIndex = 0, Parent = Window})
+corner(WindowBg, 18)
+
+-- cabecera
+local Header = mk("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Parent = Window})
+
+-- titulo
+local TitleRow = mk("Frame", {Size = UDim2.new(1, -196, 0, 28), Position = UDim2.fromOffset(16, 6), BackgroundTransparency = 1, Parent = Header})
+mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder, Parent = TitleRow})
+local TitleText = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = TITLE, TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 25, MaxVisibleGraphemes = 0, LayoutOrder = 1, Parent = TitleRow})
+do local outline = TitleText:FindFirstChildOfClass("UIStroke") if outline then outline:Destroy() end end
+-- efecto del nombre (el mismo de "Ultra" en la libreria): un brillo recorre las letras y descansa un momento
+local TitleGradient = mk("UIGradient", {Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.65), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.65),
+}), Offset = Vector2.new(-1, 0), Parent = TitleText})
+TweenService:Create(TitleGradient, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.6), {Offset = Vector2.new(1, 0)}):Play()
+-- entrada: el titulo se escribe letra por letra
+task.spawn(function()
+    for count = 1, (utf8.len(TITLE) or #TITLE) do
+        TitleText.MaxVisibleGraphemes = count
+        task.wait(0.06)
+    end
+    TitleText.MaxVisibleGraphemes = -1
+end)
+
+local HeaderSub = mk("TextLabel", {Size = UDim2.new(1, -196, 0, 14), Position = UDim2.fromOffset(16, 36), BackgroundTransparency = 1, Text = "", TextColor3 = C.Dim, Font = Enum.Font.GothamMedium, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Header})
+local function headerButton(text, offset, image)
+    local button = mk("TextButton", {Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, offset, 0, 28), BackgroundColor3 = C.Card, AutoButtonColor = false, Text = image and "" or text, TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 14, Parent = Header})
+    corner(button, 999)
+    stroke(button, C.Stroke, 0.3)
+    if image then
+        mk("ImageLabel", {Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, Image = image, ImageColor3 = C.Dim, ScaleType = Enum.ScaleType.Fit, Parent = button})
+    end
+    return button
+end
+local HideButton = headerButton("\226\128\147", -46, "rbxassetid://81811812656965")
+local CloseButton = headerButton("\226\156\149", -12, "rbxassetid://115244780748239")
+-- chip de estado: la pelota que te persigue, en vivo
+local Chip = mk("Frame", {Size = UDim2.fromOffset(108, 26), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -82, 0, 28), BackgroundColor3 = C.Card, BorderSizePixel = 0, Parent = Header})
+corner(Chip, 999)
+local ChipStroke = stroke(Chip, C.Stroke, 0.3)
+local ChipDot = mk("Frame", {Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 10, 0.5, 0), BackgroundColor3 = C.Dim, BorderSizePixel = 0, Parent = Chip})
+corner(ChipDot, 999)
+local ChipText = mk("TextLabel", {Size = UDim2.new(1, -26, 1, 0), Position = UDim2.fromOffset(22, 0), BackgroundTransparency = 1, Text = "", TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Chip})
+
+-- contador de jugadores en linea, junto al chip de FPS (mismo metodo que Yin Yang): cada 60 s avisa con /api/heartbeat y lee onlineCount de /api/chat/messages
+local COUNT_URL = tostring(Settings.OnlineUrl or "https://chatglobal.up.railway.app")
+local CountPill = mk("Frame", {Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -196, 0, 28), BackgroundColor3 = C.Card, BorderSizePixel = 0, Parent = Header})
+corner(CountPill, 999)
+local CountStroke = stroke(CountPill, C.Stroke, 0.3)
+mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 11), Parent = CountPill})
+mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = CountPill})
+local CountDot = mk("Frame", {Size = UDim2.fromOffset(8, 8), BackgroundColor3 = C.Dim, BorderSizePixel = 0, LayoutOrder = 1, Parent = CountPill})
+corner(CountDot, 999)
+local CountText = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = "\226\128\166", TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 10, LayoutOrder = 2, Parent = CountPill})
+if Settings.OnlineCounter ~= true then CountPill.Visible = false end
+task.spawn(function()
+    if Settings.OnlineCounter ~= true then return end
+    local sendRequest = (syn and syn.request) or (http and http.request) or fluxus_request or http_request or request or (fluxus and fluxus.request)
+    local HttpService = game:GetService("HttpService")
+    local function setState(text, color)
+        CountText.Text, CountText.TextColor3, CountDot.BackgroundColor3, CountStroke.Color = text, color, color, color
+    end
+    if not sendRequest then setState("!", C.Bad) return end
+    local body = HttpService:JSONEncode({playerId = tostring(LocalPlayer.UserId)})
+    while Gui.Parent do
+        local ok = pcall(function()
+            sendRequest({Url = COUNT_URL .. "/api/heartbeat", Method = "POST", Headers = {["Content-Type"] = "application/json"}, Body = body})
+            local response = sendRequest({Url = COUNT_URL .. "/api/chat/messages?after=999999999", Method = "GET"})
+            local count = tonumber(HttpService:JSONDecode(response.Body).onlineCount)
+            if not count then error("sin onlineCount") end
+            setState(tostring(math.floor(count)), C.Good)
+        end)
+        if not ok then setState("!", C.Bad) end
+        task.wait(60)
+    end
+end)
+
+-- paginas
+local Pages = mk("Frame", {Size = UDim2.new(1, -20, 1, -126), Position = UDim2.fromOffset(10, 60), BackgroundTransparency = 1, Parent = Window})
+
+-- ==================== PESTANAS ABAJO EN CARRUSEL ====================
+-- Carrusel: vuelta infinita,
+-- arrastre con inercia, los iconos de los bordes se achican, giran un poco al moverse
+-- y la pestana elegida se centra con animacion.
+local TabBar = mk("Frame", {Size = UDim2.new(1, -16, 0, 54), Position = UDim2.new(0, 8, 1, -60), BackgroundColor3 = C.Card, BackgroundTransparency = BAR_ALPHA, BorderSizePixel = 0, ClipsDescendants = true, Parent = Window})
+corner(TabBar, 16)
+stroke(TabBar, C.Stroke, 0.2)
+local Viewport = mk("Frame", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ClipsDescendants = true, Parent = TabBar})
+for _, side in ipairs({0, 1}) do
+    local fade = mk("Frame", {Size = UDim2.new(0, 30, 1, 0), AnchorPoint = Vector2.new(side, 0), Position = UDim2.fromScale(side, 0), BackgroundColor3 = C.Card, BackgroundTransparency = BAR_ALPHA, BorderSizePixel = 0, ZIndex = 5, Parent = TabBar})
+    corner(fade, 16) -- mismas esquinas redondas que la barra, para que no sobresalgan
+    mk("UIGradient", {Rotation = side == 0 and 0 or 180, Transparency = NumberSequence.new(0, 1), Parent = fade})
+end
+
+local TAB_SIZE, TAB_MIN_STEP = 48, 58
+local Carousel = {items = {}, offset = 0, velocity = 0, viewW = 0, anim = nil, spin = 0, lastOffset = 0, step = TAB_MIN_STEP, press = nil}
+
+local function renderCarousel()
+    local count, viewW = #Carousel.items, Carousel.viewW
+    if count == 0 or viewW <= 0 then return end
+    local step = Carousel.step
+    local length = count * step
+    Carousel.offset = Carousel.offset % length
+    local moved = ((Carousel.offset - Carousel.lastOffset + length / 2) % length) - length / 2
+    Carousel.lastOffset = Carousel.offset
+    Carousel.spin = math.clamp(Carousel.spin - moved * 0.6, -24, 24)
+    for index, item in ipairs(Carousel.items) do
+        local x = (((index - 1) * step - Carousel.offset + step) % length) - step
+        item.button.Position = UDim2.new(0, x + step / 2, 0.5, 0)
+        local d = math.clamp(math.abs((x + step / 2) - viewW / 2) / math.max(viewW / 2, 1), 0, 1)
+        item.scale.Scale = 1 - 0.25 * math.clamp((d - 0.55) / 0.45, 0, 1)
+        item.dist = d
+        item.icon.Rotation = Carousel.spin * (0.6 + 0.8 * d)
+    end
+end
+
+local function focusCarousel(name, animate)
+    if Carousel.viewW <= 0 then return end
+    local index
+    for i, item in ipairs(Carousel.items) do
+        if item.name == name then index = i break end
+    end
+    if not index then return end
+    local length = #Carousel.items * Carousel.step
+    local target = (index - 1) * Carousel.step + Carousel.step / 2 - Carousel.viewW / 2
+    local delta = (target - Carousel.offset + length / 2) % length - length / 2
+    Carousel.velocity = 0
+    if animate then
+        Carousel.anim = {from = Carousel.offset, to = Carousel.offset + delta, t0 = os.clock(), dur = 0.35}
+    else
+        Carousel.anim = nil
+        Carousel.offset = Carousel.offset + delta
+        renderCarousel()
+    end
+end
+
+local Tabs, currentTab = {}, nil
+local TabTitles = {Home = "Inicio", Settings = "Ajustes"}
+
+local function relayoutCarousel()
+    local scale = WindowScale.Scale
+    if type(scale) ~= "number" or scale < 0.05 then scale = 1 end
+    Carousel.viewW = Viewport.AbsoluteSize.X / scale
+    local count = #Carousel.items
+    -- el paso se estira para que la vuelta infinita nunca deje huecos visibles
+    if count > 0 then Carousel.step = math.max(TAB_MIN_STEP, (Carousel.viewW + 2 * TAB_SIZE) / count) end
+    Carousel.anim = nil
+    Carousel.velocity = 0
+    renderCarousel()
+    if currentTab then focusCarousel(currentTab, false) end
+end
+track(Viewport:GetPropertyChangedSignal("AbsoluteSize"):Connect(relayoutCarousel))
+Viewport.InputChanged:Connect(function(input)
+    if input.UserInputType ~= Enum.UserInputType.MouseWheel then return end
+    Carousel.anim = nil
+    Carousel.velocity = Carousel.velocity - input.Position.Z * 520
+end)
+
+local function selectTab(name)
+    HeaderSub.Text = tr(TabTitles[name] or name)
+    for tabName, tab in pairs(Tabs) do
+        local on = tabName == name
+        tab.page.Visible = on
+        tween(tab.icon, 0.25, {[tab.iconProp] = on and C.Accent or C.Dim, [tab.iconProp == "ImageColor3" and "ImageTransparency" or "TextTransparency"] = on and 0 or 0.35})
+        tween(tab.caption, 0.25, {TextColor3 = on and C.Accent or C.Dim, TextTransparency = on and 0 or 0.35})
+        tween(tab.underline, 0.3, {Size = UDim2.fromOffset(on and 18 or 0, 3)}, Enum.EasingStyle.Back)
+    end
+    currentTab = name
+    focusCarousel(name, true)
+end
+
+local function createTab(order, name, icon, caption)
+    local button = mk("TextButton", {Size = UDim2.fromOffset(TAB_SIZE, 44), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = C.Field, BackgroundTransparency = 1, AutoButtonColor = false, Text = "", ZIndex = 2, Parent = Viewport})
+    corner(button, 13)
+    local buttonStroke = stroke(button, C.Stroke, 1)
+    local underline = mk("Frame", {Size = UDim2.fromOffset(0, 3), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 2), BackgroundColor3 = C.Accent, BorderSizePixel = 0, ZIndex = 3, Parent = button})
+    corner(underline, 99)
+    local iconLabel, iconProp = mkIcon(icon, C.Dim, {Size = UDim2.fromOffset(22, 22), Position = UDim2.new(0.5, -11, 0, 4), ScaleType = Enum.ScaleType.Fit, ZIndex = 3, Parent = button},
+        {Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 3), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 17, ZIndex = 3, Parent = button})
+    local captionLabel = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 12), Position = UDim2.fromOffset(0, 28), BackgroundTransparency = 1, Text = caption, TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 8, ZIndex = 3, Parent = button})
+    local page = mk("ScrollingFrame", {
+        Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3,
+        ScrollBarImageColor3 = C.Accent, CanvasSize = UDim2.new(0, 0, 0, 0), AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        Visible = false, Parent = Pages,
+    })
+    mk("UIListLayout", {Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder, Parent = page})
+    mk("UIPadding", {PaddingRight = UDim.new(0, 6), PaddingBottom = UDim.new(0, 10), Parent = page})
+    Tabs[name] = {button = button, icon = iconLabel, iconProp = iconProp, caption = captionLabel, stroke = buttonStroke, underline = underline, page = page, order = 0}
+    local item = {name = name, button = button, icon = iconLabel, scale = mk("UIScale", {Scale = 1, Parent = button})}
+    table.insert(Carousel.items, item)
+    -- tocar sin arrastrar = elegir pestana; arrastrar = mover el carrusel
+    button.InputBegan:Connect(function(input)
+        local inputType = input.UserInputType
+        if inputType ~= Enum.UserInputType.MouseButton1 and inputType ~= Enum.UserInputType.Touch then return end
+        if Carousel.press then return end
+        Carousel.anim, Carousel.velocity = nil, 0
+        Carousel.press = {input = input, startX = input.Position.X, lastX = input.Position.X, lastT = os.clock(), moved = false, item = item}
+    end)
+    return Tabs[name]
+end
+
+track(UserInputService.InputChanged:Connect(function(input)
+    local press = Carousel.press
+    if not press then return end
+    local pressType, inputType = press.input.UserInputType, input.UserInputType
+    local matches = (inputType == Enum.UserInputType.MouseMovement and pressType == Enum.UserInputType.MouseButton1)
+        or (inputType == Enum.UserInputType.Touch and pressType == Enum.UserInputType.Touch)
+    if not matches then return end
+    local x = input.Position.X
+    if not press.moved and math.abs(x - press.startX) > 7 then press.moved = true end
+    if press.moved then
+        local now = os.clock()
+        local dt = math.max(now - press.lastT, 1 / 240)
+        local scale = (type(WindowScale.Scale) == "number" and WindowScale.Scale > 0.05) and WindowScale.Scale or 1
+        local dx = (x - press.lastX) / scale
+        Carousel.offset = Carousel.offset - dx
+        Carousel.velocity = Carousel.velocity * 0.5 + (-dx / dt) * 0.5
+        press.lastT = now
+        renderCarousel()
+    end
+    press.lastX = x
+end))
+track(UserInputService.InputEnded:Connect(function(input)
+    local press = Carousel.press
+    if not press or input.UserInputType ~= press.input.UserInputType then return end
+    Carousel.press = nil
+    if press.moved then
+        if os.clock() - press.lastT > 0.08 then Carousel.velocity = 0 end
+    else
+        selectTab(press.item.name)
+    end
+end))
+track(RunService.Heartbeat:Connect(function(dt)
+    if Carousel.spin ~= 0 then
+        Carousel.spin = Carousel.spin * math.exp(-9 * dt)
+        if math.abs(Carousel.spin) < 0.05 then Carousel.spin = 0 end
+        for _, item in ipairs(Carousel.items) do item.icon.Rotation = Carousel.spin * (0.6 + 0.8 * (item.dist or 0)) end
+    end
+    if Carousel.press and Carousel.press.moved then return end
+    local anim = Carousel.anim
+    if anim then
+        local t = math.min((os.clock() - anim.t0) / anim.dur, 1)
+        Carousel.offset = anim.from + (anim.to - anim.from) * (1 - (1 - t) ^ 3)
+        if t >= 1 then Carousel.anim = nil end
+        renderCarousel()
+    elseif math.abs(Carousel.velocity) > 8 then
+        Carousel.offset = Carousel.offset + Carousel.velocity * dt
+        Carousel.velocity = Carousel.velocity * math.exp(-4.2 * dt)
+        renderCarousel()
+    elseif Carousel.velocity ~= 0 then
+        Carousel.velocity = 0
+    end
+end))
+
+-- ---------- avisos tipo notificacion ----------
+local ToastHolder = mk("Frame", {Size = UDim2.fromOffset(320, 0), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -24), BackgroundTransparency = 1, Parent = Gui})
+mk("UIListLayout", {Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Bottom, HorizontalAlignment = Enum.HorizontalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder, Parent = ToastHolder})
+local toastCount = 0
+local function toast(text, color)
+    toastCount = toastCount + 1
+    local card = mk("Frame", {Size = UDim2.fromOffset(0, 32), AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = C.Card, BorderSizePixel = 0, LayoutOrder = toastCount, Parent = ToastHolder})
+    corner(card, 999)
+    stroke(card, color or C.Stroke, 0.25)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), Parent = card})
+    mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1
