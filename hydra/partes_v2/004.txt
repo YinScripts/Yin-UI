@@ -1,0 +1,218 @@
+ createTab(1, "Home", "\226\140\130", "INICIO")
+local TabSettings = createTab(2, "Settings", "\226\154\153", "AJUSTES")
+
+-- INICIO
+local Home = {start = os.clock(), frames = 0, acc = 0, fps = 0, bars = {}, history = {}, values = {}}
+do
+    local function service(name)
+        local ok, found = pcall(function() return game:GetService(name) end)
+        return ok and found or nil
+    end
+    Home.stats, Home.market, Home.teleport = service("Stats"), service("MarketplaceService"), service("TeleportService")
+
+    -- tarjeta de bienvenida
+    local hero = mk("Frame", {Size = UDim2.new(1, 0, 0, 108), BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = nextOrder(TabHome), Parent = TabHome.page})
+    corner(hero, 16)
+    stroke(hero, C.Stroke, 0.45)
+    -- franja de luz diagonal que cruza la tarjeta de vez en cuando
+    local shine = mk("Frame", {Size = UDim2.new(0, 60, 2, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(-0.2, 0, 0.5, 0), Rotation = 18, BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.93, BorderSizePixel = 0, Parent = hero})
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = shine})
+    TweenService:Create(shine, TweenInfo.new(2.4, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut, -1, false, 3.5), {Position = UDim2.new(1.2, 0, 0.5, 0)}):Play()
+    -- resplandor del acento en la esquina
+    local glow = mk("Frame", {Size = UDim2.fromOffset(220, 220), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(1, -20, 0, 0), BackgroundColor3 = C.Accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, Parent = hero})
+    corner(glow, 999)
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.6, 0.55), NumberSequenceKeypoint.new(1, 1)}), Rotation = 45, Parent = glow})
+
+    -- avatar con anillo que gira
+    local ring = mk("Frame", {Size = UDim2.fromOffset(70, 70), Position = UDim2.new(0, 16, 0.5, -35), BackgroundColor3 = C.Field, BorderSizePixel = 0, Parent = hero})
+    corner(ring, 999)
+    local ringStroke = mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 2.5, Parent = ring})
+    local ringGradient = mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, C.Accent), ColorSequenceKeypoint.new(0.5, C.Field), ColorSequenceKeypoint.new(1, C.Accent)}), Rotation = 0, Parent = ringStroke})
+    Home.ringGradient = ringGradient
+    local avatar = mk("ImageLabel", {Size = UDim2.new(1, -8, 1, -8), Position = UDim2.fromOffset(4, 4), BackgroundColor3 = C.AccentSoft, BorderSizePixel = 0, Image = "", ScaleType = Enum.ScaleType.Crop, Parent = ring})
+    corner(avatar, 999)
+    local online = mk("Frame", {Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -2, 1, -2), BackgroundColor3 = C.Good, BorderSizePixel = 0, ZIndex = 3, Parent = ring})
+    corner(online, 999)
+    mk("UIStroke", {Color = C.Card, Thickness = 2.5, Parent = online})
+    task.spawn(function()
+        local ok, image = pcall(function()
+            return Players:GetUserThumbnailAsync(LocalPlayer.UserId, Enum.ThumbnailType.HeadShot, Enum.ThumbnailSize.Size150x150)
+        end)
+        if ok and type(image) == "string" and avatar.Parent then avatar.Image = image end
+    end)
+
+    -- saludo segun la hora
+    local function greetingKey()
+        local hour = tonumber(os.date("%H")) or 12
+        if hour >= 6 and hour < 12 then return "Buenos d\195\173as" end
+        if hour >= 12 and hour < 20 then return "Buenas tardes" end
+        return "Buenas noches"
+    end
+    Home.greeting = mk("TextLabel", {Size = UDim2.new(1, -112, 0, 24), Position = UDim2.fromOffset(100, 20), BackgroundTransparency = 1, Text = "", TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = hero})
+    mk("TextLabel", {Size = UDim2.new(1, -112, 0, 14), Position = UDim2.fromOffset(100, 45), BackgroundTransparency = 1, Text = "@" .. LocalPlayer.Name, TextColor3 = C.Dim, Font = Enum.Font.GothamMedium, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = hero})
+    local function chip(x)
+        local frame = mk("Frame", {Size = UDim2.fromOffset(0, 20), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(x, 68), BackgroundColor3 = C.AccentSoft, BackgroundTransparency = 0.2, BorderSizePixel = 0, Parent = hero})
+        corner(frame, 999)
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = frame})
+        mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 5), Parent = frame})
+        local dot = mk("Frame", {Size = UDim2.fromOffset(6, 6), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = frame})
+        corner(dot, 999)
+        local label = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = "", TextColor3 = C.Accent, Font = Enum.Font.GothamBold, TextSize = 10, Parent = frame})
+        return frame, label, dot
+    end
+    local onlineChip, onlineLabel = chip(100)
+    Home.onlineLabel = onlineLabel
+    local sessionChip, sessionLabel = chip(100)
+    Home.sessionLabel = sessionLabel
+    -- el segundo chip se acomoda al lado del primero
+    local function placeChips() sessionChip.Position = UDim2.fromOffset(100 + onlineChip.AbsoluteSize.X / math.max(WindowScale.Scale, 0.05) + 6, 68) end
+    track(onlineChip:GetPropertyChangedSignal("AbsoluteSize"):Connect(placeChips))
+
+    function Home.refreshTexts()
+        Home.greeting.Text = tr(greetingKey()) .. ", " .. LocalPlayer.DisplayName
+        onlineLabel.Text = tr("En l\195\173nea")
+    end
+    Home.refreshTexts()
+
+    -- tarjetas de datos en vivo (2 x 2)
+    section(TabHome, "Rendimiento", "\226\151\183")
+    local grid = mk("Frame", {Size = UDim2.new(1, 0, 0, 144), BackgroundTransparency = 1, LayoutOrder = nextOrder(TabHome), Parent = TabHome.page})
+    mk("UIGridLayout", {CellSize = UDim2.new(0.5, -4, 0, 68), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = grid})
+    local function tile(order, caption, glyph)
+        local card = mk("Frame", {BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order, Parent = grid})
+        corner(card, 14)
+        stroke(card, C.Stroke, 0.5)
+        local badge = mk("Frame", {Size = UDim2.fromOffset(22, 22), Position = UDim2.fromOffset(10, 10), BackgroundColor3 = C.AccentSoft, BorderSizePixel = 0, Parent = card})
+        corner(badge, 7)
+        mkIcon(glyph, C.Accent, {Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(4, 4), ScaleType = Enum.ScaleType.Fit, Parent = badge},
+            {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 12, Parent = badge})
+        mk("TextLabel", {Size = UDim2.new(1, -44, 0, 22), Position = UDim2.fromOffset(38, 10), BackgroundTransparency = 1, Text = caption, TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card})
+        local value = mk("TextLabel", {Size = UDim2.new(1, -20, 0, 24), Position = UDim2.fromOffset(10, 36), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 18, TextXAlignment = Enum.TextXAlignment.Left, Parent = card})
+        return card, value
+    end
+    local fpsCard
+    fpsCard, Home.values.fps = tile(1, "FPS", "\226\151\183")
+    _, Home.values.ping = tile(2, "Ping", "\226\151\142")
+    _, Home.values.players = tile(3, "Jugadores", "\226\156\166")
+    _, Home.values.uptime = tile(4, "Servidor abierto hace", "\226\150\162")
+    -- mini grafico de FPS de los ultimos segundos
+    local graph = mk("Frame", {Size = UDim2.fromOffset(66, 24), AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -10, 1, -10), BackgroundTransparency = 1, Parent = fpsCard})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Bottom, Padding = UDim.new(0, 2), SortOrder = Enum.SortOrder.LayoutOrder, Parent = graph})
+    for i = 1, 16 do
+        local bar = mk("Frame", {Size = UDim2.new(0, 2, 0, 2), BackgroundColor3 = C.Accent, BackgroundTransparency = 0.25, BorderSizePixel = 0, LayoutOrder = i, Parent = graph})
+        corner(bar, 2)
+        Home.bars[i] = bar
+    end
+
+    -- datos de la partida
+    section(TabHome, "Partida", "\226\156\142")
+    Home.info = infoCard(TabHome, {"Juego", "Ejecutor", "Versi\195\179n"})
+    Home.info["Versi\195\179n"].Text = "Hydra 1.0"
+    do
+        local name = "?"
+        pcall(function()
+            local a, b = identifyexecutor()
+            name = tostring(a) .. (b and (" " .. tostring(b)) or "")
+        end)
+        Home.info["Ejecutor"].Text = name
+    end
+    task.spawn(function()
+        local ok, product = pcall(function() return Home.market:GetProductInfo(game.PlaceId) end)
+        local label = Home.info["Juego"]
+        if label.Parent then label.Text = (ok and type(product) == "table" and product.Name) or tostring(game.PlaceId) end
+    end)
+
+    -- accesos rapidos
+    section(TabHome, "Accesos r\195\161pidos", "\226\158\164")
+    local quick = mk("Frame", {Size = UDim2.new(1, 0, 0, 58), BackgroundTransparency = 1, LayoutOrder = nextOrder(TabHome), Parent = TabHome.page})
+    mk("UIGridLayout", {CellSize = UDim2.new(1 / 3, -6, 1, 0), CellPadding = UDim2.fromOffset(8, 0), SortOrder = Enum.SortOrder.LayoutOrder, Parent = quick})
+    local function quickButton(order, glyph, caption, onClick)
+        local button = mk("TextButton", {BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, AutoButtonColor = false, Text = "", LayoutOrder = order, Parent = quick})
+        corner(button, 14)
+        local buttonStroke = stroke(button, C.Stroke, 0.5)
+        hover(button)
+        local scale = mk("UIScale", {Scale = 1, Parent = button})
+        mkIcon(glyph, C.Accent, {Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, -9, 0, 9), ScaleType = Enum.ScaleType.Fit, Parent = button},
+            {Size = UDim2.new(1, 0, 0, 22), Position = UDim2.fromOffset(0, 7), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 16, Parent = button})
+        mk("TextLabel", {Size = UDim2.new(1, -8, 0, 14), Position = UDim2.new(0, 4, 1, -20), BackgroundTransparency = 1, Text = caption, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 10, TextTruncate = Enum.TextTruncate.AtEnd, Parent = button})
+        button.MouseButton1Down:Connect(function() tween(scale, 0.08, {Scale = 0.94}) end)
+        button.MouseButton1Up:Connect(function() tween(scale, 0.3, {Scale = 1}, Enum.EasingStyle.Back) end)
+        button.MouseLeave:Connect(function() tween(scale, 0.3, {Scale = 1}, Enum.EasingStyle.Back) end)
+        button.MouseButton1Click:Connect(function()
+            tween(buttonStroke, 0.08, {Color = C.Accent, Transparency = 0})
+            task.delay(0.25, function() tween(buttonStroke, 0.4, {Color = C.Stroke, Transparency = 0.5}) end)
+            local ok, err = pcall(onClick)
+            if not ok then toast("Error: " .. tostring(err), C.Bad) end
+        end)
+    end
+    quickButton(1, "\226\156\142", "Copiar servidor", function()
+        local copy = setclipboard or toclipboard
+        if type(copy) ~= "function" then toast(tr("Tu ejecutor no puede copiar"), C.Bad) return end
+        copy(tostring(game.JobId))
+        toast(tr("ID del servidor copiado"), C.Accent)
+    end)
+    quickButton(2, "\226\158\164", "Reentrar", function()
+        toast(tr("Reentrando..."), C.Accent)
+        local ok = pcall(function() Home.teleport:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer) end)
+        if not ok then toast(tr("No se pudo reentrar"), C.Bad) end
+    end)
+    quickButton(3, "\226\154\153", "Idioma", function() selectTab("Settings") end)
+end
+
+-- datos en vivo: FPS siempre (chip de la cabecera); el resto solo con la pestana Inicio abierta
+local function fpsColor(fps)
+    if fps >= 50 then return C.Good end
+    if fps >= 30 then return C.Mid end
+    return C.Bad
+end
+local function clockText(seconds)
+    seconds = math.max(0, math.floor(seconds))
+    local h, m, sec = math.floor(seconds / 3600), math.floor(seconds / 60) % 60, seconds % 60
+    if h > 0 then return string.format("%d:%02d:%02d", h, m, sec) end
+    return string.format("%02d:%02d", m, sec)
+end
+track(RunService.Heartbeat:Connect(function(dt)
+    Home.frames = Home.frames + 1
+    Home.acc = Home.acc + dt
+    if Home.ringGradient and Window.Visible then Home.ringGradient.Rotation = (Home.ringGradient.Rotation + dt * 90) % 360 end
+    if Home.acc < 0.5 then return end
+    Home.fps = math.floor(Home.frames / Home.acc + 0.5)
+    Home.frames, Home.acc = 0, 0
+    table.insert(Home.history, Home.fps)
+    if #Home.history > #Home.bars then table.remove(Home.history, 1) end
+    if not Window.Visible then return end
+    local color = fpsColor(Home.fps)
+    ChipText.Text = Home.fps .. " FPS"
+    ChipText.TextColor3 = color
+    ChipDot.BackgroundColor3 = color
+    ChipStroke.Color = color
+    if currentTab ~= "Home" then return end
+    Home.values.fps.Text = Home.fps .. " FPS"
+    Home.values.fps.TextColor3 = color
+    for i, bar in ipairs(Home.bars) do
+        local value = Home.history[#Home.history - #Home.bars + i]
+        bar.Size = UDim2.new(0, 2, 0, value and math.clamp(math.floor(value / 60 * 24), 2, 24) or 2)
+        bar.BackgroundColor3 = value and fpsColor(value) or C.Off
+    end
+    local ping
+    pcall(function() ping = math.floor(Home.stats.Network.ServerStatsItem["Data Ping"]:GetValue() + 0.5) end)
+    Home.values.ping.Text = ping and (ping .. " ms") or "\226\128\148"
+    Home.values.ping.TextColor3 = not ping and C.Text or (ping < 120 and C.Good or (ping < 250 and C.Mid or C.Bad))
+    Home.values.players.Text = #Players:GetPlayers() .. " / " .. tostring(Players.MaxPlayers)
+    Home.values.uptime.Text = clockText(workspace.DistributedGameTime)
+    Home.sessionLabel.Text = tr("Sesi\195\179n") .. " " .. clockText(os.clock() - Home.start)
+end))
+
+-- AJUSTES
+section(TabSettings, "Idioma", "\226\156\142")
+local LANGUAGE_NAMES = {auto = "Autom\195\161tico", es = "Espa\195\177ol", en = "English"}
+local LanguagePicker = dropdown(TabSettings, "Idioma", "Autom\195\161tico = el idioma de tu Roblox", function()
+    return {
+        {value = "auto", text = tr("Autom\195\161tico")},
+        {value = "es", text = "Espa\195\177ol"},
+        {value = "en", text = "English"},
+    }
+end, function(value)
+    Config.language = value
+    saveConfig()
+    applyLanguage(
