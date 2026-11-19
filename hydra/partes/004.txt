@@ -1,0 +1,446 @@
+
+        local lockBody = mk("Frame", {Size = UDim2.fromOffset(12, 9), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, 3), BackgroundColor3 = C.Dim, BorderSizePixel = 0, ZIndex = 2, Parent = lockB})
+        corner(lockBody, 3)
+        local keyhole = mk("Frame", {Size = UDim2.fromOffset(2, 3), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = C.Bg, BorderSizePixel = 0, ZIndex = 3, Parent = lockBody})
+        corner(keyhole, 99)
+        local function paintLock(animate)
+            local floating = Hydra.Floats[id] ~= nil
+            local locked = floating and Hydra.isFloatLocked(id)
+            -- siempre visible (como Yin Yang); sin flotante queda apagado y no hace nada
+            lockB.BackgroundTransparency = floating and 0.35 or 0.7
+            local t = animate and 0.2 or 0
+            tween(shackleStroke, t, {Color = locked and C.Accent or C.Dim})
+            tween(lockBody, t, {BackgroundColor3 = locked and C.Accent or C.Dim})
+            tween(shackle, t, {Position = locked and UDim2.new(0.5, 0, 0.5, -4) or UDim2.new(0.5, 3, 0.5, -6)})
+        end
+        floatButton.paintLock = paintLock
+        lockB.MouseButton1Click:Connect(function()
+            if not Hydra.Floats[id] then return end
+            Hydra.setFloatLocked(id, not Hydra.isFloatLocked(id))
+            paintLock(true)
+        end)
+        paintLock(false)
+        b.MouseButton1Click:Connect(function()
+            local on = Hydra.floatButton(obj, o)
+            tween(fiStroke, 0.2, {Color = on and C.Accent or C.Dim})
+            tween(corner2, 0.2, {BackgroundColor3 = on and C.Accent or C.Dim})
+            paintLock(true)
+        end)
+    end
+    -- desplegable de sub-opciones
+    local options, chevron
+    local function ensureOptions()
+        if options then return options end
+        options = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = options})
+        mk("UIListLayout", {Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = options})
+        local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = C.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, LayoutOrder = 0, Parent = options})
+        mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = line})
+        local b = mini(6, 26)
+        chevron = mk("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "\226\128\186", TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 18, Rotation = 90, Parent = b})
+        b.MouseButton1Click:Connect(function()
+            options.Visible = not options.Visible
+            tween(chevron, 0.25, {Rotation = options.Visible and 270 or 90, TextColor3 = options.Visible and C.Accent or C.Dim})
+        end)
+        return options
+    end
+    -- textos
+    local textArea = mk("Frame", {Size = UDim2.new(1, -x - 12, 1, 0), Position = UDim2.fromOffset(x, 0), BackgroundTransparency = 1, Parent = head})
+    local titleLabel = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 16), Position = UDim2.new(0, 0, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = textArea})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, 0, 0, 13), Position = UDim2.new(0, 0, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = textArea})
+    end
+    -- el texto no se mete debajo de los botones de la derecha
+    local function fitText()
+        local scale = (type(WindowScale.Scale) == "number" and WindowScale.Scale > 0.05) and WindowScale.Scale or 1
+        textArea.Size = UDim2.new(1, -x - 18 - right.AbsoluteSize.X / scale, 1, 0)
+    end
+    right:GetPropertyChangedSignal("AbsoluteSize"):Connect(fitText)
+
+    local function paint(animate)
+        local t = animate and 0.25 or 0
+        tween(switch, t, {BackgroundColor3 = state and C.On or C.Off})
+        switchGradient.Enabled = state
+        tween(knob, t, {Position = state and UDim2.new(1, -21, 0.5, 0) or UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = state and C.Bg or Color3.new(1, 1, 1)}, Enum.EasingStyle.Back)
+        if animate then
+            tween(knob, 0.1, {Size = UDim2.fromOffset(23, 16)})
+            task.delay(0.1, function() tween(knob, 0.2, {Size = UDim2.fromOffset(18, 18)}, Enum.EasingStyle.Back) end)
+        end
+        knobShadow.Transparency = state and 0.6 or 0.75
+        tween(cardStroke, t, {Color = state and C.Accent or C.Stroke, Transparency = state and 0.35 or (nested and 0.65 or 0.5)})
+        tween(glowBar, t, {Size = UDim2.fromOffset(3, state and headH - 22 or 0)})
+        tween(titleLabel, t, {TextColor3 = state and C.Text or C.Text})
+        if badge then
+            tween(badge, t, {BackgroundColor3 = state and C.Accent or C.AccentSoft})
+            tween(icon, t, {[iconProp] = state and C.Bg or C.Accent})
+        end
+        if obj._floatPaint then pcall(obj._floatPaint) end
+    end
+    function obj:Set(newState, silent)
+        newState = newState == true
+        if newState == state then return end
+        state = newState
+        Config.flags[id] = state
+        saveConfig()
+        paint(true)
+        if o.Callback and not silent then pcall(o.Callback, state) end
+    end
+    function obj:Get() return state end
+    function obj:Toggle(sub) return Hydra.toggle(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Slider(sub) return Hydra.slider(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Button(sub) return Hydra.button(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Dropdown(sub) return Hydra.dropdown(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Input(sub) return Hydra.input(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Keybind(sub) return Hydra.keybind(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:MultiDropdown(sub) return Hydra.multiDropdown(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:ColorPicker(sub) return Hydra.colorPicker(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Label(sub) return Hydra.label(ensureOptions(), function() return #options:GetChildren() + 1 end, sub, true) end
+    function obj:Divider() return Hydra.divider(ensureOptions(), function() return #options:GetChildren() + 1 end) end
+    function obj:Open(open)
+        local opts = ensureOptions()
+        opts.Visible = open ~= false
+        chevron.Rotation = opts.Visible and 270 or 90
+    end
+
+    head.MouseButton1Click:Connect(function() obj:Set(not state) end)
+    head.MouseEnter:Connect(function() tween(card, 0.15, {BackgroundTransparency = (nested and 0.94 or CARD_ALPHA) - 0.06}) end)
+    head.MouseLeave:Connect(function() tween(card, 0.2, {BackgroundTransparency = nested and 0.94 or CARD_ALPHA}) end)
+    paint(false)
+    task.defer(fitText)
+    Hydra.Options[id] = obj
+    -- si el valor guardado estaba prendido, se avisa al script al arrancar
+    if state and o.Callback then task.defer(function() pcall(o.Callback, true) end) end
+    if o.Floating and type(Config.floats[id]) == "table" and floatButton then
+        task.defer(function()
+            if Hydra.floatButton(obj, o) then
+                floatButton.stroke.Color = C.Accent
+                floatButton.dot.BackgroundColor3 = C.Accent
+            end
+            floatButton.paintLock(false)
+        end)
+    end
+    return obj
+end
+
+-- ---------- boton ----------
+-- Tab:Button({Title, Desc, Icon, Callback}) o Toggle:Button({...}) dentro del desplegable
+function Hydra.button(parent, order, o, nested)
+    local card = mk("TextButton", {Size = UDim2.new(1, 0, 0, nested and 44 or (o.Desc and 60 or 52)), BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA,
+        AutoButtonColor = false, Text = "", LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    local x = 14
+    if not nested then
+        local badge = mk("Frame", {Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), BackgroundColor3 = C.AccentSoft, BorderSizePixel = 0, Parent = card})
+        corner(badge, 10)
+        mkIcon(o.Icon or "\226\158\164", C.Accent, {Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(8, 8), ScaleType = Enum.ScaleType.Fit, Parent = badge},
+            {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 15, Parent = badge})
+        x = 56
+    end
+    mk("TextLabel", {Size = UDim2.new(1, -x - 60, 0, 16), Position = UDim2.new(0, x, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, -x - 60, 0, 13), Position = UDim2.new(0, x, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim,
+            Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card})
+    end
+    -- flechita a la derecha que se ilumina al tocar
+    local go = mk("Frame", {Size = UDim2.fromOffset(30, 26), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.35, BorderSizePixel = 0, Parent = card})
+    corner(go, 9)
+    local goStroke = stroke(go, C.Stroke, 0.55)
+    local arrow = mk("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "\226\128\186", TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 18, Parent = go})
+    local scale = mk("UIScale", {Scale = 1, Parent = card})
+    card.MouseEnter:Connect(function() tween(card, 0.15, {BackgroundTransparency = (nested and 0.94 or CARD_ALPHA) - 0.06}) end)
+    card.MouseLeave:Connect(function()
+        tween(card, 0.2, {BackgroundTransparency = nested and 0.94 or CARD_ALPHA})
+        tween(scale, 0.25, {Scale = 1})
+    end)
+    card.MouseButton1Down:Connect(function() tween(scale, 0.08, {Scale = 0.98}) end)
+    card.MouseButton1Up:Connect(function() tween(scale, 0.25, {Scale = 1}, Enum.EasingStyle.Back) end)
+    card.MouseButton1Click:Connect(function()
+        tween(goStroke, 0.1, {Color = C.Accent, Transparency = 0})
+        tween(arrow, 0.1, {TextColor3 = C.Accent})
+        tween(cardStroke, 0.1, {Color = C.Accent, Transparency = 0.35})
+        task.delay(0.35, function()
+            tween(goStroke, 0.4, {Color = C.Stroke, Transparency = 0.55})
+            tween(arrow, 0.4, {TextColor3 = C.Dim})
+            tween(cardStroke, 0.4, {Color = C.Stroke, Transparency = nested and 0.65 or 0.5})
+        end)
+        if o.Callback then
+            local ok, err = pcall(o.Callback)
+            if not ok then toast("Error: " .. tostring(err), C.Bad) end
+        end
+    end)
+    return {Holder = card}
+end
+
+-- ---------- lista desplegable ----------
+-- Tab:Dropdown({Id, Title, Desc, Options = {{value = ..., text = "..."}, ...} o function() return {...} end,
+--   Default = valor, Callback = function(valor) end}) o Toggle:Dropdown({...}). Guarda la eleccion (Config.flags).
+function Hydra.dropdown(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "Dropdown", Id = id, value = nil, text = nil}
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA,
+        BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local headH = nested and 46 or (o.Desc and 60 or 52)
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1, LayoutOrder = 1, Parent = card})
+    mk("TextLabel", {Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 14, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, -190, 0, 13), Position = UDim2.new(0, 14, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim,
+            Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    end
+    local pill = mk("TextButton", {Size = UDim2.fromOffset(160, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3,
+        AutoButtonColor = false, Text = "", Parent = head})
+    corner(pill, 10)
+    local pillStroke = stroke(pill, C.Stroke, 0.5)
+    local pillText = mk("TextLabel", {Size = UDim2.new(1, -34, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pill})
+    local chevron = mk("TextLabel", {Size = UDim2.fromOffset(24, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), BackgroundTransparency = 1, Text = "\226\128\186",
+        TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 18, Rotation = 90, Parent = pill})
+    -- lista (con scroll si son muchas)
+    local listWrap = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = listWrap})
+    local list = mk("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = C.Accent,
+        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = listWrap})
+    local listLayout = mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list})
+    local function options()
+        local raw = type(o.Options) == "function" and o.Options() or o.Options or {}
+        return type(raw) == "table" and raw or {}
+    end
+    local function textFor(value)
+        for _, option in ipairs(options()) do
+            if option.value == value then return option.text end
+        end
+        return nil
+    end
+    function obj:Set(value, silent)
+        obj.value = value
+        obj.text = textFor(value) or (value ~= nil and tostring(value)) or nil
+        pillText.Text = obj.text or "\226\128\148"
+        Config.flags[id] = value
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, value) end
+    end
+    function obj:Get() return obj.value end
+    local function close()
+        listWrap.Visible = false
+        tween(chevron, 0.25, {Rotation = 90, TextColor3 = C.Dim})
+        tween(pillStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        tween(cardStroke, 0.2, {Color = C.Stroke, Transparency = nested and 0.65 or 0.5})
+    end
+    local function open()
+        for _, child in ipairs(list:GetChildren()) do
+            if child:IsA("GuiObject") then child:Destroy() end
+        end
+        local all = options()
+        if #all == 0 then
+            mk("TextLabel", {Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "No hay nada para elegir", TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = list})
+        end
+        for index, option in ipairs(all) do
+            local selected = option.value == obj.value
+            local item = mk("TextButton", {Size = UDim2.new(1, -6, 0, 32), BackgroundColor3 = selected and C.Accent or C.Glass, BackgroundTransparency = selected and 0.82 or 0.94,
+                AutoButtonColor = false, Text = "", LayoutOrder = index, Parent = list})
+            corner(item, 9)
+            if selected then stroke(item, C.Accent, 0.4) end
+            mk("TextLabel", {Size = UDim2.new(1, -20, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = option.text or tostring(option.value),
+                TextColor3 = selected and C.Accent or C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = item})
+            item.MouseEnter:Connect(function() if option.value ~= obj.value then tween(item, 0.12, {BackgroundTransparency = 0.88}) end end)
+            item.MouseLeave:Connect(function() if option.value ~= obj.value then tween(item, 0.15, {BackgroundTransparency = 0.94}) end end)
+            item.MouseButton1Click:Connect(function()
+                obj:Set(option.value)
+                close()
+            end)
+        end
+        local height = math.min(#all, 6) * 36
+        list.Size = UDim2.new(1, 0, 0, math.max(height, 28))
+        listWrap.Visible = true
+        tween(chevron, 0.25, {Rotation = 270, TextColor3 = C.Accent})
+        tween(pillStroke, 0.2, {Color = C.Accent, Transparency = 0.2})
+        tween(cardStroke, 0.2, {Color = C.Accent, Transparency = 0.45})
+    end
+    pill.MouseButton1Click:Connect(function()
+        if listWrap.Visible then close() else open() end
+    end)
+    local saved = Config.flags[id]
+    if saved ~= nil then obj:Set(saved, true) elseif o.Default ~= nil then obj:Set(o.Default, true) end
+    if obj.value ~= nil and o.Callback then task.defer(function() pcall(o.Callback, obj.value) end) end
+    -- para refrescar el texto si las opciones cargan despues
+    function obj:Refresh() obj.text = textFor(obj.value) or obj.text pillText.Text = obj.text or "\226\128\148" end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ==================== ELEMENTOS NUEVOS ====================
+-- Tab:Input({Id, Title, Desc, Placeholder, Default = "", Numeric = false, MaxLength = n, Callback = function(texto) end})
+--   Caja de texto. El Callback corre al terminar de escribir. :Set(texto) y :Get() (siempre texto; con Numeric usa tonumber).
+-- Tab:Keybind({Id, Title, Desc, Default = Enum.KeyCode.F, Callback = function(tecla) end, OnChange = function(tecla) end})
+--   Tecla asignable. Callback corre al PRESIONAR la tecla; OnChange al cambiar la asignacion. :Set(tecla|nombre|nil) y :Get().
+-- Tab:MultiDropdown({Id, Title, Desc, Placeholder, Options = {{value, text}, ...} o function, Default = {valores}, Callback = function(lista) end})
+--   Lista desplegable con varias opciones a la vez. :Set({valores}) y :Get() devuelven una lista de valores.
+-- Tab:ColorPicker({Id, Title, Desc, Default = Color3, Callback = function(color) end})
+--   Selector de color con barras H / S / V y caja HEX. :Set(Color3 o "#RRGGBB") y :Get() (Color3).
+-- Tab:Label({Title, Text}) o Tab:Label("texto")  -> tarjeta de texto (:SetText, :SetTitle).   Tab:Divider() -> linea separadora.
+-- Todos funcionan tambien dentro de un toggle (Toggle:Input({...}), Toggle:ColorPicker({...}), etc.) y los que guardan valor
+-- lo hacen solos (Config.flags / Config.binds) y quedan en Hydra.Options.
+
+-- fila base: tarjeta de vidrio con insignia de icono, titulo y descripcion (igual que toggle y dropdown)
+local function baseRow(parent, order, o, nested, rightW, glyph)
+    local headH = nested and 46 or (o.Desc and 60 or 52)
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA,
+        BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1, LayoutOrder = 1, Parent = card})
+    local x = 14
+    if not nested then
+        local badge = mk("Frame", {Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), BackgroundColor3 = C.AccentSoft, BorderSizePixel = 0, Parent = head})
+        corner(badge, 10)
+        mkIcon(o.Icon or glyph, C.Accent, {Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(8, 8), ScaleType = Enum.ScaleType.Fit, Parent = badge},
+            {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 15, Parent = badge})
+        x = 56
+    end
+    local title = mk("TextLabel", {Size = UDim2.new(1, -x - rightW - 12, 0, 16), Position = UDim2.new(0, x, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title or "",
+        TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    local desc
+    if o.Desc then
+        desc = mk("TextLabel", {Size = UDim2.new(1, -x - rightW - 12, 0, 13), Position = UDim2.new(0, x, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc,
+            TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    end
+    return {card = card, head = head, stroke = cardStroke, title = title, desc = desc}
+end
+
+-- ---------- caja de texto ----------
+function Hydra.input(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "Input", Id = id}
+    local row = baseRow(parent, order, o, nested, 160, "\226\156\142")
+    local pill = mk("Frame", {Size = UDim2.fromOffset(148, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = row.head})
+    corner(pill, 10)
+    local pillStroke = stroke(pill, C.Stroke, 0.5)
+    local box = mk("TextBox", {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = o.Placeholder or "", PlaceholderColor3 = C.AccentDark,
+        TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = pill})
+    local value = ""
+    local function clean(text)
+        text = tostring(text == nil and "" or text)
+        if o.Numeric then
+            text = string.gsub(text, ",", ".")
+            text = string.gsub(text, "[^%d%.%-]", "")
+        end
+        if o.MaxLength then
+            local cut = utf8.offset(text, o.MaxLength + 1)
+            if cut then text = string.sub(text, 1, cut - 1) end
+        end
+        return text
+    end
+    function obj:Set(newValue, silent)
+        newValue = clean(newValue)
+        value = newValue
+        box.Text = newValue
+        Config.flags[id] = newValue
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, newValue) end
+    end
+    function obj:Get() return value end
+    box.Focused:Connect(function() tween(pillStroke, 0.15, {Color = C.Accent, Transparency = 0}) end)
+    box.FocusLost:Connect(function()
+        tween(pillStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        local typed = clean(box.Text)
+        if typed ~= value then obj:Set(typed) else box.Text = typed end
+    end)
+    local saved = Config.flags[id]
+    if type(saved) == "string" then value = clean(saved) elseif o.Default ~= nil then value = clean(o.Default) end
+    box.Text = value
+    if value ~= "" and o.Callback then task.defer(function() pcall(o.Callback, value) end) end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- tecla suelta ----------
+function Hydra.keybind(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "Keybind", Id = id}
+    local row = baseRow(parent, order, o, nested, 90, "\226\150\162")
+    local function toCode(raw)
+        if typeof(raw) == "EnumItem" then return raw end
+        if type(raw) == "string" then
+            local ok, code = pcall(function() return Enum.KeyCode[raw] end)
+            if ok then return code end
+        end
+        return nil
+    end
+    local code = toCode(Config.binds[id]) or toCode(o.Default)
+    local chip = mk("TextButton", {Size = UDim2.fromOffset(0, 26), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0),
+        BackgroundColor3 = C.Bg, BackgroundTransparency = 0.35, AutoButtonColor = false, Text = keyName(code), TextColor3 = code and C.Text or C.Dim, Font = Enum.Font.GothamBold, TextSize = 10, Parent = row.head})
+    corner(chip, 8)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = chip})
+    mk("UISizeConstraint", {MinSize = Vector2.new(34, 26), Parent = chip})
+    local chipStroke = stroke(chip, C.Stroke, 0.55)
+    chip.MouseEnter:Connect(function() tween(chipStroke, 0.15, {Color = C.Accent, Transparency = 0.2}) end)
+    chip.MouseLeave:Connect(function() tween(chipStroke, 0.2, {Color = C.Stroke, Transparency = 0.55}) end)
+    Hydra.Binds[id] = {code = code, obj = obj, title = o.Title, action = function()
+        if not o.Callback then return end
+        local ok, err = pcall(o.Callback, Hydra.Binds[id].code)
+        if not ok then toast("Error: " .. tostring(err), C.Bad) end
+    end}
+    function obj:Set(newCode, silent)
+        newCode = toCode(newCode)
+        Hydra.Binds[id].code = newCode
+        Config.binds[id] = newCode and newCode.Name or nil
+        saveConfig()
+        chip.Text = keyName(newCode)
+        chip.TextColor3 = newCode and C.Text or C.Dim
+        if Hydra.refreshKeys then Hydra.refreshKeys() end
+        if o.OnChange and not silent then pcall(o.OnChange, newCode) end
+    end
+    function obj:Get() return Hydra.Binds[id].code end
+    chip.MouseButton1Click:Connect(function()
+        Hydra.listening = {id = id, button = chip, onAssigned = function(newCode)
+            if o.OnChange then o.OnChange(newCode) end
+        end}
+        chip.Text = "..."
+        chip.TextColor3 = C.Accent
+    end)
+    if Hydra.refreshKeys then task.defer(Hydra.refreshKeys) end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- texto y separador ----------
+function Hydra.label(parent, order, o, nested)
+    if type(o) == "string" then o = {Text = o} end
+    local obj = {Type = "Label"}
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA, BorderSizePixel = 0, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14), PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = card})
+    mk("UIListLayout", {Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local title
+    if o.Title then
+        title = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text, Font = Enum.Font.GothamBold,
+            TextSize = 12, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 1, Parent = card})
+    end
+    local body = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = o.Text or o.Desc or "", TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold,
+        TextSize = 11, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = 2, Parent = card})
+    function obj:SetText(text) body.Text = tostring(text) end
+    function obj:SetTitle(text) if title then title.Text = tostring(text) end end
+    obj.Holder = card
+    return obj
+end
+
+function Hydra.divider(parent, order)
+    local holder = mk("Frame", {Size = UDim2.new(1, 0, 0, 10), BackgroundTransparency = 1, LayoutOrder = order(), Parent = parent})
+    local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 1), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = C.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, Parent = holder})
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = line})
+    return {Holder = holder}
+end
+
+-- ---------- lista desplegable de seleccion multiple ----------
+EN["seleccionados"] = "selected"
+function Hydra.multiDropdown(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "MultiDropdown", Id = id}
+    local card = mk("Fram
