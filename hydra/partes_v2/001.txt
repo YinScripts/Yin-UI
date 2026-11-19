@@ -1,0 +1,274 @@
+--[[
+    HYDRA - interfaz
+
+    VENTANA
+    - Arrastra la ventana desde la cabecera. Las pestanas de abajo son un carrusel: arrastralo de costado o toca una pestana.
+    - "-" esconde la ventana y deja un boton flotante; tocalo para volver a abrirla. En PC tambien con la tecla K.
+    - "" cierra el script.
+
+    IDIOMA
+    Detecta el idioma del jugador (primero el del dispositivo, despues el que eligio en Roblox). Espanol e ingles completos;
+    otros idiomas usan el traductor de Roblox. Se puede forzar en AJUSTES -> Idioma.
+
+    COMPONENTES (para armar las pestanas de Hydra en la seccion "pestanas y opciones")
+    createTab, section, toggle, slider, actionButton, dropdown, infoCard, note, toast.
+]]
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local TweenService = game:GetService("TweenService")
+local UserInputService = game:GetService("UserInputService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+-- AJUSTES OPCIONALES: el script que usa la libreria puede definirlos ANTES de cargarla. Sin ellos todo queda como siempre.
+--   getgenv().HydraSettings = {Name = "MiHub", ConfigFile = "MiHub.json", Logo = "rbxassetid://...", Background = false,
+--       ToggleKey = Enum.KeyCode.RightShift, OnlineCounter = true, OnlineUrl = "https://..."}
+-- Name: titulo y nombre de la ventana | ConfigFile: archivo donde se guardan las opciones (usa uno propio para no pisar a otros scripts)
+-- Logo / Background: imagen (texto rbxassetid://...) o false para no usar ninguna | ToggleKey: tecla que muestra u oculta la ventana
+-- OnlineCounter: true muestra el contador de jugadores en linea (por defecto NO: envia el UserId a OnlineUrl, solo se activa si el script lo pide)
+-- Components: pestana "Componentes" con todos los elementos. Por defecto aparece sola y desaparece cuando otro script agrega sus pestanas;
+--   false = nunca se crea, true = se queda siempre
+local Settings = {}
+pcall(function()
+    local genv = (type(getgenv) == "function" and getgenv()) or _G
+    if type(genv.HydraSettings) == "table" then Settings = genv.HydraSettings end
+end)
+local TITLE = tostring(Settings.Name or "Hydra")
+local INITIAL = string.upper(TITLE:match("^[\1-\127\194-\244][\128-\191]*") or "H")
+
+-- ==================== CONFIGURACION (se guarda en el executor) ====================
+local CONFIG_FILE = tostring(Settings.ConfigFile or "Hydra.json")
+local Config = {
+    language = "auto", -- "auto" (idioma de Roblox), "es" o "en"
+    flags = {}, binds = {}, floats = {}, -- valores de las opciones, teclas de atajo y botones flotantes (API de Hydra)
+}
+local function loadConfig()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" then return end
+    pcall(function()
+        if not isfile(CONFIG_FILE) then return end
+        local data = game:GetService("HttpService"):JSONDecode(readfile(CONFIG_FILE))
+        for key, value in pairs(data) do
+            if Config[key] ~= nil and type(value) == type(Config[key]) then Config[key] = value end
+        end
+    end)
+end
+local saveToken = 0
+local function saveConfig()
+    if type(writefile) ~= "function" then return end
+    saveToken = saveToken + 1
+    local token = saveToken
+    task.delay(0.5, function()
+        if token ~= saveToken then return end
+        pcall(function() writefile(CONFIG_FILE, game:GetService("HttpService"):JSONEncode(Config)) end)
+    end)
+end
+loadConfig()
+
+-- ==================== IDIOMA (detecta el idioma del jugador) ====================
+-- Espanol e ingles vienen completos. Para otros idiomas se usa el traductor de Roblox;
+-- si Roblox no tiene esa frase traducida, se muestra en ingles.
+local LocalizationService = game:GetService("LocalizationService")
+local Lang = {current = "en", system = "en", translator = nil, cache = {}, registry = setmetatable({}, {__mode = "k"}), onChange = nil}
+local EN = {
+    -- pestanas y titulos
+    -- pestanas y titulos
+    ["AJUSTES"] = "SETTINGS", ["Ajustes"] = "Settings", ["No hay nada para elegir"] = "Nothing to choose",
+    ["RIESGO"] = "RISK",
+    -- ajustes
+    ["Idioma"] = "Language", ["Autom\195\161tico = el idioma de tu Roblox"] = "Automatic = your Roblox language", ["Autom\195\161tico"] = "Automatic",
+    ["Ventana"] = "Window", ["Teclas"] = "Keys",
+    -- inicio
+    ["INICIO"] = "HOME", ["Inicio"] = "Home",
+    ["Buenos d\195\173as"] = "Good morning", ["Buenas tardes"] = "Good afternoon", ["Buenas noches"] = "Good evening",
+    ["Sesi\195\179n"] = "Session", ["En l\195\173nea"] = "Online",
+    ["Rendimiento"] = "Performance", ["Ping"] = "Ping", ["Jugadores"] = "Players", ["Servidor abierto hace"] = "Server up for",
+    ["Partida"] = "Match", ["Juego"] = "Game", ["Ejecutor"] = "Executor", ["Versi\195\179n"] = "Version",
+    ["Accesos r\195\161pidos"] = "Quick actions", ["Copiar servidor"] = "Copy server", ["Reentrar"] = "Rejoin",
+    ["ID del servidor copiado"] = "Server ID copied", ["Tu ejecutor no puede copiar"] = "Your executor can't copy",
+    ["Reentrando..."] = "Rejoining...", ["No se pudo reentrar"] = "Couldn't rejoin",
+    ["Bot\195\179n \226\128\147 : esconde la ventana. Toc\195\161 el bot\195\179n flotante para volver a abrirla. En PC tambi\195\169n con la tecla K. La \226\156\149 cierra el script."] = "\226\128\147 button: hides the window. Tap the floating button to open it again. On PC you can also press K. The \226\156\149 closes the script.",
+}
+local function normalizeLocale(localeId)
+    return string.lower(tostring(localeId or "en")):match("^(%a+)") or "en"
+end
+local function tr(spanish)
+    if Lang.current == "es" then return spanish end
+    local english = EN[spanish] or spanish
+    if Lang.current == "en" or not Lang.translator then return english end
+    local cached = Lang.cache[english]
+    if cached ~= nil then return cached or english end
+    local translated
+    pcall(function() translated = Lang.translator:Translate(game, english) end)
+    if translated and translated ~= "" and translated ~= english then
+        Lang.cache[english] = translated
+        return translated
+    end
+    Lang.cache[english] = false
+    return english
+end
+local function resolveLanguage()
+    local mode = Config.language
+    if mode == "es" or mode == "en" then return mode end
+    return Lang.system
+end
+local function applyLanguage(force)
+    local language = resolveLanguage()
+    if language == Lang.current and not force then return end
+    Lang.current, Lang.cache = language, {}
+    for inst, key in pairs(Lang.registry) do
+        if inst.Parent then inst.Text = tr(key) end
+    end
+    if Lang.onChange then pcall(Lang.onChange) end
+end
+pcall(function()
+    local locale = LocalizationService.SystemLocaleId
+    if locale and locale ~= "" then Lang.system = normalizeLocale(locale) end
+end)
+Lang.current = resolveLanguage()
+-- el idioma que el jugador eligio en Roblox manda sobre el del sistema
+task.spawn(function()
+    local ok, translator = pcall(function() return LocalizationService:GetTranslatorForPlayerAsync(LocalPlayer) end)
+    if not ok or not translator then return end
+    Lang.translator = translator
+    Lang.system = normalizeLocale(translator.LocaleId)
+    Lang.cache = {}
+    applyLanguage(true)
+    pcall(function()
+        translator:GetPropertyChangedSignal("LocaleId"):Connect(function()
+            Lang.system = normalizeLocale(translator.LocaleId)
+            applyLanguage()
+        end)
+    end)
+end)
+
+
+-- colores
+local C = {
+    -- tema oscuro tipo glass: fondo casi negro translucido, tarjetas de vidrio claro, acento blanco/plateado
+    Bg = Color3.fromRGB(12, 14, 19), Card = Color3.fromRGB(30, 34, 43), Field = Color3.fromRGB(38, 43, 54),
+    Glass = Color3.fromRGB(255, 255, 255),
+    Stroke = Color3.fromRGB(150, 156, 172), Text = Color3.fromRGB(248, 249, 252), Dim = Color3.fromRGB(212, 216, 226),
+    Accent = Color3.fromRGB(236, 239, 245), AccentDark = Color3.fromRGB(140, 146, 160), AccentSoft = Color3.fromRGB(62, 66, 78),
+    On = Color3.fromRGB(236, 239, 245), Off = Color3.fromRGB(70, 75, 88),
+    Warn = Color3.fromRGB(255, 176, 86),
+    Good = Color3.fromRGB(46, 214, 170), Mid = Color3.fromRGB(255, 190, 80), Bad = Color3.fromRGB(255, 96, 110),
+}
+
+-- contenedor propio (fuera del Workspace del juego)
+local guiParent = LocalPlayer:WaitForChild("PlayerGui")
+pcall(function()
+    if typeof(gethui) == "function" then
+        local hidden = gethui()
+        if hidden then guiParent = hidden end
+    end
+end)
+for _, name in ipairs({TITLE}) do
+    local old = guiParent:FindFirstChild(name)
+    if old then old:Destroy() end
+end
+
+local Connections = {}
+local function track(connection) table.insert(Connections, connection) return connection end
+
+-- ==================== UTILIDADES ====================
+local function mk(class, props)
+    local inst = Instance.new(class)
+    for key, value in pairs(props) do
+        if key ~= "Parent" then inst[key] = value end
+    end
+    -- si el texto es una frase conocida, se traduce y se anota para cambiarla si cambia el idioma
+    local text = props.Text
+    if type(text) == "string" and EN[text] then
+        Lang.registry[inst] = text
+        inst.Text = tr(text)
+    end
+    -- contorno oscuro suave en los textos: se leen bien aunque detras haya partes claras del fondo
+    if class == "TextLabel" or class == "TextBox" then
+        local outline = Instance.new("UIStroke")
+        outline.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+        outline.Color = Color3.new(0, 0, 0)
+        outline.Thickness = 1.2
+        outline.Transparency = 0.45
+        outline.Parent = inst
+    end
+    inst.Parent = props.Parent
+    return inst
+end
+local function corner(parent, radius) return mk("UICorner", {CornerRadius = UDim.new(0, radius), Parent = parent}) end
+local function stroke(parent, color, transparency)
+    return mk("UIStroke", {Color = color, Thickness = 1, Transparency = transparency or 0, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = parent})
+end
+local function tween(inst, time, goals, style)
+    local t = TweenService:Create(inst, TweenInfo.new(time, style or Enum.EasingStyle.Quint, Enum.EasingDirection.Out), goals)
+    t:Play()
+    return t
+end
+
+-- iconos: las letras     salen como cuadros en algunos celulares, asi que se dibujan como imagenes (ids del script Sapphire).
+-- La clave es la letra que ya usa cada pestana/seccion; si una letra no esta aca se sigue dibujando como texto.
+local ICON_IMAGES = {
+    ["\226\158\164"] = "rbxassetid://7734058599", -- Blatant
+    ["\226\156\166"] = "rbxassetid://7733954760", -- World
+    ["\226\151\142"] = "rbxassetid://7734056608", -- Detection
+    ["\226\156\142"] = "rbxassetid://7733917120", -- Misc
+    ["\226\154\153"] = "rbxassetid://82447077635685", -- Ajustes
+    ["\226\151\183"] = "rbxassetid://7733774602", -- Visual
+    ["\226\150\162"] = "rbxassetid://7734053495", -- GUI
+    ["\226\140\130"] = "rbxassetid://131051652075705", -- Inicio
+}
+local function mkIcon(glyph, color, imageProps, textProps)
+    local image = ICON_IMAGES[glyph] or ((type(glyph) == "string" and string.sub(glyph, 1, 13) == "rbxassetid://") and glyph or nil)
+    if image then
+        imageProps.Image, imageProps.ImageColor3, imageProps.BackgroundTransparency = image, color, 1
+        return mk("ImageLabel", imageProps), "ImageColor3"
+    end
+    textProps.Text, textProps.TextColor3 = glyph, color
+    return mk("TextLabel", textProps), "TextColor3"
+end
+
+-- ==================== INTERFAZ ====================
+local Gui = mk("ScreenGui", {Name = TITLE, ResetOnSpawn = false, IgnoreGuiInset = true, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 60, Parent = guiParent})
+local isMobile = UserInputService.TouchEnabled and not UserInputService.KeyboardEnabled
+local WIDTH, HEIGHT = isMobile and 480 or 590, isMobile and 350 or 445
+
+local Window = mk("Frame", {
+    Size = UDim2.fromOffset(WIDTH, HEIGHT), Position = UDim2.new(0.5, -WIDTH / 2, 0.5, -HEIGHT / 2),
+    BackgroundColor3 = C.Bg, BackgroundTransparency = 0.06, BorderSizePixel = 0, ClipsDescendants = true, Parent = Gui,
+})
+-- brillo de vidrio: arriba un poco mas claro
+mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(255, 255, 255), Color3.fromRGB(170, 176, 190)), Parent = Window})
+corner(Window, 18)
+stroke(Window, C.Stroke, 0.1)
+local WindowScale = mk("UIScale", {Scale = 0.9, Parent = Window})
+-- imagen de fondo de la ventana: va detras de todo y un poco transparente para que el texto se lea
+local BG_IMAGE_ID, BG_IMAGE_TRANSPARENCY = "rbxassetid://104092388902076", 0.3
+if type(Settings.Background) == "string" then BG_IMAGE_ID = Settings.Background elseif Settings.Background == false then BG_IMAGE_ID = "" end
+local CARD_ALPHA, BAR_ALPHA = 0.9, 0.4 -- transparencia de las tarjetas de opciones y de la barra de pestanas (0 = blanco opaco, 1 = invisible)
+local WindowBg = mk("ImageLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = BG_IMAGE_ID, ImageTransparency = BG_IMAGE_TRANSPARENCY, ScaleType = Enum.ScaleType.Crop, ZIndex = 0, Parent = Window})
+corner(WindowBg, 18)
+
+-- cabecera
+local Header = mk("Frame", {Size = UDim2.new(1, 0, 0, 56), BackgroundTransparency = 1, Parent = Window})
+
+-- titulo
+local TitleRow = mk("Frame", {Size = UDim2.new(1, -196, 0, 28), Position = UDim2.fromOffset(16, 6), BackgroundTransparency = 1, Parent = Header})
+mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 7), SortOrder = Enum.SortOrder.LayoutOrder, Parent = TitleRow})
+local TitleText = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = TITLE, TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 25, MaxVisibleGraphemes = 0, LayoutOrder = 1, Parent = TitleRow})
+do local outline = TitleText:FindFirstChildOfClass("UIStroke") if outline then outline:Destroy() end end
+-- efecto del nombre (el mismo de "Ultra" en la libreria): un brillo recorre las letras y descansa un momento
+local TitleGradient = mk("UIGradient", {Transparency = NumberSequence.new({
+    NumberSequenceKeypoint.new(0, 0.65), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.65),
+}), Offset = Vector2.new(-1, 0), Parent = TitleText})
+TweenService:Create(TitleGradient, TweenInfo.new(1.8, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.6), {Offset = Vector2.new(1, 0)}):Play()
+-- entrada: el titulo se escribe letra por letra
+task.spawn(function()
+    for count = 1, (utf8.len(TITLE) or #TITLE) do
+        TitleText.MaxVisibleGraphemes = count
+        task.wait(0.06)
+    end
+    TitleText.MaxVisibleGraphemes = -1
+end)
+
+local HeaderSub = mk("TextLabel", {Size = UDim2.new(1, -196, 0, 14), Position = UDim2.fromOffset(16, 36), BackgroundTransparency = 1, Text = "", TextColor3 = C.Dim, Font = Enum.Font.GothamMedium, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = Header})
+local funct
