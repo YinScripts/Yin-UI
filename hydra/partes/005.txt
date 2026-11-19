@@ -1,0 +1,470 @@
+e", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA,
+        BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local headH = nested and 46 or (o.Desc and 60 or 52)
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1, LayoutOrder = 1, Parent = card})
+    mk("TextLabel", {Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 14, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title or "", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, -190, 0, 13), Position = UDim2.new(0, 14, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim,
+            Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    end
+    local pill = mk("TextButton", {Size = UDim2.fromOffset(160, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3,
+        AutoButtonColor = false, Text = "", Parent = head})
+    corner(pill, 10)
+    local pillStroke = stroke(pill, C.Stroke, 0.5)
+    local pillText = mk("TextLabel", {Size = UDim2.new(1, -34, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pill})
+    local chevron = mk("TextLabel", {Size = UDim2.fromOffset(24, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), BackgroundTransparency = 1, Text = "\226\128\186",
+        TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 18, Rotation = 90, Parent = pill})
+    local listWrap = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = listWrap})
+    local list = mk("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = C.Accent,
+        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = listWrap})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list})
+    local function options()
+        local raw = type(o.Options) == "function" and o.Options() or o.Options or {}
+        return type(raw) == "table" and raw or {}
+    end
+    local function textFor(value)
+        for _, option in ipairs(options()) do
+            if option.value == value then return option.text or tostring(value) end
+        end
+        return tostring(value)
+    end
+    local chosen = {}
+    local function has(value)
+        for _, v in ipairs(chosen) do
+            if v == value then return true end
+        end
+        return false
+    end
+    local function summary()
+        if #chosen == 0 then return o.Placeholder or "\226\128\148" end
+        if #chosen <= 2 then
+            local names = {}
+            for _, v in ipairs(chosen) do names[#names + 1] = textFor(v) end
+            return table.concat(names, ", ")
+        end
+        return #chosen .. " " .. tr("seleccionados")
+    end
+    local function copy()
+        local out = {}
+        for i, v in ipairs(chosen) do out[i] = v end
+        return out
+    end
+    local function commit(silent)
+        pillText.Text = summary()
+        Config.flags[id] = copy()
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, copy()) end
+    end
+    function obj:Set(values, silent)
+        chosen = {}
+        if type(values) == "table" then
+            for _, v in ipairs(values) do
+                if not has(v) then chosen[#chosen + 1] = v end
+            end
+        end
+        commit(silent)
+    end
+    function obj:Get() return copy() end
+    function obj:Refresh() pillText.Text = summary() end
+    local function close()
+        listWrap.Visible = false
+        tween(chevron, 0.25, {Rotation = 90, TextColor3 = C.Dim})
+        tween(pillStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        tween(cardStroke, 0.2, {Color = C.Stroke, Transparency = nested and 0.65 or 0.5})
+    end
+    local function open()
+        for _, child in ipairs(list:GetChildren()) do
+            if child:IsA("GuiObject") then child:Destroy() end
+        end
+        local all = options()
+        if #all == 0 then
+            mk("TextLabel", {Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "No hay nada para elegir", TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = list})
+        end
+        for index, option in ipairs(all) do
+            local item = mk("TextButton", {Size = UDim2.new(1, -6, 0, 32), BackgroundColor3 = C.Glass, BackgroundTransparency = 0.94, AutoButtonColor = false, Text = "", LayoutOrder = index, Parent = list})
+            corner(item, 9)
+            local itemStroke = stroke(item, C.Accent, 1)
+            local label = mk("TextLabel", {Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = option.text or tostring(option.value),
+                TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = item})
+            local mark = mk("TextLabel", {Size = UDim2.fromOffset(24, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 0), BackgroundTransparency = 1, Text = "\226\156\147",
+                TextColor3 = C.Accent, TextTransparency = 1, Font = Enum.Font.GothamBlack, TextSize = 13, Parent = item})
+            local function paintItem()
+                local on = has(option.value)
+                item.BackgroundColor3 = on and C.Accent or C.Glass
+                tween(item, 0.12, {BackgroundTransparency = on and 0.82 or 0.94})
+                itemStroke.Transparency = on and 0.4 or 1
+                label.TextColor3 = on and C.Accent or C.Text
+                mark.TextTransparency = on and 0 or 1
+            end
+            paintItem()
+            item.MouseButton1Click:Connect(function()
+                if has(option.value) then
+                    for i, v in ipairs(chosen) do
+                        if v == option.value then table.remove(chosen, i) break end
+                    end
+                else
+                    chosen[#chosen + 1] = option.value
+                end
+                paintItem()
+                commit(false)
+            end)
+        end
+        list.Size = UDim2.new(1, 0, 0, math.max(math.min(#all, 6) * 36, 28))
+        listWrap.Visible = true
+        tween(chevron, 0.25, {Rotation = 270, TextColor3 = C.Accent})
+        tween(pillStroke, 0.2, {Color = C.Accent, Transparency = 0.2})
+        tween(cardStroke, 0.2, {Color = C.Accent, Transparency = 0.45})
+    end
+    pill.MouseButton1Click:Connect(function()
+        if listWrap.Visible then close() else open() end
+    end)
+    local saved = Config.flags[id]
+    if type(saved) == "table" then obj:Set(saved, true) elseif type(o.Default) == "table" then obj:Set(o.Default, true) else pillText.Text = summary() end
+    if #chosen > 0 and o.Callback then task.defer(function() pcall(o.Callback, copy()) end) end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- selector de color (barras H / S / V + caja HEX) ----------
+function Hydra.colorPicker(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "ColorPicker", Id = id}
+    local row = baseRow(parent, order, o, nested, 60, "\226\151\183")
+    local card, head = row.card, row.head
+    local h, s, v = 0, 0, 1
+    local color = Color3.new(1, 1, 1)
+    local swatch = mk("TextButton", {Size = UDim2.fromOffset(46, 26), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = color, AutoButtonColor = false, Text = "", Parent = head})
+    corner(swatch, 9)
+    local swatchStroke = stroke(swatch, C.Stroke, 0.35)
+    local panel = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), Parent = panel})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = panel})
+    local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = C.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, LayoutOrder = 0, Parent = panel})
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = line})
+
+    local function toHex(c)
+        return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+    end
+    local function parseHex(text)
+        text = string.gsub(tostring(text), "[%s#]", "")
+        if #text == 3 then text = string.rep(string.sub(text, 1, 1), 2) .. string.rep(string.sub(text, 2, 2), 2) .. string.rep(string.sub(text, 3, 3), 2) end
+        if not string.match(text, "^%x%x%x%x%x%x$") then return nil end
+        return Color3.fromRGB(tonumber(string.sub(text, 1, 2), 16), tonumber(string.sub(text, 3, 4), 16), tonumber(string.sub(text, 5, 6), 16))
+    end
+
+    local paint
+    -- una barra horizontal arrastrable (misma mecanica que el slider): devuelve su degradado y su cursor
+    local function makeBar(orderIndex, letter, onValue)
+        local wrap = mk("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = orderIndex, Parent = panel})
+        mk("TextLabel", {Size = UDim2.fromOffset(16, 30), BackgroundTransparency = 1, Text = letter, TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap})
+        local bar = mk("TextButton", {Size = UDim2.new(1, -24, 0, 14), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 24, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", Parent = wrap})
+        corner(bar, 99)
+        stroke(bar, C.Stroke, 0.5)
+        local gradient = mk("UIGradient", {Parent = bar})
+        local thumb = mk("Frame", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 3, Parent = bar})
+        corner(thumb, 99)
+        mk("UIStroke", {Color = C.Bg, Thickness = 2, Parent = thumb})
+        local dragging = false
+        local function from(x) onValue(math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)) end
+        bar.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                from(inp.Position.X)
+            end
+        end)
+        track(UserInputService.InputChanged:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then from(inp.Position.X) end
+        end))
+        track(UserInputService.InputEnded:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) then dragging = false end
+        end))
+        return gradient, thumb
+    end
+    local function commit(silent)
+        paint()
+        Config.flags[id] = toHex(color)
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, color) end
+    end
+    local hueGradient, hueThumb = makeBar(1, "H", function(alpha) h = alpha commit() end)
+    local satGradient, satThumb = makeBar(2, "S", function(alpha) s = alpha commit() end)
+    local valGradient, valThumb = makeBar(3, "V", function(alpha) v = alpha commit() end)
+    hueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1 / 6, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(2 / 6, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(3 / 6, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(4 / 6, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(5 / 6, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+    })
+
+    local hexRow = mk("Frame", {Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 4, Parent = panel})
+    mk("TextLabel", {Size = UDim2.fromOffset(40, 32), BackgroundTransparency = 1, Text = "HEX", TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = hexRow})
+    local hexPill = mk("Frame", {Size = UDim2.fromOffset(110, 28), Position = UDim2.fromOffset(40, 2), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = hexRow})
+    corner(hexPill, 9)
+    local hexStroke = stroke(hexPill, C.Stroke, 0.5)
+    local hexBox = mk("TextBox", {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundTransparency = 1, Text = "", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = hexPill})
+
+    function paint()
+        color = Color3.fromHSV(h, s, v)
+        swatch.BackgroundColor3 = color
+        hueThumb.Position = UDim2.new(h, 0, 0.5, 0)
+        satThumb.Position = UDim2.new(s, 0, 0.5, 0)
+        valThumb.Position = UDim2.new(v, 0, 0.5, 0)
+        satGradient.Color = ColorSequence.new(Color3.fromHSV(h, 0, v), Color3.fromHSV(h, 1, v))
+        valGradient.Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.fromHSV(h, s, 1))
+        if not hexBox:IsFocused() then hexBox.Text = toHex(color) end
+    end
+    function obj:Set(newColor, silent)
+        if type(newColor) == "string" then newColor = parseHex(newColor) end
+        if typeof(newColor) ~= "Color3" then return end
+        h, s, v = newColor:ToHSV()
+        commit(silent)
+    end
+    function obj:Get() return color end
+
+    hexBox.Focused:Connect(function() tween(hexStroke, 0.15, {Color = C.Accent, Transparency = 0}) end)
+    hexBox.FocusLost:Connect(function()
+        tween(hexStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        local typed = parseHex(hexBox.Text)
+        if typed then obj:Set(typed) else hexBox.Text = toHex(color) end
+    end)
+    swatch.MouseButton1Click:Connect(function()
+        panel.Visible = not panel.Visible
+        tween(swatchStroke, 0.2, {Color = panel.Visible and C.Accent or C.Stroke, Transparency = panel.Visible and 0.1 or 0.35})
+        tween(row.stroke, 0.2, {Color = panel.Visible and C.Accent or C.Stroke, Transparency = panel.Visible and 0.45 or (nested and 0.65 or 0.5)})
+    end)
+
+    local start = parseHex(Config.flags[id] or "") or (typeof(o.Default) == "Color3" and o.Default) or parseHex(o.Default or "")
+    if start then h, s, v = start:ToHSV() end
+    commit(true)
+    if start and o.Callback then task.defer(function() pcall(o.Callback, color) end) end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- pestana de componentes (demostracion) ----------
+-- Muestra todos los elementos de la libreria con el estilo de Hydra. Desaparece sola en cuanto otro script agrega sus propias
+-- pestanas con Hydra:Tab(). HydraSettings.Components = false no la crea nunca; = true la deja siempre.
+EN["Componentes"] = "Components"
+EN["COMPONENTES"] = "COMPONENTS"
+EN["Interruptores"] = "Switches"
+EN["Numeros y texto"] = "Numbers and text"
+EN["Selecci\195\179n"] = "Selection"
+EN["Color"] = "Color"
+EN["Teclas"] = "Keys"
+EN["Acciones"] = "Actions"
+EN["Texto"] = "Text"
+EN["Jugadores"] = "Players"
+local demoIds = {}
+local function demo(id)
+    demoIds[id] = true
+    return id
+end
+
+function Hydra.removeComponentsTab()
+    if not Hydra.demoTab or Settings.Components == true then return end
+    Hydra.demoTab = nil
+    local name = "Components"
+    local tab = Tabs[name]
+    for index, item in ipairs(Carousel.items) do
+        if item.name == name then table.remove(Carousel.items, index) break end
+    end
+    Tabs[name] = nil
+    TabTitles[name] = nil
+    for id in pairs(demoIds) do
+        Hydra.Options[id] = nil
+        Hydra.Binds[id] = nil
+        Config.flags[id] = nil
+        Config.binds[id] = nil
+        if Hydra.Floats[id] then
+            pcall(function() Hydra.Floats[id]:Destroy() end)
+            Hydra.Floats[id] = nil
+        end
+        Config.floats[id] = nil
+    end
+    demoIds = {}
+    if tab then
+        pcall(function() tab.button:Destroy() end)
+        pcall(function() tab.page:Destroy() end)
+    end
+    if currentTab == name then selectTab("Home") end
+    relayoutCarousel()
+    if Hydra.refreshKeys then Hydra.refreshKeys() end
+    saveConfig()
+end
+
+local function buildComponentsTab()
+    buildingDemo = true
+    local ok, err = pcall(function()
+        local Tab = Hydra:Tab({Id = "Components", Title = "Componentes", Icon = "\226\156\166", Caption = "COMPONENTES"})
+        Tab:Note("Esta pesta\195\177a muestra todos los elementos de la librer\195\173a. Desaparece sola cuando otro script la usa y agrega sus propias pesta\195\177as.")
+
+        Tab:Section("Interruptores", "\226\158\164")
+        local demoToggle = Tab:Toggle({Id = demo("demo_toggle"), Title = "Toggle", Desc = "Con tecla, bot\195\179n flotante y sub-opciones", Keybind = true, Floating = true,
+            Callback = function(on) Hydra:Notify("Toggle: " .. tostring(on)) end})
+        demoToggle:Slider({Id = demo("demo_toggle_slider"), Title = "Slider interno", Min = 0, Max = 100, Step = 1, Default = 50, Suffix = "%"})
+        demoToggle:Toggle({Id = demo("demo_toggle_sub"), Title = "Toggle interno"})
+        demoToggle:Dropdown({Id = demo("demo_toggle_dropdown"), Title = "Dropdown interno", Options = {{value = "a", text = "Opci\195\179n A"}, {value = "b", text = "Opci\195\179n B"}}, Default = "a"})
+        demoToggle:Input({Id = demo("demo_toggle_input"), Title = "Input interno", Placeholder = "Escrib\195\173..."})
+        demoToggle:Keybind({Id = demo("demo_toggle_keybind"), Title = "Tecla interna"})
+        demoToggle:ColorPicker({Id = demo("demo_toggle_color"), Title = "Color interno", Default = Color3.fromRGB(120, 180, 255)})
+        demoToggle:MultiDropdown({Id = demo("demo_toggle_multi"), Title = "Multi interno", Options = {{value = 1, text = "Uno"}, {value = 2, text = "Dos"}, {value = 3, text = "Tres"}}})
+        demoToggle:Label({Text = "Label dentro de un toggle"})
+        demoToggle:Divider()
+        demoToggle:Button({Title = "Bot\195\179n interno", Callback = function() Hydra:Notify("Bot\195\179n interno") end})
+
+        Tab:Section("Numeros y texto", "\226\151\183")
+        Tab:Slider({Id = demo("demo_slider"), Title = "Slider", Desc = "Arrastr\195\161 o escrib\195\173 el valor", Min = 0, Max = 200, Step = 5, Default = 50, Suffix = " u"})
+        Tab:Input({Id = demo("demo_input"), Title = "Input", Desc = "Texto libre", Placeholder = "Escrib\195\173 algo...", MaxLength = 20,
+            Callback = function(text) Hydra:Notify("Input: " .. text) end})
+        Tab:Input({Id = demo("demo_input_num"), Title = "Input num\195\169rico", Desc = "Solo n\195\186meros", Numeric = true, Default = "10",
+            Callback = function(text) Hydra:Notify("N\195\186mero: " .. text) end})
+
+        Tab:Section("Selecci\195\179n", "\226\156\142")
+        Tab:Dropdown({Id = demo("demo_dropdown"), Title = "Dropdown", Desc = "Una sola opci\195\179n", Options = {{value = "a", text = "Opci\195\179n A"}, {value = "b", text = "Opci\195\179n B"}, {value = "c", text = "Opci\195\179n C"}}, Default = "a",
+            Callback = function(value) Hydra:Notify("Dropdown: " .. tostring(value)) end})
+        Tab:MultiDropdown({Id = demo("demo_multi"), Title = "Dropdown m\195\186ltiple", Desc = "Varias opciones a la vez", Placeholder = "Eleg\195\173",
+            Options = {{value = "uno", text = "Uno"}, {value = "dos", text = "Dos"}, {value = "tres", text = "Tres"}, {value = "cuatro", text = "Cuatro"}},
+            Callback = function(list) Hydra:Notify("Elegidas: " .. #list) end})
+
+        Tab:Section("Color", "\226\151\183")
+        Tab:ColorPicker({Id = demo("demo_color"), Title = "Color", Desc = "Barras H / S / V y c\195\179digo HEX", Default = Color3.fromRGB(255, 120, 120),
+            Callback = function(color) end})
+
+        Tab:Section("Teclas", "\226\150\162")
+        Tab:Keybind({Id = demo("demo_keybind"), Title = "Tecla", Desc = "Toc\195\161 el chip y presion\195\161 una tecla", Default = Enum.KeyCode.J,
+            Callback = function(key) Hydra:Notify("Tecla: " .. keyName(key)) end})
+
+        Tab:Section("Acciones", "\226\158\164")
+        Tab:Button({Title = "Bot\195\179n", Desc = "Muestra un aviso", Callback = function() Hydra:Notify("\194\161Hola!", C.Good) end})
+
+        Tab:Section("Texto", "\226\156\142")
+        Tab:Label({Title = "Label", Text = "Tarjeta de texto con t\195\173tulo opcional. El texto se ajusta solo al ancho."})
+        Tab:Divider()
+        Tab:Note("Note: l\195\173nea de texto suelta, como esta.")
+
+        Tab:Section("Jugadores", "\226\156\166")
+        Tab:PlayerSearch({Placeholder = "Nombre de usuario", ButtonText = "Aplicar", Callback = function(info)
+            Hydra:Notify("Elegiste: " .. tostring(info.display))
+            return true, "Listo"
+        end})
+    end)
+    buildingDemo = false
+    if ok then
+        Hydra.demoTab = true
+    else
+        warn("[Hydra] no se pudo armar la pesta\195\177a de componentes: " .. tostring(err))
+    end
+end
+
+-- teclas: asignar y usar
+track(UserInputService.InputBegan:Connect(function(input, processed)
+    if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+    local listening = Hydra.listening
+    if listening then
+        Hydra.listening = nil
+        local code = input.KeyCode
+        if code == Enum.KeyCode.Backspace or code == Enum.KeyCode.Escape then code = nil end
+        Hydra.Binds[listening.id].code = code
+        Config.binds[listening.id] = code and code.Name or nil
+        saveConfig()
+        listening.button.Text = keyName(code)
+        listening.button.TextColor3 = code and C.Text or C.Dim
+        if Hydra.refreshKeys then Hydra.refreshKeys() end
+        if listening.onAssigned then pcall(listening.onAssigned, code) end
+        return
+    end
+    if processed then return end
+    for _, bind in pairs(Hydra.Binds) do
+        if bind.code and input.KeyCode == bind.code then
+            if bind.action then bind.action() else bind.obj:Set(not bind.obj:Get()) end
+        end
+    end
+end))
+
+
+-- ---------- buscador de jugadores (con vista previa del avatar) ----------
+-- Tab:PlayerSearch({Placeholder, ButtonText, Callback = function(info) return ok, mensaje end})
+--   info = {id = UserId, user = "@usuario", display = "nombre visible"}
+-- Arriba: caja para escribir el nombre y el boton. Al escribir, despues de una pausa corta, busca el usuario y muestra
+-- su avatar de cuerpo entero (miniatura oficial rbxthumb), su nombre y su @usuario. Abajo: los jugadores del servidor
+-- (toca uno y se completa el nombre). El Callback corre aparte (puede esperar); lo que devuelve se muestra en el chip.
+-- Devuelve: obj:Fill(nombre), obj:SetStatus(texto, "ok" | "bad" | "busy"), obj:Get() (el ultimo usuario encontrado).
+EN["Nombre de usuario"] = "Username"
+EN["Aplicar"] = "Apply"
+EN["Buscando\226\128\166"] = "Searching\226\128\166"
+EN["No existe ese usuario"] = "That user doesn't exist"
+EN["\226\156\147 Listo para aplicar"] = "\226\156\147 Ready to apply"
+EN["\226\156\149 Revis\195\161 el nombre"] = "\226\156\149 Check the name"
+EN["Escrib\195\173 un nombre primero"] = "Type a name first"
+EN["Aplicando\226\128\166"] = "Applying\226\128\166"
+EN["En el servidor"] = "In this server"
+EN["No hay nadie m\195\161s en el servidor"] = "There is nobody else in the server"
+function Hydra.playerSearch(parent, order, o)
+    local UserService = game:GetService("UserService")
+    local S = {gen = 0, cache = {}, info = nil, busy = false}
+    local obj = {Type = "PlayerSearch"}
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA,
+        BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, 14)
+    local cardStroke = stroke(card, C.Stroke, 0.5)
+    mk("UIPadding", {PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), Parent = card})
+    mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+
+    -- 1) barra de busqueda: lupa dibujada + caja + boton
+    local bar = mk("Frame", {Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3, BorderSizePixel = 0, LayoutOrder = 1, Parent = card})
+    corner(bar, 12)
+    local barStroke = stroke(bar, C.Stroke, 0.55)
+    local lens = mk("Frame", {Size = UDim2.fromOffset(12, 12), Position = UDim2.fromOffset(12, 11), BackgroundTransparency = 1, Parent = bar})
+    corner(lens, 99)
+    local lensStroke = mk("UIStroke", {Color = C.Dim, Thickness = 2, Parent = lens})
+    local handle = mk("Frame", {Size = UDim2.fromOffset(6, 2), Position = UDim2.fromOffset(22, 25), Rotation = 45, BackgroundColor3 = C.Dim, BorderSizePixel = 0, Parent = bar})
+    corner(handle, 99)
+    local box = mk("TextBox", {Size = UDim2.new(1, -140, 1, 0), Position = UDim2.fromOffset(36, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = tr(o.Placeholder or "Nombre de usuario"),
+        PlaceholderColor3 = C.Dim, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 13, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd, Parent = bar})
+    local apply = mk("TextButton", {Size = UDim2.fromOffset(92, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -5, 0.5, 0), BackgroundColor3 = C.Accent,
+        AutoButtonColor = false, Text = "", Parent = bar})
+    corner(apply, 10)
+    mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(178, 183, 195)), Parent = apply})
+    local applyLabel = mk("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = o.ButtonText or "Aplicar", TextColor3 = C.Bg, Font = Enum.Font.GothamBlack, TextSize = 12, Parent = apply})
+    local applyScale = mk("UIScale", {Scale = 1, Parent = apply})
+    box.Focused:Connect(function()
+        tween(barStroke, 0.2, {Color = C.Accent, Transparency = 0.15})
+        tween(lensStroke, 0.2, {Color = C.Accent})
+        tween(handle, 0.2, {BackgroundColor3 = C.Accent})
+    end)
+    box.FocusLost:Connect(function()
+        tween(barStroke, 0.25, {Color = C.Stroke, Transparency = 0.55})
+        tween(lensStroke, 0.25, {Color = C.Dim})
+        tween(handle, 0.25, {BackgroundColor3 = C.Dim})
+    end)
+
+    -- 2) vista previa: un "escenario" con el avatar centrado sobre una base de luz, el nombre debajo
+    -- y una barra de estado fina abajo de todo (se abre al encontrar a alguien)
+    local OPEN = 214
+    local preview = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.4, BorderSizePixel = 0, ClipsDescendants = true,
+        Visible = false, LayoutOrder = 2, Parent = card})
+    corner(preview, 12)
+    stroke(preview, C.Stroke, 0.6)
+    -- luz desde arriba (degradado vertical)
+    local stage = mk("Frame", {Size = UDim2.new(1, 0, 0, 150), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, BorderSizePixel = 0, Parent = preview})
+    mk("UIGradient", {Rotation = 90, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.86), NumberSequenceKeypoint.new(0.7, 0.97), NumberSequenceKeypoint.new(1, 1)}), Parent = stage})
+    -- base de luz debajo de los pies (dos ovalos)
+    local glow = mk("Frame", {Size = UDim2.fromOffset(150, 20), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 136), BackgroundColor3 = C.Accent,
+        BackgroundTransparency = 0.82, BorderSizePixel = 0, Parent = preview})
+    corner(glow, 999)
+    local base = mk("Frame", {Size = UDim2.fromOffset(96, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0, 136), BackgroundColor3 = C.Accent,
+        BackgroundTransparency = 0.45, BorderSizePixel = 0, Parent = preview})
+    corner(base, 999)
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = base})
+    -- el avatar
+    local body = mk("ImageLabel", {Size = UDim2.fromOffset(136, 136), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 2), BackgroundTransparency = 1, Image = "",
+        ImageTransparency = 1, ScaleType = Enum.ScaleType.Fit, ZIndex = 2, Parent = preview})
+    -- linea que escanea de arriba a abajo mientras busca
+    local scan = mk("Frame", {Size = UDim2.fromOffset(150, 2), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = C.Accent, BorderSiz
