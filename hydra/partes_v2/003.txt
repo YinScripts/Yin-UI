@@ -1,0 +1,231 @@
+, Text = text, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 12, Parent = card})
+    local scale = mk("UIScale", {Scale = 0.85, Parent = card})
+    tween(scale, 0.25, {Scale = 1}, Enum.EasingStyle.Back)
+    task.delay(2.6, function()
+        if card.Parent then card:Destroy() end
+    end)
+end
+
+-- ---------- componentes ----------
+local function nextOrder(tab) tab.order = tab.order + 1; return tab.order end
+
+local function section(tab, text, icon)
+    local row = mk("Frame", {Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, LayoutOrder = nextOrder(tab), Parent = tab.page})
+    mkIcon(icon or "\226\128\162", C.Accent, {Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(2, 5), ScaleType = Enum.ScaleType.Fit, Parent = row},
+        {Size = UDim2.fromOffset(20, 26), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, Parent = row})
+    mk("TextLabel", {Size = UDim2.new(1, -24, 1, 0), Position = UDim2.fromOffset(24, 0), BackgroundTransparency = 1, Text = text, TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 13, TextXAlignment = Enum.TextXAlignment.Left, Parent = row})
+end
+
+-- titulo (+ insignia RIESGO opcional) y subtitulo de una fila
+local function labels(row, title, subtitle, x, right, risk)
+    local line = mk("Frame", {Size = UDim2.new(1, -x - right, 0, 16), Position = UDim2.new(0, x, 0, subtitle and 9 or 12), BackgroundTransparency = 1, Parent = row})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = line})
+    mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = title, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 12, LayoutOrder = 1, Parent = line})
+    if risk then
+        local badge = mk("TextLabel", {Size = UDim2.fromOffset(46, 14), BackgroundColor3 = C.Warn, BackgroundTransparency = 0.82, Text = "RIESGO", TextColor3 = C.Warn, Font = Enum.Font.GothamBlack, TextSize = 8, LayoutOrder = 2, Parent = line})
+        corner(badge, 999)
+    end
+    if subtitle then
+        mk("TextLabel", {Size = UDim2.new(1, -x - right, 0, 14), Position = UDim2.new(0, x, 0, 27), BackgroundTransparency = 1, Text = subtitle, TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = row})
+    end
+end
+
+-- PC: al pasar el mouse la fila se aclara un poco
+local function hover(row)
+    row.MouseEnter:Connect(function() tween(row, 0.15, {BackgroundTransparency = CARD_ALPHA - 0.06}) end)
+    row.MouseLeave:Connect(function() tween(row, 0.2, {BackgroundTransparency = CARD_ALPHA}) end)
+end
+
+local function toggle(tab, key, title, subtitle, dotColor, onChange, risk)
+    local row = mk("TextButton", {Size = UDim2.new(1, 0, 0, subtitle and 50 or 40), BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, AutoButtonColor = false, Text = "", LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(row, 12)
+    local rowStroke = stroke(row, C.Stroke, 0.5)
+    hover(row)
+    local x = 12
+    if dotColor then
+        local dot = mk("Frame", {Size = UDim2.fromOffset(10, 10), Position = UDim2.new(0, 12, 0.5, -5), BackgroundColor3 = dotColor, BorderSizePixel = 0, Parent = row})
+        corner(dot, 999)
+        x = 30
+    end
+    labels(row, title, subtitle, x, 60, risk)
+    local switch = mk("Frame", {Size = UDim2.fromOffset(40, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), BackgroundColor3 = C.Off, BorderSizePixel = 0, Parent = row})
+    corner(switch, 999)
+    local knob = mk("Frame", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = switch})
+    corner(knob, 999)
+    local function paint(animate)
+        local on = Config[key]
+        local t = animate and 0.25 or 0
+        tween(switch, t, {BackgroundColor3 = on and C.On or C.Off})
+        tween(knob, t, {Position = on and UDim2.new(1, -19, 0.5, 0) or UDim2.new(0, 3, 0.5, 0)}, Enum.EasingStyle.Back)
+        tween(rowStroke, t, {Color = on and C.On or C.Stroke, Transparency = on and 0.35 or 0.5})
+    end
+    row.MouseButton1Click:Connect(function()
+        Config[key] = not Config[key]
+        paint(true)
+        saveConfig()
+        if onChange then pcall(onChange, Config[key]) end
+    end)
+    paint(false)
+end
+
+local function slider(tab, key, title, minValue, maxValue, step, suffix, zeroText, onChange, subtitle)
+    local row = mk("Frame", {Size = UDim2.new(1, 0, 0, subtitle and 66 or 58), BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, BorderSizePixel = 0, LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(row, 12)
+    stroke(row, C.Stroke, 0.5)
+    labels(row, title, subtitle, 12, 90)
+    local valueLabel = mk("TextLabel", {Size = UDim2.fromOffset(80, 16), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 9), BackgroundTransparency = 1, Text = "", TextColor3 = C.Accent, Font = Enum.Font.GothamBlack, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Right, Parent = row})
+    local barY = subtitle and 48 or 38
+    local bar = mk("Frame", {Size = UDim2.new(1, -24, 0, 6), Position = UDim2.fromOffset(12, barY), BackgroundColor3 = C.Field, BorderSizePixel = 0, Parent = row})
+    corner(bar, 99)
+    local fill = mk("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = bar})
+    corner(fill, 99)
+    local thumb = mk("Frame", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bar})
+    corner(thumb, 999)
+    stroke(thumb, C.Accent, 0.2)
+    local function paint()
+        local value = Config[key]
+        local alpha = math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+        fill.Size = UDim2.new(alpha, 0, 1, 0)
+        thumb.Position = UDim2.new(alpha, 0, 0.5, 0)
+        valueLabel.Text = (zeroText and value == minValue) and tr(zeroText) or (tostring(value) .. (suffix or ""))
+    end
+    local dragging = false
+    local function setFrom(x)
+        local alpha = math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
+        local value = minValue + (maxValue - minValue) * alpha
+        value = math.floor(value / step + 0.5) * step
+        if value ~= Config[key] then
+            Config[key] = value
+            paint()
+            if onChange then pcall(onChange, value) end
+        end
+    end
+    local hit = mk("TextButton", {Size = UDim2.new(1, 0, 0, 30), Position = UDim2.fromOffset(0, barY - 12), BackgroundTransparency = 1, Text = "", Parent = row})
+    hit.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging = true
+            setFrom(input.Position.X)
+        end
+    end)
+    track(UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            setFrom(input.Position.X)
+        end
+    end))
+    track(UserInputService.InputEnded:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = false
+            saveConfig()
+        end
+    end))
+    paint()
+end
+
+-- boton de accion (fila con icono a la derecha)
+local function actionButton(tab, title, subtitle, icon, onClick, risk)
+    local row = mk("TextButton", {Size = UDim2.new(1, 0, 0, subtitle and 50 or 40), BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, AutoButtonColor = false, Text = "", LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(row, 12)
+    stroke(row, C.Stroke, 0.5)
+    labels(row, title, subtitle, 12, 52, risk)
+    hover(row)
+    local iconBox = mk("Frame", {Size = UDim2.fromOffset(30, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), BackgroundColor3 = C.Field, BorderSizePixel = 0, Parent = row})
+    corner(iconBox, 9)
+    local iconLabel, iconProp = mkIcon(icon or "\226\158\164", C.Accent, {Size = UDim2.fromOffset(18, 18), Position = UDim2.new(0.5, -9, 0.5, -9), ScaleType = Enum.ScaleType.Fit, Parent = iconBox},
+        {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 14, Parent = iconBox})
+    row.MouseButton1Click:Connect(function()
+        tween(iconBox, 0.08, {BackgroundColor3 = C.Accent})
+        tween(iconLabel, 0.08, {[iconProp] = Color3.new(1, 1, 1)})
+        task.delay(0.2, function()
+            tween(iconBox, 0.3, {BackgroundColor3 = C.Field})
+            tween(iconLabel, 0.3, {[iconProp] = C.Accent})
+        end)
+        if onClick then
+            local ok, err = pcall(onClick)
+            if not ok then toast("Error: " .. tostring(err), C.Accent) end
+        end
+    end)
+end
+
+-- desplegable (lista que se abre debajo de la fila)
+local function dropdown(tab, title, subtitle, getOptions, onSelect)
+    local row = mk("Frame", {Size = UDim2.new(1, 0, 0, 50), BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, BorderSizePixel = 0, LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(row, 12)
+    stroke(row, C.Stroke, 0.5)
+    labels(row, title, subtitle, 12, 160)
+    local pill = mk("TextButton", {Size = UDim2.fromOffset(144, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), BackgroundColor3 = C.Field, AutoButtonColor = false, Text = "", Parent = row})
+    corner(pill, 10)
+    stroke(pill, C.Stroke, 0.4)
+    local pillText = mk("TextLabel", {Size = UDim2.new(1, -32, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pill})
+    local arrow = mk("TextLabel", {Size = UDim2.fromOffset(20, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 0), BackgroundTransparency = 1, Text = "\226\150\190", TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 14, Parent = pill})
+    local list = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Field, BorderSizePixel = 0, Visible = false, LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(list, 12)
+    stroke(list, C.Stroke, 0.5)
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list})
+    mk("UIPadding", {PaddingTop = UDim.new(0, 6), PaddingBottom = UDim.new(0, 6), PaddingLeft = UDim.new(0, 6), PaddingRight = UDim.new(0, 6), Parent = list})
+    local api = {value = nil}
+    local function close()
+        list.Visible = false
+        arrow.Text = "\226\150\190"
+    end
+    local function open()
+        for _, child in ipairs(list:GetChildren()) do
+            if child:IsA("GuiObject") then child:Destroy() end
+        end
+        local options = getOptions()
+        if #options == 0 then
+            mk("TextLabel", {Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, Text = "No hay nada para elegir", TextColor3 = C.Dim, Font = Enum.Font.GothamMedium, TextSize = 11, Parent = list})
+        end
+        for index, option in ipairs(options) do
+            local selected = option.value == api.value
+            local item = mk("TextButton", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = selected and C.AccentSoft or C.Card, BackgroundTransparency = CARD_ALPHA, AutoButtonColor = false, Text = "", LayoutOrder = index, Parent = list})
+            corner(item, 9)
+            if option.color then
+                local dot = mk("Frame", {Size = UDim2.fromOffset(8, 8), Position = UDim2.new(0, 10, 0.5, -4), BackgroundColor3 = option.color, BorderSizePixel = 0, Parent = item})
+                corner(dot, 999)
+            end
+            mk("TextLabel", {Size = UDim2.new(1, -34, 1, 0), Position = UDim2.fromOffset(26, 0), BackgroundTransparency = 1, Text = option.text, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = item})
+            item.MouseButton1Click:Connect(function()
+                api.value = option.value
+                pillText.Text = option.short or option.text
+                close()
+                if onSelect then pcall(onSelect, option.value) end
+            end)
+        end
+        list.Visible = true
+        arrow.Text = "\226\150\180"
+    end
+    pill.MouseButton1Click:Connect(function()
+        if list.Visible then close() else open() end
+    end)
+    function api.clear()
+        api.value = nil
+        pillText.Text = "\226\128\148"
+    end
+    function api.set(value, text)
+        api.value = value
+        pillText.Text = text or "\226\128\148"
+    end
+    return api
+end
+
+local function infoCard(tab, rows)
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = CARD_ALPHA, BorderSizePixel = 0, LayoutOrder = nextOrder(tab), Parent = tab.page})
+    corner(card, 12)
+    stroke(card, C.Stroke, 0.5)
+    mk("UIPadding", {PaddingTop = UDim.new(0, 8), PaddingBottom = UDim.new(0, 8), PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), Parent = card})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local values = {}
+    for index, title in ipairs(rows) do
+        local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = index, Parent = card})
+        mk("TextLabel", {Size = UDim2.new(0.5, 0, 1, 0), BackgroundTransparency = 1, Text = title, TextColor3 = C.Dim, Font = Enum.Font.GothamMedium, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = line})
+        values[title] = mk("TextLabel", {Size = UDim2.new(0.5, 0, 1, 0), Position = UDim2.fromScale(0.5, 0), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Right, TextTruncate = Enum.TextTruncate.AtEnd, Parent = line})
+    end
+    return values
+end
+
+local function note(tab, text)
+    mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = text, TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, LayoutOrder = nextOrder(tab), Parent = tab.page})
+end
+
+-- ---------- pestanas y opciones ----------
+local TabHome =
