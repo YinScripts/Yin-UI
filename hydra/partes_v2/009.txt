@@ -1,0 +1,230 @@
+e", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA,
+        BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local headH = nested and 46 or (o.Desc and 60 or 52)
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1, LayoutOrder = 1, Parent = card})
+    mk("TextLabel", {Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 14, 0.5, o.Desc and -15 or -8), BackgroundTransparency = 1, Text = o.Title or "", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = nested and 12 or 13, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, -190, 0, 13), Position = UDim2.new(0, 14, 0.5, 3), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim,
+            Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = head})
+    end
+    local pill = mk("TextButton", {Size = UDim2.fromOffset(160, 30), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3,
+        AutoButtonColor = false, Text = "", Parent = head})
+    corner(pill, 10)
+    local pillStroke = stroke(pill, C.Stroke, 0.5)
+    local pillText = mk("TextLabel", {Size = UDim2.new(1, -34, 1, 0), Position = UDim2.fromOffset(10, 0), BackgroundTransparency = 1, Text = "\226\128\148", TextColor3 = C.Text,
+        Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pill})
+    local chevron = mk("TextLabel", {Size = UDim2.fromOffset(24, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -4, 0, 0), BackgroundTransparency = 1, Text = "\226\128\186",
+        TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 18, Rotation = 90, Parent = pill})
+    local listWrap = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), Parent = listWrap})
+    local list = mk("ScrollingFrame", {Size = UDim2.new(1, 0, 0, 0), BackgroundTransparency = 1, BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = C.Accent,
+        CanvasSize = UDim2.new(), AutomaticCanvasSize = Enum.AutomaticSize.Y, Parent = listWrap})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = list})
+    local function options()
+        local raw = type(o.Options) == "function" and o.Options() or o.Options or {}
+        return type(raw) == "table" and raw or {}
+    end
+    local function textFor(value)
+        for _, option in ipairs(options()) do
+            if option.value == value then return option.text or tostring(value) end
+        end
+        return tostring(value)
+    end
+    local chosen = {}
+    local function has(value)
+        for _, v in ipairs(chosen) do
+            if v == value then return true end
+        end
+        return false
+    end
+    local function summary()
+        if #chosen == 0 then return o.Placeholder or "\226\128\148" end
+        if #chosen <= 2 then
+            local names = {}
+            for _, v in ipairs(chosen) do names[#names + 1] = textFor(v) end
+            return table.concat(names, ", ")
+        end
+        return #chosen .. " " .. tr("seleccionados")
+    end
+    local function copy()
+        local out = {}
+        for i, v in ipairs(chosen) do out[i] = v end
+        return out
+    end
+    local function commit(silent)
+        pillText.Text = summary()
+        Config.flags[id] = copy()
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, copy()) end
+    end
+    function obj:Set(values, silent)
+        chosen = {}
+        if type(values) == "table" then
+            for _, v in ipairs(values) do
+                if not has(v) then chosen[#chosen + 1] = v end
+            end
+        end
+        commit(silent)
+    end
+    function obj:Get() return copy() end
+    function obj:Refresh() pillText.Text = summary() end
+    local function close()
+        listWrap.Visible = false
+        tween(chevron, 0.25, {Rotation = 90, TextColor3 = C.Dim})
+        tween(pillStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        tween(cardStroke, 0.2, {Color = C.Stroke, Transparency = nested and 0.65 or 0.5})
+    end
+    local function open()
+        for _, child in ipairs(list:GetChildren()) do
+            if child:IsA("GuiObject") then child:Destroy() end
+        end
+        local all = options()
+        if #all == 0 then
+            mk("TextLabel", {Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, Text = "No hay nada para elegir", TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, Parent = list})
+        end
+        for index, option in ipairs(all) do
+            local item = mk("TextButton", {Size = UDim2.new(1, -6, 0, 32), BackgroundColor3 = C.Glass, BackgroundTransparency = 0.94, AutoButtonColor = false, Text = "", LayoutOrder = index, Parent = list})
+            corner(item, 9)
+            local itemStroke = stroke(item, C.Accent, 1)
+            local label = mk("TextLabel", {Size = UDim2.new(1, -44, 1, 0), Position = UDim2.fromOffset(12, 0), BackgroundTransparency = 1, Text = option.text or tostring(option.value),
+                TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = item})
+            local mark = mk("TextLabel", {Size = UDim2.fromOffset(24, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -8, 0, 0), BackgroundTransparency = 1, Text = "\226\156\147",
+                TextColor3 = C.Accent, TextTransparency = 1, Font = Enum.Font.GothamBlack, TextSize = 13, Parent = item})
+            local function paintItem()
+                local on = has(option.value)
+                item.BackgroundColor3 = on and C.Accent or C.Glass
+                tween(item, 0.12, {BackgroundTransparency = on and 0.82 or 0.94})
+                itemStroke.Transparency = on and 0.4 or 1
+                label.TextColor3 = on and C.Accent or C.Text
+                mark.TextTransparency = on and 0 or 1
+            end
+            paintItem()
+            item.MouseButton1Click:Connect(function()
+                if has(option.value) then
+                    for i, v in ipairs(chosen) do
+                        if v == option.value then table.remove(chosen, i) break end
+                    end
+                else
+                    chosen[#chosen + 1] = option.value
+                end
+                paintItem()
+                commit(false)
+            end)
+        end
+        list.Size = UDim2.new(1, 0, 0, math.max(math.min(#all, 6) * 36, 28))
+        listWrap.Visible = true
+        tween(chevron, 0.25, {Rotation = 270, TextColor3 = C.Accent})
+        tween(pillStroke, 0.2, {Color = C.Accent, Transparency = 0.2})
+        tween(cardStroke, 0.2, {Color = C.Accent, Transparency = 0.45})
+    end
+    pill.MouseButton1Click:Connect(function()
+        if listWrap.Visible then close() else open() end
+    end)
+    local saved = Config.flags[id]
+    if type(saved) == "table" then obj:Set(saved, true) elseif type(o.Default) == "table" then obj:Set(o.Default, true) else pillText.Text = summary() end
+    if #chosen > 0 and o.Callback then task.defer(function() pcall(o.Callback, copy()) end) end
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- selector de color (barras H / S / V + caja HEX) ----------
+function Hydra.colorPicker(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local obj = {Type = "ColorPicker", Id = id}
+    local row = baseRow(parent, order, o, nested, 60, "\226\151\183")
+    local card, head = row.card, row.head
+    local h, s, v = 0, 0, 1
+    local color = Color3.new(1, 1, 1)
+    local swatch = mk("TextButton", {Size = UDim2.fromOffset(46, 26), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = color, AutoButtonColor = false, Text = "", Parent = head})
+    corner(swatch, 9)
+    local swatchStroke = stroke(swatch, C.Stroke, 0.35)
+    local panel = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Visible = false, LayoutOrder = 2, Parent = card})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12), PaddingBottom = UDim.new(0, 12), Parent = panel})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = panel})
+    local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = C.Stroke, BackgroundTransparency = 0.5, BorderSizePixel = 0, LayoutOrder = 0, Parent = panel})
+    mk("UIGradient", {Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 1)}), Parent = line})
+
+    local function toHex(c)
+        return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+    end
+    local function parseHex(text)
+        text = string.gsub(tostring(text), "[%s#]", "")
+        if #text == 3 then text = string.rep(string.sub(text, 1, 1), 2) .. string.rep(string.sub(text, 2, 2), 2) .. string.rep(string.sub(text, 3, 3), 2) end
+        if not string.match(text, "^%x%x%x%x%x%x$") then return nil end
+        return Color3.fromRGB(tonumber(string.sub(text, 1, 2), 16), tonumber(string.sub(text, 3, 4), 16), tonumber(string.sub(text, 5, 6), 16))
+    end
+
+    local paint
+    -- una barra horizontal arrastrable (misma mecanica que el slider): devuelve su degradado y su cursor
+    local function makeBar(orderIndex, letter, onValue)
+        local wrap = mk("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = orderIndex, Parent = panel})
+        mk("TextLabel", {Size = UDim2.fromOffset(16, 30), BackgroundTransparency = 1, Text = letter, TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = wrap})
+        local bar = mk("TextButton", {Size = UDim2.new(1, -24, 0, 14), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 24, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), AutoButtonColor = false, Text = "", Parent = wrap})
+        corner(bar, 99)
+        stroke(bar, C.Stroke, 0.5)
+        local gradient = mk("UIGradient", {Parent = bar})
+        local thumb = mk("Frame", {Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 3, Parent = bar})
+        corner(thumb, 99)
+        mk("UIStroke", {Color = C.Bg, Thickness = 2, Parent = thumb})
+        local dragging = false
+        local function from(x) onValue(math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)) end
+        bar.InputBegan:Connect(function(inp)
+            if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                from(inp.Position.X)
+            end
+        end)
+        track(UserInputService.InputChanged:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then from(inp.Position.X) end
+        end))
+        track(UserInputService.InputEnded:Connect(function(inp)
+            if dragging and (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) then dragging = false end
+        end))
+        return gradient, thumb
+    end
+    local function commit(silent)
+        paint()
+        Config.flags[id] = toHex(color)
+        saveConfig()
+        if o.Callback and not silent then pcall(o.Callback, color) end
+    end
+    local hueGradient, hueThumb = makeBar(1, "H", function(alpha) h = alpha commit() end)
+    local satGradient, satThumb = makeBar(2, "S", function(alpha) s = alpha commit() end)
+    local valGradient, valThumb = makeBar(3, "V", function(alpha) v = alpha commit() end)
+    hueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(1 / 6, Color3.fromRGB(255, 255, 0)), ColorSequenceKeypoint.new(2 / 6, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(3 / 6, Color3.fromRGB(0, 255, 255)), ColorSequenceKeypoint.new(4 / 6, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(5 / 6, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+    })
+
+    local hexRow = mk("Frame", {Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 4, Parent = panel})
+    mk("TextLabel", {Size = UDim2.fromOffset(40, 32), BackgroundTransparency = 1, Text = "HEX", TextColor3 = C.Dim, Font = Enum.Font.GothamBlack, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, Parent = hexRow})
+    local hexPill = mk("Frame", {Size = UDim2.fromOffset(110, 28), Position = UDim2.fromOffset(40, 2), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = hexRow})
+    corner(hexPill, 9)
+    local hexStroke = stroke(hexPill, C.Stroke, 0.5)
+    local hexBox = mk("TextBox", {Size = UDim2.new(1, -16, 1, 0), Position = UDim2.fromOffset(8, 0), BackgroundTransparency = 1, Text = "", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 11,
+        TextXAlignment = Enum.TextXAlignment.Left, ClearTextOnFocus = false, Parent = hexPill})
+
+    function paint()
+        color = Color3.fromHSV(h, s, v)
+        swatch.BackgroundColor3 = color
+        hueThumb.Position = UDim2.new(h, 0, 0.5, 0)
+        satThumb.Position = UDim2.new(s, 0, 0.5, 0)
+        valThumb.Position = UDim2.new(v, 0, 0.5, 0)
+        satGradient.Color = ColorSequence.new(Color3.fromHSV(h, 0, v), Color3.fromHSV(h, 1, v))
+        valGradient.Color = ColorSequence.new(Color3.new(0, 0, 0), Color3.fromHSV(h, s, 1))
+        if not hexBox:IsFocused() then hexBox.Text = toHex(color) end
+    end
+    function obj:Set(newColor, silent)
+        if type(newColor) == "string" then newColor = parseHex(newColor) end
+        if typeof(newColor) ~= "Color3" then return end
+        h, s, v = newColor:ToHSV()
+        commit(silent)
+    end
+    function obj:Get() return color end
+
+    hexBox.Focused:Connect(function() tween(hexStroke, 0.15, {Color = C.Accent, Transparen
