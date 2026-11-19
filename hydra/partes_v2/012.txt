@@ -1,0 +1,145 @@
+xt = "0", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 10, Parent = head})
+    corner(KB.counter, 10)
+    stroke(KB.counter, C.Accent, 0.55)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = KB.counter})
+    -- el teclado: base oscura con degradado y las teclas con relieve
+    local board = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Bg, BackgroundTransparency = 0.25,
+        BorderSizePixel = 0, LayoutOrder = 1, Parent = card})
+    corner(board, 12)
+    stroke(board, C.Stroke, 0.6)
+    mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.fromRGB(70, 76, 90), Color3.new(1, 1, 1)), Parent = board})
+    mk("UIPadding", {PaddingTop = UDim.new(0, 7), PaddingBottom = UDim.new(0, 7), PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7), Parent = board})
+    mk("UIListLayout", {Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder, Parent = board})
+    for rowIndex, row in ipairs(KB.ROWS) do
+        local units = 0
+        for _, key in ipairs(row) do units = units + (key[3] or 1) end
+        local line = mk("Frame", {Size = UDim2.new(1, 0, 0, 26), BackgroundTransparency = 1, LayoutOrder = rowIndex, Parent = board})
+        mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 3), SortOrder = Enum.SortOrder.LayoutOrder, Parent = line})
+        local gap = 3 * (#row - 1) / #row
+        for keyIndex, key in ipairs(row) do
+            local slot = mk("Frame", {Size = UDim2.new((key[3] or 1) / units, -gap, 1, 0), BackgroundTransparency = 1, LayoutOrder = keyIndex, Parent = line})
+            -- sombra de abajo (da el relieve)
+            local base = mk("Frame", {Size = UDim2.new(1, 0, 1, -2), Position = UDim2.fromOffset(0, 2), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45,
+                BorderSizePixel = 0, Parent = slot})
+            corner(base, 6)
+            local cap = mk("Frame", {Size = UDim2.new(1, 0, 1, -2), Position = UDim2.fromOffset(0, 0), BackgroundColor3 = C.Field, BackgroundTransparency = 0.1,
+                BorderSizePixel = 0, ClipsDescendants = true, Parent = slot})
+            corner(cap, 6)
+            mk("UIGradient", {Rotation = 90, Color = KB.TOP_LIGHT, Parent = cap})
+            local capStroke = stroke(cap, C.Stroke, 0.65)
+            local sheen = mk("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, BorderSizePixel = 0, Visible = false, Parent = cap})
+            corner(sheen, 6)
+            local sheenGrad = mk("UIGradient", {Rotation = 20, Offset = Vector2.new(-1, 0), Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.42, 1), NumberSequenceKeypoint.new(0.5, 0.35),
+                NumberSequenceKeypoint.new(0.58, 1), NumberSequenceKeypoint.new(1, 1)}), Parent = sheen})
+            local label = mk("TextLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = key[1], TextColor3 = C.Dim,
+                Font = Enum.Font.GothamBold, TextSize = 10, TextScaled = false, ZIndex = 2, Parent = cap})
+            KB.keys[key[2]] = {cap = cap, base = base, stroke = capStroke, label = label, sheen = sheen, sheenGrad = sheenGrad}
+        end
+    end
+    -- lista de asignaciones
+    KB.list = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 2, Parent = card})
+    mk("UIListLayout", {Padding = UDim.new(0, 5), SortOrder = Enum.SortOrder.LayoutOrder, Parent = KB.list})
+    -- las teclas se hunden cuando las apretas en el teclado de verdad
+    local function press(input, down)
+        if input.UserInputType ~= Enum.UserInputType.Keyboard then return end
+        local key = KB.keys[input.KeyCode.Name]
+        if not key then return end
+        tween(key.cap, down and 0.06 or 0.18, {Position = UDim2.fromOffset(0, down and 2 or 0)})
+        tween(key.base, down and 0.06 or 0.18, {BackgroundTransparency = down and 0.8 or 0.45})
+    end
+    track(UserInputService.InputBegan:Connect(function(input) press(input, true) end))
+    track(UserInputService.InputEnded:Connect(function(input) press(input, false) end))
+    -- al cambiar el idioma se vuelve a armar la lista con los nombres traducidos
+    local previous = Lang.onChange
+    Lang.onChange = function()
+        if previous then previous() end
+        if Hydra.refreshKeys then Hydra.refreshKeys() end
+    end
+end
+
+function Hydra.refreshKeys()
+    local KB = Hydra.Keyboard
+    local used, count = {}, 0
+    -- K abre y cierra la ventana (de la libreria)
+    used.K = {tr("Abrir / cerrar Hydra")}
+    for _, bind in pairs(Hydra.Binds) do
+        if bind.code then
+            local name = bind.code.Name
+            if not used[name] then count = count + 1 end
+            used[name] = used[name] or {}
+            table.insert(used[name], tr(bind.title or "?"))
+        end
+    end
+    KB.counter.Text = tostring(count) .. " " .. tr("en uso")
+    for name, key in pairs(KB.keys) do
+        local on = used[name] ~= nil
+        tween(key.cap, 0.3, {BackgroundColor3 = on and C.Accent or C.Field, BackgroundTransparency = on and 0 or 0.1})
+        tween(key.label, 0.3, {TextColor3 = on and C.Bg or C.Dim})
+        tween(key.stroke, 0.3, {Color = on and Color3.new(1, 1, 1) or C.Stroke, Transparency = on and 0.1 or 0.65})
+        key.label.Font = on and Enum.Font.GothamBlack or Enum.Font.GothamBold
+        if on and not key.loop then
+            key.sheen.Visible = true
+            key.sheenGrad.Offset = Vector2.new(-1, 0)
+            key.loop = TweenService:Create(key.sheenGrad, KB.SHEEN, {Offset = Vector2.new(1, 0)})
+            key.loop:Play()
+        elseif not on and key.loop then
+            key.loop:Cancel()
+            key.loop = nil
+            key.sheen.Visible = false
+        end
+    end
+    for _, child in ipairs(KB.list:GetChildren()) do
+        if child:IsA("GuiObject") then child:Destroy() end
+    end
+    local names = {}
+    for name in pairs(used) do names[#names + 1] = name end
+    -- primero las teclas de las opciones, la K de la ventana al final
+    table.sort(names, function(a, b)
+        if (a == "K") ~= (b == "K") then return b == "K" end
+        return a < b
+    end)
+    for index, name in ipairs(names) do
+        local row = mk("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundColor3 = C.Glass, BackgroundTransparency = 0.93, BorderSizePixel = 0, LayoutOrder = index, Parent = KB.list})
+        corner(row, 9)
+        stroke(row, C.Stroke, 0.78)
+        -- chip con forma de tecla
+        local chipBase = mk("Frame", {Size = UDim2.fromOffset(60, 20), Position = UDim2.new(0, 6, 0.5, -9), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.45,
+            BorderSizePixel = 0, Parent = row})
+        corner(chipBase, 6)
+        local chip = mk("TextLabel", {Size = UDim2.fromOffset(60, 20), Position = UDim2.new(0, 6, 0.5, -11), BackgroundColor3 = C.Accent,
+            Text = keyName(Enum.KeyCode[name]), TextColor3 = C.Bg, Font = Enum.Font.GothamBlack, TextSize = 10, TextTruncate = Enum.TextTruncate.AtEnd, Parent = row})
+        corner(chip, 6)
+        mk("UIGradient", {Rotation = 90, Color = KB.TOP_LIGHT, Parent = chip})
+        mk("TextLabel", {Size = UDim2.new(1, -84, 1, 0), Position = UDim2.fromOffset(76, 0), BackgroundTransparency = 1, Text = table.concat(used[name], "  \194\183  "),
+            TextColor3 = name == "K" and C.Dim or C.Text, Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, Parent = row})
+    end
+    -- todavia no asignaste ninguna: una pista de como hacerlo
+    if count == 0 then
+        mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = #names + 1,
+            Text = "Toc\195\161 el chip de tecla de cualquier opci\195\179n para asignarle una", TextColor3 = C.Dim, Font = Enum.Font.Gotham, TextSize = 11,
+            TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, Parent = KB.list})
+    end
+end
+task.defer(Hydra.refreshKeys)
+
+function Hydra:Notify(text, color) toast(text, color) end
+-- traduce un texto (en espanol) al idioma del jugador, con las traducciones cargadas
+function Hydra:T(text) return tr(text) end
+-- traducciones de los textos de un script externo: {["texto en espanol"] = "english text"}
+function Hydra:AddTranslations(list)
+    for spanish, english in pairs(list) do EN[spanish] = english end
+end
+function Hydra:Select(name) selectTab(name) end
+-- cierra la ventana y libera todo (lo mismo que el boton de cerrar)
+function Hydra:Destroy()
+    for _, connection in ipairs(Connections) do pcall(function() connection:Disconnect() end) end
+    pcall(function() Gui:Destroy() end)
+    loadConfig()
+end
+
+-- pestana de componentes: se arma al final, cuando todos los elementos (PlayerSearch, Notify, teclas) ya existen
+if Settings.Components ~= false then buildComponentsTab() end
+
+return Hydra
