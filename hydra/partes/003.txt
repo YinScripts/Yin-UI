@@ -1,0 +1,480 @@
+)
+end)
+LanguagePicker.set(Config.language, tr(LANGUAGE_NAMES[Config.language] or "Autom\195\161tico"))
+section(TabSettings, "Ventana", "\226\150\162")
+note(TabSettings, "Bot\195\179n \226\128\147 : esconde la ventana. Toc\195\161 el bot\195\179n flotante para volver a abrirla. En PC tambi\195\169n con la tecla K. La \226\156\149 cierra el script.")
+
+relayoutCarousel()
+selectTab("Home")
+-- al cambiar el idioma: titulo de la pestana y nombres elegidos
+Lang.onChange = function()
+    if currentTab then HeaderSub.Text = tr(TabTitles[currentTab] or currentTab) end
+    Home.refreshTexts()
+    LanguagePicker.set(Config.language, tr(LANGUAGE_NAMES[Config.language] or "Autom\195\161tico"))
+end
+
+-- ---------- boton flotante para reabrir ----------
+local Bubble = mk("TextButton", {Size = UDim2.fromOffset(73, 73), Position = UDim2.new(0, 16, 0.5, -36), BackgroundColor3 = C.Accent, AutoButtonColor = false, Text = INITIAL, TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 22, Visible = false, Parent = Gui})
+corner(Bubble, 999)
+local BubbleStroke = stroke(Bubble, Color3.new(1, 1, 1), 0.6)
+-- logo del boton flotante; mientras no cargue (o si falla) se queda la H
+local BUBBLE_LOGO = "rbxassetid://114974832117287"
+if type(Settings.Logo) == "string" then BUBBLE_LOGO = Settings.Logo elseif Settings.Logo == false then BUBBLE_LOGO = "" end
+local BubbleLogo = mk("ImageLabel", {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Image = BUBBLE_LOGO, ScaleType = Enum.ScaleType.Crop, Parent = Bubble})
+corner(BubbleLogo, 999)
+-- con logo se ve solo la imagen, sin circulo ni borde. Si el logo no carga a los 5 s de aparecer el boton, vuelve la H con su circulo.
+if BubbleLogo.Image ~= "" then
+    Bubble.Text = ""
+    Bubble.BackgroundTransparency = 1
+    BubbleStroke.Transparency = 1
+    local checked = false
+    Bubble:GetPropertyChangedSignal("Visible"):Connect(function()
+        if checked or not Bubble.Visible then return end
+        checked = true
+        task.delay(5, function()
+            -- si el logo no carga, solo se muestra la H (sin circulo de fondo)
+            if Bubble.Parent and not BubbleLogo.IsLoaded then Bubble.Text = INITIAL end
+        end)
+    end)
+end
+
+local function setWindowVisible(visible)
+    if visible then
+        Window.Visible = true
+        Bubble.Visible = false
+        WindowScale.Scale = 0.9
+        tween(WindowScale, 0.3, {Scale = 1}, Enum.EasingStyle.Back)
+    else
+        tween(WindowScale, 0.15, {Scale = 0.9})
+        task.delay(0.15, function()
+            Window.Visible = false
+            Bubble.Visible = true
+        end)
+    end
+end
+HideButton.MouseButton1Click:Connect(function() setWindowVisible(false) end)
+
+-- arrastrar (ventana desde la cabecera y burbuja)
+local function draggable(handle, target, onTap)
+    local dragging, dragStart, startPos, moved = false, nil, nil, false
+    handle.InputBegan:Connect(function(input)
+        if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+            dragging, dragStart, startPos, moved = true, input.Position, target.Position, false
+        end
+    end)
+    track(UserInputService.InputChanged:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+            local delta = input.Position - dragStart
+            if delta.Magnitude > 6 then moved = true end
+            target.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+        end
+    end))
+    track(UserInputService.InputEnded:Connect(function(input)
+        if dragging and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+            dragging = false
+            if not moved and onTap then onTap() end
+        end
+    end))
+end
+draggable(Header, Window)
+draggable(Bubble, Bubble, function() setWindowVisible(true) end)
+
+track(UserInputService.InputBegan:Connect(function(input, processed)
+    if processed then return end
+    if input.KeyCode == (Settings.ToggleKey or Enum.KeyCode.K) then setWindowVisible(not Window.Visible) end
+end))
+
+-- ==================== ARRANQUE Y CIERRE ====================
+CloseButton.MouseButton1Click:Connect(function()
+    for _, connection in ipairs(Connections) do pcall(function() connection:Disconnect() end) end
+    tween(WindowScale, 0.18, {Scale = 0.85})
+    task.delay(0.2, function()
+        Gui:Destroy()
+    end)
+    loadConfig() -- se recupera la configuracion guardada (para la proxima vez), sin aplicarla
+end)
+
+-- ==================== HYDRA: API PARA USAR LA LIBRERIA DESDE AFUERA ====================
+-- local Hydra = loadstring(...)()
+-- local Tab = Hydra:Tab({Title = "Movimiento", Caption = "MOVER", Icon = "rbxassetid://..."})
+-- Tab:Section("Salto", icono)
+-- local Bhop = Tab:Toggle({Id = "bhop", Title = "Bunny Hop", Desc = "...", Icon = "rbxassetid://...", Default = false,
+--     Keybind = true, Floating = true, Callback = function(on) end})
+-- Bhop:Slider({Id = "bhopAccel", Title = "Aceleracion", Min = -3, Max = 0, Step = 0.1, Default = -0.2, Suffix = "", Callback = function(v) end})
+-- Bhop:Toggle({Id = "bhopHold", Title = "Mantener salto", Callback = function(on) end})   -- sub-opciones dentro del desplegable
+-- Tab:Slider({...})  -- slider suelto, misma forma
+-- Cada opcion devuelve :Set(valor), :Get() y guarda su valor solo (Config.flags).
+local Hydra = {Options = {}, Binds = {}, Floats = {}}
+Config.flags, Config.binds, Config.floats = Config.flags or {}, Config.binds or {}, Config.floats or {}
+
+local function keyName(code)
+    if not code then return "\226\128\148" end
+    local name = tostring(code.Name or code)
+    local short = {LeftShift = "LShift", RightShift = "RShift", LeftControl = "LCtrl", RightControl = "RCtrl", LeftAlt = "LAlt", RightAlt = "RAlt", Space = "Space"}
+    return short[name] or name
+end
+
+function Hydra.formatValue(value, step)
+    local decimals = 0
+    local text = tostring(step or 1)
+    local dot = string.find(text, "%.")
+    if dot then decimals = #text - dot end
+    return string.format("%." .. decimals .. "f", value)
+end
+
+-- pestana nueva: queda antes de Ajustes en el carrusel
+local buildingDemo = false
+function Hydra:Tab(info)
+    if not buildingDemo and Hydra.removeComponentsTab then Hydra.removeComponentsTab() end
+    local name = info.Id or info.Title
+    TabTitles[name] = info.Title
+    local tab = createTab(0, name, info.Icon or "\226\156\166", info.Caption or string.upper(info.Title))
+    local last = table.remove(Carousel.items)
+    local at = #Carousel.items + 1
+    for i, item in ipairs(Carousel.items) do
+        if item.name == "Settings" then at = i break end
+    end
+    table.insert(Carousel.items, at, last)
+    relayoutCarousel()
+    local api = {raw = tab}
+    function api:Section(title, icon) section(tab, title, icon or "\226\128\162") end
+    function api:Note(text) note(tab, text) end
+    function api:Toggle(o) return Hydra.toggle(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Slider(o) return Hydra.slider(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Button(o) return Hydra.button(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Dropdown(o) return Hydra.dropdown(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:PlayerSearch(o) return Hydra.playerSearch(tab.page, function() return nextOrder(tab) end, o) end
+    function api:Input(o) return Hydra.input(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Keybind(o) return Hydra.keybind(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:MultiDropdown(o) return Hydra.multiDropdown(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:ColorPicker(o) return Hydra.colorPicker(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Label(o) return Hydra.label(tab.page, function() return nextOrder(tab) end, o, false) end
+    function api:Divider() return Hydra.divider(tab.page, function() return nextOrder(tab) end) end
+    return api
+end
+
+-- ---------- slider ----------
+function Hydra.slider(parent, order, o, nested)
+    local minValue, maxValue, step = o.Min or 0, o.Max or 100, o.Step or 1
+    local default = math.clamp(o.Default or minValue, minValue, maxValue)
+    local id = o.Id or o.Title
+    local value = tonumber(Config.flags[id]) or default
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, o.Desc and 76 or 64), BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA, BorderSizePixel = 0, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("TextLabel", {Size = UDim2.new(1, -150, 0, 16), Position = UDim2.fromOffset(14, 10), BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card})
+    if o.Desc then
+        mk("TextLabel", {Size = UDim2.new(1, -150, 0, 13), Position = UDim2.fromOffset(14, 27), BackgroundTransparency = 1, Text = o.Desc, TextColor3 = C.Dim, Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = card})
+    end
+    -- caja del valor (se puede escribir) + boton de reset
+    local box = mk("Frame", {Size = UDim2.fromOffset(74, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 9), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.3, BorderSizePixel = 0, Parent = card})
+    corner(box, 8)
+    local boxStroke = stroke(box, C.Stroke, 0.5)
+    local input = mk("TextBox", {Size = UDim2.new(1, -10, 1, 0), Position = UDim2.fromOffset(5, 0), BackgroundTransparency = 1, Text = "", TextColor3 = C.Accent, Font = Enum.Font.GothamBlack, TextSize = 12, ClearTextOnFocus = false, Parent = box})
+    local reset = mk("TextButton", {Size = UDim2.fromOffset(44, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -92, 0, 11), BackgroundColor3 = C.AccentSoft, BackgroundTransparency = 1, AutoButtonColor = false, Text = "Reset", TextColor3 = C.Accent, TextTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 9, Parent = card})
+    corner(reset, 999)
+    local barY = o.Desc and 52 or 42
+    local bar = mk("Frame", {Size = UDim2.new(1, -28, 0, 6), Position = UDim2.fromOffset(14, barY), BackgroundColor3 = C.Off, BorderSizePixel = 0, Parent = card})
+    corner(bar, 99)
+    local fill = mk("Frame", {Size = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = bar})
+    corner(fill, 99)
+    mk("UIGradient", {Color = ColorSequence.new(C.AccentDark, C.Accent), Parent = fill})
+    local thumb = mk("Frame", {Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = C.Bg, BorderSizePixel = 0, ZIndex = 3, Parent = bar})
+    corner(thumb, 999)
+    local thumbStroke = mk("UIStroke", {Color = C.Accent, Thickness = 2.5, Parent = thumb})
+    local halo = mk("Frame", {Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = C.Accent, BackgroundTransparency = 1, BorderSizePixel = 0, ZIndex = 2, Parent = thumb})
+    corner(halo, 999)
+    -- globito con el valor mientras arrastras
+    local bubble = mk("Frame", {Size = UDim2.fromOffset(0, 22), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 0, -8), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Visible = false, ZIndex = 6, Parent = thumb})
+    corner(bubble, 8)
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8), Parent = bubble})
+    local bubbleText = mk("TextLabel", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = "", TextColor3 = C.Bg, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 7, Parent = bubble})
+    mk("Frame", {Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 1, 0), Rotation = 45, BackgroundColor3 = C.Accent, BorderSizePixel = 0, ZIndex = 6, Parent = bubble})
+    local bubbleScale = mk("UIScale", {Scale = 0.6, Parent = bubble})
+
+    local obj = {Type = "Slider", Id = id}
+    local function paint(animate)
+        local alpha = (maxValue == minValue) and 0 or math.clamp((value - minValue) / (maxValue - minValue), 0, 1)
+        local t = animate and 0.12 or 0
+        tween(fill, t, {Size = UDim2.new(alpha, 0, 1, 0)})
+        tween(thumb, t, {Position = UDim2.new(alpha, 0, 0.5, 0)})
+        local text = Hydra.formatValue(value, step) .. (o.Suffix or "")
+        if not input:IsFocused() then input.Text = text end
+        bubbleText.Text = text
+        local changed = math.abs(value - default) > step / 2
+        tween(reset, 0.2, {BackgroundTransparency = changed and 0.2 or 1, TextTransparency = changed and 0 or 1})
+        reset.Active = changed
+    end
+    function obj:Set(newValue, silent)
+        newValue = tonumber(newValue)
+        if not newValue then paint(true) return end
+        newValue = math.clamp(math.floor((newValue - minValue) / step + 0.5) * step + minValue, minValue, maxValue)
+        local changed = newValue ~= value
+        value = newValue
+        Config.flags[id] = value
+        paint(true)
+        if changed then
+            saveConfig()
+            if o.Callback and not silent then pcall(o.Callback, value) end
+        end
+    end
+    function obj:Get() return value end
+
+    local dragging = false
+    local function setFrom(x)
+        local alpha = math.clamp((x - bar.AbsolutePosition.X) / math.max(bar.AbsoluteSize.X, 1), 0, 1)
+        obj:Set(minValue + (maxValue - minValue) * alpha)
+    end
+    local function grab(on)
+        dragging = on
+        bubble.Visible = true
+        tween(bubbleScale, on and 0.18 or 0.12, {Scale = on and 1 or 0.6}, on and Enum.EasingStyle.Back or Enum.EasingStyle.Quad)
+        tween(halo, 0.18, {Size = on and UDim2.fromOffset(34, 34) or UDim2.fromOffset(18, 18), BackgroundTransparency = on and 0.75 or 1})
+        tween(thumbStroke, 0.18, {Thickness = on and 3.5 or 2.5})
+        if not on then task.delay(0.12, function() if not dragging then bubble.Visible = false end end) end
+    end
+    local hit = mk("TextButton", {Size = UDim2.new(1, -14, 0, 30), Position = UDim2.fromOffset(7, barY - 12), BackgroundTransparency = 1, Text = "", ZIndex = 4, Parent = card})
+    hit.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            grab(true)
+            setFrom(inp.Position.X)
+        end
+    end)
+    track(UserInputService.InputChanged:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then setFrom(inp.Position.X) end
+    end))
+    track(UserInputService.InputEnded:Connect(function(inp)
+        if dragging and (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) then grab(false) end
+    end))
+    input.Focused:Connect(function()
+        tween(boxStroke, 0.15, {Color = C.Accent, Transparency = 0})
+        input.Text = Hydra.formatValue(value, step)
+    end)
+    input.FocusLost:Connect(function()
+        tween(boxStroke, 0.2, {Color = C.Stroke, Transparency = 0.5})
+        local typed = tonumber((string.gsub(input.Text, ",", ".")))
+        if typed then obj:Set(typed) else paint(false) end
+        input.Text = Hydra.formatValue(value, step) .. (o.Suffix or "")
+    end)
+    reset.MouseButton1Click:Connect(function()
+        if reset.Active then obj:Set(default) end
+    end)
+    paint(false)
+    Hydra.Options[id] = obj
+    return obj
+end
+
+-- ---------- boton flotante de un toggle ----------
+-- Pastilla de vidrio oscuro: el fondo tiene un brillo que gira despacio, el borde una luz que lo recorre
+-- y el nombre un destello que lo cruza (como el titulo). Prendido = todo mas intenso; apagado = tenue.
+Hydra.FloatFx = {}
+track(RunService.Heartbeat:Connect(function(dt)
+    for pill, fx in pairs(Hydra.FloatFx) do
+        if not pill.Parent then
+            Hydra.FloatFx[pill] = nil
+        else
+            fx.angle = (fx.angle + dt * (fx.on and 40 or 18)) % 360
+            fx.border.Rotation = fx.angle
+            fx.bg.Rotation = (360 - fx.angle * 0.5) % 360
+        end
+    end
+end))
+-- deja un boton flotante siempre adentro de la pantalla (x, y = esquina de arriba a la izquierda, en pixeles)
+function Hydra.placeOnScreen(pill, x, y)
+    local screen, size = Gui.AbsoluteSize, pill.AbsoluteSize
+    if screen.X <= 0 or screen.Y <= 0 then return end
+    local margin = 6
+    x = math.clamp(x, margin, math.max(margin, screen.X - size.X - margin))
+    y = math.clamp(y, margin, math.max(margin, screen.Y - size.Y - margin))
+    pill.Position = UDim2.fromOffset(x, y)
+end
+-- si cambia el tamano de la pantalla (o del boton), vuelve a meterlos adentro
+track(Gui:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+    for _, pill in pairs(Hydra.Floats) do
+        if pill.Parent then Hydra.placeOnScreen(pill, pill.Position.X.Offset, pill.Position.Y.Offset) end
+    end
+end))
+-- candado del boton flotante: con el candado puesto queda fijo en su lugar (se guarda con la posicion)
+function Hydra.isFloatLocked(id)
+    local saved = Config.floats[id]
+    return type(saved) == "table" and saved.locked == true
+end
+function Hydra.setFloatLocked(id, locked)
+    local pill = Hydra.Floats[id]
+    if not pill then return false end
+    Config.floats[id] = {x = pill.AbsolutePosition.X, y = pill.AbsolutePosition.Y, locked = locked and true or nil}
+    saveConfig()
+    return true
+end
+function Hydra.floatButton(obj, o)
+    local id = obj.Id
+    if Hydra.Floats[id] then
+        Hydra.Floats[id]:Destroy()
+        Hydra.Floats[id] = nil
+        Config.floats[id] = nil
+        saveConfig()
+        return false
+    end
+    local saved = Config.floats[id]
+    local pill = mk("TextButton", {Size = UDim2.fromOffset(0, 42), AutomaticSize = Enum.AutomaticSize.X, Position = (type(saved) == "table" and saved.x) and UDim2.fromOffset(saved.x, saved.y) or UDim2.fromOffset(Gui.AbsoluteSize.X / 2 - 70, Gui.AbsoluteSize.Y * 0.18),
+        BackgroundColor3 = Color3.fromRGB(10, 11, 15), BackgroundTransparency = 0.45, AutoButtonColor = false, Text = "", Parent = Gui})
+    corner(pill, 999)
+    -- fondo: una capa con un brillo plateado muy suave que gira lento (va debajo del contenido)
+    local sheen = mk("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0, BorderSizePixel = 0, Parent = pill})
+    corner(sheen, 999)
+    local bg = mk("UIGradient", {Transparency = NumberSequence.new(0.93), Parent = sheen})
+    -- borde: una luz que recorre el contorno
+    local border = mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.6, Transparency = 0, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = pill})
+    local borderGradient = mk("UIGradient", {Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0, Color3.fromRGB(60, 64, 76)), ColorSequenceKeypoint.new(0.45, Color3.fromRGB(255, 255, 255)),
+        ColorSequenceKeypoint.new(0.55, Color3.fromRGB(255, 255, 255)), ColorSequenceKeypoint.new(1, Color3.fromRGB(60, 64, 76)),
+    }), Parent = border})
+    local content = mk("Frame", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, ZIndex = 2, Parent = pill})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 18), Parent = content})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 9), SortOrder = Enum.SortOrder.LayoutOrder, Parent = content})
+    -- icono suelto, sin fondo
+    local icon, iconProp = mkIcon(o.Icon or "\226\156\166", C.Dim, {Size = UDim2.fromOffset(18, 18), ScaleType = Enum.ScaleType.Fit, LayoutOrder = 1, Parent = content},
+        {Size = UDim2.fromOffset(18, 18), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 15, LayoutOrder = 1, Parent = content})
+    -- nombre con destello que lo cruza
+    local label = mk("TextLabel", {Size = UDim2.new(0, 0, 0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1, Text = o.Title, TextColor3 = C.Text, Font = Enum.Font.GothamBlack, TextSize = 13, LayoutOrder = 2, Parent = content})
+    local shine = mk("UIGradient", {Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.45), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.45),
+    }), Offset = Vector2.new(-1, 0), Parent = label})
+    local shineTween = TweenService:Create(shine, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.9), {Offset = Vector2.new(1, 0)})
+    -- puntito de estado a la derecha
+    local dot = mk("Frame", {Size = UDim2.fromOffset(7, 7), BackgroundColor3 = C.Off, BorderSizePixel = 0, LayoutOrder = 3, Parent = content})
+    corner(dot, 999)
+    local fx = {angle = math.random(0, 359), border = borderGradient, bg = bg, on = false}
+    Hydra.FloatFx[pill] = fx
+    local function paint(animate)
+        local on = obj:Get()
+        fx.on = on
+        local t = animate and 0.45 or 0
+        tween(pill, t, {BackgroundTransparency = on and 0.38 or 0.5})
+        bg.Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, on and 0.78 or 0.9), NumberSequenceKeypoint.new(1, 1),
+        })
+        tween(border, t, {Thickness = on and 2 or 1.4, Transparency = on and 0 or 0.45})
+        tween(icon, t, {[iconProp] = on and C.Accent or C.Dim})
+        tween(label, t, {TextColor3 = on and C.Text or C.Dim})
+        tween(dot, t, {BackgroundColor3 = on and C.Accent or C.Off, Size = on and UDim2.fromOffset(8, 8) or UDim2.fromOffset(7, 7)})
+        if on then
+            shineTween:Play()
+        else
+            shineTween:Cancel()
+            shine.Offset = Vector2.new(-1, 0)
+        end
+    end
+    obj._floatPaint = function() paint(true) end
+    paint(false)
+    local dragStart, startPos, moved
+    pill.InputBegan:Connect(function(inp)
+        if inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch then
+            dragStart, startPos, moved = inp.Position, pill.Position, false
+        end
+    end)
+    track(UserInputService.InputChanged:Connect(function(inp)
+        if dragStart and (inp.UserInputType == Enum.UserInputType.MouseMovement or inp.UserInputType == Enum.UserInputType.Touch) then
+            local delta = inp.Position - dragStart
+            if delta.Magnitude > 6 then moved = true end
+            -- con el candado puesto no se mueve (tocarlo sigue prendiendo/apagando)
+            if moved and not Hydra.isFloatLocked(id) then Hydra.placeOnScreen(pill, startPos.X.Offset + delta.X, startPos.Y.Offset + delta.Y) end
+        end
+    end))
+    track(UserInputService.InputEnded:Connect(function(inp)
+        if dragStart and (inp.UserInputType == Enum.UserInputType.MouseButton1 or inp.UserInputType == Enum.UserInputType.Touch) then
+            dragStart = nil
+            if moved then
+                if not Hydra.isFloatLocked(id) then
+                    Config.floats[id] = {x = pill.AbsolutePosition.X, y = pill.AbsolutePosition.Y}
+                    saveConfig()
+                end
+            else
+                obj:Set(not obj:Get())
+            end
+        end
+    end))
+    Hydra.Floats[id] = pill
+    pill:GetPropertyChangedSignal("AbsoluteSize"):Connect(function() Hydra.placeOnScreen(pill, pill.Position.X.Offset, pill.Position.Y.Offset) end)
+    task.defer(function() if pill.Parent then Hydra.placeOnScreen(pill, pill.Position.X.Offset, pill.Position.Y.Offset) end end)
+    if not (type(saved) == "table" and saved.x) then Config.floats[id] = {} saveConfig() end
+    return true
+end
+
+-- ---------- toggle ----------
+function Hydra.toggle(parent, order, o, nested)
+    local id = o.Id or o.Title
+    local state = Config.flags[id]
+    if type(state) ~= "boolean" then state = o.Default == true end
+    local obj = {Type = "Toggle", Id = id}
+    local card = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = C.Glass, BackgroundTransparency = nested and 0.94 or CARD_ALPHA, BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = order(), Parent = parent})
+    corner(card, nested and 11 or 14)
+    local cardStroke = stroke(card, C.Stroke, nested and 0.65 or 0.5)
+    mk("UIListLayout", {SortOrder = Enum.SortOrder.LayoutOrder, Parent = card})
+    local headH = nested and 44 or (o.Desc and 60 or 52)
+    local head = mk("TextButton", {Size = UDim2.new(1, 0, 0, headH), BackgroundTransparency = 1, AutoButtonColor = false, Text = "", LayoutOrder = 1, Parent = card})
+    -- barrita de acento a la izquierda (crece al prender)
+    local glowBar = mk("Frame", {Size = UDim2.fromOffset(3, 0), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 0, 0.5, 0), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = head})
+    corner(glowBar, 99)
+    local x = 14
+    local badge, icon, iconProp
+    if not nested then
+        badge = mk("Frame", {Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 12, 0.5, 0), BackgroundColor3 = C.AccentSoft, BorderSizePixel = 0, Parent = head})
+        corner(badge, 10)
+        icon, iconProp = mkIcon(o.Icon or "\226\156\166", C.Accent, {Size = UDim2.fromOffset(18, 18), Position = UDim2.fromOffset(8, 8), ScaleType = Enum.ScaleType.Fit, Parent = badge},
+            {Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Font = Enum.Font.GothamBold, TextSize = 15, Parent = badge})
+        x = 56
+    end
+    -- lado derecho: switch, tecla, flotante y flechita (de derecha a izquierda)
+    local right = mk("Frame", {Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -12, 0, 0), BackgroundTransparency = 1, Parent = head})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, HorizontalAlignment = Enum.HorizontalAlignment.Right, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = right})
+    local switch = mk("Frame", {Size = UDim2.fromOffset(44, 24), BackgroundColor3 = C.Off, BorderSizePixel = 0, LayoutOrder = 10, Parent = right})
+    corner(switch, 999)
+    local switchGradient = mk("UIGradient", {Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(200, 200, 200)), Rotation = 90, Parent = switch})
+    local knob = mk("Frame", {Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 3, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 2, Parent = switch})
+    corner(knob, 999)
+    local knobShadow = mk("UIStroke", {Color = Color3.new(0, 0, 0), Thickness = 1, Transparency = 0.75, Parent = knob})
+    local miniButtons = {}
+    local function mini(orderIndex, width)
+        local b = mk("TextButton", {Size = UDim2.fromOffset(width or 26, 24), BackgroundColor3 = C.Bg, BackgroundTransparency = 0.35, AutoButtonColor = false, Text = "", LayoutOrder = orderIndex, Parent = right})
+        corner(b, 8)
+        local s = stroke(b, C.Stroke, 0.55)
+        b.MouseEnter:Connect(function() tween(s, 0.15, {Color = C.Accent, Transparency = 0.2}) end)
+        b.MouseLeave:Connect(function() tween(s, 0.2, {Color = C.Stroke, Transparency = 0.55}) end)
+        miniButtons[#miniButtons + 1] = b
+        return b, s
+    end
+    -- tecla de atajo (PC)
+    local bindButton
+    if o.Keybind and not nested then
+        local b = mini(5, 0)
+        b.AutomaticSize = Enum.AutomaticSize.X
+        mk("UIPadding", {PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7), Parent = b})
+        b.TextColor3, b.Font, b.TextSize = C.Dim, Enum.Font.GothamBold, 10
+        local saved = Config.binds[id]
+        local code = saved and Enum.KeyCode[saved] or nil
+        Hydra.Binds[id] = {code = code, obj = obj, title = o.Title}
+        if Hydra.refreshKeys then task.defer(Hydra.refreshKeys) end
+        b.Text = keyName(code)
+        bindButton = b
+        b.MouseButton1Click:Connect(function()
+            Hydra.listening = {id = id, button = b}
+            b.Text = "..."
+            b.TextColor3 = C.Accent
+        end)
+    end
+    -- boton para sacarlo flotando (dibujo de una ventanita)
+    local floatButton
+    if o.Floating and not nested then
+        local b = mini(4, 26)
+        local frameIcon = mk("Frame", {Size = UDim2.fromOffset(12, 10), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, -1, 0.5, 1), BackgroundTransparency = 1, Parent = b})
+        corner(frameIcon, 3)
+        local fiStroke = mk("UIStroke", {Color = C.Dim, Thickness = 1.5, Parent = frameIcon})
+        local corner2 = mk("Frame", {Size = UDim2.fromOffset(6, 6), Position = UDim2.new(1, -3, 0, -3), BackgroundColor3 = C.Dim, BorderSizePixel = 0, Parent = frameIcon})
+        corner(corner2, 2)
+        floatButton = {button = b, stroke = fiStroke, dot = corner2}
+        -- candado (dibujado): arco arriba + cuerpo; abierto = el arco sube y se corre
+        local lockB = mini(3, 26)
+        local shackle = mk("Frame", {Size = UDim2.fromOffset(8, 8), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.5, 0, 0.5, -4), BackgroundTransparency = 1, Parent = lockB})
+        corner(shackle, 99)
+        local shackleStroke = mk("UIStroke", {Color = C.Dim, Thickness = 1.6, Parent = shackle})
