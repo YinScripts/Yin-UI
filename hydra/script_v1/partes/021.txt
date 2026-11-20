@@ -1,0 +1,55 @@
+ + dt
+    if AntiBot.acc < 0.1 then return end
+    AntiBot.acc = 0
+    pcall(AntiBot.step)
+end)
+
+Hydra:AddTranslations({
+    ["Ayuda"] = "Help", ["Visual"] = "Visual", ["Farm"] = "Farm",
+    ["Carga solo a los derribados cerca tuyo"] = "Carries nearby downed players by itself",
+    ["Distancia"] = "Range", ["Hasta qu\195\169 distancia act\195\186a"] = "How far it works", ["Espera"] = "Delay", ["Entre intentos"] = "Between attempts",
+    ["Revive solo a los derribados cerca tuyo"] = "Revives nearby downed players by itself",
+    ["Si qued\195\161s derribado, vuelve a aparecer solo"] = "If you get downed, you respawn by itself",
+    ["ESP jugadores"] = "Player ESP", ["Encontr\195\161 a todos, incluso a trav\195\169s de paredes"] = "Find everyone, even through walls",
+    ["Distancia m\195\161xima"] = "Max distance", ["M\195\161s lejos no se muestra"] = "Farther away is hidden",
+    ["Nombres"] = "Names", ["Vida"] = "Health", ["Flechas en el borde"] = "Edge arrows", ["Apuntan a los que no ves"] = "Point at the ones you can't see",
+    ["L\195\173neas"] = "Lines", ["Desde abajo de la pantalla hasta cada uno"] = "From the bottom of the screen to each one",
+    ["Contorno"] = "Outline", ["Silueta a trav\195\169s de paredes"] = "Silhouette through walls",
+    ["ESP derribados"] = "Downed ESP", ["Derribados con su tiempo restante"] = "Downed players with their remaining time",
+    ["Auto farm tickets"] = "Auto farm tickets", ["Junta los tickets del mapa solo"] = "Collects the map tickets by itself",
+    ["Velocidad de viaje"] = "Travel speed", ["Qu\195\169 tan r\195\161pido va a cada ticket"] = "How fast it goes to each ticket",
+    ["Directo"] = "Instant", ["Aparece en el ticket sin deslizarse"] = "Appears on the ticket without gliding",
+    ["Volver"] = "Return", ["Al terminar vuelve a donde estabas"] = "When done, goes back to where you were",
+    ["DERRIBADO"] = "DOWNED", ["CARGADO"] = "CARRIED",
+    ["Te deja en una plataforma en el cielo, lejos de todo"] = "Leaves you on a platform in the sky, far from everything",
+    ["Te aleja de los nextbots cuando se acercan"] = "Moves you away from nextbots when they get close",
+    ["Distancia de reacci\195\179n"] = "Reaction distance", ["Si un bot est\195\161 m\195\161s cerca, te mueve"] = "If a bot is closer, it moves you",
+    ["Entre teletransportes"] = "Between teleports",
+})
+ESP.gui()
+local TabMore = Hydra:Tab({Id = "More", Title = "More", Caption = "MORE", Icon = "rbxassetid://114688401779019"})
+
+TabMore:Section("Ayuda", "\226\156\166")
+local CarryToggle = TabMore:Toggle({Id = "autoCarry", Title = "Auto Carry", Desc = "Carga solo a los derribados cerca tuyo", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AutoCarry.Enabled = on end})
+CarryToggle:Slider({Id = "carryRange", Title = "Distancia", Desc = "Hasta qu\195\169 distancia act\195\186a", Min = 5, Max = 60, Step = 1, Default = 30, Suffix = " m",
+    Callback = function(v) AutoCarry.Range = v end})
+CarryToggle:Slider({Id = "carryDelay", Title = "Espera", Desc = "Entre intentos", Min = 0.05, Max = 1, Step = 0.05, Default = 0.2, Suffix = " s",
+    Callback = function(v) AutoCarry.Interval = v end})
+local ReviveToggle = TabMore:Toggle({Id = "autoRevive", Title = "Auto Revive", Desc = "Revive solo a los derribados cerca tuyo", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AutoRevive.Enabled = on end})
+ReviveToggle:Slider({Id = "reviveRange", Title = "Distancia", Desc = "Hasta qu\195\169 distancia act\195\186a", Min = 5, Max = 30, Step = 1, Default = 30, Suffix = " m",
+    Callback = function(v) AutoRevive.Range = v end})
+TabMore:Toggle({Id = "autoSpawn", Title = "Auto Spawn", Desc = "Si qued\195\161s derribado, vuelve a aparecer solo", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AutoSpawn.Enabled = on end})
+local AntiBotToggle = TabMore:Toggle({Id = "antiBot", Title = "Anti Bot", Desc = "Te aleja de los nextbots cuando se acercan", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AntiBot.Enabled = on end})
+AntiBotToggle:Slider({Id = "antiBotDist", Title = "Distancia de reacci\195\179n", Desc = "Si un bot est\195\161 m\195\161s cerca, te mueve", Min = 1, Max = 25, Step = 1, Default = 10, Suffix = " m",
+    Callback = function(v) AntiBot.Distance = v end})
+AntiBotToggle:Slider({Id = "antiBotCd", Title = "Espera", Desc = "Entre teletransportes", Min = 0.05, Max = 2, Step = 0.05, Default = 0.15, Suffix = " s",
+    Callback = function(v) AntiBot.Cooldown = v end})
+
+TabMore:Section("Visual", "\226\151\142")
+local EspToggle = TabMore:Toggle({Id = "espPlayers", Title = "ESP jugadores", Desc = "Encontr\195\161 a todos, incluso a trav\195\169s de paredes", Icon = "\226\151\142", Keybind = true, Floating = true,
+    Callback = function(on) ESP.Players.Enabled = on end})
+EspToggle:Slider({Id = "espDist", Title = "Distancia m\195\161xima", Desc = "M\195\161s lejos no se muestra",
