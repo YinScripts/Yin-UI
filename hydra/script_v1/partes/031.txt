@@ -86,8 +86,28 @@ a legacy SetHeader.
         origSetEquipped = EmotePopup and EmotePopup.SetEquipped or nil
         UA2.origGetSkin = Inventory.GetSkin
 
-        applyPatches()
-        applyShopPatches()
+        local okPatches, patchError = pcall(function()
+            applyPatches()
+            applyShopPatches()
+        end)
+        if not okPatches then
+            M.Disable()
+            log("ABORTADO: error al instalar Unlock All: " .. tostring(patchError))
+            return
+        end
+        local essential = { ["useInventory.GetOwnedBySlotType"] = false,
+                            ["useLoadout.Equip"] = false,
+                            ["useInventory.Equip"] = false }
+        for _, result in ipairs(patchResults) do
+            if essential[result.label] ~= nil then essential[result.label] = result.ok end
+        end
+        for label, succeeded in pairs(essential) do
+            if not succeeded then
+                M.Disable()
+                log("ABORTADO: no se pudo instalar " .. label .. "; el ejecutor debe permitir modificar las tablas de Evade (setreadonly).")
+                return
+            end
+        end
         active = true
 
         if UA2.skinOn then
