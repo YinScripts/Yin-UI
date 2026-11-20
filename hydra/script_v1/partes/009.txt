@@ -1,0 +1,119 @@
+function Core.module(...)
+    local node = ReplicatedStorage
+    for _, name in ipairs({...}) do
+        node = node and node:FindFirstChild(name)
+    end
+    return node
+end
+
+-- Evade 5073+: los remotos viven en Remotes/<grupo>; Events se conserva como compatibilidad.
+function Core.remote(group, name)
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    local folder = remotes and remotes:FindFirstChild(group)
+    local remote = folder and folder:FindFirstChild(name)
+    if remote then return remote end
+    local events = ReplicatedStorage:FindFirstChild("Events")
+    return events and events:FindFirstChild(name) or nil
+end
+
+function Core.hook()
+    if Core.hooked then return true end
+    if Core.safeMode then
+        RunService.Stepped:Connect(function(_, dt)
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if not hrp or not hum or hum.Health <= 0 then return end
+            local ctx = {char = char, root = hrp, hum = hum, dt = dt, grounded = hum.FloorMaterial ~= Enum.Material.Air,
+                jumpHeld = hum.Jump == true, jump = function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end}
+            for _, fn in pairs(Core.steps) do pcall(fn, ctx) end
+        end)
+        Core.hooked = true
+        return true
+    end
+    local moduleScript = Core.module("Objects", "Game", "Character", "Client", "Movement")
+    if not moduleScript then return false end
+    local ok, Movement = pcall(require, moduleScript)
+    if not ok or type(Movement) ~= "table" or type(Movement.Update) ~= "function" then return false end
+    local old = Movement.Update
+    Movement.Update = function(self, dt, ...)
+
+        if self.Character and self.Character == LocalPlayer.Character then
+            for _, fn in pairs(Core.preSteps) do pcall(fn, self) end
+        end
+        old(self, dt, ...)
+        if not (self.Character and self.Character == LocalPlayer.Character) then return end
+        local hrp = self.Character:FindFirstChild("HumanoidRootPart")
+        local hum = self.Character:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum or hum.Health <= 0 then return end
+        local okG, g = pcall(function() return self.DataRegistry:Get("Grounded") end)
+        local ctx = {char = self.Character, root = hrp, hum = hum, dt = tonumber(dt) or (1 / 60), registry = self.DataRegistry,
+            grounded = (okG and g ~= nil) and (g == true) or (not (okG and g ~= nil) and hum.FloorMaterial ~= Enum.Material.Air),
+            jumpHeld = self.JumpHeldDown == true, movement = self, jump = function() pcall(function() self:AttemptJump() end) end}
+        for _, fn in pairs(Core.steps) do pcall(fn, ctx) end
+    end
+    Core.hooked = true
+    return true
+end
+
+function Core.setModifier(name, value)
+    if not Core.safeMode then
+        local ok = pcall(function()
+            local service = require(Core.module("Services", "Asset", "CharacterService"))
+            local data = service:GetCharacterFromPlayer(LocalPlayer)
+            local stats = data.Movement.MoveStats
+            stats.Modifiers = stats.Modifiers or {}
+            stats.Modifiers[name] = value
+            stats:Reset()
+        end)
+        if ok then return true end
+    end
+    local fire = firesignal
+    local char = LocalPlayer.Character
+    local tag = char and char:GetAttribute("Tag")
+    local event = Core.remote("Character", "CharacterTask")
+    if type(fire) ~= "function" or not tag or not event then return false end
+    return (pcall(fire, event.OnClientEvent, tag, "ModifyMovement", {name, value}))
+end
+
+local SP = {Enabled = false, Value = 55, Token = 0, SPRINT_CAP = 2}
+function SP.apply()
+    if SP.Enabled then return Core.setModifier("Speed", SP.Value * 90 / SP.SPRINT_CAP) end
+    return Core.setModifier("Speed", nil)
+end
+LocalPlayer.CharacterAdded:Connect(function()
+    SP.Token = SP.Token + 1
+    local token = SP.Token
+    if not SP.Enabled then return end
+    task.spawn(function()
+        for _ = 1, 20 do
+            task.wait(0.5)
+            if token ~= SP.Token or not SP.Enabled then return end
+            if SP.apply() then return end
+        end
+    end)
+end)
+
+local AJ = {Enabled = false, Height = 10, Token = 0}
+function AJ.apply()
+    if AJ.Enabled then return Core.setModifier("JumpHeight", AJ.Height) end
+    return Core.setModifier("JumpHeight", nil)
+end
+LocalPlayer.CharacterAdded:Connect(function()
+    AJ.Token = AJ.Token + 1
+    local token = AJ.Token
+    if not AJ.Enabled then return end
+    task.spawn(function()
+        for _ = 1, 20 do
+            task.wait(0.5)
+            if token ~= AJ.Token or not AJ.Enabled then return end
+            if AJ.apply() then return end
+        end
+    end)
+end)
+
+local Front = {rays = RaycastParams.new()}
+Front.rays.FilterType = Enum.RaycastFilterType.Exclude
+pcall(function() Front.rays.RespectCanCollide = true end)
+
+function Front.obsta
