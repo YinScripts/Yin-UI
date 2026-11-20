@@ -1,0 +1,75 @@
+ionService")
+    local player = Players.LocalPlayer
+    local M = HydraKey.MAINT
+    local C = {Bg = Color3.fromRGB(12, 14, 19), Field = Color3.fromRGB(38, 43, 54), Text = Color3.fromRGB(248, 249, 252), Dim = Color3.fromRGB(190, 195, 208),
+        Accent = Color3.fromRGB(236, 239, 245), AccentDark = Color3.fromRGB(140, 146, 160), Stroke = Color3.fromRGB(150, 156, 172)}
+    local lang = "en"
+    local function pickLang(locale)
+        local l = string.lower(tostring(locale or "")):gsub("_", "-")
+        local code = string.sub(l, 1, 2)
+        if code == "zh" then
+            if string.find(l, "tw", 1, true) or string.find(l, "hk", 1, true) or string.find(l, "hant", 1, true) then return "zh_tw" end
+            return "zh_cn"
+        end
+        if M.TEXT[code] then return code end
+        return "en"
+    end
+    pcall(function() lang = pickLang(LocalizationService.SystemLocaleId) end)
+    pcall(function()
+        local id = player.LocaleId
+        if type(id) == "string" and #id > 0 then lang = pickLang(id) end
+    end)
+    local function t(k) return (M.TEXT[lang] or M.TEXT.en)[k] end
+    local function mk(class, props)
+        local inst = Instance.new(class)
+        for k, v in pairs(props) do if k ~= "Parent" then inst[k] = v end end
+        if class == "TextLabel" or class == "TextBox" or class == "TextButton" then
+            local o = Instance.new("UIStroke")
+            o.ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual
+            o.Color = Color3.new(0, 0, 0)
+            o.Thickness = 1
+            o.Transparency = 0.55
+            o.Parent = inst
+        end
+        inst.Parent = props.Parent
+        return inst
+    end
+    local function corner(p, r) return mk("UICorner", {CornerRadius = UDim.new(0, r), Parent = p}) end
+    local function stroke(p, color, tr, th) return mk("UIStroke", {Color = color, Transparency = tr or 0, Thickness = th or 1, ApplyStrokeMode = Enum.ApplyStrokeMode.Border, Parent = p}) end
+    local function tween(i, time, goals, style, dir)
+        local tw = TweenService:Create(i, TweenInfo.new(time, style or Enum.EasingStyle.Quint, dir or Enum.EasingDirection.Out), goals)
+        tw:Play()
+        return tw
+    end
+
+    local parent = nil
+    pcall(function() if typeof(gethui) == "function" then parent = gethui() end end)
+    if not parent then pcall(function() parent = game:GetService("CoreGui") end) end
+    parent = parent or player:WaitForChild("PlayerGui")
+    local old = parent:FindFirstChild("HydraMaintenance")
+    if old then old:Destroy() end
+    local gui = mk("ScreenGui", {Name = "HydraMaintenance", ResetOnSpawn = false, IgnoreGuiInset = false, ZIndexBehavior = Enum.ZIndexBehavior.Sibling, DisplayOrder = 100, Parent = parent})
+
+    local panel = mk("Frame", {Size = UDim2.new(0.92, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, -220),
+        BackgroundColor3 = C.Bg, BackgroundTransparency = 0.04, BorderSizePixel = 0, Parent = gui})
+    mk("UISizeConstraint", {MaxSize = Vector2.new(340, math.huge), Parent = panel})
+    corner(panel, 16)
+    local scale = mk("UIScale", {Scale = 0.9, Parent = panel})
+
+    local ring = stroke(panel, Color3.new(1, 1, 1), 0.15, 1.4)
+    local ringGrad = mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, C.AccentDark), ColorSequenceKeypoint.new(0.45, C.AccentDark),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(0.55, C.AccentDark), ColorSequenceKeypoint.new(1, C.AccentDark)}), Parent = ring})
+    local ringSpin = TweenService:Create(ringGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360})
+    ringSpin:Play()
+
+    local glow = mk("Frame", {Size = UDim2.new(1, 0, 0, 90), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, Parent = panel})
+    corner(glow, 16)
+    mk("UIGradient", {Rotation = 90, Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.9), NumberSequenceKeypoint.new(1, 1)}), Parent = glow})
+    local body = mk("Frame", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Parent = panel})
+    mk("UIPadding", {PaddingTop = UDim.new(0, 14), PaddingBottom = UDim.new(0, 14), PaddingLeft = UDim.new(0, 16), PaddingRight = UDim.new(0, 16), Parent = body})
+    mk("UIListLayout", {Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder, Parent = body})
+
+    local head = mk("Frame", {Size = UDim2.new(1, 0, 0, 46), BackgroundTransparency = 1, LayoutOrder = 1, Parent = body})
+    local logo = mk("ImageLabel", {Size = UDim2.fromOffset(44, 44), BackgroundTransparency = 1, Image = M.LOGO, ScaleType = Enum.ScaleType.Fit, Parent = head})
+    TweenService:Create(logo, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), {Rotation = 4}):Play()
+    local title = mk("TextLabel", {Size = UDim2.new(1, -100, 0, 26), Position = UDim2.fromOffset(54, 0), BackgroundTransparency = 1
