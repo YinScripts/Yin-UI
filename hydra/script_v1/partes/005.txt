@@ -1,0 +1,78 @@
+ pcall(function() getgenv().HydraKeyValidated = true end)
+            setStatus("accepted", C.OK, false)
+            check.Text = t("granted")
+            tween(checkGrad, 0.25, {Rotation = 270})
+            tween(check, 0.25, {BackgroundColor3 = C.OK})
+            markSteps(3)
+            task.wait(0.45)
+            dismiss()
+        else
+            if fromCache and kind == "invalid_expired" then
+                HydraKey.clear()
+                input.Text = ""
+                state.removed = true
+            end
+            setStatus(kind, C.ERR, false)
+            check.Text = t("check")
+            fieldStroke.Color = C.ERR
+            fieldStroke.Transparency = 0.1
+            shake()
+            task.delay(1.2, function()
+                if fieldStroke.Parent then tween(fieldStroke, 0.3, {Color = C.Stroke, Transparency = 0.55}) end
+            end)
+        end
+        state.busy = false
+    end
+
+    input.FocusLost:Connect(function(enter) if enter then tryAccess(input.Text, false) end end)
+    check.Activated:Connect(function() tryAccess(input.Text, false) end)
+    link.Activated:Connect(function()
+        if setclipboard then
+            pcall(setclipboard, HydraKey.PORTAL)
+            setStatus("link_copied", C.OK, false)
+        else
+            setStatus("portal", C.Accent, false)
+        end
+        if HydraKey.normalize(input.Text) == "" then markSteps(2) end
+    end)
+    close.Activated:Connect(function()
+        state.closed = true
+        task.spawn(dismiss)
+    end)
+
+    tween(shade, 0.3, {BackgroundTransparency = 0.35})
+    tween(scale, 0.45, {Scale = 1}, Enum.EasingStyle.Back)
+    refreshFormat()
+    local cached = HydraKey.loadCached()
+    if cached then
+        input.Text = cached
+        task.spawn(function()
+            task.wait()
+            tryAccess(cached, true)
+        end)
+    elseif not HydraKey.canCache() then
+        setStatus("no_file", C.Accent, false)
+    end
+    while not state.authorized and not state.closed do task.wait() end
+    return state.authorized
+end
+
+-- Aviso de mantenimiento (se muestra mientras el sistema key esta desactivado: HydraKey.ENABLED = false)
+HydraKey.MAINT = {
+    LOGO = "rbxassetid://138681977482040",
+    DURATION = 25, -- segundos antes de cerrarse solo (0 = no se cierra solo)
+    TEXT = {
+        en = {tag = "MAINTENANCE",
+            msg = "Yin Yang will be undergoing maintenance. We apologize for this, but it's for the good of our script. It will be back in a few days. We'll announce everything on our Discord server!"},
+        es = {tag = "MANTENIMIENTO",
+            msg = "Yin Yang entrar\195\161 en mantenimiento. Pedimos disculpas por esto, pero es por el bien de nuestro script. Volver\195\161 en unos d\195\173as. \194\161Anunciaremos todo en nuestro servidor de Discord!"},
+        pt = {tag = "MANUTEN\195\135\195\131O",
+            msg = "O Yin Yang entrar\195\161 em manuten\195\167\195\163o. Pedimos desculpas por isso, mas \195\169 para o bem do nosso script. Ele voltar\195\161 em alguns dias. Vamos anunciar tudo no nosso servidor do Discord!"},
+        fr = {tag = "MAINTENANCE",
+            msg = "Yin Yang va entrer en maintenance. Nous nous en excusons, mais c'est pour le bien de notre script. Il sera de retour dans quelques jours. Nous annoncerons tout sur notre serveur Discord !"},
+        de = {tag = "WARTUNG",
+            msg = "Yin Yang wird gewartet. Wir entschuldigen uns daf\195\188r, aber es dient dem Wohl unseres Scripts. Es ist in ein paar Tagen wieder da. Wir geben alles auf unserem Discord-Server bekannt!"},
+        it = {tag = "MANUTENZIONE",
+            msg = "Yin Yang andr\195\160 in manutenzione. Ci scusiamo per questo, ma \195\168 per il bene del nostro script. Torner\195\160 tra pochi giorni. Annunceremo tutto sul nostro server Discord!"},
+        ru = {tag = "\208\162\208\149\208\165\208\160\208\144\208\145\208\158\208\162\208\171",
+            msg = "Yin Yang \209\131\209\133\208\190\208\180\208\184\209\130 \208\189\208\176 \209\130\208\181\209\133\208\189\208\184\209\135\208\181\209\129\208\186\208\190\208\181 \208\190\208\177\209\129\208\187\209\131\208\182\208\184\208\178\208\176\208\189\208\184\208\181. \208\159\209\128\208\184\208\189\208\190\209\129\208\184\208\188 \208\184\208\183\208\178\208\184\208\189\208\181\208\189\208\184\209\143, \208\189\208\190 \209\141\209\130\208\190 \208\189\209\131\208\182\208\189\208\190 \208\180\208\187\209\143 \209\131\208\187\209\131\209\135\209\136\208\181\208\189\208\184\209\143 \208\189\208\176\209\136\208\181\208\179\208\190 \209\129\208\186\209\128\208\184\208\191\209\130\208\176. \208\158\208\189 \208\178\208\181\209\128\208\189\209\145\209\130\209\129\209\143 \209\135\208\181\209\128\208\181\208\183 \208\189\208\181\209\129\208\186\208\190\208\187\209\140\208\186\208\190 \208\180\208\189\208\181\208\185. \208\158\208\177\208\190 \208\178\209\129\209\145\208\188 \208\190\208\177\209\138\209\143\208\178\208\184\208\188 \208\189\208\176 \208\189\208\176\209\136\208\181\208\
