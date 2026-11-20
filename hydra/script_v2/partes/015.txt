@@ -1,0 +1,101 @@
+P.rigService = (ok and type(svc) == "table") and svc or false
+    end
+    local tag = char:GetAttribute("Tag")
+    if ESP.rigService and tag then
+        local ok, rig = pcall(function() return ESP.rigService:GetRigFromTag(tag) end)
+        if ok and rig and typeof(rig.Model) == "Instance" and rig.Model:IsA("Model") and rig.Model.Parent then return rig.Model end
+    end
+    return char
+end
+function ESP.template()
+    if ESP.whistle == nil then
+        local found = Core.module("Objects", "Game", "Character", "ActionVisuals", "Actions", "Whistle")
+        ESP.whistle = found and found:FindFirstChild("WhistleHighlight") or false
+    end
+    return ESP.whistle or nil
+end
+function ESP.outline(e, char, model, color, on)
+    if not on then
+        if e.hl then e.hl.Enabled = false end
+        return
+    end
+    if not e.hl or e.hl.Parent ~= char then
+        if e.hl then pcall(function() e.hl:Destroy() end) end
+        local template = ESP.template()
+        local hl = template and template:Clone() or Instance.new("Highlight")
+        hl.Name = "HydraHL"
+        hl.DepthMode = Enum.HighlightDepthMode.AlwaysOnTop
+        if not template then
+            hl.FillTransparency = 0.5
+            hl.OutlineTransparency = 0
+        end
+        hl.Parent = char
+        e.hl = hl
+    end
+    e.hl.Adornee = model
+    e.hl.FillColor = color
+    e.hl.OutlineColor = color
+    e.hl.Enabled = true
+end
+function ESP.step()
+    local cam = workspace.CurrentCamera
+    local myRoot = More.myRoot()
+    local screen = ESP.screen
+    if not cam or not screen then return end
+    local view = cam.ViewportSize
+    local center = Vector2.new(view.X / 2, view.Y / 2)
+    local radius = math.min(view.X, view.Y) * 0.36
+    local anyOn = ESP.Players.Enabled or ESP.Downed.Enabled
+    for _, player in ipairs(Players:GetPlayers()) do
+        if player ~= LocalPlayer then
+            local char = player.Character
+            local root = char and char:FindFirstChild("HumanoidRootPart")
+            local e = anyOn and root and ESP.entry(player)
+            if e then
+                local data = More.data(player)
+                local downed = data and More.reg(data, "Downed") == true
+                local cfg = downed and ESP.Downed or ESP.Players
+
+                if downed and not ESP.Downed.Enabled then cfg, downed = ESP.Players, false end
+
+                local distance = (root.Position - (myRoot and myRoot.Position or cam.CFrame.Position)).Magnitude
+                if not cfg.Enabled or distance > cfg.MaxDist then
+                    ESP.hide(e)
+                else
+                    local color = downed and ESP.RED or ESP.WHITE
+                    local model = ESP.rigModel(char)
+                    ESP.outline(e, char, model, color, cfg.Outline)
+
+                    e.bb.Adornee = model:FindFirstChild("Head", true) or root
+                    e.bb.Enabled = true
+                    e.tag.Visible = downed
+                    if downed then
+                        local carried = More.isSet(More.reg(data, "Carried"))
+                        e.tag.Text = Hydra:T(carried and "CARGADO" or "DERRIBADO")
+                    end
+                    e.name.Visible = downed or cfg.Names
+                    e.name.Text = player.DisplayName
+                    e.name.TextColor3 = color
+                    local hum = char:FindFirstChildOfClass("Humanoid")
+                    local health = data and tonumber(More.reg(data, "Health")) or (hum and hum.Health) or 0
+                    e.info.Text = math.floor(distance + 0.5) .. "m" .. ((not downed and cfg.Health) and ("  \194\183  " .. math.floor(health + 0.5) .. " hp") or "")
+                    local showBar = downed or cfg.Health
+                    e.barBack.Visible = showBar
+                    if showBar then
+                        local fraction
+                        if downed then
+                            fraction = math.clamp(tonumber(More.reg(data, "DownedPeriod")) or 1, 0, 1)
+                        else
+                            local maxHealth = hum and hum.MaxHealth or 100
+                            fraction = math.clamp(health / math.max(maxHealth, 1), 0, 1)
+                        end
+                        e.bar.Size = UDim2.fromScale(fraction, 1)
+                        e.bar.BackgroundColor3 = downed and ESP.RED:Lerp(Color3.fromRGB(90, 20, 20), 1 - fraction) or ESP.WHITE
+                    end
+
+                    local point, onScreen = cam:WorldToViewportPoint(root.Position)
+                    local visible = onScreen and point.Z > 0
+                    if not visible and cfg.Arrows then
+                        local rel = cam.CFrame:PointToObjectSpace(root.Position)
+                        local angle = math.atan2(rel.X, -rel.Z)
+                        e.arrow.Position = UDim2.fr

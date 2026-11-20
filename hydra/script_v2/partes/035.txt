@@ -1,0 +1,109 @@
+ end
+    for _, part in ipairs(rig:GetChildren()) do
+        if part:IsA("BasePart") then
+            for _, child in ipairs(part:GetChildren()) do
+                if (child:IsA("Motor6D") or child:IsA("AnimationConstraint")) and joints:FindFirstChild(child.Name) then pcall(function() child:Destroy() end) end
+            end
+        end
+    end
+end
+function Avatar.applySafe(humanoid, description)
+    local rig = humanoid and humanoid.Parent
+    if rig and not rig:FindFirstChild("HumanoidRootPart") then
+        local tempRoot = Instance.new("Part")
+        tempRoot.Name = "HumanoidRootPart"
+        tempRoot.Size = Vector3.new(2, 2, 1)
+        tempRoot.Transparency = 1
+        tempRoot.CanCollide, tempRoot.CanQuery, tempRoot.CanTouch = false, false, false
+        tempRoot.Massless = true
+        tempRoot.Anchored = false
+        local reference = nil
+        pcall(function()
+            local joints = rig:FindFirstChild("Joints")
+            local rootJoint = joints and joints:FindFirstChild("Root")
+            if rootJoint and rootJoint.Part0 and rootJoint.Part0:IsDescendantOf(workspace) then reference = rootJoint.Part0 end
+        end)
+        reference = reference or rig:FindFirstChild("LowerTorso") or rig:FindFirstChild("Torso")
+        if reference then tempRoot.CFrame = reference.CFrame end
+        tempRoot.Parent = rig
+
+        local ok, err = pcall(function() humanoid:ApplyDescription(description) end)
+        pcall(function() tempRoot:Destroy() end)
+        pcall(Avatar.repairJoints, rig)
+        if ok then return true end
+        return false, tostring(err)
+    end
+    local okReset, errReset = pcall(function() humanoid:ApplyDescriptionReset(description) end)
+    if okReset then pcall(Avatar.repairJoints, rig) return true end
+    local okDiff, errDiff = pcall(function() humanoid:ApplyDescription(description) end)
+    pcall(Avatar.repairJoints, rig)
+    if okDiff then return true end
+    return false, tostring(errDiff or errReset)
+end
+
+function Avatar.applyPart(humanoid, description)
+    local rig = humanoid and humanoid.Parent
+    if rig and not rig:FindFirstChild("HumanoidRootPart") then return Avatar.applySafe(humanoid, description) end
+    local ok, err = pcall(function() humanoid:ApplyDescription(description) end)
+    pcall(Avatar.repairJoints, rig)
+    if ok then return true end
+    return false, tostring(err)
+end
+
+function Avatar.strip(rig)
+    if not rig then return end
+    local joints = rig:FindFirstChild("Joints")
+    for _, d in ipairs(rig:GetDescendants()) do
+        if (d:IsA("Accoutrement") or d:IsA("Clothing") or d:IsA("ShirtGraphic")) and not (joints and d:IsDescendantOf(joints)) then
+            pcall(function() d:Destroy() end)
+        end
+    end
+end
+function Avatar.removeHeadItems(rig)
+    if not rig then return end
+    local types = {Hat = true, Hair = true, Face = true, Eyebrow = true, Eyelash = true}
+    local attachments = {HatAttachment = true, HairAttachment = true, FaceFrontAttachment = true, FaceCenterAttachment = true}
+    for _, child in ipairs(rig:GetChildren()) do
+        if child:IsA("Accessory") then
+            local isHead = false
+            pcall(function() isHead = types[child.AccessoryType.Name] == true end)
+            if not isHead then
+                local handle = child:FindFirstChild("Handle")
+                local attachment = handle and handle:FindFirstChildOfClass("Attachment")
+                isHead = attachment ~= nil and attachments[attachment.Name] == true
+            end
+            if isHead then pcall(function() child:Destroy() end) end
+        end
+    end
+end
+
+function Avatar.saveFile()
+    if type(writefile) ~= "function" then return end
+    pcall(function()
+        if Avatar.look then
+            writefile(Avatar.FILE, game:GetService("HttpService"):JSONEncode(Avatar.look))
+        elseif type(isfile) == "function" and isfile(Avatar.FILE) and type(delfile) == "function" then
+            delfile(Avatar.FILE)
+        else
+            writefile(Avatar.FILE, "null")
+        end
+    end)
+end
+function Avatar.loadFile()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" then return end
+    pcall(function()
+        if not isfile(Avatar.FILE) then return end
+        local data = game:GetService("HttpService"):JSONDecode(readfile(Avatar.FILE))
+        if type(data) == "table" then Avatar.look = data end
+    end)
+end
+function Avatar.remember(desc, strip)
+    if not desc then return end
+    local look = {props = {}, colors = {}, scales = {}, layered = {}, strip = strip == true}
+    for _, p in ipairs(Avatar.ID_PROPS) do
+        local ok, v = pcall(function() return desc[p] end)
+        if ok and v ~= nil then look.props[p] = v end
+    end
+
+    if Avatar.saved.RightLeg ~= nil then look.props.RightLeg = Avatar.saved.RightLeg end
+    for _, p in

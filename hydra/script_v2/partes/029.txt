@@ -1,0 +1,118 @@
+= patch("useShops.Purchase (no manda compras de tiers bloqueados)", ShopsSvc, "Purchase", function(orig)
+            return function(id, ...)
+                local n = tonumber(id)
+                if n and type(origTierProgress) == "function" then
+                    local ok, tiers = pcall(origTierProgress)
+                    if ok and type(tiers) == "table" then
+                        for _, t in ipairs(tiers) do
+                            if t.status == "Locked" then
+                                for _, it in ipairs(t.items or {}) do
+                                    if it.itemId == n then
+                                        log("Tienda de evento: item", n, "esta en un tier bloqueado de verdad -> no se manda la compra")
+                                        shopNotify("Solo visual: ese tier sigue bloqueado y no se puede comprar", "Visual only: that tier is still locked and cannot be bought")
+                                        return false
+                                    end
+                                end
+                            end
+                        end
+                    end
+                end
+                return orig(id, ...)
+            end
+        end)
+        if not okBuy then
+            log("Tienda de evento: no se aplico el bloqueo de compra, asi que tampoco se cambia lo que se muestra")
+            return
+        end
+
+        patch("useEvent.GetTiers (candado visual)", EventSvc, "GetTiers", function(orig)
+            return function(...)
+                local real = orig(...)
+                if type(real) ~= "table" then
+                    return real
+                end
+                local out = {}
+                for i, t in ipairs(real) do
+                    local c = t
+                    if type(t) == "table" and t.State == "Locked" then
+                        if SHOP_MODE == "B" then
+                            c = table.clone(t)
+                            c.State = "Unlocked"
+                            c.IsTimeOpen = true
+                            c.IsWaitingOnTimer = false
+                            c.ItemsMet = true
+                            c.UnlockProgress = nil
+                        elseif t.IsWaitingOnTimer then
+                            c = table.clone(t)
+                            c.IsTimeOpen = true
+                            c.IsWaitingOnTimer = false
+                            if t.ItemsMet then
+                                c.State = "Unlocked"
+                            end
+                        end
+                    end
+                    out[i] = c
+                end
+                return out
+            end
+        end)
+    end
+
+    function M.Disable()
+        gen = gen + 1
+        if not active and #patches == 0 then
+            return
+        end
+        for i = #patches, 1, -1 do
+            local p = patches[i]
+            pcall(function()
+                p.tbl[p.key] = p.orig
+            end)
+        end
+        patches = {}
+        table.clear(fakeE)
+        table.clear(fakeC)
+        table.clear(fakeS)
+        table.clear(lastBuild)
+        notifyUI()
+        modernSetOriginal = nil
+        table.clear(modernInput)
+        pending = nil
+        emoteOn, cosOn = false, false
+        UA2.skinOn, UA2.slotsOn = false, false
+        pcall(function() Inventory.Changed:Fire() end)
+        pcall(function() Loadout.Changed:Fire() end)
+        active = false
+        refreshWheel()
+        log("Descargado: todo restaurado")
+    end
+
+    local function enableImpl(myGen)
+
+        for _, name in ipairs({}) do
+            local ok, t = pcall(function()
+                return GENV[name]
+            end)
+            if ok and type(t) == "table" and type(t.Unload) == "function" then
+                pcall(t.Unload)
+                log("Se descargo el script de prueba suelto:", name)
+            end
+        end
+
+        Registry = req("Items.Registry", "Items", "Registry")
+        Inventory = req("useInventory", "Client", "Services", "UserData", "Inventory")
+        Loadout = req("useLoadout", "Client", "Services", "UserData", "Inventory", "Loadout")
+        if not (Registry and Inventory and Loadout) then
+            log("ABORTADO: falta al menos un modulo necesario. No se aplico ningun parche.")
+            return
+        end
+
+        ItemSlotType = Inventory.GetItemSlotType
+        do
+            local matched, checked, emoteBad = 0, 0, 0
+            local okAll, equipped = pcall(Loadout.GetAll)
+            if type(ItemSlotType) == "function" and okAll and type(equipped) == "table" then
+                for slot, id in pairs(equipped) do
+                    if type(id) == "number" and id ~= 0 then
+                        local okI, got = pcall(ItemSlotType, id)
+                        local okS, want = pcall(Loadout.

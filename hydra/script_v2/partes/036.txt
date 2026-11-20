@@ -1,0 +1,120 @@
+ ipairs(Avatar.COLOR_PROPS) do
+        pcall(function()
+            local c = desc[p]
+            if typeof(c) == "Color3" then look.colors[p] = {c.R, c.G, c.B} end
+        end)
+    end
+    for _, p in ipairs(Avatar.SCALE_PROPS) do
+        pcall(function()
+            local n = tonumber(desc[p])
+            if n then look.scales[p] = n end
+        end)
+    end
+    pcall(function()
+        for _, e in ipairs(desc:GetAccessories(false)) do
+            local typeName = nil
+            pcall(function() typeName = e.AccessoryType.Name end)
+            if e.AssetId and typeName then table.insert(look.layered, {id = e.AssetId, t = typeName, o = e.Order}) end
+        end
+    end)
+    Avatar.look = look
+    Avatar.saveFile()
+end
+function Avatar.restoreLook()
+    local look = Avatar.look
+    if type(look) ~= "table" then return false end
+    local rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then return false end
+    local ok, desc = pcall(function() return humanoid:GetAppliedDescription() end)
+    if not ok or not desc then return false end
+    for p, v in pairs(look.props or {}) do
+        pcall(function()
+            if table.find(Avatar.LIST_PROPS, p) then desc[p] = tostring(v) else desc[p] = tonumber(v) or 0 end
+        end)
+    end
+    for p, c in pairs(look.colors or {}) do pcall(function() desc[p] = Color3.new(c[1], c[2], c[3]) end) end
+    for p, n in pairs(look.scales or {}) do pcall(function() desc[p] = tonumber(n) end) end
+    if type(look.layered) == "table" then
+        local list = {}
+        for i, e in ipairs(look.layered) do
+            local okT, accessoryType = pcall(function() return Enum.AccessoryType[e.t] end)
+            if okT and accessoryType then
+                list[#list + 1] = {AssetId = tonumber(e.id), AccessoryType = accessoryType, IsLayered = true, Order = tonumber(e.o) or i}
+            end
+        end
+        pcall(function() desc:SetAccessories(list, false) end)
+    end
+    if look.strip then pcall(Avatar.strip, rig) end
+    return (Avatar.applySafe(humanoid, desc)) == true
+end
+
+function Avatar.setKorblox(on)
+    local rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then return false end
+    local ok, desc = pcall(function() return humanoid:GetAppliedDescription() end)
+    if not ok or not desc then return false end
+    if on then
+        if Avatar.saved.RightLeg == nil then Avatar.saved.RightLeg = desc.RightLeg end
+        desc.RightLeg = Avatar.KORBLOX_LEG
+    else
+        desc.RightLeg = Avatar.saved.RightLeg or 0
+        Avatar.saved.RightLeg = nil
+    end
+    return (Avatar.applyPart(humanoid, desc)) == true
+end
+
+function Avatar.setHeadless(on)
+    local state = Avatar.head
+    if on then
+        if state.conn then return end
+        state.on = true
+        state.conn = RunService.RenderStepped:Connect(function()
+            local rig = Avatar.current
+            if not (rig and rig.Parent) then rig = Avatar.rig() end
+            local head = rig and rig:FindFirstChild("Head")
+            if not head or not head:IsA("BasePart") then return end
+            head.LocalTransparencyModifier = 1
+            for _, child in ipairs(head:GetChildren()) do
+                if child:IsA("Decal") then
+                    if state.faces[child] == nil then state.faces[child] = child.Transparency end
+                    child.Transparency = 1
+                end
+            end
+        end)
+        return
+    end
+    if state.conn then pcall(function() state.conn:Disconnect() end) end
+    for decal, transparency in pairs(state.faces) do
+        pcall(function() if decal.Parent then decal.Transparency = transparency end end)
+    end
+    pcall(function()
+        local rig = Avatar.rig()
+        local head = rig and rig:FindFirstChild("Head")
+        if head and head:IsA("BasePart") then head.LocalTransparencyModifier = 0 end
+    end)
+    Avatar.head = {on = false, conn = nil, faces = {}}
+end
+
+function Avatar.reapply()
+    local rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then return end
+    if Avatar.look then
+        pcall(Avatar.restoreLook)
+    elseif rig:GetAttribute("HydraLook") ~= nil then
+
+        if not Avatar.ownDesc then
+            local ok, desc = pcall(function() return Players:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId) end)
+            if ok then Avatar.ownDesc = desc end
+        end
+        if Avatar.ownDesc then pcall(Avatar.strip, rig) pcall(Avatar.applySafe, humanoid, Avatar.ownDesc) end
+    end
+    Avatar.saved.RightLeg = nil
+    if Avatar.korblox then pcall(Avatar.setKorblox, true) end
+    if Avatar.deleted then pcall(Avatar.removeHeadItems, rig) end
+    Avatar.mark(rig)
+end
+function Avatar.hasSaved() return Avatar.look ~= nil or Avatar.korblox or Avatar.deleted end
+
+Avatar.version = 1
+function Avatar.mark(rig)
+    if rig then p

@@ -1,0 +1,152 @@
+ "table" then
+            return nil
+        end
+        local list = table.clone(owned)
+        table.sort(list)
+        for _, id in ipairs(list) do
+            if not origIsEquipped(id) then
+                return id
+            end
+        end
+        return nil
+    end
+
+    local function isExtraSlot(idx)
+        return UA2.slotsOn and UA2.extraLocked and type(idx) == "number" and idx > 6
+    end
+
+    local function baseEmoteId()
+        for i = 1, 6 do
+            local id = realSlotId(i)
+            if id ~= 0 then
+                return id
+            end
+        end
+        return nil
+    end
+
+    local function augmentEmotes(list)
+        if type(list) ~= "table" or not (UA2.slotsOn and UA2.extraLocked) then
+            return list
+        end
+        local out = table.clone(list)
+        local base = baseEmoteId()
+        for idx = 7, 12 do
+            if fakeE[idx] and base then
+                out[idx] = base
+            elseif realSlotId(idx) == 0 then
+                out[idx] = nil
+            end
+        end
+        if not base and next(fakeE) ~= nil and not UA2.warnedNoBase then
+            UA2.warnedNoBase = true
+            log("Para usar los slots 7-12 necesitas al menos un emote real equipado en los slots 1-6")
+        end
+        return out
+    end
+
+    local function getPopup()
+        if popupInst and popupInst.Frame then
+            return popupInst
+        end
+        if PopupService and type(PopupService.GetPopup) == "function" then
+            local ok, p = pcall(PopupService.GetPopup, PopupService, "Emote")
+            if ok and p then
+                popupInst = p
+                return p
+            end
+        end
+        return nil
+    end
+
+    local function wheelSlotFrame(popup, idx)
+        local wheel = popup.Frame:FindFirstChild(idx <= 6 and "Wheel" or "Wheel2")
+        return wheel and wheel:FindFirstChild("Emote" .. ((idx - 1) % 6 + 1))
+    end
+
+    local function applyOverlay(popup)
+        if not popup or not popup.Frame or type(popup.Emotes) ~= "table" then
+            return
+        end
+        for idx, fid in pairs(fakeE) do
+            if popup.Emotes[idx] then
+                local ok, err = pcall(function()
+                    local sf = wheelSlotFrame(popup, idx)
+                    local item = ItemSvc:GetItemFromID(fid)
+                    ItemSvc:ClearViewport(sf.ViewportFrame)
+                    ItemSvc:CreateViewport(item, sf.ViewportFrame)
+                    sf.TextLabel.Text = ItemSvc:GetName(item)
+                end)
+                if not ok and not warnedOverlay then
+                    warnedOverlay = true
+                    log("Aviso: no se pudo dibujar el visual en la rueda ->", tostring(err))
+                end
+            end
+        end
+    end
+
+    local function visibleEmotes(list)
+        local out = type(list) == "table" and table.clone(list) or {}
+        for idx, fid in pairs(fakeE) do out[idx] = fid end
+        return out
+    end
+
+    local function refreshWheel()
+        if ModernWheel and type(ModernWheel.Set) == "function" then
+            local list = {}
+            for i = 1, 12 do
+                local id = realSlotId(i)
+                if id ~= 0 then list[i] = id end
+            end
+            pcall(ModernWheel.Set, list)
+        end
+        local p = getPopup()
+        if not p or type(p.Emotes) ~= "table" then
+            return
+        end
+        pcall(origSetEquipped, p, augmentEmotes(p.Emotes))
+        applyOverlay(p)
+    end
+
+    local function notifyUI()
+        for callback in pairs(uiObservers) do
+            task.defer(function()
+                if uiObservers[callback] then
+                    local ok, err = pcall(callback)
+                    if not ok then log("Error al actualizar inventario:", err) end
+                end
+            end)
+        end
+    end
+
+    local function isLocalEmote(self)
+        local char = self.Character
+        local lc = LP.Character
+        if not char or not lc then
+            return false
+        end
+        if char == lc then
+            return true
+        end
+        local a, b = char:GetAttribute("Tag"), lc:GetAttribute("Tag")
+        return a ~= nil and a == b
+    end
+
+    local function resolveFake(self)
+        local mod = self.EmoteModule
+        local modId = mod and mod:GetAttribute("ID")
+        if not modId then
+            return nil
+        end
+        if pending and tick() - pending.t < 5 then
+            local fid = fakeE[pending.slot]
+            if fid and (realSlotId(pending.slot) == modId or pending.base == modId) then
+                pending = nil
+                return fid
+            end
+        end
+        for idx = 1, 12 do
+            local fid = fakeE[idx]
+            if fid and realSlotId(idx) == modId then
+                return fid
+            end

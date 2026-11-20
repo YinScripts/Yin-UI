@@ -1,0 +1,77 @@
+ en partida"] = "Perk in match", ["Nametag en partida"] = "Nametag in match", ["Boombox en partida"] = "Boombox in match",
+    ["Tambi\195\169n se ve durante la ronda"] = "Also shows during the round",
+    ["Skin del boombox"] = "Boombox skin", ["Eleg\195\173 cualquiera"] = "Pick any",
+    ["Look aleatorio"] = "Random look", ["Emotes, cosm\195\169ticos y skins al azar"] = "Random emotes, cosmetics and skins",
+    ["Guardar mi look"] = "Save my look", ["Lo que ten\195\169s puesto ahora"] = "What you are wearing now",
+    ["Cargar mi look"] = "Load my look", ["El \195\186ltimo que guardaste"] = "The last one you saved",
+    ["Cargar mi look al activar"] = "Load my look when turning on", ["Se pone solo cada vez que lo prend\195\169s"] = "It is applied every time you turn it on",
+    ["Unlock All activo"] = "Unlock All on", ["Unlock All no se pudo activar"] = "Unlock All could not turn on",
+    ["Activ\195\161 Unlock All primero"] = "Turn on Unlock All first", ["Look guardado"] = "Look saved", ["Look aplicado"] = "Look applied",
+    ["No hay un look guardado"] = "There is no saved look", ["Tu ejecutor no puede guardar archivos"] = "Your executor can't save files",
+})
+
+local TabExtra = Hydra:Tab({Id = "Extra", Title = "Extra", Caption = "EXTRA", Icon = "\226\156\142"})
+
+local Avatar = {FILE = "Hydra_Avatar.json", look = nil, saved = {}, korblox = false, deleted = false, busy = false,
+    head = {on = false, conn = nil, faces = {}}, KORBLOX_LEG = 139607718,
+    LIST_PROPS = {"HatAccessory", "HairAccessory", "FaceAccessory", "NeckAccessory", "ShouldersAccessory", "FrontAccessory", "BackAccessory", "WaistAccessory"},
+    ID_PROPS = {"HatAccessory", "HairAccessory", "FaceAccessory", "NeckAccessory", "ShouldersAccessory", "FrontAccessory", "BackAccessory", "WaistAccessory",
+        "Shirt", "Pants", "GraphicTShirt", "Face", "Head", "Torso", "LeftArm", "RightArm", "LeftLeg", "RightLeg"},
+    COLOR_PROPS = {"HeadColor", "TorsoColor", "LeftArmColor", "RightArmColor", "LeftLegColor", "RightLegColor"},
+    SCALE_PROPS = {"BodyTypeScale", "DepthScale", "HeadScale", "HeightScale", "ProportionScale", "WidthScale"}}
+
+function Avatar.rig()
+    local rigs = workspace:FindFirstChild("Rigs")
+    if not rigs then return nil end
+    local char = LocalPlayer.Character
+    local tag = char and char:GetAttribute("Tag")
+    if tag ~= nil then
+        if Avatar.rigService == nil then
+            local ok, svc = pcall(function() return require(Core.module("Services", "Asset", "RigService")) end)
+            Avatar.rigService = (ok and type(svc) == "table") and svc or false
+        end
+        if Avatar.rigService then
+            local ok, data = pcall(function() return Avatar.rigService:GetRigFromTag(tag) end)
+            local model = ok and type(data) == "table" and data.Model or nil
+            if model and model.Parent == rigs then return model, model:FindFirstChildOfClass("Humanoid") end
+        end
+    end
+    for _, model in ipairs(rigs:GetChildren()) do
+        if model.Name == LocalPlayer.Name and model:IsA("Model") then
+            local head = model:FindFirstChild("Head")
+            if head and head:IsA("BasePart") and not head.Anchored then return model, model:FindFirstChildOfClass("Humanoid") end
+        end
+    end
+    return nil
+end
+
+function Avatar.repairJoints(rig)
+    local joints = rig and rig:FindFirstChild("Joints")
+    if not joints then return end
+    for _, joint in ipairs(joints:GetDescendants()) do
+        if joint:IsA("JointInstance") then
+            for _, key in ipairs({"Part0", "Part1"}) do
+                local part = joint[key]
+                if part and not part:IsDescendantOf(workspace) then
+                    local replacement = rig:FindFirstChild(part.Name)
+                    if replacement and replacement:IsA("BasePart") then joint[key] = replacement end
+                end
+            end
+        elseif joint:IsA("AnimationConstraint") then
+            for _, key in ipairs({"Attachment0", "Attachment1"}) do
+                local attachment = joint[key]
+                local oldPart = attachment and attachment.Parent
+                if attachment and oldPart and not attachment:IsDescendantOf(workspace) then
+                    local replacement = rig:FindFirstChild(oldPart.Name)
+                    if replacement and replacement:IsA("BasePart") then
+                        local newAttachment = replacement:FindFirstChild(attachment.Name)
+                        if not (newAttachment and newAttachment:IsA("Attachment")) then
+                            newAttachment = attachment:Clone()
+                            newAttachment.Parent = replacement
+                        end
+                        joint[key] = newAttachment
+                    end
+                end
+            end
+        end
+   

@@ -1,0 +1,54 @@
+.Accent),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(0.55, C.Accent), ColorSequenceKeypoint.new(1, C.AccentDark)}), Offset = Vector2.new(-1, 0), Parent = title})
+    TweenService:Create(shine, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.6), {Offset = Vector2.new(1, 0)}):Play()
+    local sub = mk("TextLabel", {Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(60, 31), BackgroundTransparency = 1, Text = t("sub"), TextColor3 = C.Dim,
+        Font = Enum.Font.GothamSemibold, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, Parent = head})
+    local close = mk("TextButton", {Size = UDim2.fromOffset(32, 32), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 2), BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 0.9, AutoButtonColor = false, Text = "\195\151", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 20, Parent = head})
+    corner(close, 99)
+    stroke(close, C.Stroke, 0.6)
+
+    local steps = mk("Frame", {Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, LayoutOrder = 2, Parent = body})
+    mk("UIListLayout", {FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, Parent = steps})
+    local stepPills = {}
+    for i = 1, 3 do
+        local pill = mk("Frame", {Size = UDim2.new(1 / 3, -4, 1, 0), BackgroundColor3 = C.Field, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = i, Parent = steps})
+        corner(pill, 10)
+        local pillStroke = stroke(pill, C.Stroke, 0.7)
+        local num = mk("TextLabel", {Size = UDim2.fromOffset(20, 20), Position = UDim2.new(0, 6, 0.5, -10), BackgroundColor3 = C.Bg, Text = tostring(i), TextColor3 = C.Dim,
+            Font = Enum.Font.GothamBlack, TextSize = 11, Parent = pill})
+        corner(num, 99)
+        local label = mk("TextLabel", {Size = UDim2.new(1, -32, 1, 0), Position = UDim2.fromOffset(30, 0), BackgroundTransparency = 1, Text = t("step" .. i), TextColor3 = C.Dim,
+            Font = Enum.Font.GothamBold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = pill})
+        stepPills[i] = {pill = pill, stroke = pillStroke, num = num, label = label}
+    end
+    local function markSteps(n)
+        for i, s in ipairs(stepPills) do
+            local on = i <= n
+            tween(s.pill, 0.25, {BackgroundColor3 = on and C.Accent or C.Field, BackgroundTransparency = on and 0.82 or 0.35})
+            tween(s.stroke, 0.25, {Color = on and C.Accent or C.Stroke, Transparency = on and 0.25 or 0.7})
+            tween(s.num, 0.25, {BackgroundColor3 = on and C.Accent or C.Bg, TextColor3 = on and C.Bg or C.Dim})
+            tween(s.label, 0.25, {TextColor3 = on and C.Text or C.Dim})
+        end
+    end
+
+    local field = mk("Frame", {Size = UDim2.new(1, 0, 0, 46), BackgroundColor3 = C.Field, BackgroundTransparency = 0.25, BorderSizePixel = 0, LayoutOrder = 3, Parent = body})
+    corner(field, 12)
+    local fieldStroke = stroke(field, C.Stroke, 0.55, 1.2)
+    local input = mk("TextBox", {Size = UDim2.new(1, -66, 1, 0), Position = UDim2.fromOffset(14, 0), BackgroundTransparency = 1, Text = "", PlaceholderText = t("placeholder"),
+        PlaceholderColor3 = C.Dim, TextColor3 = C.Text, Font = Enum.Font.Code, TextSize = 13, ClearTextOnFocus = false, TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd, Parent = field})
+    local counter = mk("TextLabel", {Size = UDim2.fromOffset(42, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -10, 0.5, 0), BackgroundColor3 = C.Bg,
+        BackgroundTransparency = 0.3, Text = "0/5", TextColor3 = C.Dim, Font = Enum.Font.GothamBold, TextSize = 11, Parent = field})
+    corner(counter, 99)
+
+    local buttons = mk("Frame", {Size = UDim2.new(1, 0, 0, 42), BackgroundTransparency = 1, LayoutOrder = 4, Parent = body})
+    local check = mk("TextButton", {Size = UDim2.new(0.55, -4, 1, 0), BackgroundColor3 = C.Accent, AutoButtonColor = false, Text = t("check"), TextColor3 = C.Bg,
+        Font = Enum.Font.GothamBlack, TextSize = 13, Parent = buttons})
+    corner(check, 12)
+    local checkGrad = mk("UIGradient", {Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(178, 183, 195)), Parent = check})
+    local link = mk("TextButton", {Size = UDim2.new(0.45, -4, 1, 0), AnchorPoint = Vector2.new(1, 0), Position = UDim2.fromScale(1, 0), BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 0.92, AutoButtonColor = false, Text = t("link"), TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 12, Parent = buttons})
+    corner(link, 12)
+    stroke(link, C.Stroke, 0.5)
+    for _, b in ipairs({

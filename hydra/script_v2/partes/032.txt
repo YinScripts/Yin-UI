@@ -1,0 +1,128 @@
+tostring(err))
+            end
+        end)
+    end
+
+    function M.IsEnabled()
+        return active
+    end
+
+    function M.Status()
+        log("---- ESTADO ---- activo:", tostring(active), "| emotes:", tostring(emoteOn), "| cosmeticos:", tostring(cosOn))
+        for _, r in ipairs(patchResults) do
+            log(r.ok and "OK     " or "FALLO  ", r.label)
+        end
+        for st in pairs(KNOWN) do
+            log("Tipo", st, ENABLED[st] and "activo" or "desactivado", "| items:", #BYTYPE[st])
+        end
+        local any = false
+        for idx = 1, 12 do
+            if fakeE[idx] then
+                any = true
+                log("Emote slot", idx, "real:", realSlotId(idx), "| visual:", fakeE[idx])
+            end
+        end
+        for slot, fid in pairs(fakeC) do
+            any = true
+            local okReal, real = pcall(Loadout.GetEquipped, slot)
+            log("Slot", slot, "real:", okReal and real or "?", "| visual:", fid)
+        end
+        for item, sid in pairs(fakeS) do
+            any = true
+            log("Skin de", item, "-> visual", sid)
+        end
+        log("Skins disponibles:", #UA2.SKINS, "| slots 7-12:", UA2.slotsOn and "visuales" or (UA2.extraLocked and "bloqueados" or "comprados"))
+        if not any then
+            log("Sin slots visuales activos")
+        end
+    end
+
+    function M.SetType(name, state)
+        if not KNOWN[name] then
+            log("Tipo desconocido:", tostring(name), "(usa " .. table.concat(TYPE_NAMES, ", ") .. ")")
+            return
+        end
+        ENABLED[name] = state and true or false
+        if not ENABLED[name] then
+            for slot in pairs(fakeC) do
+                if slotType(slot) == name then
+                    fakeC[slot] = nil
+                end
+            end
+        end
+        log("Tipo", name, ENABLED[name] and "activado" or "desactivado", "(se aplica la proxima vez que abras el selector)")
+    end
+
+    function M.GetBoomboxSkins()
+        local out, seen = {}, {}
+        for _, id in ipairs(BYTYPE.Boombox or {}) do
+            local name = tostring(id)
+            pcall(function()
+                local entry = Registry.GetById(id)
+                local ok, info = pcall(require, entry.Module)
+                name = (ok and type(info) == "table" and info.AppearanceInfo and info.AppearanceInfo.Name) or entry.Module.Name
+            end)
+            seen[id] = true
+            out[#out + 1] = { id = id, name = name, ugc = false }
+        end
+        pcall(function()
+            for _, tagged in ipairs(game:GetService("CollectionService"):GetTagged("RelicsUGCSkin")) do
+                local id = tagged:GetAttribute("ID")
+                if type(id) == "number" and not seen[id] then
+                    seen[id] = true
+                    local display = tagged:GetAttribute("DisplayName")
+                    out[#out + 1] = { id = id, name = type(display) == "string" and display or tagged.Name, ugc = true }
+                end
+            end
+        end)
+        return out
+    end
+
+    function M.GetBoombox()
+        return fakeC.BoomboxSlot
+    end
+
+    function M.SetBoombox(id)
+        if not active then
+            log("Activa Unlock All primero")
+            return false
+        end
+        fakeC.BoomboxSlot = type(id) == "number" and id or nil
+        log("Boombox visual ->", tostring(fakeC.BoomboxSlot))
+        pcall(function() Loadout.Changed:Fire() end)
+        return true
+    end
+
+    function M.Snapshot()
+        local snap = { emotes = {}, cosmetics = {}, skins = {} }
+        for idx, fid in pairs(fakeE) do snap.emotes[tostring(idx)] = fid end
+        for slot, fid in pairs(fakeC) do snap.cosmetics[slot] = fid end
+        for item, sid in pairs(fakeS) do snap.skins[tostring(item)] = sid end
+        return snap
+    end
+
+    function M.ApplySnapshot(snap)
+        if not active or type(snap) ~= "table" then
+            return false
+        end
+        table.clear(fakeE)
+        table.clear(fakeC)
+        table.clear(fakeS)
+        local skipped = 0
+        for idx, fid in pairs(snap.emotes or {}) do
+            local n = tonumber(idx)
+            if not (n and n >= 1 and n <= 12 and ALLSET[fid]) or (n > 6 and UA2.extraLocked and not UA2.slotsOn) then
+                skipped += 1
+            elseif n <= 6 and realSlotId(n) == 0 then
+
+                local okE = pcall(Loadout.Equip, "EmoteSlot_" .. n, fid)
+                if not okE then skipped += 1 end
+                task.wait(0.3)
+            else
+                fakeE[n] = fid
+            end
+        end
+        for slot, fid in pairs(snap.cosmetics or {}) do
+            local st = slotType(slot)
+            local isUgcBoombox = slot == "BoomboxSlot" and type(fid) == "number" and ENABLED.Boombox
+            if (st and TYPE_OF[fid] == st) or isUgcBoombox then fakeC[slo

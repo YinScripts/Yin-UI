@@ -1,0 +1,140 @@
+n value
+        end
+        local removed, any = {}, false
+        for slot in pairs(fakeC) do
+            if slotType(slot) == "Perk" then
+                any = true
+                local okR, rid = pcall(origGetFromSlot, slot)
+                if okR and type(rid) == "number" and rid ~= 0 then
+                    removed[rid] = true
+                end
+            end
+        end
+        if not any then
+            return value
+        end
+        local out, seen = {}, {}
+        for _, id in ipairs(value) do
+            if not removed[id] then
+                out[#out + 1] = id
+                seen[id] = true
+            end
+        end
+        for slot, fid in pairs(fakeC) do
+            if slotType(slot) == "Perk" and not seen[fid] then
+                out[#out + 1] = fid
+                seen[fid] = true
+            end
+        end
+        return out
+    end
+
+    local function substituteSkins(value)
+        if not UA2.skinOn or next(fakeS) == nil then
+            return value
+        end
+        if type(value) ~= "table" then
+            value = {}
+        end
+        local removed = {}
+        for item in pairs(fakeS) do
+            local okO, realOrig = pcall(function() return UA2.origGetSkin(item) end)
+            if okO and type(realOrig) == "number" then
+                removed[realOrig] = true
+            end
+        end
+        local out, seen = {}, {}
+        for _, id in ipairs(value) do
+            if not removed[id] then
+                out[#out + 1] = id
+                seen[id] = true
+            end
+        end
+        for _, sid in pairs(fakeS) do
+            if not seen[sid] then
+                out[#out + 1] = sid
+                seen[sid] = true
+            end
+        end
+        return out
+    end
+
+    local function substituteNametag(value)
+        local fid = fakeC["NametagSlot"]
+        if type(fid) == "number" and INGAME.Nametag and ENABLED.Nametag then
+            return fid
+        end
+        return value
+    end
+
+    local function applyPatches()
+
+        patch("useInventory.GetOwnedBySlotType", Inventory, "GetOwnedBySlotType", function(orig)
+            return function(st, ...)
+                local list = orig(st, ...)
+                if type(list) ~= "table" then
+                    return list
+                end
+                local extra
+                if st == "Emote" then
+                    if not emoteOn then
+                        return list
+                    end
+                    extra = ALL
+                elseif cosOn and ENABLED[st] then
+                    extra = BYTYPE[st]
+                else
+                    return list
+                end
+                local have = {}
+                for _, id in ipairs(list) do
+                    have[id] = true
+                end
+                local out = table.clone(list)
+                for _, id in ipairs(extra) do
+                    if not have[id] then
+                        out[#out + 1] = id
+                    end
+                end
+                return out
+            end
+        end)
+
+        -- La interfaz moderna conserva las suscripciones hasta cerrar el inventario.
+        for _, key in ipairs({ "ObserveAll", "ObserveOwned", "ObserveLoadout" }) do
+            patch("Inventario." .. key, Inventory, key, function(orig)
+                return function(callback, ...)
+                    if type(callback) ~= "function" then return orig(callback, ...) end
+                    local wrapper = function(...) return callback(...) end
+                    uiObservers[wrapper] = true
+                    local ok, disconnect = pcall(orig, wrapper, ...)
+                    if not ok then uiObservers[wrapper] = nil; error(disconnect) end
+                    return function()
+                        uiObservers[wrapper] = nil
+                        if type(disconnect) == "function" then disconnect() end
+                    end
+                end
+            end)
+        end
+
+        patchBoth("Equip", "Equip", function(orig)
+            return function(slot, id, ...)
+                local idx = emoteOn and slotIndex(slot) or nil
+                if idx and isExtraSlot(idx) then
+
+                    if type(id) == "number" and id ~= 0 then
+                        fakeE[idx] = id
+                        log("Slot extra", idx, "-> emote visual", id)
+                    else
+                        fakeE[idx] = nil
+                    end
+                    refreshWheel()
+                    notifyUI()
+                    return
+                end
+                if idx then
+                    if type(id) == "number" and id ~= 0 then
+                        if ALLSET[id] and not owns(id) then
+                            if realSlotId(idx) == 0 then
+                                local base = pickBase()
+ 

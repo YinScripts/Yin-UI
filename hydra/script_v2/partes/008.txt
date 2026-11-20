@@ -1,0 +1,130 @@
+stChild("HumanoidRootPart")
+    if not root then return end
+    local av = root.AssemblyLinearVelocity
+    local flat = Vector3.new(av.X, 0, av.Z)
+    local vy = av.Y
+    if movement.JumpHeldDown == true then IS.Jumped = true end
+    if not IS.Jumped and vy > 4 then vy = 0 end
+    if flat.Magnitude > cap / 90 then flat = flat.Unit * (cap / 90) end
+    root.AssemblyLinearVelocity = Vector3.new(flat.X, vy, flat.Z)
+end
+
+Core.preSteps.infiniteSlide = function(movement)
+    if os.clock() < IS.ExitUntil then pcall(IS.exitGuard, movement) end
+    if IS.Applied == nil or IS.crouchHeld(movement) then return end
+    IS.setFriction(movement, nil)
+    pcall(function()
+        local stats = movement.MoveStats.MoveStats
+        IS.Cap = (tonumber(stats.Speed) or 1500) * (tonumber(stats.SprintCap) or 2)
+    end)
+    IS.Jumped = movement.JumpHeldDown == true
+    IS.ExitUntil = os.clock() + 0.4
+    pcall(IS.exitGuard, movement)
+end
+
+Core.steps.infiniteSlide = function(ctx)
+    local movement = ctx.movement
+    if not movement then return end
+    local sliding = IS.Enabled and IS.SLIDES[movement.State] == true and IS.crouchHeld(movement)
+    IS.setFriction(movement, sliding and -IS.Boost or nil)
+end
+
+local AC = {Enabled = false, Rate = 1.5, Down = false, Next = 0, Movement = nil}
+Core.steps.autoCrouch = function(ctx)
+    if not AC.Enabled or not ctx.movement then return end
+    AC.Movement = ctx.movement
+    local now = os.clock()
+    if now < AC.Next then return end
+    AC.Next = now + 1 / math.max(AC.Rate, 0.5)
+    AC.Down = not AC.Down
+    pcall(function() ctx.movement:KeyUsed({Key = "Crouching", Down = AC.Down}) end)
+end
+function AC.release()
+    if AC.Down and AC.Movement then pcall(function() AC.Movement:KeyUsed({Key = "Crouching", Down = false}) end) end
+    AC.Down = false
+end
+
+local JL = {Enabled = false, Layers = 3, Token = 0}
+function JL.apply()
+    if JL.Enabled then return Core.setModifier("JumpCap", JL.Layers + 1) end
+    return Core.setModifier("JumpCap", nil)
+end
+
+LocalPlayer.CharacterAdded:Connect(function()
+    JL.Token = JL.Token + 1
+    local token = JL.Token
+    if not JL.Enabled then return end
+    task.spawn(function()
+        for _ = 1, 20 do
+            task.wait(0.5)
+            if token ~= JL.Token or not JL.Enabled then return end
+            if JL.apply() then return end
+        end
+    end)
+end)
+
+local Paint = {WHITE = Color3.new(1, 1, 1), DARK = Color3.fromRGB(28, 28, 32), last = setmetatable({}, {__mode = "k"})}
+
+function Paint.lock(inst, prop, convert)
+    if not inst then return end
+    local function apply()
+        local current = inst[prop]
+        if Paint.last[inst] == current then return end
+        local wanted = convert(current)
+        Paint.last[inst] = wanted
+        if current ~= wanted then inst[prop] = wanted end
+    end
+    inst:GetPropertyChangedSignal(prop):Connect(apply)
+    apply()
+end
+
+function Paint.white() return Paint.WHITE end
+
+function Paint.downed(color)
+    local t = math.clamp((1 - color.R) / (1 - 20 / 255), 0, 1)
+    return Paint.WHITE:Lerp(Paint.DARK, t)
+end
+
+function Paint.notice(frame)
+    local skull = frame:FindFirstChild("Skull")
+    local arrow = frame:FindFirstChild("Arrow")
+    local arrowImage = arrow and arrow:FindFirstChild("ImageLabel")
+    if skull and skull:IsA("ImageLabel") then Paint.lock(skull, "ImageColor3", Paint.downed) end
+    if arrowImage and arrowImage:IsA("ImageLabel") then Paint.lock(arrowImage, "ImageColor3", Paint.downed) end
+end
+
+Paint.spin = {}
+RunService.Heartbeat:Connect(function(dt)
+    for gradient in pairs(Paint.spin) do
+        if gradient.Parent then
+            gradient.Rotation = (gradient.Rotation + dt * 45) % 360
+        else
+            Paint.spin[gradient] = nil
+        end
+    end
+end)
+
+function Paint.shine(label)
+    if not label then return end
+    local gradient = label:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+    gradient.Color = ColorSequence.new(Paint.WHITE)
+    gradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0.3), NumberSequenceKeypoint.new(0.5, 0), NumberSequenceKeypoint.new(1, 0.3),
+    })
+    gradient.Rotation = 0
+    gradient.Offset = Vector2.new(-1, 0)
+    gradient.Parent = label
+    game:GetService("TweenService"):Create(gradient, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 1), {Offset = Vector2.new(1, 0)}):Play()
+end
+
+function Paint.roundTimer(container)
+    local box = container:WaitForChild("RoundTimer", 15)
+    if not box then return end
+    local timer = box:FindFirstChild("Timer")
+    local about = box:FindFirstChild("About")
+    local stroke = box:FindFirstChildOfClass("UIStroke")
+
+    Paint.lock(container, "Visible", function() return true end)
+    Paint.lock(box, "Visible", function() return true end)
+
+   

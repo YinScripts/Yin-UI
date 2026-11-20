@@ -1,0 +1,119 @@
+                               if not base then
+                                    log("No tienes ningun emote real para usar de base en el slot", idx)
+                                    return
+                                end
+                                log("Slot", idx, "vacio: se equipa el emote real base", base)
+                                orig(slot, base)
+                            end
+                            fakeE[idx] = id
+                            log("Slot", idx, "-> emote visual", id)
+                            refreshWheel()
+                            notifyUI()
+                            return
+                        end
+                        local had = fakeE[idx] ~= nil
+                        fakeE[idx] = nil
+                        local r = orig(slot, id, ...)
+                        if had then
+                            refreshWheel()
+                        end
+                        return r
+                    end
+                    if id == nil or id == 0 then
+                        fakeE[idx] = nil
+                    end
+                    return orig(slot, id, ...)
+                end
+
+                local st = cosOn and slotType(slot) or nil
+                if st and ENABLED[st] then
+                    if type(id) == "number" and id ~= 0 then
+                        if TYPE_OF[id] == st and not owns(id) then
+                            fakeC[slot] = id
+                            log("Slot", slot, "-> visual", id)
+                            notifyUI()
+                            return
+                        end
+                        fakeC[slot] = nil
+                        return orig(slot, id, ...)
+                    end
+                    if (id == nil or id == 0) and fakeC[slot] ~= nil then
+                        fakeC[slot] = nil
+                        log("Slot", slot, "-> visual quitado")
+                        return
+                    end
+                end
+                return orig(slot, id, ...)
+            end
+        end)
+
+        patchBoth("Unequip", "Unequip", function(orig)
+            return function(slot, ...)
+                if cosOn and fakeC[slot] ~= nil then
+                    fakeC[slot] = nil
+                    log("Slot", slot, "-> visual quitado")
+                    notifyUI()
+                    return
+                end
+                local idx = emoteOn and slotIndex(slot) or nil
+                if idx and isExtraSlot(idx) then
+                    fakeE[idx] = nil
+                    refreshWheel()
+                    notifyUI()
+                    return
+                end
+                local had = idx and fakeE[idx] ~= nil
+                if idx then
+                    fakeE[idx] = nil
+                end
+                local r = orig(slot, ...)
+                if had then
+                    refreshWheel()
+                end
+                return r
+            end
+        end)
+
+        patchBoth("Swap (visual)", "Swap", function(orig)
+            return function(a, b, ...)
+                local ia, ib = slotIndex(a), slotIndex(b)
+                local va = ia and fakeE[ia] or fakeC[a]
+                local vb = ib and fakeE[ib] or fakeC[b]
+                if va == nil and vb == nil then return orig(a, b, ...) end
+                local ra, rb = origGetFromSlot(a), origGetFromSlot(b)
+                if ia then fakeE[ia] = vb or rb else fakeC[a] = vb or rb end
+                if ib then fakeE[ib] = va or ra else fakeC[b] = va or ra end
+                refreshWheel()
+                notifyUI()
+            end
+        end)
+
+        local function buildEquippedMap(orig)
+            return function(...)
+                local real = orig(...)
+                if type(real) ~= "table" or (next(fakeE) == nil and next(fakeC) == nil) then
+                    return real
+                end
+                local out = table.clone(real)
+                for idx, fid in pairs(fakeE) do
+                    local name = "EmoteSlot_" .. idx
+                    if out[name] or isExtraSlot(idx) then
+                        out[name] = fid
+                    end
+                end
+                for slot, fid in pairs(fakeC) do
+                    out[slot] = fid
+                end
+                return table.freeze(out)
+            end
+        end
+        patch("useLoadout.GetAll", Loadout, "GetAll", buildEquippedMap)
+        patch("useInventory.GetLoadout", Inventory, "GetLoadout", buildEquippedMap)
+
+        patchBoth("IsEquipped", "IsEquipped", function(orig)
+            return function(id)
+                local eq, s = orig(id)
+                if eq and not ((slotIndex(s) and fakeE[slotIndex(s)] ~= nil) or fakeC[s] ~= nil) then
+                    return eq, s
+                end
+                for idx, fid i

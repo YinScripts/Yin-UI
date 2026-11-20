@@ -1,0 +1,89 @@
+ Paint.lock(timer, "TextColor3", Paint.white)
+    Paint.lock(about, "TextColor3", Paint.white)
+    Paint.lock(box:FindFirstChild("ImageLabel"), "ImageColor3", Paint.white)
+    Paint.lock(stroke, "Color", Paint.white)
+
+    Paint.shine(timer)
+    Paint.shine(about)
+    if stroke then
+        local light = stroke:FindFirstChildOfClass("UIGradient") or Instance.new("UIGradient")
+        light.Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(70, 74, 86)), ColorSequenceKeypoint.new(0.45, Paint.WHITE),
+            ColorSequenceKeypoint.new(0.55, Paint.WHITE), ColorSequenceKeypoint.new(1, Color3.fromRGB(70, 74, 86)),
+        })
+        light.Transparency = NumberSequence.new(0)
+        light.Rotation = 0
+        light.Parent = stroke
+        Paint.spin[light] = true
+    end
+    if timer then
+        local pulse = timer:FindFirstChild("HydraPulse") or Instance.new("UIScale")
+        pulse.Name = "HydraPulse"
+        pulse.Parent = timer
+        local tweens = game:GetService("TweenService")
+        timer:GetPropertyChangedSignal("Text"):Connect(function()
+            local seconds = tonumber(string.match(timer.Text, ":(%d+)$"))
+            local minutes = tonumber(string.match(timer.Text, "^(%d+):"))
+            local last = minutes == 0 and seconds and seconds <= 10
+            pulse.Scale = last and 1.18 or 1.07
+            tweens:Create(pulse, TweenInfo.new(last and 0.45 or 0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+    end
+
+    local ingame = container:FindFirstChild("IngameRoundTimer")
+    local ingameTimer = ingame and ingame:FindFirstChild("Timer")
+    if ingameTimer and timer then
+        Paint.lock(ingame, "Visible", function() return false end)
+        ingameTimer:GetPropertyChangedSignal("Text"):Connect(function()
+            if timer.Text ~= ingameTimer.Text then timer.Text = ingameTimer.Text end
+        end)
+    end
+end
+
+function Paint.hookGame(gameGui)
+    task.spawn(function()
+        local hud = gameGui:WaitForChild("HUD", 15)
+        if not hud then return end
+        local notices = hud:WaitForChild("Notices", 15)
+        if notices then
+            for _, child in ipairs(notices:GetChildren()) do Paint.notice(child) end
+            notices.ChildAdded:Connect(function(child) task.defer(Paint.notice, child) end)
+        end
+        local ok, health = pcall(function()
+            return hud:WaitForChild("Overlay", 15):WaitForChild("CharacterStatus", 15):WaitForChild("BottomLeft", 15):WaitForChild("Health", 15)
+        end)
+        if ok and health then
+            Paint.lock(health:FindFirstChild("HealthIcon"), "ImageColor3", Paint.white)
+            Paint.lock(health:FindFirstChild("Health"), "TextColor3", Paint.white)
+            local background = health:FindFirstChild("BackgroundStroke")
+            Paint.lock(background and background:FindFirstChildOfClass("UIStroke"), "Color", Paint.white)
+        end
+        local okRound, roundTimer = pcall(function()
+            return hud:WaitForChild("Overlay", 15):WaitForChild("RoundOverlay", 15):WaitForChild("RoundTimer", 15)
+        end)
+        if okRound and roundTimer then Paint.roundTimer(roundTimer) end
+    end)
+end
+
+do
+    local playerGui = LocalPlayer:WaitForChild("PlayerGui")
+    local current = playerGui:FindFirstChild("Game")
+    if current then Paint.hookGame(current) end
+
+    playerGui.ChildAdded:Connect(function(child)
+        if child.Name == "Game" and child:IsA("ScreenGui") then Paint.hookGame(child) end
+    end)
+end
+
+Hydra:AddTranslations({
+    ["Movimiento"] = "Movement", ["MOVER"] = "MOVE", ["Velocidad"] = "Speed", ["Salto"] = "Jump",
+    ["Te lleva hacia adelante sin trabarse"] = "Takes you forward without getting stuck",
+    ["Velocidad m\195\161xima"] = "Max speed", ["Hasta qu\195\169 velocidad llega"] = "How fast it gets",
+    ["Aceleraci\195\179n"] = "Acceleration", ["Qu\195\169 tan r\195\161pido llega a la velocidad"] = "How fast it reaches the speed",
+    ["Multiplicador de rampa"] = "Ramp multiplier", ["Cu\195\161nto te impulsa una rampa"] = "How hard a ramp launches you",
+    ["Fuerza de rampa"] = "Ramp power", ["Fuerza base del salto en rampas"] = "Base jump power on ramps",
+    ["Potenciar mis saltos"] = "Boost my jumps", ["Tus saltos usan la fuerza y el multiplicador de rampa"] = "Your jumps use the ramp power and multiplier",
+    ["Suave"] = "Smooth", ["Acelera y frena de a poco"] = "Speeds up and slows down gradually",
+    ["Seguir movimiento"] = "Follow movement", ["Va hacia donde camin\195\161s, no hacia la c\195\161mara"] = "Goes where you walk, not where the camera looks",
+    ["Saltos extra en el aire"] = "Extra jumps in the air",
+    ["Capas"] = "Layers", ["Cu\195\161ntas veces pod\195\169s saltar en el aire"] = "How many times you can jump

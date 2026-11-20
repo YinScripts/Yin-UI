@@ -1,0 +1,103 @@
+GetSlotType, slot)
+                        if okI and okS and want ~= nil then
+                            checked = checked + 1
+                            if got == want then
+                                matched = matched + 1
+                            elseif want == "Emote" then
+                                emoteBad = emoteBad + 1
+                            end
+                        end
+                    end
+                end
+            end
+            if type(ItemSlotType) ~= "function" then
+                log("ABORTADO: Inventory.GetItemSlotType no esta disponible en esta version de Evade.")
+                return
+            end
+            if emoteBad > 0 or (checked > 0 and matched == 0) then
+                log("ABORTADO: GetItemSlotType no coincide con el loadout (" .. matched .. " de " .. checked .. "). No se aplico ningun parche.")
+                return
+            end
+            if checked == 0 then
+                log("Loadout vacio o aun cargando; se verificara la clasificacion con el Registry.")
+            else
+                log("GetItemSlotType verificado contra tu loadout:", matched, "de", checked, "slots")
+            end
+        end
+        RigClass = req("Objects.Game.Character.Rig", "Objects", "Game", "Character", "Rig")
+        DataRegClass = req("Objects.Game.Character.DataRegistry", "Objects", "Game", "Character", "DataRegistry")
+        PopupService = req("PopupService", "Services", "UI", "PopupService")
+        local legacyEmote = Core.module("Services", "UI", "PopupService", "Types", "Emote")
+        EmotePopup = nil
+        if legacyEmote then
+            local ok, value = pcall(require, legacyEmote)
+            if ok and type(value) == "table" then EmotePopup = value end
+        end
+        local modernWheelModule = Core.module("Client", "UI", "Game", "EmoteWheel")
+        ModernWheel = nil
+        if modernWheelModule then
+            local ok, value = pcall(require, modernWheelModule)
+            if ok and type(value) == "table" then ModernWheel = value end
+        end
+        local wheelModule = Core.module("Client", "UI", "Components", "Wheel")
+        WheelClass = nil
+        if wheelModule then
+            local ok, value = pcall(require, wheelModule)
+            if ok and type(value) == "table" then WheelClass = value end
+        end
+        EmoteClass = req("Objects.Items.Emote", "Objects", "Items", "Emote")
+        ItemSvc = req("ClientItemService", "Services", "Items", "ClientItemService")
+        PackageMod = req("UserOwnsPackage", "Shared", "Marketplace", "UserOwnsPackage")
+        -- El inventario moderno ya no usa la vista legacy SetHeader.
+        local legacySlots = Core.module("Objects", "Menu", "Menu", "Views", "Inventory", "Views", "Slots")
+        if legacySlots then
+            local ok, value = pcall(require, legacySlots)
+            if ok and type(value) == "table" then SlotsView = value end
+        end
+        local modernSlots = Core.module("Client", "UI", "Menu", "Pages", "Inventory", "Slots")
+        if modernSlots then
+            local ok, value = pcall(require, modernSlots)
+            if ok and type(value) == "table" then SlotsModern = value end
+        end
+        EventSvc = req("useEvent", "Client", "Services", "UserData", "Event")
+        ShopsSvc = req("useShops", "Client", "Services", "UserData", "Shops")
+        local emoteMods = type(ItemSlotType) == "function"
+        if ModernWheel and not EmotePopup then
+            log("Rueda moderna detectada: la lista visual de emotes se habilita; el servidor puede rechazar emotes no poseidos.")
+        elseif not emoteMods then
+            log("Aviso: no se pudo identificar el catalogo de emotes.")
+        end
+
+        local newAll, newAllSet, rawCount = {}, {}, 0
+        if emoteMods then
+            newAll, rawCount = collectEmoteIds()
+            for _, id in ipairs(newAll) do
+                newAllSet[id] = true
+            end
+            log("Emotes encontrados:", rawCount, "| validos:", #newAll)
+        end
+
+        local newBy, newTypeOf, regCount = collectCosmetics()
+        local newSkins, newSkinSet = collectSkins()
+
+        local extraLocked = false
+        if PackageMod then
+            local okOwn, owned = pcall(PackageMod.Owns, LP, "MoreEmotes")
+            extraLocked = not (okOwn and owned == true)
+        end
+        if myGen ~= gen then
+            return
+        end
+        if active then
+            return
+        end
+        if not newBy then
+            log("Aviso: Registry.GetAll no devolvio una tabla; cosmeticos/personajes/auras desactivados")
+            newBy = emptyByType()
+            newTypeOf = {}
+            regCount = 0
+        end
+        local cosTotal = 0
+        local counts = {}
+        for _, n in ipairs(TYPE_NAMES) do
+            cosTotal = cos

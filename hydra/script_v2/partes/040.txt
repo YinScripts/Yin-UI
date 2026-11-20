@@ -1,0 +1,71 @@
+n
+        local base = cs.CameraCFrame
+        if typeof(base) == "CFrame" then
+            local ignore = {}
+            if LocalPlayer.Character then ignore[#ignore + 1] = LocalPlayer.Character end
+            for _, name in ipairs({"Players", "Rigs"}) do
+                local folder = workspace:FindFirstChild(name)
+                if folder then ignore[#ignore + 1] = folder end
+            end
+            Cam.rays.FilterDescendantsInstances = ignore
+            local back = base:VectorToWorldSpace(Vector3.new(0, Cam.Height * (want / 20), want))
+            local hit = workspace:Raycast(base.Position, back + back.Unit * 0.8, Cam.rays)
+            if hit then want = math.max(0, want * ((hit.Distance - 0.8) / (back.Magnitude + 0.8))) end
+        end
+    end
+
+    Cam.Cur = Cam.Cur + (want - Cam.Cur) * math.min(1, dt * 10)
+    if Cam.Cur < 0.01 and not Cam.On then
+        cs:SetCameraOffset("HydraDistance", nil)
+    else
+        cs:SetCameraOffset("HydraDistance", CFrame.new(0, Cam.Height * (Cam.Cur / 20), Cam.Cur))
+    end
+    if Cam.Fov then
+        local baseFov = tonumber(cs.BaseFOV) or 70
+        cs:AdjustFOV("HydraFov", math.clamp(Cam.FovValue / math.max(baseFov, 1), 0.3, 3))
+    else
+        cs:AdjustFOV("HydraFov", nil)
+    end
+end
+
+function Cam.loop()
+    if Cam.Conn or not Cam.CS then return end
+    Cam.Conn = RunService.RenderStepped:Connect(function(dt)
+        local ok = pcall(Cam.step, dt)
+        if (not ok) or (not Cam.On and not Cam.Fov and Cam.Cur < 0.01) then
+            pcall(function()
+                Cam.CS:SetCameraOffset("HydraDistance", nil)
+                Cam.CS:AdjustFOV("HydraFov", nil)
+            end)
+            if Cam.Conn then Cam.Conn:Disconnect() Cam.Conn = nil end
+        end
+    end)
+end
+
+Hydra:AddTranslations({
+    ["C\195\161mara"] = "Camera", ["C\195\161mara lejana"] = "Far camera", ["Aleja la c\195\161mara de tu personaje"] = "Moves the camera away from your character",
+    ["Distancia"] = "Range", ["Cu\195\161nto se aleja"] = "How far it goes",
+    ["Campo de visi\195\179n"] = "Field of view", ["M\195\161s o menos \195\161ngulo de visi\195\179n"] = "Wider or narrower view", ["Grados"] = "Degrees",
+})
+TabExtra:Section("C\195\161mara", "C")
+local function cameraToggle(o)
+    local toggle
+    toggle = TabExtra:Toggle({Id = o.Id, Title = o.Title, Desc = o.Desc, Icon = "C", Keybind = true, Floating = true,
+        Callback = function(on)
+            if on and not Cam.CS then
+                Hydra:Notify(Hydra:T(o.Title) .. ": " .. Hydra:T("No disponible en este ejecutor"))
+                task.defer(function() toggle:Set(false, true) end)
+                return
+            end
+            o.set(on)
+            Cam.loop()
+        end})
+    return toggle
+end
+local FarToggle = cameraToggle({Id = "camFar", Title = "C\195\161mara lejana", Desc = "Aleja la c\195\161mara de tu personaje", set = function(on) Cam.On = on end})
+FarToggle:Slider({Id = "camDistance", Title = "Distancia", Desc = "Cu\195\161nto se aleja", Min = 0, Max = 40, Step = 1, Default = 12, Suffix = " m",
+    Callback = function(v) Cam.Extra = math.clamp(tonumber(v) or 0, 0, 40) end})
+local FovToggle = cameraToggle({Id = "camFov", Title = "FOV", Desc = "M\195\161s o menos \195\161ngulo de visi\195\179n", set = function(on) Cam.Fov = on end})
+FovToggle:Slider({Id = "camFovValue", Title = "Campo de visi\195\179n", Desc = "Grados", Min = 50, Max = 120, Step = 1, Default = 90, Suffix = "\194\176",
+    Callback = function(v) Cam.FovValue = math.clamp(tonumber(v) or 90, 50, 120) end})
+Cam.Extra, Cam.FovValue = Hydra.Options.camDistance:Get(), Hydra.Options.camFovValue:Get()

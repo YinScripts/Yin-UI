@@ -1,0 +1,106 @@
+idad en el aire", Desc = "1x = la misma que al caminar", Min = 0.5, Max = 2, Step = 0.05, Default = 1, Suffix = "x",
+    Callback = function(v) SWJ.AirMult = v end})
+SpeedWithJump:Toggle({Id = "swjOnlyMoving", Title = "Solo al caminar", Desc = "Si no te mov\195\169s, no salta", Default = true,
+    Callback = function(on) SWJ.OnlyMoving = on end})
+SWJ.Power = Hydra.Options.swjPower:Get()
+SWJ.Delay = Hydra.Options.swjDelay:Get()
+SWJ.AirMult = Hydra.Options.swjAir:Get()
+SWJ.OnlyMoving = Hydra.Options.swjOnlyMoving:Get()
+
+local InfiniteSlide
+InfiniteSlide = TabMove:Toggle({Id = "infiniteSlide", Title = "Infinite Slide", Desc = "El slide no frena mientras manten\195\169s agacharte", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on)
+        if on and (Core.safeMode or not Core.hook()) then
+            Hydra:Notify("Infinite Slide: No disponible en este ejecutor")
+            task.defer(function() InfiniteSlide:Set(false, true) end)
+            return
+        end
+        IS.Enabled = on
+    end})
+InfiniteSlide:Slider({Id = "isBoost", Title = "Velocidad del slide", Desc = "M\195\161s alto = acelera m\195\161s r\195\161pido", Min = 1, Max = 150, Step = 1, Default = 8,
+    Callback = function(v) IS.Boost = v end})
+IS.Boost = Hydra.Options.isBoost:Get()
+
+local AutoCrouch
+AutoCrouch = TabMove:Toggle({Id = "autoCrouch", Title = "Auto Crouch", Desc = "Se agacha y se levanta solo", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on)
+        if on and (Core.safeMode or not Core.hook()) then
+            Hydra:Notify("Auto Crouch: No disponible en este ejecutor")
+            task.defer(function() AutoCrouch:Set(false, true) end)
+            return
+        end
+        AC.Enabled = on
+        AC.Next = 0
+        if not on then AC.release() end
+    end})
+AutoCrouch:Slider({Id = "acRate", Title = "Ritmo", Desc = "Cambios por segundo", Min = 0.5, Max = 100, Step = 0.5, Default = 1.5, Suffix = "/s",
+    Callback = function(v) AC.Rate = v end})
+AC.Rate = Hydra.Options.acRate:Get()
+
+TabMove:Section("Salto", "\226\151\142")
+local JumpLayers
+JumpLayers = TabMove:Toggle({Id = "jumpLayers", Title = "Jump Layers", Desc = "Saltos extra en el aire", Icon = "rbxassetid://88035054740813", Keybind = true, Floating = true,
+    Callback = function(on)
+        JL.Enabled = on
+        if not JL.apply() and on then
+            Hydra:Notify("Jump Layers: No disponible en este ejecutor")
+            JL.Enabled = false
+            task.defer(function() JumpLayers:Set(false, true) end)
+        end
+    end})
+JumpLayers:Slider({Id = "jlLayers", Title = "Capas", Desc = "Cu\195\161ntas veces pod\195\169s saltar en el aire", Min = 1, Max = 50, Step = 1, Default = 3,
+    Callback = function(v)
+        JL.Layers = v
+        if JL.Enabled then JL.apply() end
+    end})
+
+JL.Layers = Hydra.Options.jlLayers:Get()
+
+local AdjustJump
+AdjustJump = TabMove:Toggle({Id = "adjustJump", Title = "Adjust Jump", Desc = "Qu\195\169 tan alto salt\195\161s", Icon = "\226\151\142", Keybind = true, Floating = true,
+    Callback = function(on)
+        AJ.Enabled = on
+        if not AJ.apply() and on then
+            Hydra:Notify("Adjust Jump: No disponible en este ejecutor")
+            AJ.Enabled = false
+            task.defer(function() AdjustJump:Set(false, true) end)
+        end
+    end})
+AdjustJump:Slider({Id = "ajHeight", Title = "Altura", Desc = "Normal del juego: 3", Min = 1, Max = 100, Step = 0.5, Default = 10,
+    Callback = function(v)
+        AJ.Height = v
+        if AJ.Enabled then AJ.apply() end
+    end})
+AJ.Height = Hydra.Options.ajHeight:Get()
+
+local More = {}
+function More.service()
+    if More.svc then return More.svc end
+    local ok, svc = pcall(function() return require(Core.module("Services", "Asset", "CharacterService")) end)
+    if ok and type(svc) == "table" then More.svc = svc end
+    return More.svc
+end
+function More.data(player)
+    local svc = More.service()
+    if not svc then return nil end
+    local ok, data = pcall(function() return svc:GetCharacterFromPlayer(player) end)
+    return ok and data or nil
+end
+function More.reg(data, key)
+    local ok, value = pcall(function() return data.DataRegistry:Get(key) end)
+    if ok then return value end
+    return nil
+end
+function More.isSet(value) return value ~= nil and value ~= false and value ~= 0 end
+function More.myRoot()
+    local char = LocalPlayer.Character
+    return char and char:FindFirstChild("HumanoidRootPart")
+end
+function More.event(name)
+    local groups = {Interact = "Character", SetPlayerMode = "Session"}
+    local group = groups[name]
+    return group and Core.remote(group, name) or nil
+end
+
+local AutoCarry = {Enabled = false, Range = 30, Interval = 0.2, Last = 0,
+    STATES = {Carry = true, CarrySlide = true, CarrySlideAir = tru

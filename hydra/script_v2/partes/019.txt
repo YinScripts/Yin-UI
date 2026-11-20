@@ -1,0 +1,56 @@
+ed\195\161s derribado, vuelve a aparecer solo", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AutoSpawn.Enabled = on end})
+local AntiBotToggle = TabMore:Toggle({Id = "antiBot", Title = "Anti Bot", Desc = "Te aleja de los nextbots cuando se acercan", Icon = "\226\156\166", Keybind = true, Floating = true,
+    Callback = function(on) AntiBot.Enabled = on end})
+AntiBotToggle:Slider({Id = "antiBotDist", Title = "Distancia de reacci\195\179n", Desc = "Si un bot est\195\161 m\195\161s cerca, te mueve", Min = 1, Max = 25, Step = 1, Default = 10, Suffix = " m",
+    Callback = function(v) AntiBot.Distance = v end})
+AntiBotToggle:Slider({Id = "antiBotCd", Title = "Espera", Desc = "Entre teletransportes", Min = 0.05, Max = 2, Step = 0.05, Default = 0.15, Suffix = " s",
+    Callback = function(v) AntiBot.Cooldown = v end})
+
+TabMore:Section("Visual", "\226\151\142")
+local EspToggle = TabMore:Toggle({Id = "espPlayers", Title = "ESP jugadores", Desc = "Encontr\195\161 a todos, incluso a trav\195\169s de paredes", Icon = "\226\151\142", Keybind = true, Floating = true,
+    Callback = function(on) ESP.Players.Enabled = on end})
+EspToggle:Slider({Id = "espDist", Title = "Distancia m\195\161xima", Desc = "M\195\161s lejos no se muestra", Min = 50, Max = 5000, Step = 50, Default = 1500, Suffix = " m",
+    Callback = function(v) ESP.Players.MaxDist = v end})
+EspToggle:Toggle({Id = "espNames", Title = "Nombres", Default = true, Callback = function(on) ESP.Players.Names = on end})
+EspToggle:Toggle({Id = "espHealth", Title = "Vida", Default = true, Callback = function(on) ESP.Players.Health = on end})
+EspToggle:Toggle({Id = "espArrows", Title = "Flechas en el borde", Desc = "Apuntan a los que no ves", Default = true, Callback = function(on) ESP.Players.Arrows = on end})
+EspToggle:Toggle({Id = "espLines", Title = "L\195\173neas", Desc = "Desde abajo de la pantalla hasta cada uno", Callback = function(on) ESP.Players.Tracers = on end})
+EspToggle:Toggle({Id = "espOutline", Title = "Contorno", Desc = "Silueta a trav\195\169s de paredes", Default = true, Callback = function(on) ESP.Players.Outline = on end})
+local DownToggle = TabMore:Toggle({Id = "espDowned", Title = "ESP derribados", Desc = "Derribados con su tiempo restante", Icon = "\226\151\142", Keybind = true, Floating = true,
+    Callback = function(on) ESP.Downed.Enabled = on end})
+DownToggle:Slider({Id = "espDownDist", Title = "Distancia m\195\161xima", Desc = "M\195\161s lejos no se muestra", Min = 50, Max = 5000, Step = 50, Default = 3000, Suffix = " m",
+    Callback = function(v) ESP.Downed.MaxDist = v end})
+DownToggle:Toggle({Id = "espDownArrows", Title = "Flechas en el borde", Desc = "Apuntan a los que no ves", Default = true, Callback = function(on) ESP.Downed.Arrows = on end})
+DownToggle:Toggle({Id = "espDownOutline", Title = "Contorno", Desc = "Silueta a trav\195\169s de paredes", Default = true, Callback = function(on) ESP.Downed.Outline = on end})
+
+TabMore:Section("Farm", "\226\158\164")
+TabMore:Toggle({Id = "afk", Title = "AFK", Desc = "Te deja en una plataforma en el cielo, lejos de todo", Icon = "\226\158\164", Keybind = true, Floating = true,
+    Callback = function(on) AFK.set(on) end})
+local FarmToggle = TabMore:Toggle({Id = "ticketFarm", Title = "Auto farm tickets", Desc = "Junta los tickets del mapa solo", Icon = "\226\158\164", Keybind = true, Floating = true,
+    Callback = function(on) Farm.Enabled = on end})
+FarmToggle:Toggle({Id = "farmReturn", Title = "Volver", Desc = "Al terminar vuelve a donde estabas", Default = true, Callback = function(on) Farm.Return = on end})
+
+AutoCarry.Range, AutoCarry.Interval = Hydra.Options.carryRange:Get(), Hydra.Options.carryDelay:Get()
+AutoRevive.Range = Hydra.Options.reviveRange:Get()
+ESP.Players.MaxDist, ESP.Players.Names, ESP.Players.Health = Hydra.Options.espDist:Get(), Hydra.Options.espNames:Get(), Hydra.Options.espHealth:Get()
+ESP.Players.Arrows, ESP.Players.Tracers, ESP.Players.Outline = Hydra.Options.espArrows:Get(), Hydra.Options.espLines:Get(), Hydra.Options.espOutline:Get()
+ESP.Downed.MaxDist, ESP.Downed.Arrows, ESP.Downed.Outline = Hydra.Options.espDownDist:Get(), Hydra.Options.espDownArrows:Get(), Hydra.Options.espDownOutline:Get()
+Farm.Return = Hydra.Options.farmReturn:Get()
+AntiBot.Distance, AntiBot.Cooldown = Hydra.Options.antiBotDist:Get(), Hydra.Options.antiBotCd:Get()
+
+getgenv().HydraScriptText = function(es, en)
+    Hydra:AddTranslations({[es] = en})
+    return Hydra:T(es)
+end
+do
+local GENV = (type(getgenv) == "function" and getgenv()) or _G
+if GENV.HydraUnlockAll and GENV.HydraUnlockAll.Disable then
+    pcall(GENV.HydraUnlockAll.Disable)
+end
+
+GENV.HydraUnlockAll = (function()
+    local M = {}
+
+    local Players = game:GetService("Players")
+    local RS = game:GetServ

@@ -1,0 +1,81 @@
+0)
+        if FA.Enabled then FA.current = FA.Speed end
+    end})
+FA.Speed = Hydra.Options.fastAccelSpeed:Get()
+FA.current = FA.Speed
+
+TabMove:Section("Velocidad", "\226\151\183")
+local Speed
+Speed = TabMove:Toggle({Id = "speedMain", Title = "Speed", Desc = "Cambia qu\195\169 tan r\195\161pido corr\195\169s", Icon = "\226\151\183", Keybind = true, Floating = true,
+    Callback = function(on)
+        SP.Enabled = on
+        if not SP.apply() and on then
+            Hydra:Notify("Speed: No disponible en este ejecutor")
+            SP.Enabled = false
+            task.defer(function() Speed:Set(false, true) end)
+        end
+    end})
+Speed:Slider({Id = "speedValue", Title = "Velocidad", Desc = "Normal del juego: 33", Min = 1, Max = 400, Step = 1, Default = 55,
+    Callback = function(v)
+        SP.Value = v
+        if SP.Enabled then SP.apply() end
+    end})
+SP.Value = Hydra.Options.speedValue:Get()
+
+local function frontToggle(F, other, otherId, prefix, title, desc, icon, followDesc)
+    local toggle
+    toggle = TabMove:Toggle({Id = prefix == "sf" and "speedFront" or "backFront", Title = title, Desc = desc, Icon = icon, Keybind = true, Floating = true,
+        Callback = function(on)
+            if on and not Core.hook() then
+                Hydra:Notify(title .. ": No disponible en este ejecutor")
+                task.defer(function() toggle:Set(false, true) end)
+                return
+            end
+            F.Enabled = on
+            F.Speed = 0
+
+            if on and other.Enabled and Hydra.Options[otherId] then Hydra.Options[otherId]:Set(false) end
+        end})
+    toggle:Slider({Id = prefix .. "Speed", Title = "Velocidad m\195\161xima", Desc = "Hasta qu\195\169 velocidad llega", Min = 10, Max = 200, Step = 1, Default = 99,
+        Callback = function(v) F.MaxSpeed = v end})
+    toggle:Slider({Id = prefix .. "Accel", Title = "Aceleraci\195\179n", Desc = "Qu\195\169 tan r\195\161pido llega a la velocidad", Min = 1, Max = 30, Step = 1, Default = 9,
+        Callback = function(v) F.Accel = v end})
+    toggle:Slider({Id = prefix .. "RampMult", Title = "Multiplicador de rampa", Desc = "Cu\195\161nto te impulsa una rampa", Min = 0.1, Max = 5, Step = 0.05, Default = 1.55, Suffix = "x",
+        Callback = function(v) F.RampMult = v end})
+    toggle:Slider({Id = prefix .. "RampPower", Title = "Fuerza de rampa", Desc = "Fuerza base del salto en rampas", Min = 30, Max = 110, Step = 1, Default = 42,
+        Callback = function(v) F.RampPower = v end})
+    toggle:Toggle({Id = prefix .. "Smooth", Title = "Suave", Desc = "Acelera y frena de a poco", Default = true,
+        Callback = function(on) F.Smooth = on end})
+    toggle:Toggle({Id = prefix .. "Follow", Title = "Seguir movimiento", Desc = followDesc,
+        Callback = function(on) F.FollowMove = on end})
+    toggle:Toggle({Id = prefix .. "Boost", Title = "Potenciar mis saltos", Desc = "Tus saltos usan la fuerza y el multiplicador de rampa",
+        Callback = function(on) F.BoostManual = on end})
+
+    F.MaxSpeed = Hydra.Options[prefix .. "Speed"]:Get()
+    F.Accel = Hydra.Options[prefix .. "Accel"]:Get()
+    F.RampMult = Hydra.Options[prefix .. "RampMult"]:Get()
+    F.RampPower = Hydra.Options[prefix .. "RampPower"]:Get()
+    F.Smooth = Hydra.Options[prefix .. "Smooth"]:Get()
+    F.FollowMove = Hydra.Options[prefix .. "Follow"]:Get()
+    F.BoostManual = Hydra.Options[prefix .. "Boost"]:Get()
+    return toggle
+end
+frontToggle(SF, BF, "backFront", "sf", "Speed Front", "Te lleva hacia adelante sin trabarse", "rbxassetid://116954340494960", "Va hacia donde camin\195\161s, no hacia la c\195\161mara")
+frontToggle(BF, SF, "speedFront", "bf", "Back Front", "Te lleva hacia atr\195\161s sin trabarse", "rbxassetid://116954340494960", "Va hacia donde camin\195\161s, no hacia atr\195\161s de la c\195\161mara")
+
+local SpeedWithJump
+SpeedWithJump = TabMove:Toggle({Id = "speedWithJump", Title = "Speed with jump", Desc = "Salta solo y segu\195\173s caminando normal en el aire", Icon = "\226\151\142", Keybind = true, Floating = true,
+    Callback = function(on)
+        if on and not Core.hook() then
+            Hydra:Notify("Speed with jump: No disponible en este ejecutor")
+            task.defer(function() SpeedWithJump:Set(false, true) end)
+            return
+        end
+        SWJ.Enabled = on
+        SWJ.GroundSpeed = 0
+    end})
+SpeedWithJump:Slider({Id = "swjPower", Title = "Fuerza de salto", Desc = "Qu\195\169 tan alto salta", Min = 20, Max = 90, Step = 1, Default = 34,
+    Callback = function(v) SWJ.Power = v end})
+SpeedWithJump:Slider({Id = "swjDelay", Title = "Espera entre saltos", Desc = "Pausa al tocar el piso", Min = 0, Max = 1, Step = 0.05, Default = 0, Suffix = " s",
+    Callback = function(v) SWJ.Delay = v end})
+SpeedWithJump:Slider({Id = "swjAir", Title = "Veloc

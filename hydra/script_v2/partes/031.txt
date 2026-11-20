@@ -1,0 +1,117 @@
+Total + #newBy[n]
+            counts[#counts + 1] = n .. ": " .. #newBy[n]
+        end
+        log("Items en Registry:", regCount, "|", table.concat(counts, " | "))
+
+        log("Skins de herramientas:", #newSkins, "| Emote slots 7-12:", extraLocked and "bloqueados (se desbloquean visuales)" or "ya comprados")
+
+        if #newAll == 0 and cosTotal == 0 and #newSkins == 0 then
+            log("ABORTADO: no se encontro ningun emote ni cosmetico. No se aplico ningun parche.")
+            return
+        end
+
+        ALL, ALLSET = newAll, newAllSet
+        BYTYPE, TYPE_OF = newBy, newTypeOf
+        emoteOn = emoteMods and #newAll > 0
+        cosOn = cosTotal > 0
+        UA2.SKINS, UA2.SKINSET = newSkins, newSkinSet
+        UA2.skinItem = nil
+        UA2.skinOn = #newSkins > 0
+        UA2.extraLocked = extraLocked
+        UA2.slotsOn = emoteOn and extraLocked
+        UA2.warnedNoBase = false
+        table.clear(fakeS)
+        patches, patchResults = {}, {}
+        table.clear(fakeE)
+        table.clear(fakeC)
+        pending = nil
+        popupInst = nil
+        warnedOverlay = false
+
+        origGetOwned = Inventory.GetOwnedBySlotType
+        origOwns = Inventory.Owns
+        origIsEquipped = Loadout.IsEquipped
+        origGetFromSlot = Loadout.GetEquipped
+        origSlotTypeForSlot = Loadout.GetSlotType
+        origSetEquipped = EmotePopup and EmotePopup.SetEquipped or nil
+        UA2.origGetSkin = Inventory.GetSkin
+
+        local okPatches, patchError = pcall(function()
+            applyPatches()
+            applyShopPatches()
+        end)
+        if not okPatches then
+            M.Disable()
+            log("ABORTADO: error al instalar Unlock All: " .. tostring(patchError))
+            return
+        end
+        local essential = { ["useInventory.GetOwnedBySlotType"] = false,
+                            ["useLoadout.Equip"] = false,
+                            ["useInventory.Equip"] = false }
+        for _, result in ipairs(patchResults) do
+            if essential[result.label] ~= nil then essential[result.label] = result.ok end
+        end
+        for label, succeeded in pairs(essential) do
+            if not succeeded then
+                M.Disable()
+                log("ABORTADO: no se pudo instalar " .. label .. "; el ejecutor debe permitir modificar las tablas de Evade (setreadonly).")
+                return
+            end
+        end
+        active = true
+
+        if UA2.skinOn then
+            task.spawn(function()
+                local deploySvc = req("DeployableService", "Services", "Items", "DeployableService")
+                if not deploySvc or not active or myGen ~= gen or not UA2.skinOn then
+                    return
+                end
+                patch("DeployableService.Build (skins de colocables)", deploySvc, "Build", function(orig)
+                    return function(self, model, itemId, skinId, upgrades, owner, ...)
+                        -- Build recibe owner y skin antes de crear el modelo visual.
+                        -- El atributo Owner se establece dentro de Build, no antes.
+                        if UA2.skinOn and (owner == LP.Name or owner == LP.UserId) then
+                            local sid = fakeS[itemId]
+                            if type(sid) == "number" then
+                                skinId = sid ~= itemId and sid or nil
+                                log("Colocable propio", tostring(itemId), "-> skin visual", tostring(skinId))
+                            end
+                        end
+                        return orig(self, model, itemId, skinId, upgrades, owner, ...)
+                    end
+                end)
+            end)
+        end
+        pcall(function() Inventory.Changed:Fire() end)
+        pcall(function() Loadout.Changed:Fire() end)
+        refreshWheel()
+
+        local okCount = 0
+        for _, r in ipairs(patchResults) do
+            if r.ok then
+                okCount = okCount + 1
+            end
+        end
+        log("Listo:", okCount .. "/" .. #patchResults, "parches aplicados")
+        if okCount < #patchResults then
+            log("Algun parche fallo")
+        end
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "Unlock All",
+                Text = okCount .. "/" .. #patchResults .. ((type(getgenv) == "function" and getgenv().HydraScriptText) and getgenv().HydraScriptText(" parches aplicados", " patches applied") or " parches aplicados"),
+                Duration = 5,
+            })
+        end)
+    end
+
+    function M.Enable()
+        if active then
+            return
+        end
+        gen = gen + 1
+        local myGen = gen
+        task.spawn(function()
+            local ok, err = pcall(enableImpl, myGen)
+            if not ok then
+                log("FALLO Enable ->", 

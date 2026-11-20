@@ -1,0 +1,111 @@
+n pairs(fakeE) do
+                    if fid == id then
+                        return true, "EmoteSlot_" .. idx
+                    end
+                end
+                for slot, fid in pairs(fakeC) do
+                    if fid == id then
+                        return true, slot
+                    end
+                end
+                return false, nil
+            end
+        end)
+
+        if emoteOn then
+
+            if EmotePopup then
+            patch("EmotePopup.SetEquipped", EmotePopup, "SetEquipped", function(orig)
+                return function(self, list, ...)
+                    local r = orig(self, augmentEmotes(list), ...)
+                    popupInst = self
+                    applyOverlay(self)
+                    return r
+                end
+            end)
+
+            patch("EmotePopup.Show", EmotePopup, "Show", function(orig)
+                return function(self, ...)
+                    local r = orig(self, ...)
+                    popupInst = self
+                    applyOverlay(self)
+                    return r
+                end
+            end)
+
+            patch("EmotePopup.KeyActivated", EmotePopup, "KeyActivated", function(orig)
+                return function(self, slot, ...)
+                    if type(slot) == "number" then
+                        pending = { slot = slot, t = tick(), base = type(self.Emotes) == "table" and self.Emotes[slot] or nil }
+                    end
+                    return orig(self, slot, ...)
+                end
+            end)
+
+            end
+            if EmoteClass then
+            patch("Emote.Activate", EmoteClass, "Activate", function(orig)
+                return function(self, preview, p3)
+                    local fid = nil
+                    if not preview then
+                        pcall(function()
+                            if isLocalEmote(self) then
+                                fid = resolveFake(self)
+                            end
+                        end)
+                    end
+                    if fid then
+                        task.defer(swapTo, fid)
+                    end
+                    return orig(self, preview, p3)
+                end
+            end)
+            end
+        end
+
+        if emoteOn and ModernWheel then
+            patch("EmoteWheel.Set (visuales)", ModernWheel, "Set", function(orig)
+                modernSetOriginal = orig
+                return function(list, ...)
+                    modernInput = type(list) == "table" and table.clone(list) or {}
+                    return orig(visibleEmotes(list), ...)
+                end
+            end)
+            if WheelClass then
+                patch("Wheel._pick (emote visual)", WheelClass, "_pick", function(orig)
+                    return function(self, segment, ...)
+                        local spec = type(self) == "table" and self._spec
+                        local part = self._parts and self._parts[segment]
+                        local view = part and part.View
+                        local idx = ((tonumber(self._page) or 1) - 1) * 6 + (tonumber(segment) or 0)
+                        local fid = fakeE[idx]
+                        if not (spec and spec.Name == "Emote" and self._isOpen and view and view.IsReady and fid and modernSetOriginal) then
+                            return orig(self, segment, ...)
+                        end
+                        local base = realSlotId(idx)
+                        if base == 0 then base = baseEmoteId() end
+                        if not base then
+                            log("No hay emote propio de base para reproducir el visual en el slot", idx)
+                            return orig(self, segment, ...)
+                        end
+                        local sendList = visibleEmotes(modernInput)
+                        sendList[idx] = base
+                        local okSet = pcall(modernSetOriginal, sendList)
+                        if not okSet then return orig(self, segment, ...) end
+                        pending = { slot = idx, t = tick(), base = base }
+                        local result = table.pack(pcall(orig, self, segment, ...))
+                        pcall(modernSetOriginal, visibleEmotes(modernInput))
+                        if not result[1] then error(result[2]) end
+                        return table.unpack(result, 2, result.n)
+                    end
+                end)
+            end
+        end
+
+        if UA2.slotsOn and PackageMod then
+            patch("UserOwnsPackage.Peek (MoreEmotes)", PackageMod, "Peek", function(orig)
+                return function(player, package, ...)
+                    if player == LP and package == "MoreEmotes" and UA2.slotsOn then return true end
+                    return orig(player, package, ...)
+                end
+      

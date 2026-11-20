@@ -1,0 +1,143 @@
+
+        end
+        return nil
+    end
+
+    local function swapTo(fid)
+        if type(firesignal) ~= "function" then
+            log("Tu ejecutor no tiene firesignal: no se puede cambiar el emote local")
+            return
+        end
+        local char = LP.Character
+        local tag = char and char:GetAttribute("Tag")
+        if not tag then
+            log("No se encontro el Tag del personaje; no se cambia el emote")
+            return
+        end
+        local ok, err = pcall(function()
+            local tagBuf = buffer.create(2)
+            buffer.writeu16(tagBuf, 0, tag)
+            local remote = Core.remote("Registry", "UpdateCharacterDataRegistry")
+            if not remote then error("no se encontro Remotes.Registry.UpdateCharacterDataRegistry") end
+            firesignal(remote.OnClientEvent, {
+                buffer.fromstring("\24\1"),
+                fid,
+                tagBuf,
+            })
+        end)
+        if not ok then
+            log("Fallo el cambio local de emote ->", tostring(err))
+        end
+    end
+
+    local function slotType(slot)
+        if type(slot) ~= "string" or type(origSlotTypeForSlot) ~= "function" then
+            return nil
+        end
+        local ok, st = pcall(origSlotTypeForSlot, slot)
+        if ok and KNOWN[st] then
+            return st
+        end
+        return nil
+    end
+
+    local function collectEmoteIds()
+        local raw, seen = {}, {}
+        local items = RS:FindFirstChild("Items")
+        local function walk(parent)
+            for _, child in ipairs(parent:GetChildren()) do
+                if child:IsA("Folder") then
+                    if child.Name == "Emotes" then
+                        for _, e in ipairs(child:GetChildren()) do
+                            if e:IsA("ModuleScript") then
+                                local id = e:GetAttribute("ID")
+                                if type(id) == "number" and not seen[id] then
+                                    seen[id] = true
+                                    raw[#raw + 1] = id
+                                end
+                            end
+                        end
+                    else
+                        walk(child)
+                    end
+                end
+            end
+        end
+        if items then
+            walk(items)
+        end
+
+        local filtered = {}
+        for _, id in ipairs(raw) do
+            local okSlot, st = pcall(ItemSlotType, id)
+            local okReg, entry = pcall(Registry.GetById, id)
+            if okSlot and st == "Emote" and okReg and entry and entry.Module then
+                filtered[#filtered + 1] = id
+            end
+        end
+        if #filtered == 0 and #raw > 0 then
+            log("Aviso: el filtro por slot 'Emote' dejo 0; se usa la lista sin filtrar (", #raw, ")")
+            filtered = raw
+        end
+        table.sort(filtered)
+        return filtered, #raw
+    end
+
+    local function collectCosmetics()
+        local okAll, all = pcall(Registry.GetAll)
+        if not okAll or type(all) ~= "table" then
+            return nil
+        end
+        local bytype = emptyByType()
+        local typeOf = {}
+        local n = 0
+        for id in pairs(all) do
+            n = n + 1
+            if n % 150 == 0 then
+                task.wait()
+            end
+            if type(id) == "number" then
+                local ok, st = pcall(ItemSlotType, id)
+                if ok and KNOWN[st] then
+                    local list = bytype[st]
+                    list[#list + 1] = id
+                    typeOf[id] = st
+                end
+            end
+        end
+        for _, list in pairs(bytype) do
+            table.sort(list)
+        end
+        return bytype, typeOf, n
+    end
+
+    local function collectSkins()
+        local okAll, all = pcall(Registry.GetAll)
+        if not okAll or type(all) ~= "table" then
+            return {}, {}
+        end
+        local list, set, n = {}, {}, 0
+        for id in pairs(all) do
+            n = n + 1
+            if n % 150 == 0 then
+                task.wait()
+            end
+            if type(id) == "number" then
+                local ok, isSkin = pcall(function()
+                    local entry = Registry.GetById(id)
+                    local original = entry and entry.Module and entry.Module:FindFirstChild("Original")
+                    return original ~= nil and original:IsA("ObjectValue") and original.Value ~= nil
+                end)
+                if ok and isSkin then
+                    list[#list + 1] = id
+                    set[id] = true
+                end
+            end
+        end
+        table.sort(list)
+        return list, set
+    end
+
+    local function substitutePerks(value)
+        if type(value) ~= "table" or not (INGAME.Perk and ENABLED.Perk) then
+            retur

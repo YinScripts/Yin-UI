@@ -1,0 +1,111 @@
+e, CarryAir = true, Carried = true, CarryMove = true, CarryIdle = true}}
+function AutoCarry.ragdolled(player, data)
+    local char = player.Character
+    if not char then return false end
+    if char:FindFirstChild("RagdollConstraints") then return true end
+    if data and More.reg(data, "Ragdolling") then return true end
+    if char.PrimaryPart and char.PrimaryPart.Anchored then return true end
+    return false
+end
+function AutoCarry.step()
+    local root = More.myRoot()
+    if not root then return end
+    local me = More.data(LocalPlayer)
+    local movement = me and me.Movement
+    if not movement or AutoCarry.STATES[movement.State] then return end
+    local interact = More.event("Interact")
+    if not interact then return end
+    local now = tick()
+    if now - AutoCarry.Last < AutoCarry.Interval then return end
+    for _, other in ipairs(Players:GetPlayers()) do
+        if other ~= LocalPlayer then
+            local char = other.Character
+            local data = char and More.data(other)
+            if data and More.reg(data, "Downed") and not AutoCarry.ragdolled(other, data) then
+                local otherRoot = char:FindFirstChild("HumanoidRootPart")
+                if otherRoot and (root.Position - otherRoot.Position).Magnitude <= AutoCarry.Range then
+                    local tag = char:GetAttribute("Tag")
+                    if tag then
+                        pcall(function() interact:FireServer("Carry", tag) end)
+                        AutoCarry.Last = now
+                        break
+                    end
+                end
+            end
+        end
+    end
+end
+task.spawn(function()
+    while true do
+        if AutoCarry.Enabled then pcall(AutoCarry.step) end
+        task.wait(AutoCarry.Interval > 0 and AutoCarry.Interval or 0.2)
+    end
+end)
+
+local AutoRevive = {Enabled = false, Range = 30}
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if AutoRevive.Enabled then
+            pcall(function()
+                local root = More.myRoot()
+                local interact = More.event("Interact")
+                local me = More.data(LocalPlayer)
+                if not root or not interact or (me and More.reg(me, "Downed")) then return end
+                for _, other in ipairs(Players:GetPlayers()) do
+                    if not AutoRevive.Enabled then return end
+                    local char = other ~= LocalPlayer and other.Character
+                    local otherRoot = char and char:FindFirstChild("HumanoidRootPart")
+                    local data = otherRoot and More.data(other)
+                    local tag = char and char:GetAttribute("Tag")
+                    if data and tag and More.reg(data, "Downed") and (otherRoot.Position - root.Position).Magnitude <= AutoRevive.Range then
+                        interact:FireServer("Revive", tag, true)
+                        task.wait(tonumber(More.reg(data, "ReviveLength")) or 1.5)
+                        if AutoRevive.Enabled and More.reg(data, "Downed") and otherRoot.Parent
+                            and (otherRoot.Position - root.Position).Magnitude <= AutoRevive.Range then
+                            interact:FireServer("Revive", tag)
+                        end
+                    end
+                end
+            end)
+        end
+    end
+end)
+
+local AutoSpawn = {Enabled = false, Last = 0}
+task.spawn(function()
+    while true do
+        task.wait(0.2)
+        if AutoSpawn.Enabled and os.clock() - AutoSpawn.Last >= 3 then
+            pcall(function()
+                local me = More.data(LocalPlayer)
+                local remote = More.event("SetPlayerMode")
+                if me and remote and More.reg(me, "Downed") then
+                    AutoSpawn.Last = os.clock()
+                    remote:FireServer(true)
+                end
+            end)
+        end
+    end
+end)
+
+local ESP = {
+    entries = {},
+    Players = {Enabled = false, MaxDist = 1500, Names = true, Health = true, Arrows = true, Tracers = false, Outline = true},
+    Downed = {Enabled = false, MaxDist = 3000, Arrows = true, Outline = true},
+    WHITE = Color3.new(1, 1, 1), RED = Color3.fromRGB(255, 92, 92), DIM = Color3.fromRGB(190, 196, 210),
+}
+function ESP.gui()
+    if ESP.screen and ESP.screen.Parent then return ESP.screen end
+    local screen = Instance.new("ScreenGui")
+    screen.Name = "HydraESP"
+    screen.ResetOnSpawn = false
+    screen.IgnoreGuiInset = true
+    screen.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+    screen.DisplayOrder = 5
+    local ok = pcall(function() screen.Parent = (type(gethui) == "function" and gethui()) or game:GetService("CoreGui") end)
+    if not ok or not screen.Parent then screen.Parent = LocalPlayer:WaitForChild("PlayerGui") end
+    ESP.screen = screen
+    return screen
+end
+function ESP.label(parent, size, font, co

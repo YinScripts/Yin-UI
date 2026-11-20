@@ -1,0 +1,99 @@
+ seen[id] = true
+                                        end
+                                    end
+                                    for slot, fid in pairs(fakeC) do
+                                        if slot ~= "BoomboxSlot" and not seen[fid] then
+                                            out[#out + 1] = fid
+                                            seen[fid] = true
+                                        end
+                                    end
+
+                                    local bid = fakeC.BoomboxSlot
+                                    if type(bid) == "number" and INGAME.Boombox and ENABLED.Boombox then
+                                        self.Boombox = bid
+                                    end
+                                    table.clear(lastBuild)
+                                    lastBuild.Real = table.clone(real)
+                                    lastBuild.Fake = table.clone(fakeC)
+                                    lastBuild.Final = table.clone(out)
+                                    self.Cosmetics = out
+                                    log(
+                                        "BuildRig local: real = {" .. table.concat(real, ",") .. "}",
+                                        "| final = {" .. table.concat(out, ",") .. "}"
+                                    )
+                                end)
+                                if not ok then
+                                    log("Fallo al cambiar Cosmetics en BuildRig ->", tostring(err))
+                                end
+                            end
+                        end
+                        return orig(self, ...)
+                    end
+                end)
+            else
+                log("PARCHE NO APLICADO (no se pudo cargar Objects.Game.Character.Rig): cosmeticos en partida no funcionan")
+                patchResults[#patchResults + 1] = { label = "Rig.BuildRig (partida)", ok = false }
+            end
+
+            if DataRegClass then
+                patch("DataRegistry.SetTerm (ventajas/etiqueta)", DataRegClass, "SetTerm", function(orig)
+                    return function(self, term, value, ...)
+                        if (term == "Perks" or term == "Nametag" or term == "Boombox") and next(fakeC) ~= nil then
+                            local ok, res = pcall(function()
+                                if self.Parent == nil or self.Parent.Local ~= true then
+                                    return value
+                                end
+                                if term == "Perks" then
+                                    return substitutePerks(value)
+                                end
+                                if term == "Boombox" then
+                                    local fid = fakeC.BoomboxSlot
+                                    if type(fid) == "number" and INGAME.Boombox and ENABLED.Boombox then
+                                        return fid
+                                    end
+                                    return value
+                                end
+                                return substituteNametag(value)
+                            end)
+                            if ok and res ~= nil and res ~= value then
+                                log("En partida:", term, "->", type(res) == "table" and ("{" .. table.concat(res, ",") .. "}") or tostring(res))
+                                value = res
+                            end
+                        end
+                        return orig(self, term, value, ...)
+                    end
+                end)
+            else
+                log("PARCHE NO APLICADO (no se pudo cargar Objects.Game.Character.DataRegistry): ventajas/etiqueta en partida no funcionan")
+                patchResults[#patchResults + 1] = { label = "DataRegistry.SetTerm (ventajas/etiqueta)", ok = false }
+            end
+        end
+    end
+
+    local SHOP_MODE = "B"
+    local origTierProgress
+
+    local lastShopNotify = 0
+    local function shopNotify(es, en)
+        if os.clock() - lastShopNotify < 4 then
+            return
+        end
+        lastShopNotify = os.clock()
+        pcall(function()
+            local tr = (type(getgenv) == "function" and getgenv().HydraScriptText) or nil
+            StarterGui:SetCore("SendNotification", {
+                Title = tr and tr("Tienda de evento", "Event shop") or "Tienda de evento",
+                Text = tr and tr(es, en) or es,
+                Duration = 4,
+            })
+        end)
+    end
+
+    local function applyShopPatches()
+        if not (EventSvc and ShopsSvc) then
+            log("Tienda de evento: falta UserData.Event o UserData.Shops, parches omitidos")
+            return
+        end
+        origTierProgress = EventSvc.GetTierProgress
+
+        local okBuy 

@@ -1,0 +1,169 @@
+ice("ReplicatedStorage")
+    local StarterGui = game:GetService("StarterGui")
+    local LP = Players.LocalPlayer
+
+    local PREFIX = "[Hydra-UnlockAll]"
+    local LOG = {}
+    local function log(...)
+        local parts = {}
+        for i = 1, select("#", ...) do
+            parts[i] = tostring((select(i, ...)))
+        end
+        local line = PREFIX .. " " .. table.concat(parts, " ")
+        LOG[#LOG + 1] = line
+        if #LOG > 200 then
+            table.remove(LOG, 1)
+        end
+    end
+
+    local function path(root, ...)
+        local cur = root
+        for _, name in ipairs({ ... }) do
+            if not cur then
+                return nil
+            end
+            cur = cur:WaitForChild(name, 10)
+        end
+        return cur
+    end
+
+    local function req(label, ...)
+        local names = { ... }
+        local ok, res = pcall(function()
+            local inst = path(RS, table.unpack(names))
+            if not inst then
+                error("no se encontro la ruta")
+            end
+            return require(inst)
+        end)
+        if not ok then
+            log("FALLO cargando", label, "->", tostring(res))
+            return nil
+        end
+        return res
+    end
+
+    local active = false
+    local gen = 0
+    local patches = {}
+    local patchResults = {}
+
+    local fakeE = {}
+    local fakeC = {}
+    local pending = nil
+    local popupInst = nil
+    local warnedOverlay = false
+    local lastBuild = {}
+
+    local emoteOn, cosOn = false, false
+
+    local UA2 = {
+        fakeS = {},
+        SKINS = {},
+        SKINSET = {},
+        skinOn = false,
+        extraLocked = false,
+        slotsOn = false,
+        warnedNoBase = false,
+    }
+    local fakeS = UA2.fakeS
+
+    local Registry, Inventory, Loadout, PopupService, EmotePopup, EmoteClass, ItemSvc, RigClass, DataRegClass
+    local PackageMod, SlotsView, SlotsModern, ModernWheel, WheelClass
+    local modernSetOriginal, modernInput = nil, {}
+    local uiObservers = {}
+    local EventSvc, ShopsSvc
+
+    local origGetOwned, origOwns, origIsEquipped, origGetFromSlot, origSlotTypeForSlot, origSetEquipped
+    local ItemSlotType
+
+    local ALL, ALLSET = {}, {}
+
+    local TYPE_NAMES = { "Cosmetic", "Character", "Unusual", "Perk", "CarryAnimation", "Nametag", "Boombox" }
+    local ENABLED, KNOWN = {}, {}
+    for _, n in ipairs(TYPE_NAMES) do
+        ENABLED[n] = true
+        KNOWN[n] = true
+    end
+
+    local INGAME = { Perk = true, Nametag = true, Boombox = true }
+    local function emptyByType()
+        local t = {}
+        for _, n in ipairs(TYPE_NAMES) do
+            t[n] = {}
+        end
+        return t
+    end
+    local BYTYPE = emptyByType()
+    local TYPE_OF = {}
+
+    M.Log = LOG
+    M.FakeEmotes = fakeE
+    M.FakeCosmetics = fakeC
+    M.FakeSkins = fakeS
+    M.LastBuild = lastBuild
+
+    local function writable(t)
+        local function probe()
+            return pcall(function()
+                t.__hydra_probe = nil
+            end)
+        end
+        if probe() then
+            return true
+        end
+        if type(setreadonly) == "function" then
+            pcall(setreadonly, t, false)
+        end
+        if probe() then
+            return true
+        end
+        if type(make_writeable) == "function" then
+            pcall(make_writeable, t)
+        end
+        return probe()
+    end
+
+    local function patch(label, tbl, key, build)
+        local orig = tbl[key]
+        if type(orig) ~= "function" then
+            log("PARCHE NO APLICADO (no existe la funcion):", label)
+            patchResults[#patchResults + 1] = { label = label, ok = false }
+            return false
+        end
+        if not writable(tbl) then
+            log("PARCHE NO APLICADO (tabla de solo lectura, falta setreadonly):", label)
+            patchResults[#patchResults + 1] = { label = label, ok = false }
+            return false
+        end
+        patches[#patches + 1] = { tbl = tbl, key = key, orig = orig }
+        tbl[key] = build(orig)
+        patchResults[#patchResults + 1] = { label = label, ok = true }
+        return true
+    end
+
+    local function patchBoth(label, key, build)
+        patch("useLoadout." .. label, Loadout, key, build)
+        patch("useInventory." .. label, Inventory, key, build)
+    end
+
+    local function slotIndex(slot)
+        return tonumber(string.match(tostring(slot), "^EmoteSlot_(%d+)$"))
+    end
+
+    local function realSlotId(idx)
+        local ok, id = pcall(origGetFromSlot, "EmoteSlot_" .. idx)
+        if ok and type(id) == "number" then
+            return id
+        end
+        return 0
+    end
+
+    local function owns(id)
+        local ok, res = pcall(origOwns, id)
+        return ok and res == true
+    end
+
+    local function pickBase()
+        local ok, owned = pcall(origGetOwned, "Emote")
+        if not ok or type(owned) ~=

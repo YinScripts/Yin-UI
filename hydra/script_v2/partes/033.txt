@@ -1,0 +1,127 @@
+t] = fid else skipped += 1 end
+        end
+        for item, sid in pairs(snap.skins or {}) do
+            local n = tonumber(item)
+            if n and UA2.SKINSET[sid] then fakeS[n] = sid else skipped += 1 end
+        end
+        refreshWheel()
+        pcall(function() Loadout.Changed:Fire() end)
+        pcall(function() Inventory.Changed:Fire() end)
+        log("Perfil aplicado", skipped > 0 and ("(" .. skipped .. " items ya no existen)") or "")
+        return true, skipped
+    end
+
+    function M.Pools()
+        return { emotes = ALL, bytype = BYTYPE, skins = UA2.SKINS }
+    end
+
+    function M.RandomLook()
+        if not active then
+            log("Activa Unlock All primero")
+            return nil
+        end
+        local function pick(list)
+            if type(list) == "table" and #list > 0 then
+                return list[math.random(1, #list)]
+            end
+            return nil
+        end
+        local snap = { emotes = {}, cosmetics = {}, skins = {} }
+        if emoteOn and #ALL > 0 then
+            local maxSlot = (UA2.extraLocked and not UA2.slotsOn) and 6 or 12
+            local pool = table.clone(ALL)
+            for idx = 1, maxSlot do
+                if #pool == 0 then
+                    break
+                end
+                local k = math.random(1, #pool)
+                snap.emotes[tostring(idx)] = pool[k]
+                pool[k] = pool[#pool]
+                pool[#pool] = nil
+            end
+        end
+        if cosOn then
+            local used = {}
+            for _, slot in ipairs({ "CosmeticSlot_1", "CosmeticSlot_2", "CharacterSlot", "UnusualSlot", "CarryAnimationSlot", "NametagSlot" }) do
+                local st = slotType(slot)
+                if st and ENABLED[st] then
+                    for _ = 1, 4 do
+                        local id = pick(BYTYPE[st])
+                        if id and not used[id] then
+                            used[id] = true
+                            snap.cosmetics[slot] = id
+                            break
+                        end
+                    end
+                end
+            end
+            if ENABLED.Boombox then
+                local b = pick(M.GetBoomboxSkins())
+                if b then
+                    snap.cosmetics.BoomboxSlot = b.id
+                end
+            end
+        end
+        if UA2.skinOn and #UA2.SKINS > 0 then
+            if not UA2.skinItem then
+
+                local map = {}
+                for _, sid in ipairs(UA2.SKINS) do
+                    local ok, item = pcall(function()
+                        return Registry.GetById(sid).Module.Original.Value:GetAttribute("ID")
+                    end)
+                    if ok and type(item) == "number" then
+                        map[item] = map[item] or {}
+                        table.insert(map[item], sid)
+                    end
+                end
+                UA2.skinItem = map
+            end
+            for item, list in pairs(UA2.skinItem) do
+                snap.skins[tostring(item)] = pick(list)
+            end
+        end
+        return snap
+    end
+
+    function M.SetInGame(name, state)
+        if INGAME[name] == nil then
+            log("Solo se puede para Perk, Nametag o Boombox")
+            return
+        end
+        INGAME[name] = state and true or false
+        log("En partida:", name, INGAME[name] and "activado" or "desactivado", "(aplica en la proxima actualizacion del servidor)")
+    end
+
+    return M
+end)()
+end
+local UA = getgenv().HydraUnlockAll
+local Unlock = {LOOK_FILE = "Hydra_Look.json", AutoLook = true, Waiting = 0}
+function Unlock.saveLook()
+    if type(writefile) ~= "function" or not UA then return false end
+    local ok = pcall(function()
+        writefile(Unlock.LOOK_FILE, game:GetService("HttpService"):JSONEncode(UA.Snapshot()))
+    end)
+    return ok
+end
+function Unlock.loadLook()
+    if type(readfile) ~= "function" or type(isfile) ~= "function" or not UA then return false end
+    local ok, snap = pcall(function()
+        if not isfile(Unlock.LOOK_FILE) then return nil end
+        return game:GetService("HttpService"):JSONDecode(readfile(Unlock.LOOK_FILE))
+    end)
+    if not ok or type(snap) ~= "table" then return false end
+    return (UA.ApplySnapshot(snap))
+end
+function Unlock.lastLine()
+    local log = UA and UA.Log
+    if type(log) == "table" and #log > 0 then return (tostring(log[#log]):gsub("^%[Hydra%-UnlockAll%]%s*", "")) end
+    return ""
+end
+
+Hydra:AddTranslations({
+    ["Desbloquea todo de forma visual (solo lo ves vos)"] = "Unlocks everything visually (only you see it)",
+    ["Cosm\195\169ticos"] = "Cosmetics", ["Personajes"] = "Characters", ["Unusuals"] = "Unusuals", ["Perks"] = "Perks",
+    ["Animaci\195\179n de cargar"] = "Carry animation", ["Nametags"] = "Nametags", ["Boombox"] = "Boombox",
+    ["Perk

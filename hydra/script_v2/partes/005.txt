@@ -1,0 +1,126 @@
+end)
+        if fillLoop then pcall(function() fillLoop:Cancel() end) end
+        tween(shade, 0.22, {BackgroundTransparency = 1})
+        local out = tween(scale, 0.22, {Scale = 0.9}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        out.Completed:Wait()
+        if gui.Parent then gui:Destroy() end
+    end
+
+    local function tryAccess(value, fromCache)
+        if state.busy or state.closed then return end
+        state.busy = true
+        state.removed = false
+        input.Text = HydraKey.normalize(value)
+        check.Text = t("checking")
+        setStatus(fromCache and "revalidating" or "contacting", C.Accent, true)
+        local valid, kind = HydraKey.validate(input.Text)
+        if valid then
+            HydraKey.save(input.Text)
+            state.authorized = true
+            pcall(function() getgenv().HydraKeyValidated = true end)
+            setStatus("accepted", C.OK, false)
+            check.Text = t("granted")
+            tween(checkGrad, 0.25, {Rotation = 270})
+            tween(check, 0.25, {BackgroundColor3 = C.OK})
+            markSteps(3)
+            task.wait(0.45)
+            dismiss()
+        else
+            if fromCache and kind == "invalid_expired" then
+                HydraKey.clear()
+                input.Text = ""
+                state.removed = true
+            end
+            setStatus(kind, C.ERR, false)
+            check.Text = t("check")
+            fieldStroke.Color = C.ERR
+            fieldStroke.Transparency = 0.1
+            shake()
+            task.delay(1.2, function()
+                if fieldStroke.Parent then tween(fieldStroke, 0.3, {Color = C.Stroke, Transparency = 0.55}) end
+            end)
+        end
+        state.busy = false
+    end
+
+    input.FocusLost:Connect(function(enter) if enter then tryAccess(input.Text, false) end end)
+    check.Activated:Connect(function() tryAccess(input.Text, false) end)
+    link.Activated:Connect(function()
+        if setclipboard then
+            pcall(setclipboard, HydraKey.PORTAL)
+            setStatus("link_copied", C.OK, false)
+        else
+            setStatus("portal", C.Accent, false)
+        end
+        if HydraKey.normalize(input.Text) == "" then markSteps(2) end
+    end)
+    close.Activated:Connect(function()
+        state.closed = true
+        task.spawn(dismiss)
+    end)
+
+    tween(shade, 0.3, {BackgroundTransparency = 0.35})
+    tween(scale, 0.45, {Scale = 1}, Enum.EasingStyle.Back)
+    refreshFormat()
+    local cached = HydraKey.loadCached()
+    if cached then
+        input.Text = cached
+        task.spawn(function()
+            task.wait()
+            tryAccess(cached, true)
+        end)
+    elseif not HydraKey.canCache() then
+        setStatus("no_file", C.Accent, false)
+    end
+    while not state.authorized and not state.closed do task.wait() end
+    return state.authorized
+end
+
+-- Si el sistema de claves esta activo, conservar su verificacion.
+if HydraKey.ENABLED then
+    if not HydraKey.run() then return end
+end
+
+local Hydra = loadstring(HydraKey.lib or game:HttpGet(HYDRA_URL))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local Core = {steps = {}, preSteps = {}, hooked = false, safeMode = false}
+pcall(function()
+    if identifyexecutor then
+        Core.safeMode = string.find(string.lower(tostring(identifyexecutor())), "solara", 1, true) ~= nil
+    end
+end)
+
+function Core.module(...)
+    local node = ReplicatedStorage
+    for _, name in ipairs({...}) do
+        node = node and node:FindFirstChild(name)
+    end
+    return node
+end
+
+-- Evade 5073+: los remotos viven en Remotes/<grupo>; Events se conserva como compatibilidad.
+function Core.remote(group, name)
+    local remotes = ReplicatedStorage:FindFirstChild("Remotes")
+    local folder = remotes and remotes:FindFirstChild(group)
+    local remote = folder and folder:FindFirstChild(name)
+    if remote then return remote end
+    local events = ReplicatedStorage:FindFirstChild("Events")
+    return events and events:FindFirstChild(name) or nil
+end
+
+function Core.hook()
+    if Core.hooked then return true end
+    if Core.safeMode then
+        RunService.Stepped:Connect(function(_, dt)
+            local char = LocalPlayer.Character
+            local hrp = char and char:FindFirstChild("HumanoidRootPart")
+            local hum = char and char:FindFirstChildOfClass("Humanoid")
+            if not hrp or not hum or hum.Health <= 0 then return end
+            local ctx = {char = char, root = hrp, hum = hum, dt = dt, grounded = hum.FloorMaterial ~= Enum.Material.Air,
+                jumpHeld = hum.Jump == true, jump = function() hum:ChangeState(Enum.HumanoidStateType.Jumping) end}
+            for _, fn in pairs(Core.step

@@ -1,0 +1,94 @@
+ in the air",
+    ["No disponible en este ejecutor"] = "Not available on this executor",
+    ["Te lleva hacia atr\195\161s sin trabarse"] = "Takes you backwards without getting stuck",
+    ["Va hacia donde camin\195\161s, no hacia atr\195\161s de la c\195\161mara"] = "Goes where you walk, not behind the camera",
+    ["Salta solo y segu\195\173s caminando normal en el aire"] = "Jumps by itself and you keep walking normally in the air",
+    ["Fuerza de salto"] = "Jump power", ["Qu\195\169 tan alto salta"] = "How high it jumps",
+    ["Espera entre saltos"] = "Delay between jumps", ["Pausa al tocar el piso"] = "Pause when touching the ground",
+    ["Velocidad en el aire"] = "Air speed", ["1x = la misma que al caminar"] = "1x = the same as walking",
+    ["Solo al caminar"] = "Only while walking", ["Si no te mov\195\169s, no salta"] = "If you don't move, it doesn't jump",
+    ["Se agacha y se levanta solo"] = "Crouches and stands up by itself",
+    ["Cambia qu\195\169 tan r\195\161pido corr\195\169s"] = "Changes how fast you run",
+    ["El slide no frena mientras manten\195\169s agacharte"] = "The slide never slows down while you hold crouch",
+    ["Velocidad del slide"] = "Slide speed", ["M\195\161s alto = acelera m\195\161s r\195\161pido"] = "Higher = speeds up faster",
+    ["Qu\195\169 tan alto salt\195\161s"] = "How high you jump", ["Altura"] = "Height", ["Normal del juego: 3"] = "Game default: 3", ["Normal del juego: 33"] = "Game default: 33",
+    ["Ritmo"] = "Rate", ["Cambios por segundo"] = "Changes per second",
+})
+
+local TabMove = Hydra:Tab({Id = "Move", Title = "Movimiento", Caption = "MOVER", Icon = "rbxassetid://130468910849957"})
+
+local FA = {Enabled = false, Speed = 42, current = 42, acc = 0, lastTick = tick(), lastJump = tick(), wasAir = false, bv = nil, INTERVAL = 0.65}
+function FA.inEmote()
+    local ok, value = pcall(function()
+        local svc = require(Core.module("Services", "Asset", "CharacterService"))
+        return svc:GetCharacterFromPlayer(LocalPlayer).DataRegistry:Get("Emote")
+    end)
+    return ok and value ~= nil and value ~= false and value ~= 0
+end
+function FA.push(root, velocity)
+    if not FA.bv or not FA.bv.Parent or FA.bv.Parent ~= root then
+        if FA.bv then pcall(function() FA.bv:Destroy() end) end
+        FA.bv = Instance.new("BodyVelocity")
+        FA.bv.MaxForce = Vector3.new(4e5, 0, 4e5)
+        FA.bv.P = 1250
+        FA.bv.Parent = root
+    end
+    FA.bv.Velocity = velocity
+end
+function FA.step()
+    if not FA.Enabled then
+        if FA.bv then pcall(function() FA.bv:Destroy() end) end
+        FA.bv = nil
+        return
+    end
+    local dt = tick() - FA.lastTick
+    FA.lastTick = tick()
+    local base = math.clamp(tonumber(FA.Speed) or 42, 30, 110)
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local hum = char and char:FindFirstChild("Humanoid")
+    if not root or not hum then return end
+    local isAir = hum.FloorMaterial == Enum.Material.Air
+    local st = hum:GetState()
+    local isOnGround = (st == Enum.HumanoidStateType.Landed or st == Enum.HumanoidStateType.Running) and not isAir
+    if FA.wasAir and isOnGround then
+        FA.current = base
+        FA.acc = 0
+    end
+    FA.wasAir = isAir
+    local cam = workspace.CurrentCamera
+    local look = cam and cam.CFrame.LookVector or Vector3.new(0, 0, -1)
+    look = Vector3.new(look.X, 0, look.Z)
+    if look.Magnitude ~= 0 then look = look.Unit end
+    if isAir then
+        FA.push(root, look * FA.current)
+        return
+    end
+    FA.acc = FA.acc + dt
+    while FA.acc >= 0.04 do
+        FA.acc = FA.acc - 0.04
+        FA.current = math.min(base + 10, FA.current + 0.3)
+    end
+    FA.push(root, look * FA.current)
+    FA.current = math.max(base, FA.current - 2.5 * dt)
+    if tick() - FA.lastJump >= FA.INTERVAL and not FA.inEmote() then
+        hum:ChangeState(Enum.HumanoidStateType.Jumping)
+        FA.lastJump = tick()
+    end
+end
+RunService.Heartbeat:Connect(function() pcall(FA.step) end)
+
+Hydra:AddTranslations({
+    ["Impulso"] = "Boost", ["Te empuja hacia donde mir\195\161s y salta solo"] = "Pushes you where you look and jumps by itself",
+    ["Velocidad del impulso"] = "Boost speed",
+})
+TabMove:Section("Impulso", "\226\158\164")
+local FastAccel = TabMove:Toggle({Id = "fastAccel", Title = "Fast Acceleration", Desc = "Te empuja hacia donde mir\195\161s y salta solo", Icon = "\226\158\164", Keybind = true, Floating = true,
+    Callback = function(on)
+        FA.Enabled = on
+        FA.lastJump = tick()
+        FA.current = FA.Speed
+    end})
+FastAccel:Slider({Id = "fastAccelSpeed", Title = "Impulso", Desc = "Velocidad del impulso", Min = 30, Max = 110, Step = 1, Default = 42,
+    Callback = function(v)
+        FA.Speed = math.clamp(tonumber(v) or 42, 30, 11

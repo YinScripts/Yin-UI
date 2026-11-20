@@ -1,0 +1,118 @@
+s) do pcall(fn, ctx) end
+        end)
+        Core.hooked = true
+        return true
+    end
+    local moduleScript = Core.module("Objects", "Game", "Character", "Client", "Movement")
+    if not moduleScript then return false end
+    local ok, Movement = pcall(require, moduleScript)
+    if not ok or type(Movement) ~= "table" or type(Movement.Update) ~= "function" then return false end
+    local old = Movement.Update
+    Movement.Update = function(self, dt, ...)
+
+        if self.Character and self.Character == LocalPlayer.Character then
+            for _, fn in pairs(Core.preSteps) do pcall(fn, self) end
+        end
+        old(self, dt, ...)
+        if not (self.Character and self.Character == LocalPlayer.Character) then return end
+        local hrp = self.Character:FindFirstChild("HumanoidRootPart")
+        local hum = self.Character:FindFirstChildOfClass("Humanoid")
+        if not hrp or not hum or hum.Health <= 0 then return end
+        local okG, g = pcall(function() return self.DataRegistry:Get("Grounded") end)
+        local ctx = {char = self.Character, root = hrp, hum = hum, dt = tonumber(dt) or (1 / 60), registry = self.DataRegistry,
+            grounded = (okG and g ~= nil) and (g == true) or (not (okG and g ~= nil) and hum.FloorMaterial ~= Enum.Material.Air),
+            jumpHeld = self.JumpHeldDown == true, movement = self, jump = function() pcall(function() self:AttemptJump() end) end}
+        for _, fn in pairs(Core.steps) do pcall(fn, ctx) end
+    end
+    Core.hooked = true
+    return true
+end
+
+function Core.setModifier(name, value)
+    if not Core.safeMode then
+        local ok = pcall(function()
+            local service = require(Core.module("Services", "Asset", "CharacterService"))
+            local data = service:GetCharacterFromPlayer(LocalPlayer)
+            local stats = data.Movement.MoveStats
+            stats.Modifiers = stats.Modifiers or {}
+            stats.Modifiers[name] = value
+            stats:Reset()
+        end)
+        if ok then return true end
+    end
+    local fire = firesignal
+    local char = LocalPlayer.Character
+    local tag = char and char:GetAttribute("Tag")
+    local event = Core.remote("Character", "CharacterTask")
+    if type(fire) ~= "function" or not tag or not event then return false end
+    return (pcall(fire, event.OnClientEvent, tag, "ModifyMovement", {name, value}))
+end
+
+local SP = {Enabled = false, Value = 55, Token = 0, SPRINT_CAP = 2}
+function SP.apply()
+    if SP.Enabled then return Core.setModifier("Speed", SP.Value * 90 / SP.SPRINT_CAP) end
+    return Core.setModifier("Speed", nil)
+end
+LocalPlayer.CharacterAdded:Connect(function()
+    SP.Token = SP.Token + 1
+    local token = SP.Token
+    if not SP.Enabled then return end
+    task.spawn(function()
+        for _ = 1, 20 do
+            task.wait(0.5)
+            if token ~= SP.Token or not SP.Enabled then return end
+            if SP.apply() then return end
+        end
+    end)
+end)
+
+local AJ = {Enabled = false, Height = 10, Token = 0}
+function AJ.apply()
+    if AJ.Enabled then return Core.setModifier("JumpHeight", AJ.Height) end
+    return Core.setModifier("JumpHeight", nil)
+end
+LocalPlayer.CharacterAdded:Connect(function()
+    AJ.Token = AJ.Token + 1
+    local token = AJ.Token
+    if not AJ.Enabled then return end
+    task.spawn(function()
+        for _ = 1, 20 do
+            task.wait(0.5)
+            if token ~= AJ.Token or not AJ.Enabled then return end
+            if AJ.apply() then return end
+        end
+    end)
+end)
+
+local Front = {rays = RaycastParams.new()}
+Front.rays.FilterType = Enum.RaycastFilterType.Exclude
+pcall(function() Front.rays.RespectCanCollide = true end)
+
+function Front.obstacle(char, root, dir, speed)
+    local ignore = {char}
+    for _, name in ipairs({"Players", "Rigs"}) do
+        local folder = workspace:FindFirstChild(name)
+        if folder then ignore[#ignore + 1] = folder end
+    end
+    Front.rays.FilterDescendantsInstances = ignore
+    local dist = math.clamp(speed * 0.15, 5, 12)
+    local hit = workspace:Raycast(root.Position - Vector3.new(0, 1.5, 0), dir * dist, Front.rays)
+    if not hit or hit.Normal.Y > 0.9 then return nil end
+    local isRamp = hit.Normal.Y >= 0.2
+    if not isRamp then
+        local n = Vector3.new(hit.Normal.X, 0, hit.Normal.Z)
+        if n.Magnitude > 0.05 and dir:Dot(-n.Unit) < 0.3 then return nil end
+    end
+    return hit, isRamp
+end
+
+function Front.lift(root, vy)
+    local v = root.AssemblyLinearVelocity
+    if v.Y < vy then root.AssemblyLinearVelocity = Vector3.new(v.X, vy, v.Z) end
+end
+
+function Front.new(sign)
+    local F = {
+        Enabled = false, Sign = sign, MaxSpeed = 99, Accel = 9, Smooth = true, FollowMove = false,
+        RampPower = 42, RampMult = 1.55, BoostManual = false,
+        Speed = 0, Dir = Vector3.new(1, 0, 0), Seen

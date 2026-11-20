@@ -1,0 +1,76 @@
+local HYDRA_URL = "https://raw.githubusercontent.com/YinScripts/Yin-UI/main/hydra/loader.lua"
+
+local HydraKey = {
+    PORTAL = "https://yinyangkeysystemnick.up.railway.app/",
+    FILE = "Hydra_Key.txt",
+    LOGO = "rbxassetid://114974832117287",
+    lib = nil,
+    ENABLED = false, -- false = sistema key desactivado temporalmente (no carga la GUI ni valida); true = vuelve a funcionar como antes
+}
+HydraKey.VALIDATE = HydraKey.PORTAL .. "api/validate?key="
+task.spawn(function()
+    local ok, source = pcall(function() return game:HttpGet(HYDRA_URL) end)
+    if ok and type(source) == "string" and #source > 0 then HydraKey.lib = source end
+end)
+HydraKey.TEXT = {
+    es = {sub = "Acceso personal de 24 horas", step1 = "Enlace", step2 = "Portal", step3 = "Key", check = "VERIFICAR", link = "OBTENER ENLACE",
+        checking = "VERIFICANDO", granted = "ACCESO CONCEDIDO", placeholder = "Peg\195\161 tu key ac\195\161",
+        secure = "Verificaci\195\179n segura del servidor", revalidating = "Revalidando la key guardada", contacting = "Contactando al servidor",
+        accepted = "Key aceptada \194\183 cargando Hydra", link_copied = "Enlace copiado", portal = "Portal", no_file = "Tu ejecutor no guarda archivos: la key no se recuerda",
+        invalid_format = "Formato inv\195\161lido", server_unavailable = "Servidor no disponible", invalid_response = "Respuesta inv\195\161lida",
+        invalid_expired = "Key inv\195\161lida o vencida", removed = "se borr\195\179 la guardada"},
+    en = {sub = "Personal 24-hour access", step1 = "Link", step2 = "Portal", step3 = "Key", check = "CHECK KEY", link = "GET LINK",
+        checking = "CHECKING", granted = "ACCESS GRANTED", placeholder = "Paste your key here",
+        secure = "Secure server verification", revalidating = "Revalidating saved key", contacting = "Contacting server",
+        accepted = "Key accepted \194\183 loading Hydra", link_copied = "Link copied", portal = "Portal", no_file = "Your executor can't save files: the key won't be remembered",
+        invalid_format = "Invalid format", server_unavailable = "Server unavailable", invalid_response = "Invalid response",
+        invalid_expired = "Invalid or expired key", removed = "saved key removed"},
+}
+
+function HydraKey.normalize(value) return (tostring(value or ""):gsub("%s+", ""):upper()) end
+function HydraKey.isFormat(value) return value:match("^YINYANG%-%w%w%w%-%w%w%w%-%w%w%w%-%w%w%w%-%w%w%w$") ~= nil end
+function HydraKey.canCache()
+    return type(isfile) == "function" and type(readfile) == "function" and type(writefile) == "function" and type(delfile) == "function"
+end
+function HydraKey.loadCached()
+    if not HydraKey.canCache() then return nil end
+    local ok, cached = pcall(function()
+        if isfile(HydraKey.FILE) then return HydraKey.normalize(readfile(HydraKey.FILE)) end
+        return nil
+    end)
+    if ok and HydraKey.isFormat(cached or "") then return cached end
+    return nil
+end
+function HydraKey.save(key) if HydraKey.canCache() then pcall(writefile, HydraKey.FILE, HydraKey.normalize(key)) end end
+function HydraKey.clear()
+    if HydraKey.canCache() then
+        pcall(function() if isfile(HydraKey.FILE) then delfile(HydraKey.FILE) end end)
+    end
+end
+function HydraKey.validate(value)
+    local key = HydraKey.normalize(value)
+    if not HydraKey.isFormat(key) then return false, "invalid_format" end
+    local HttpService = game:GetService("HttpService")
+    local requestFunction = (syn and syn.request) or http_request or request or (fluxus and fluxus.request)
+    local ok, body = pcall(function()
+        if requestFunction then
+            local response = requestFunction({Url = HydraKey.VALIDATE .. HttpService:UrlEncode(key), Method = "GET"})
+            if not response or tonumber(response.StatusCode) ~= 200 then error("HTTP validation failed") end
+            return response.Body
+        end
+        return game:HttpGet(HydraKey.VALIDATE .. HttpService:UrlEncode(key))
+    end)
+    if not ok or type(body) ~= "string" then return false, "server_unavailable" end
+    local okJson, data = pcall(function() return HttpService:JSONDecode(body) end)
+    if not okJson or type(data) ~= "table" then return false, "invalid_response" end
+    if data.valid == true then return true, "accepted" end
+    return false, "invalid_expired"
+end
+
+function HydraKey.run()
+    local Players = game:GetService("Players")
+    local TweenService = game:GetService("TweenService")
+    local LocalizationService = game:GetService("LocalizationService")
+    local player = Players.LocalPlayer
+    local C = {Bg = Color3.fromRGB(12, 14, 19), Field = Color3.fromRGB(38, 43, 54), Text = Color3.fromRGB(248, 249, 252), Dim = Color3.fromRGB(190, 195, 208),
+        Accent = Color3.fromRGB(236, 239, 245), AccentDark = Color3.fromRGB(140, 146, 16

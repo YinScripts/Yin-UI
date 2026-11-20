@@ -1,0 +1,108 @@
+      end)
+            patch("UserOwnsPackage.Owns (MoreEmotes)", PackageMod, "Owns", function(orig)
+                return function(player, package, ...)
+                    if package == "MoreEmotes" and player == LP and UA2.slotsOn then
+                        return true
+                    end
+                    return orig(player, package, ...)
+                end
+            end)
+        end
+
+        local boomboxOn = cosOn and ENABLED.Boombox and #BYTYPE.Boombox > 0
+        if SlotsView and (UA2.slotsOn or boomboxOn) then
+            patch("Inventario.Slots.SetHeader (12 emotes + boombox)", SlotsView, "SetHeader", function(orig)
+                return function(self, ...)
+                    if UA2.slotsOn then
+                        self.MoreEmotes = true
+                    end
+                    if cosOn and ENABLED.Boombox and #BYTYPE.Boombox > 0 then
+                        self.OwnsRelics = true
+                    end
+                    return orig(self, ...)
+                end
+            end)
+        end
+
+        -- La vista nueva consulta IsUnlocked para pintar cada casilla. Es un
+        -- cambio visual local; no altera el inventario autorizado del servidor.
+        if SlotsModern and (UA2.slotsOn or boomboxOn) then
+            patch("Inventario moderno.Slots.IsUnlocked", SlotsModern, "IsUnlocked", function(orig)
+                return function(slot, ...)
+                    if type(slot) == "table" then
+                        if slot.Package == "MoreEmotes" and UA2.slotsOn then return true end
+                        if slot.Package == "Boombox" and boomboxOn then return true end
+                    end
+                    return orig(slot, ...)
+                end
+            end)
+        end
+
+        patchBoth("GetEquipped (visual)", "GetEquipped", function(orig)
+            return function(slot, ...)
+                local idx = emoteOn and slotIndex(slot)
+                if idx and fakeE[idx] ~= nil then return fakeE[idx] end
+                if cosOn and fakeC[slot] ~= nil then return fakeC[slot] end
+                return orig(slot, ...)
+            end
+        end)
+
+        -- El inventario moderno consulta Owns directamente antes de conservar la
+        -- seleccion y antes de permitir elegir una skin. Esta vista es local;
+        -- la funcion original queda guardada en origOwns para no alterar el servidor.
+        patch("useInventory.Owns (catalogo visual)", Inventory, "Owns", function(orig)
+            return function(id, ...)
+                if emoteOn and ALLSET[id] then return true end
+                local st = cosOn and TYPE_OF[id]
+                if st and ENABLED[st] then return true end
+                if UA2.skinOn and UA2.SKINSET[id] then return true end
+                return orig(id, ...)
+            end
+        end)
+
+        if UA2.skinOn then
+            patch("useInventory.OwnedIds (skins)", Inventory, "OwnedIds", function(orig)
+                return function(...)
+                    local list = orig(...)
+                    if not UA2.skinOn or type(list) ~= "table" then
+                        return list
+                    end
+                    local have = {}
+                    for _, id in ipairs(list) do
+                        have[id] = true
+                    end
+                    local out = table.clone(list)
+                    for _, id in ipairs(UA2.SKINS) do
+                        if not have[id] then
+                            out[#out + 1] = id
+                        end
+                    end
+                    table.sort(out)
+                    return out
+                end
+            end)
+            patch("useInventory.GetSkin", Inventory, "GetSkin", function(orig)
+                return function(item, ...)
+                    if UA2.skinOn and fakeS[item] ~= nil then
+                        return fakeS[item]
+                    end
+                    return orig(item, ...)
+                end
+            end)
+
+            -- GetWornSkin y PickSkin usan directamente ItemModifiers, por lo
+            -- que cambiar Inventory.GetSkin/SetSkin no alcanza en el menu nuevo.
+            patch("useInventory.GetWornSkin (skin visual)", Inventory, "GetWornSkin", function(orig)
+                return function(item, ...)
+                    local skin = fakeS[item]
+                    if UA2.skinOn and skin ~= nil then
+                        if skin == item then return nil end
+                        return skin
+                    end
+                    return orig(item, ...)
+                end
+            end)
+            patch("useInventory.PickSkin (skin visual)", Inventory, "PickSkin", function(orig)
+                return function(item, skin, ...)
+                    if UA2.skinOn and type(item) == "number" then
+              

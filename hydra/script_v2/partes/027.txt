@@ -1,0 +1,96 @@
+          if skin == item and fakeS[item] ~= nil then
+                            fakeS[item] = item
+                            notifyUI()
+                            return
+                        end
+                        if type(skin) == "number" and UA2.SKINSET[skin] and not owns(skin) then
+                            local ok, base = pcall(function()
+                                local entry = Registry.GetById(skin)
+                                local original = entry and entry.Module and entry.Module:FindFirstChild("Original")
+                                return original and original.Value and original.Value:GetAttribute("ID")
+                            end)
+                            if not ok or base ~= item then
+                                log("Skin incompatible con la herramienta:", tostring(skin), tostring(item))
+                                return
+                            end
+                            fakeS[item] = skin
+                            log("Skin visual:", item, "->", skin)
+                            notifyUI()
+                            return
+                        end
+                        if fakeS[item] ~= nil then fakeS[item] = nil; notifyUI() end
+                    end
+                    return orig(item, skin, ...)
+                end
+            end)
+
+            if DataRegClass then
+                patch("DataRegistry.Get (skins de herramientas)", DataRegClass, "Get", function(orig)
+                    return function(self, term, ...)
+                        local value = orig(self, term, ...)
+                        if term == "ToolSkins" and UA2.skinOn and next(fakeS) ~= nil then
+                            local okL, isLocal = pcall(function()
+                                return self.Parent ~= nil and self.Parent.Local == true
+                            end)
+                            if okL and isLocal then
+                                local okS, res = pcall(substituteSkins, value)
+                                if okS and res ~= nil then
+                                    return res
+                                end
+                            end
+                        end
+                        return value
+                    end
+                end)
+            end
+            patch("useInventory.SetSkin", Inventory, "SetSkin", function(orig)
+                return function(item, skin, ...)
+                    if UA2.skinOn then
+                        if type(skin) == "number" and skin ~= 0 and UA2.SKINSET[skin] and not owns(skin) then
+                            fakeS[item] = skin
+                            log("Skin visual:", item, "->", skin)
+                            notifyUI()
+                            return
+                        end
+                        if fakeS[item] ~= nil then
+                            fakeS[item] = nil
+                            notifyUI()
+                        end
+                    end
+                    return orig(item, skin, ...)
+                end
+            end)
+        end
+
+        if cosOn then
+
+            if RigClass then
+                patch("Rig.BuildRig (partida)", RigClass, "BuildRig", function(orig)
+                    return function(self, ...)
+                        if not self.Built
+                            and type(self.Cosmetics) == "table"
+                            and self.RigTerm and self.Actions and self.ToolSkins and self.Boombox
+                            and next(fakeC) ~= nil
+                        then
+                            local isLocal = false
+                            pcall(function()
+                                isLocal = self.Parent ~= nil and self.Parent.Local == true
+                            end)
+                            if isLocal then
+                                local ok, err = pcall(function()
+                                    local real = self.Cosmetics
+                                    local removed = {}
+                                    for slot in pairs(fakeC) do
+
+                                        if slot ~= "BoomboxSlot" then
+                                            local okR, rid = pcall(origGetFromSlot, slot)
+                                            if okR and type(rid) == "number" and rid ~= 0 then
+                                                removed[rid] = true
+                                            end
+                                        end
+                                    end
+                                    local out, seen = {}, {}
+                                    for _, id in ipairs(real) do
+                                        if not removed[id] then
+                                            out[#out + 1] = id
+                                           
