@@ -1,0 +1,143 @@
+  outline.Thickness = 1.3
+    outline.Transparency = 0.25
+    outline.Parent = label
+    label.Parent = parent
+    return label
+end
+function ESP.bar(parent, width)
+    local back = Instance.new("Frame")
+    back.Size = UDim2.fromOffset(width, 4)
+    back.BackgroundColor3 = Color3.fromRGB(20, 22, 28)
+    back.BackgroundTransparency = 0.25
+    back.BorderSizePixel = 0
+    Instance.new("UICorner", back).CornerRadius = UDim.new(1, 0)
+    local fill = Instance.new("Frame")
+    fill.Size = UDim2.fromScale(1, 1)
+    fill.BackgroundColor3 = ESP.WHITE
+    fill.BorderSizePixel = 0
+    Instance.new("UICorner", fill).CornerRadius = UDim.new(1, 0)
+    fill.Parent = back
+    back.Parent = parent
+    return back, fill
+end
+
+function ESP.entry(player)
+    local e = ESP.entries[player]
+    if e then return e end
+    local screen = ESP.gui()
+    e = {}
+    local bb = Instance.new("BillboardGui")
+    bb.Name = "HydraESP_" .. player.Name
+    bb.Size = UDim2.fromOffset(170, 58)
+    bb.StudsOffset = Vector3.new(0, 3.2, 0)
+    bb.AlwaysOnTop = true
+    bb.LightInfluence = 0
+    bb.Enabled = false
+    local list = Instance.new("UIListLayout")
+    list.HorizontalAlignment = Enum.HorizontalAlignment.Center
+    list.VerticalAlignment = Enum.VerticalAlignment.Bottom
+    list.Padding = UDim.new(0, 2)
+    list.SortOrder = Enum.SortOrder.LayoutOrder
+    list.Parent = bb
+    e.tag = ESP.label(bb, 10, Enum.Font.GothamBlack, ESP.RED)
+    e.tag.LayoutOrder = 1
+    e.name = ESP.label(bb, 13, Enum.Font.GothamBold, ESP.WHITE)
+    e.name.LayoutOrder = 2
+    e.info = ESP.label(bb, 11, Enum.Font.GothamSemibold, ESP.DIM)
+    e.info.LayoutOrder = 3
+    e.barBack, e.bar = ESP.bar(bb, 64)
+    e.barBack.LayoutOrder = 4
+    bb.Parent = screen
+    e.bb = bb
+
+    local arrow = Instance.new("Frame")
+    arrow.Size = UDim2.fromOffset(46, 46)
+    arrow.AnchorPoint = Vector2.new(0.5, 0.5)
+    arrow.BackgroundTransparency = 1
+    arrow.Visible = false
+    local tip = Instance.new("Frame")
+    tip.Size = UDim2.fromOffset(12, 12)
+    tip.AnchorPoint = Vector2.new(0.5, 0.5)
+    tip.Position = UDim2.new(0.5, 0, 0, 4)
+    tip.Rotation = 45
+    tip.BorderSizePixel = 0
+    tip.BackgroundColor3 = ESP.WHITE
+    tip.Parent = arrow
+    local dot = Instance.new("Frame")
+    dot.Size = UDim2.fromOffset(30, 30)
+    dot.AnchorPoint = Vector2.new(0.5, 0.5)
+    dot.Position = UDim2.fromScale(0.5, 0.55)
+    dot.BackgroundColor3 = Color3.fromRGB(14, 15, 20)
+    dot.BackgroundTransparency = 0.25
+    Instance.new("UICorner", dot).CornerRadius = UDim.new(1, 0)
+    local dotStroke = Instance.new("UIStroke")
+    dotStroke.Thickness = 1.5
+    dotStroke.Color = ESP.WHITE
+    dotStroke.Parent = dot
+    dot.Parent = arrow
+    local dist = Instance.new("TextLabel")
+    dist.BackgroundTransparency = 1
+    dist.Size = UDim2.fromScale(1, 1)
+    dist.Font = Enum.Font.GothamBlack
+    dist.TextSize = 9
+    dist.TextColor3 = ESP.WHITE
+    dist.Parent = dot
+    arrow.Parent = screen
+
+    local arrowName = Instance.new("TextLabel")
+    arrowName.BackgroundTransparency = 1
+    arrowName.AnchorPoint = Vector2.new(0.5, 0)
+    arrowName.Position = UDim2.new(0.5, 0, 1, 2)
+    arrowName.Size = UDim2.fromOffset(90, 12)
+    arrowName.Font = Enum.Font.GothamBold
+    arrowName.TextSize = 10
+    arrowName.TextColor3 = ESP.WHITE
+    local nameOutline = Instance.new("UIStroke")
+    nameOutline.Thickness = 1.2
+    nameOutline.Transparency = 0.3
+    nameOutline.Parent = arrowName
+    arrowName.Parent = dot
+    e.arrow, e.tip, e.dot, e.dotStroke, e.arrowText, e.arrowName = arrow, tip, dot, dotStroke, dist, arrowName
+
+    local line = Instance.new("Frame")
+    line.AnchorPoint = Vector2.new(0.5, 0.5)
+    line.BorderSizePixel = 0
+    line.BackgroundTransparency = 0.35
+    line.Visible = false
+    line.Parent = screen
+    e.line = line
+    ESP.entries[player] = e
+    return e
+end
+function ESP.remove(player)
+    local e = ESP.entries[player]
+    if not e then return end
+    pcall(function() e.bb:Destroy() end)
+    pcall(function() e.arrow:Destroy() end)
+    pcall(function() e.line:Destroy() end)
+    if e.hl then pcall(function() e.hl:Destroy() end) end
+    ESP.entries[player] = nil
+end
+Players.PlayerRemoving:Connect(ESP.remove)
+function ESP.hide(e)
+    e.bb.Enabled = false
+    e.arrow.Visible = false
+    e.line.Visible = false
+    if e.hl then e.hl.Enabled = false end
+end
+
+function ESP.rigModel(char)
+    if ESP.rigService == nil then
+        local ok, svc = pcall(function() return require(Core.module("Services", "Asset", "RigService")) end)
+        ESP.rigService = (ok and type(svc) == "table") and svc or false
+    end
+    local tag = char:GetAttribute("Tag")
+    if ESP.rigService and tag then
+        local ok, rig = pcall(function() return ESP.rigService:GetRigFromTag(tag) end)
+        if ok and rig and typeof(rig.Model) == "Instance" and rig.Model:IsA("Model") and rig.Model.Parent then return rig.Model end
+    end
+    return char
+end
+function ESP.template()
+    if ESP.whistle == nil then
+        local found = Core.m
