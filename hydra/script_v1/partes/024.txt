@@ -1,0 +1,143 @@
+me:FindFirstChild(idx <= 6 and "Wheel" or "Wheel2")
+        return wheel and wheel:FindFirstChild("Emote" .. ((idx - 1) % 6 + 1))
+    end
+
+    local function applyOverlay(popup)
+        if not popup or not popup.Frame or type(popup.Emotes) ~= "table" then
+            return
+        end
+        for idx, fid in pairs(fakeE) do
+            if popup.Emotes[idx] then
+                local ok, err = pcall(function()
+                    local sf = wheelSlotFrame(popup, idx)
+                    local item = ItemSvc:GetItemFromID(fid)
+                    ItemSvc:ClearViewport(sf.ViewportFrame)
+                    ItemSvc:CreateViewport(item, sf.ViewportFrame)
+                    sf.TextLabel.Text = ItemSvc:GetName(item)
+                end)
+                if not ok and not warnedOverlay then
+                    warnedOverlay = true
+                    log("Aviso: no se pudo dibujar el visual en la rueda ->", tostring(err))
+                end
+            end
+        end
+    end
+
+    local function refreshWheel()
+        local p = getPopup()
+        if not p or type(p.Emotes) ~= "table" then
+            return
+        end
+        pcall(origSetEquipped, p, augmentEmotes(p.Emotes))
+        applyOverlay(p)
+    end
+
+    local function isLocalEmote(self)
+        local char = self.Character
+        local lc = LP.Character
+        if not char or not lc then
+            return false
+        end
+        if char == lc then
+            return true
+        end
+        local a, b = char:GetAttribute("Tag"), lc:GetAttribute("Tag")
+        return a ~= nil and a == b
+    end
+
+    local function resolveFake(self)
+        local mod = self.EmoteModule
+        local modId = mod and mod:GetAttribute("ID")
+        if not modId then
+            return nil
+        end
+        if pending and tick() - pending.t < 5 then
+            local fid = fakeE[pending.slot]
+            if fid and (realSlotId(pending.slot) == modId or (isExtraSlot(pending.slot) and pending.base == modId)) then
+                pending = nil
+                return fid
+            end
+        end
+        for idx = 1, 12 do
+            local fid = fakeE[idx]
+            if fid and realSlotId(idx) == modId then
+                return fid
+            end
+        end
+        return nil
+    end
+
+    local function swapTo(fid)
+        if type(firesignal) ~= "function" then
+            log("Tu ejecutor no tiene firesignal: no se puede cambiar el emote local")
+            return
+        end
+        local char = LP.Character
+        local tag = char and char:GetAttribute("Tag")
+        if not tag then
+            log("No se encontro el Tag del personaje; no se cambia el emote")
+            return
+        end
+        local ok, err = pcall(function()
+            local tagBuf = buffer.create(2)
+            buffer.writeu16(tagBuf, 0, tag)
+            local remote = Core.remote("Registry", "UpdateCharacterDataRegistry")
+            if not remote then error("no se encontro Remotes.Registry.UpdateCharacterDataRegistry") end
+            firesignal(remote.OnClientEvent, {
+                buffer.fromstring("\24\1"),
+                fid,
+                tagBuf,
+            })
+        end)
+        if not ok then
+            log("Fallo el cambio local de emote ->", tostring(err))
+        end
+    end
+
+    local function slotType(slot)
+        if type(slot) ~= "string" or type(origSlotTypeForSlot) ~= "function" then
+            return nil
+        end
+        local ok, st = pcall(origSlotTypeForSlot, slot)
+        if ok and KNOWN[st] then
+            return st
+        end
+        return nil
+    end
+
+    local function collectEmoteIds()
+        local raw, seen = {}, {}
+        local items = RS:FindFirstChild("Items")
+        local function walk(parent)
+            for _, child in ipairs(parent:GetChildren()) do
+                if child:IsA("Folder") then
+                    if child.Name == "Emotes" then
+                        for _, e in ipairs(child:GetChildren()) do
+                            if e:IsA("ModuleScript") then
+                                local id = e:GetAttribute("ID")
+                                if type(id) == "number" and not seen[id] then
+                                    seen[id] = true
+                                    raw[#raw + 1] = id
+                                end
+                            end
+                        end
+                    else
+                        walk(child)
+                    end
+                end
+            end
+        end
+        if items then
+            walk(items)
+        end
+
+        local filtered = {}
+        for _, id in ipairs(raw) do
+            local okSlot, st = pcall(ItemSlotType, id)
+            local okReg, entry = pcall(Registry.GetById, id)
+            if okSlot and st == "Emote" and okReg and entry and entry.Module then
+                filtered[#filtered + 1] = id
+            end
+        end
+        if #filtered == 0 and #raw > 0 then
+            log("Aviso: el filtro por slot 'Emote' dejo 0; se usa la lista
