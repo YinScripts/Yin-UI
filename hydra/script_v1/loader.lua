@@ -1,6 +1,7 @@
 -- Hydra Script: reune 40 fragmentos fijados a una version concreta.
-local BASE = "https://raw.githubusercontent.com/YinScripts/Yin-UI/8dffab87ed11db72392ca0589e952d616c911114/hydra/script_v1/partes/"
+local BASE = "https://raw.githubusercontent.com/YinScripts/Yin-UI/05fcd5d0152765d33750332e8c71cea9fe7da397/hydra/script_v1/partes/"
 local TOTAL, WORKERS, MAX_TRIES = 40, 6, 2
+local SPECIAL_SIZES = {[30]=5361, [31]=5895, [38]=5231, [40]=3374}
 local parts, nextPart, completed, firstError = {}, 1, 0, nil
 for _ = 1, WORKERS do
     task.spawn(function()
@@ -9,7 +10,7 @@ for _ = 1, WORKERS do
             nextPart = nextPart + 1
             if i > TOTAL then break end
             local url = BASE .. string.format("%03d.txt", i)
-            local expected = i == TOTAL and 3374 or 5000
+            local expected = SPECIAL_SIZES[i] or 5000
             local chunk
             for attempt = 1, MAX_TRIES do
                 local ok, result = pcall(function() return game:HttpGet(url, true) end)
@@ -33,3 +34,4 @@ if firstError then error(firstError) end
 local compiled, err = loadstring(table.concat(parts), "Hydra Script")
 if not compiled then error("Hydra: error al compilar el script: " .. tostring(err)) end
 return compiled()
+
