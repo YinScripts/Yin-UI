@@ -1,0 +1,128 @@
+ction AFK.goUp()
+    local root = More.myRoot()
+    if not root then return false end
+    AFK.build()
+    root.CFrame = CFrame.new(AFK.SPOT + Vector3.new(0, 6, 0))
+    root.AssemblyLinearVelocity = Vector3.zero
+    return true
+end
+function AFK.set(on)
+    AFK.Enabled = on
+    More.afkReturn = on and function() return AFK.Enabled and AFK.goUp() end or nil
+    local root = More.myRoot()
+    if on then
+        AFK.Home = root and root.CFrame or nil
+        AFK.goUp()
+    else
+        if root and AFK.Home then
+            root.CFrame = AFK.Home
+            root.AssemblyLinearVelocity = Vector3.zero
+        end
+        AFK.Home = nil
+        if AFK.Platform then AFK.Platform:Destroy() AFK.Platform = nil end
+    end
+end
+
+task.spawn(function()
+    while true do
+        task.wait(0.25)
+        if AFK.Enabled then
+            pcall(function()
+                local root = More.myRoot()
+
+                if root and not Farm.Busy and (root.Position - AFK.SPOT).Magnitude > 80 then AFK.goUp() end
+            end)
+        end
+    end
+end)
+
+LocalPlayer.Idled:Connect(function()
+    if not AFK.Enabled then return end
+    pcall(function()
+        local vu = game:GetService("VirtualUser")
+        vu:CaptureController()
+        vu:ClickButton2(Vector2.new())
+    end)
+end)
+
+local AntiBot = {Enabled = false, Distance = 10, Cooldown = 0.15, Last = 0, rays = RaycastParams.new(), acc = 0}
+AntiBot.rays.FilterType = Enum.RaycastFilterType.Exclude
+function AntiBot.ignore(char)
+    local list = {char}
+    for _, name in ipairs({"Players", "Rigs"}) do
+        local folder = workspace:FindFirstChild(name)
+        if folder then list[#list + 1] = folder end
+    end
+    return list
+end
+function AntiBot.safeSpot(candidate, char)
+    AntiBot.rays.FilterDescendantsInstances = AntiBot.ignore(char)
+    local down = workspace:Raycast(candidate + Vector3.new(0, 50, 0), Vector3.new(0, -1000, 0), AntiBot.rays)
+    if not down then return nil end
+    local spot = Vector3.new(candidate.X, down.Position.Y + 3, candidate.Z)
+    if workspace:Raycast(spot, Vector3.new(0, 5, 0), AntiBot.rays) then return nil end
+    return spot
+end
+function AntiBot.step()
+    local now = os.clock()
+    if now - AntiBot.Last < AntiBot.Cooldown or AFK.Enabled or Farm.Busy then return end
+    local char = LocalPlayer.Character
+    local root = char and char:FindFirstChild("HumanoidRootPart")
+    local svc = More.service()
+    local me = More.data(LocalPlayer)
+    if not root or not svc or not me then return end
+    if More.reg(me, "Downed") or More.isSet(More.reg(me, "Carried")) then return end
+    local ok, chars = pcall(function() return svc:GetCharacters() end)
+    if not ok or type(chars) ~= "table" then return end
+    local myPos = root.Position
+    local bots, nearest, nearestDist = {}, nil, math.huge
+    local alive = {}
+    for _, v in pairs(chars) do
+        if type(v) == "table" and v.Done and v.PrimaryPart then
+            local okPos, pos = pcall(function() return v.PrimaryPart.Position end)
+            if okPos then
+                if v.AI == true then
+                    bots[#bots + 1] = pos
+                    local d = (pos - myPos).Magnitude
+                    if d < nearestDist then nearest, nearestDist = pos, d end
+                elseif not v.Local and v.PlayerReference and not More.reg(v, "Downed") and not More.isSet(More.reg(v, "Carried")) then
+                    alive[#alive + 1] = pos
+                end
+            end
+        end
+    end
+    if not nearest or nearestDist >= AntiBot.Distance then return end
+    local function clearance(p)
+        local m = math.huge
+        for _, b in ipairs(bots) do m = math.min(m, (b - p).Magnitude) end
+        return m
+    end
+    local candidates = {}
+    local away = (myPos - nearest) * Vector3.new(1, 0, 1)
+    away = away.Magnitude < 0.1 and Vector3.new(1, 0, 0) or away.Unit
+    for _, angle in ipairs({0, 35, -35, 70, -70}) do
+        local dir = CFrame.Angles(0, math.rad(angle), 0):VectorToWorldSpace(away)
+        for _, radius in ipairs({45, 70, 35}) do candidates[#candidates + 1] = myPos + dir * radius end
+    end
+    for _, pos in ipairs(alive) do
+        candidates[#candidates + 1] = pos + Vector3.new(math.random(-5, 5), 0, math.random(-5, 5))
+    end
+    local minSafe = math.max(AntiBot.Distance * 2, 30)
+    local best, bestScore, checks = nil, -math.huge, 0
+    for _, c in ipairs(candidates) do
+        local score = clearance(c)
+        if score >= minSafe and score > bestScore then
+            checks = checks + 1
+            local spot = AntiBot.safeSpot(c, char)
+            if spot then best, bestScore = spot, score end
+            if checks >= 12 then break end
+        end
+    end
+    if not best then return end
+    local look = (best - nearest) * Vector3.new(1, 0, 1)
+    root.CFrame = look.Magnitude > 0.1 and CFrame.new(best, best + look) or CFrame.new(best)
+    AntiBot.Last = now
+end
+RunService.Heartbeat:Connect(function(dt)
+    if not AntiBot.Enabled then return end
+    AntiBot.acc = AntiBot.acc
