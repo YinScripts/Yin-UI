@@ -1,0 +1,116 @@
+cle(char, root, dir, speed)
+    local ignore = {char}
+    for _, name in ipairs({"Players", "Rigs"}) do
+        local folder = workspace:FindFirstChild(name)
+        if folder then ignore[#ignore + 1] = folder end
+    end
+    Front.rays.FilterDescendantsInstances = ignore
+    local dist = math.clamp(speed * 0.15, 5, 12)
+    local hit = workspace:Raycast(root.Position - Vector3.new(0, 1.5, 0), dir * dist, Front.rays)
+    if not hit or hit.Normal.Y > 0.9 then return nil end
+    local isRamp = hit.Normal.Y >= 0.2
+    if not isRamp then
+        local n = Vector3.new(hit.Normal.X, 0, hit.Normal.Z)
+        if n.Magnitude > 0.05 and dir:Dot(-n.Unit) < 0.3 then return nil end
+    end
+    return hit, isRamp
+end
+
+function Front.lift(root, vy)
+    local v = root.AssemblyLinearVelocity
+    if v.Y < vy then root.AssemblyLinearVelocity = Vector3.new(v.X, vy, v.Z) end
+end
+
+function Front.new(sign)
+    local F = {
+        Enabled = false, Sign = sign, MaxSpeed = 99, Accel = 9, Smooth = true, FollowMove = false,
+        RampPower = 42, RampMult = 1.55, BoostManual = false,
+        Speed = 0, Dir = Vector3.new(1, 0, 0), Seen = 0, LastAuto = 0, LastAir = 0, WasGrounded = true, OurJumpUntil = 0,
+    }
+    function F.wantedDir(hum)
+        if F.FollowMove then
+            local md = hum.MoveDirection
+            return md.Magnitude > 0.05 and Vector3.new(md.X, 0, md.Z).Unit or nil
+        end
+        local cam = workspace.CurrentCamera
+        if not cam then return nil end
+        local look = cam.CFrame.LookVector * F.Sign
+        local flat = Vector3.new(look.X, 0, look.Z)
+        return flat.Magnitude > 0.05 and flat.Unit or nil
+    end
+
+    function F.step(ctx)
+        if not F.Enabled then F.Speed = 0 return end
+        local hum, root = ctx.hum, ctx.root
+        local grounded = ctx.grounded
+        if ctx.registry then
+            local okG, g = pcall(function() return ctx.registry:Get("Grounded") end)
+            grounded = (okG and g ~= nil) and (g == true) or hum.FloorMaterial ~= Enum.Material.Air
+        end
+        local dir = F.wantedDir(hum)
+        local moving = dir ~= nil and (not F.FollowMove or hum.MoveDirection.Magnitude > 0.05)
+        if dir then F.Dir = dir end
+        local target = moving and F.MaxSpeed or 0
+        if F.Smooth then
+            local rate = target > F.Speed and F.Accel or F.Accel * 0.6
+            F.Speed = F.Speed + (target - F.Speed) * math.min(rate * ctx.dt, 1)
+        else
+            F.Speed = target
+        end
+        local vel = F.Dir * F.Speed
+        if ctx.registry then pcall(function() ctx.registry:Set("Velocity", vel * 90) end) end
+        local cur = root.AssemblyLinearVelocity
+        root.AssemblyLinearVelocity = Vector3.new(vel.X, cur.Y, vel.Z)
+
+        local now = os.clock()
+        local lift = F.RampPower * F.RampMult * 0.8
+        if moving and F.Speed > 3 then
+            local hit = Front.obstacle(ctx.char, root, F.Dir, F.Speed)
+            F.Seen = hit and F.Seen + 1 or 0
+            if F.Seen < 2 then hit = nil end
+            if hit then
+                if grounded and now - F.LastAuto > 0.45 then
+                    F.LastAuto = now
+                    F.OurJumpUntil = now + 0.4
+                    ctx.jump()
+                    task.delay(0.1, function() if root.Parent then Front.lift(root, lift) end end)
+                elseif not grounded and now - F.LastAir > 0.3 then
+                    F.LastAir = now
+                    Front.lift(root, lift * 0.6)
+                end
+            end
+        end
+
+        if F.BoostManual and ctx.jumpHeld and F.WasGrounded and not grounded and now > F.OurJumpUntil then
+            F.OurJumpUntil = now + 0.4
+            Front.lift(root, lift)
+        end
+        F.WasGrounded = grounded
+    end
+    return F
+end
+
+local SF = Front.new(1)
+local BF = Front.new(-1)
+Core.steps.speedFront = SF.step
+Core.steps.backFront = BF.step
+
+local SWJ = {Enabled = false, Power = 34, Delay = 0, AirMult = 1, OnlyMoving = true, GroundSpeed = 0, Last = 0}
+Core.steps.speedWithJump = function(ctx)
+    if not SWJ.Enabled then return end
+    local md = ctx.hum.MoveDirection
+    local moving = md.Magnitude > 0.05
+    local now = os.clock()
+    local flat = Vector3.new(ctx.root.AssemblyLinearVelocity.X, 0, ctx.root.AssemblyLinearVelocity.Z)
+    if ctx.grounded then
+        if moving then SWJ.GroundSpeed = flat.Magnitude end
+        if (moving or not SWJ.OnlyMoving) and now - SWJ.Last >= SWJ.Delay + 0.15 then
+            SWJ.Last = now
+            ctx.jump()
+            local root = ctx.root
+            task.delay(0.05, function() if root.Parent then Front.lift(root, SWJ.Power) end end)
+        end
+    elseif moving and not SF.Enabled and not BF.Enabled and SWJ.GroundSpeed > 1 then
+        local vel = Vector3.new(md.X, 0, md.Z).Unit * SWJ.GroundSpeed * SWJ.AirMult
+        if ctx.registry then pcall(function() ctx.registry:Set("Velocity", vel * 90) end) end
+        ctx.root.AssemblyLinearVelocity = Vector3.new(vel.X, ctx.root.AssemblyLinearVelocity.Y,
