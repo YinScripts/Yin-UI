@@ -1,0 +1,87 @@
+, Text = "YIN YANG", TextColor3 = Color3.new(1, 1, 1),
+        Font = Enum.Font.GothamBlack, TextSize = 22, TextXAlignment = Enum.TextXAlignment.Left, Parent = head})
+    local shine = mk("UIGradient", {Color = ColorSequence.new({ColorSequenceKeypoint.new(0, C.AccentDark), ColorSequenceKeypoint.new(0.45, C.Accent),
+        ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)), ColorSequenceKeypoint.new(0.55, C.Accent), ColorSequenceKeypoint.new(1, C.AccentDark)}), Offset = Vector2.new(-1, 0), Parent = title})
+    TweenService:Create(shine, TweenInfo.new(2.4, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 0.6), {Offset = Vector2.new(1, 0)}):Play()
+    local tag = mk("TextLabel", {Size = UDim2.fromOffset(0, 17), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(54, 27), BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 0.88, Text = t("tag"), TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 10, Parent = head})
+    mk("UIPadding", {PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9), Parent = tag})
+    corner(tag, 99)
+    stroke(tag, C.Stroke, 0.55)
+    local close = mk("TextButton", {Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Color3.new(1, 1, 1),
+        BackgroundTransparency = 0.9, AutoButtonColor = false, Text = "\195\151", TextColor3 = C.Text, Font = Enum.Font.GothamBold, TextSize = 18, Parent = head})
+    corner(close, 99)
+    stroke(close, C.Stroke, 0.6)
+    local closeScale = mk("UIScale", {Scale = 1, Parent = close})
+    close.MouseEnter:Connect(function() tween(closeScale, 0.15, {Scale = 1.06}) end)
+    close.MouseLeave:Connect(function() tween(closeScale, 0.2, {Scale = 1}) end)
+    close.MouseButton1Down:Connect(function() tween(closeScale, 0.08, {Scale = 0.94}) end)
+    close.MouseButton1Up:Connect(function() tween(closeScale, 0.3, {Scale = 1}, Enum.EasingStyle.Back) end)
+
+    mk("Frame", {Size = UDim2.new(1, 0, 0, 1), BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.88, BorderSizePixel = 0, LayoutOrder = 2, Parent = body})
+    local msg = mk("TextLabel", {Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, Text = t("msg"), TextColor3 = C.Text,
+        Font = Enum.Font.GothamMedium, TextSize = 13, LineHeight = 1.15, TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+        LayoutOrder = 3, Parent = body})
+
+    local track = mk("Frame", {Size = UDim2.new(1, 0, 0, 3), BackgroundColor3 = C.Field, BorderSizePixel = 0, ClipsDescendants = true, LayoutOrder = 4, Parent = body})
+    corner(track, 99)
+    local fill = mk("Frame", {Size = UDim2.fromScale(1, 1), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = track})
+    corner(fill, 99)
+
+    local state = {closed = false}
+    local function refresh()
+        tag.Text = t("tag")
+        msg.Text = t("msg")
+    end
+    task.spawn(function()
+        local ok, translator = pcall(function() return LocalizationService:GetTranslatorForPlayerAsync(player) end)
+        if ok and translator then
+            lang = pickLang(translator.LocaleId)
+            refresh()
+            pcall(function()
+                translator:GetPropertyChangedSignal("LocaleId"):Connect(function() lang = pickLang(translator.LocaleId) refresh() end)
+            end)
+        end
+    end)
+
+    local function dismiss()
+        if state.closed then return end
+        state.closed = true
+        pcall(function() ringSpin:Cancel() end)
+        tween(panel, 0.3, {Position = UDim2.new(0.5, 0, 0, -(panel.AbsoluteSize.Y + 30))}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        local out = tween(scale, 0.3, {Scale = 0.9}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        out.Completed:Wait()
+        if gui.Parent then gui:Destroy() end
+    end
+    close.Activated:Connect(function() task.spawn(dismiss) end)
+
+    tween(panel, 0.55, {Position = UDim2.new(0.5, 0, 0, 12)}, Enum.EasingStyle.Back)
+    tween(scale, 0.45, {Scale = 1}, Enum.EasingStyle.Back)
+    if type(M.DURATION) == "number" and M.DURATION > 0 then
+        tween(fill, M.DURATION, {Size = UDim2.fromScale(0, 1)}, Enum.EasingStyle.Linear)
+        task.delay(M.DURATION, function() task.spawn(dismiss) end)
+    else
+        track.Visible = false
+    end
+end
+
+if HydraKey.ENABLED then
+    if not HydraKey.run() then return end
+else
+    task.spawn(HydraKey.maintenance)
+end
+
+local Hydra = loadstring(HydraKey.lib or game:HttpGet(HYDRA_URL))()
+
+local Players = game:GetService("Players")
+local RunService = game:GetService("RunService")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LocalPlayer = Players.LocalPlayer
+
+local Core = {steps = {}, preSteps = {}, hooked = false, safeMode = false}
+pcall(function()
+    if identifyexecutor then
+        Core.safeMode = string.find(string.lower(tostring(identifyexecutor())), "solara", 1, true) ~= nil
+    end
+end)
+
