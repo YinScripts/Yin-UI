@@ -1,0 +1,129 @@
+id == id then
+                        return true, "EmoteSlot_" .. idx
+                    end
+                end
+                for slot, fid in pairs(fakeC) do
+                    if fid == id then
+                        return true, slot
+                    end
+                end
+                return false, nil
+            end
+        end)
+
+        if emoteOn then
+
+            patch("EmotePopup.SetEquipped", EmotePopup, "SetEquipped", function(orig)
+                return function(self, list, ...)
+                    local r = orig(self, augmentEmotes(list), ...)
+                    popupInst = self
+                    applyOverlay(self)
+                    return r
+                end
+            end)
+
+            patch("EmotePopup.Show", EmotePopup, "Show", function(orig)
+                return function(self, ...)
+                    local r = orig(self, ...)
+                    popupInst = self
+                    applyOverlay(self)
+                    return r
+                end
+            end)
+
+            patch("EmotePopup.KeyActivated", EmotePopup, "KeyActivated", function(orig)
+                return function(self, slot, ...)
+                    if type(slot) == "number" then
+                        pending = { slot = slot, t = tick(), base = type(self.Emotes) == "table" and self.Emotes[slot] or nil }
+                    end
+                    return orig(self, slot, ...)
+                end
+            end)
+
+            patch("Emote.Activate", EmoteClass, "Activate", function(orig)
+                return function(self, preview, p3)
+                    local fid = nil
+                    if not preview then
+                        pcall(function()
+                            if isLocalEmote(self) then
+                                fid = resolveFake(self)
+                            end
+                        end)
+                    end
+                    if fid then
+                        task.defer(swapTo, fid)
+                    end
+                    return orig(self, preview, p3)
+                end
+            end)
+        end
+
+        if UA2.slotsOn and PackageMod then
+            patch("UserOwnsPackage.Owns (MoreEmotes)", PackageMod, "Owns", function(orig)
+                return function(player, package, ...)
+                    if package == "MoreEmotes" and player == LP and UA2.slotsOn then
+                        return true
+                    end
+                    return orig(player, package, ...)
+                end
+            end)
+        end
+
+        local boomboxOn = cosOn and ENABLED.Boombox and #BYTYPE.Boombox > 0
+        if SlotsView and (UA2.slotsOn or boomboxOn) then
+            patch("Inventario.Slots.SetHeader (12 emotes + boombox)", SlotsView, "SetHeader", function(orig)
+                return function(self, ...)
+                    if UA2.slotsOn then
+                        self.MoreEmotes = true
+                    end
+                    if cosOn and ENABLED.Boombox and #BYTYPE.Boombox > 0 then
+                        self.OwnsRelics = true
+                    end
+                    return orig(self, ...)
+                end
+            end)
+        end
+
+        -- La vista nueva consulta IsUnlocked para pintar cada casilla. Es un
+        -- cambio visual local; no altera el inventario autorizado del servidor.
+        if SlotsModern and (UA2.slotsOn or boomboxOn) then
+            patch("Inventario moderno.Slots.IsUnlocked", SlotsModern, "IsUnlocked", function(orig)
+                return function(slot, ...)
+                    if type(slot) == "table" then
+                        if slot.Package == "MoreEmotes" and UA2.slotsOn then return true end
+                        if slot.Package == "Boombox" and boomboxOn then return true end
+                    end
+                    return orig(slot, ...)
+                end
+            end)
+        end
+
+        if boomboxOn then
+            patchBoth("GetEquipped (boombox)", "GetEquipped", function(orig)
+                return function(slot, ...)
+                    if slot == "BoomboxSlot" and fakeC.BoomboxSlot ~= nil then
+                        return fakeC.BoomboxSlot
+                    end
+                    return orig(slot, ...)
+                end
+            end)
+        end
+
+        if UA2.skinOn then
+            patch("useInventory.OwnedIds (skins)", Inventory, "OwnedIds", function(orig)
+                return function(...)
+                    local list = orig(...)
+                    if not UA2.skinOn or type(list) ~= "table" then
+                        return list
+                    end
+                    local have = {}
+                    for _, id in ipairs(list) do
+                        have[id] = true
+                    end
+                    local out = table.clone(list)
+                    for _, id in ipairs(UA2.SKINS) do
+                        if not have[id] then
+                            out[#out + 1] = id
+                        end
+                    end
+         
