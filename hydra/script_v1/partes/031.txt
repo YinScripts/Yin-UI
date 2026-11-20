@@ -1,0 +1,114 @@
+a legacy SetHeader.
+        local legacySlots = Core.module("Objects", "Menu", "Menu", "Views", "Inventory", "Views", "Slots")
+        if legacySlots then
+            local ok, value = pcall(require, legacySlots)
+            if ok and type(value) == "table" then SlotsView = value end
+        end
+        local modernSlots = Core.module("Client", "UI", "Menu", "Pages", "Inventory", "Slots")
+        if modernSlots then
+            local ok, value = pcall(require, modernSlots)
+            if ok and type(value) == "table" then SlotsModern = value end
+        end
+        EventSvc = req("useEvent", "Client", "Services", "UserData", "Event")
+        ShopsSvc = req("useShops", "Client", "Services", "UserData", "Shops")
+        local emoteMods = (EmotePopup and EmoteClass and ItemSvc) and true or false
+        if not emoteMods then
+            log("Aviso: faltan modulos de emotes; Unlock All se aplica solo a cosmeticos/personajes/auras")
+        end
+
+        local newAll, newAllSet, rawCount = {}, {}, 0
+        if emoteMods then
+            newAll, rawCount = collectEmoteIds()
+            for _, id in ipairs(newAll) do
+                newAllSet[id] = true
+            end
+            log("Emotes encontrados:", rawCount, "| validos:", #newAll)
+        end
+
+        local newBy, newTypeOf, regCount = collectCosmetics()
+        local newSkins, newSkinSet = collectSkins()
+
+        local extraLocked = false
+        if PackageMod then
+            local okOwn, owned = pcall(PackageMod.Owns, LP, "MoreEmotes")
+            extraLocked = not (okOwn and owned == true)
+        end
+        if myGen ~= gen then
+            return
+        end
+        if active then
+            return
+        end
+        if not newBy then
+            log("Aviso: Registry.GetAll no devolvio una tabla; cosmeticos/personajes/auras desactivados")
+            newBy = emptyByType()
+            newTypeOf = {}
+            regCount = 0
+        end
+        local cosTotal = 0
+        local counts = {}
+        for _, n in ipairs(TYPE_NAMES) do
+            cosTotal = cosTotal + #newBy[n]
+            counts[#counts + 1] = n .. ": " .. #newBy[n]
+        end
+        log("Items en Registry:", regCount, "|", table.concat(counts, " | "))
+
+        log("Skins de herramientas:", #newSkins, "| Emote slots 7-12:", extraLocked and "bloqueados (se desbloquean visuales)" or "ya comprados")
+
+        if #newAll == 0 and cosTotal == 0 and #newSkins == 0 then
+            log("ABORTADO: no se encontro ningun emote ni cosmetico. No se aplico ningun parche.")
+            return
+        end
+
+        ALL, ALLSET = newAll, newAllSet
+        BYTYPE, TYPE_OF = newBy, newTypeOf
+        emoteOn = emoteMods and #newAll > 0
+        cosOn = cosTotal > 0
+        UA2.SKINS, UA2.SKINSET = newSkins, newSkinSet
+        UA2.skinItem = nil
+        UA2.skinOn = #newSkins > 0
+        UA2.extraLocked = extraLocked
+        UA2.slotsOn = emoteOn and extraLocked
+        UA2.warnedNoBase = false
+        table.clear(fakeS)
+        patches, patchResults = {}, {}
+        table.clear(fakeE)
+        table.clear(fakeC)
+        pending = nil
+        popupInst = nil
+        warnedOverlay = false
+
+        origGetOwned = Inventory.GetOwnedBySlotType
+        origOwns = Inventory.Owns
+        origIsEquipped = Loadout.IsEquipped
+        origGetFromSlot = Loadout.GetEquipped
+        origSlotTypeForSlot = Loadout.GetSlotType
+        origSetEquipped = EmotePopup and EmotePopup.SetEquipped or nil
+        UA2.origGetSkin = Inventory.GetSkin
+
+        applyPatches()
+        applyShopPatches()
+        active = true
+
+        if UA2.skinOn then
+            task.spawn(function()
+                local deploySvc = req("DeployableService", "Services", "Items", "DeployableService")
+                if not deploySvc or not active or myGen ~= gen or not UA2.skinOn then
+                    return
+                end
+                patch("DeployableService.Build (skins de colocables)", deploySvc, "Build", function(orig)
+                    return function(self, model, ...)
+                        if UA2.skinOn and next(fakeS) ~= nil and typeof(model) == "Instance" then
+                            pcall(function()
+                                local owner = model:GetAttribute("Owner")
+                                local mine = owner ~= nil and (owner == LP.Name or owner == LP.DisplayName or owner == LP.UserId)
+                                if not UA2.loggedOwner then
+                                    UA2.loggedOwner = true
+                                    log("Colocable", model.Name, "Owner =", tostring(owner), mine and "(tuyo)" or "(de otro)")
+                                end
+                                if not mine then
+                                    return
+                                end
+                                for item, sid in pairs(fakeS) do
+                                    local entry = Registry.GetById(item)
+                                    if entry and entry.Module and entry.Module.Name == mode
