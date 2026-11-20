@@ -48,6 +48,7 @@ UnlockToggle = TabExtra:Toggle({Id = "unlockAll", Title = "Unlock All", Desc = "
             return
         end
         if not on then
+            Unlock.Waiting = Unlock.Waiting + 1
             pcall(UA.Disable)
             return
         end
@@ -58,7 +59,7 @@ UnlockToggle = TabExtra:Toggle({Id = "unlockAll", Title = "Unlock All", Desc = "
 
         task.spawn(function()
             local t0 = os.clock()
-            while os.clock() - t0 < 20 and token == Unlock.Waiting do
+            while os.clock() - t0 < 60 and token == Unlock.Waiting do
                 local okOn, isOn = pcall(UA.IsEnabled)
                 if okOn and isOn then
                     Hydra:Notify(Hydra:T("Unlock All activo"))
@@ -68,12 +69,16 @@ UnlockToggle = TabExtra:Toggle({Id = "unlockAll", Title = "Unlock All", Desc = "
                     return
                 end
 
-                local failed = false
+                local failure
                 for i = logStart + 1, (type(UA.Log) == "table" and #UA.Log or 0) do
                     local line = tostring(UA.Log[i]):gsub("^%[Hydra%-UnlockAll%]%s*", "")
-                    if string.find(line, "^ABORTADO") or string.find(line, "^FALLO") then failed = true end
+                    if string.find(line, "^ABORTADO") or string.find(line, "^FALLO Enable") then failure = line; break end
                 end
-                if failed then break end
+                if failure then
+                    Hydra:Notify("Unlock All: " .. failure)
+                    task.defer(function() UnlockToggle:Set(false, true) end)
+                    return
+                end
                 task.wait(0.3)
             end
             if token ~= Unlock.Waiting then return end
