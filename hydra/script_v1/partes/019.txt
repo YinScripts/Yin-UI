@@ -1,0 +1,130 @@
+                  end
+                    if visible and not downed and cfg.Tracers then
+                        local from = Vector2.new(center.X, view.Y - 6)
+                        local to = Vector2.new(point.X, point.Y)
+                        local delta = to - from
+                        e.line.Size = UDim2.fromOffset(delta.Magnitude, 1.5)
+                        e.line.Position = UDim2.fromOffset((from.X + to.X) / 2, (from.Y + to.Y) / 2)
+                        e.line.Rotation = math.deg(math.atan2(delta.Y, delta.X))
+                        e.line.BackgroundColor3 = color
+                        e.line.Visible = true
+                    else
+                        e.line.Visible = false
+                    end
+                end
+            elseif ESP.entries[player] then
+                ESP.hide(ESP.entries[player])
+            end
+        end
+    end
+end
+RunService.RenderStepped:Connect(function()
+    if ESP.Players.Enabled or ESP.Downed.Enabled then
+        pcall(ESP.step)
+    elseif ESP.screen then
+        for _, e in pairs(ESP.entries) do ESP.hide(e) end
+    end
+end)
+
+local Farm = {Enabled = false, Return = true, Busy = false}
+function Farm.tickets()
+    local effects = workspace:FindFirstChild("Effects")
+    local folder = effects and effects:FindFirstChild("Tickets")
+    local list = {}
+    if folder then
+        for _, model in ipairs(folder:GetChildren()) do
+            if model:IsA("Model") and model.PrimaryPart then list[#list + 1] = model end
+        end
+    end
+    return list
+end
+function Farm.canMove()
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChildOfClass("Humanoid")
+    local me = More.data(LocalPlayer)
+    return hum and hum.Health > 0 and not (me and More.reg(me, "Downed"))
+end
+
+function Farm.travel(root, target)
+    if not Farm.Enabled or not root.Parent then return false end
+    root.CFrame = CFrame.new(target)
+    root.AssemblyLinearVelocity = Vector3.zero
+    return true
+end
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        if Farm.Enabled and not Farm.Busy and Farm.canMove() then
+            local list = Farm.tickets()
+            local root = More.myRoot()
+            if #list > 0 and root then
+                Farm.Busy = true
+                pcall(function()
+                    local home = root.CFrame
+                    for _ = 1, #list do
+                        if not Farm.Enabled or not Farm.canMove() then break end
+
+                        local best, bestDist
+                        for _, model in ipairs(Farm.tickets()) do
+                            local d = (model.PrimaryPart.Position - root.Position).Magnitude
+                            if not bestDist or d < bestDist then best, bestDist = model, d end
+                        end
+                        if not best then break end
+
+                        local target = best.PrimaryPart.Position + Vector3.new(0, 2, 0)
+                        local stopped = false
+                        while best.Parent and best.PrimaryPart do
+                            if not Farm.Enabled or not Farm.canMove() or not root.Parent then stopped = true break end
+                            if (root.Position - target).Magnitude > 6 then Farm.travel(root, target) end
+                            task.wait(0.1)
+                        end
+                        if stopped then break end
+                    end
+
+                    if More.afkReturn and More.afkReturn() then return end
+                    if Farm.Return and Farm.Enabled and Farm.canMove() and root.Parent then Farm.travel(root, home.Position) end
+                end)
+                Farm.Busy = false
+            end
+        end
+    end
+end)
+
+local AFK = {Enabled = false, Home = nil, Platform = nil, SPOT = Vector3.new(9000, 1600, 9000), LOGO = "rbxassetid://114974832117287"}
+function AFK.build()
+    if AFK.Platform and AFK.Platform.Parent then return AFK.Platform end
+    local model = Instance.new("Model")
+    model.Name = "HydraAFK"
+    local base = Instance.new("Part")
+    base.Name = "Base"
+    base.Size = Vector3.new(70, 4, 70)
+    base.Anchored = true
+    base.CanCollide = true
+    base.Material = Enum.Material.SmoothPlastic
+    base.Color = Color3.fromRGB(14, 15, 20)
+    base.CFrame = CFrame.new(AFK.SPOT)
+    base.Parent = model
+    for _, face in ipairs({Enum.NormalId.Top, Enum.NormalId.Bottom}) do
+        local decal = Instance.new("Decal")
+        decal.Face = face
+        decal.Texture = AFK.LOGO
+        decal.Parent = base
+    end
+
+    local edge = Instance.new("SelectionBox")
+    edge.Adornee = base
+    edge.LineThickness = 0.25
+    edge.Color3 = Color3.fromRGB(235, 238, 245)
+    edge.SurfaceTransparency = 1
+    edge.Parent = base
+    local light = Instance.new("PointLight")
+    light.Range = 40
+    light.Brightness = 1.5
+    light.Color = Color3.fromRGB(235, 238, 245)
+    light.Parent = base
+    model.PrimaryPart = base
+    model.Parent = workspace
+    AFK.Platform = model
+    return model
+end
+fun
