@@ -1,0 +1,137 @@
+l.Name then
+                                        model:SetAttribute("Skin", sid)
+                                        log("Colocable", model.Name, "-> skin visual", sid)
+                                    end
+                                end
+                            end)
+                        end
+                        return orig(self, model, ...)
+                    end
+                end)
+            end)
+        end
+        pcall(function() Inventory.Changed:Fire() end)
+        pcall(function() Loadout.Changed:Fire() end)
+        refreshWheel()
+
+        local okCount = 0
+        for _, r in ipairs(patchResults) do
+            if r.ok then
+                okCount = okCount + 1
+            end
+        end
+        log("Listo:", okCount .. "/" .. #patchResults, "parches aplicados")
+        if okCount < #patchResults then
+            log("Algun parche fallo")
+        end
+        pcall(function()
+            StarterGui:SetCore("SendNotification", {
+                Title = "Unlock All",
+                Text = okCount .. "/" .. #patchResults .. ((type(getgenv) == "function" and getgenv().HydraScriptText) and getgenv().HydraScriptText(" parches aplicados", " patches applied") or " parches aplicados"),
+                Duration = 5,
+            })
+        end)
+    end
+
+    function M.Enable()
+        if active then
+            return
+        end
+        gen = gen + 1
+        local myGen = gen
+        task.spawn(function()
+            local ok, err = pcall(enableImpl, myGen)
+            if not ok then
+                log("FALLO Enable ->", tostring(err))
+            end
+        end)
+    end
+
+    function M.IsEnabled()
+        return active
+    end
+
+    function M.Status()
+        log("---- ESTADO ---- activo:", tostring(active), "| emotes:", tostring(emoteOn), "| cosmeticos:", tostring(cosOn))
+        for _, r in ipairs(patchResults) do
+            log(r.ok and "OK     " or "FALLO  ", r.label)
+        end
+        for st in pairs(KNOWN) do
+            log("Tipo", st, ENABLED[st] and "activo" or "desactivado", "| items:", #BYTYPE[st])
+        end
+        local any = false
+        for idx = 1, 12 do
+            if fakeE[idx] then
+                any = true
+                log("Emote slot", idx, "real:", realSlotId(idx), "| visual:", fakeE[idx])
+            end
+        end
+        for slot, fid in pairs(fakeC) do
+            any = true
+            local okReal, real = pcall(Loadout.GetEquipped, slot)
+            log("Slot", slot, "real:", okReal and real or "?", "| visual:", fid)
+        end
+        for item, sid in pairs(fakeS) do
+            any = true
+            log("Skin de", item, "-> visual", sid)
+        end
+        log("Skins disponibles:", #UA2.SKINS, "| slots 7-12:", UA2.slotsOn and "visuales" or (UA2.extraLocked and "bloqueados" or "comprados"))
+        if not any then
+            log("Sin slots visuales activos")
+        end
+    end
+
+    function M.SetType(name, state)
+        if not KNOWN[name] then
+            log("Tipo desconocido:", tostring(name), "(usa " .. table.concat(TYPE_NAMES, ", ") .. ")")
+            return
+        end
+        ENABLED[name] = state and true or false
+        if not ENABLED[name] then
+            for slot in pairs(fakeC) do
+                if slotType(slot) == name then
+                    fakeC[slot] = nil
+                end
+            end
+        end
+        log("Tipo", name, ENABLED[name] and "activado" or "desactivado", "(se aplica la proxima vez que abras el selector)")
+    end
+
+    function M.GetBoomboxSkins()
+        local out, seen = {}, {}
+        for _, id in ipairs(BYTYPE.Boombox or {}) do
+            local name = tostring(id)
+            pcall(function()
+                local entry = Registry.GetById(id)
+                local ok, info = pcall(require, entry.Module)
+                name = (ok and type(info) == "table" and info.AppearanceInfo and info.AppearanceInfo.Name) or entry.Module.Name
+            end)
+            seen[id] = true
+            out[#out + 1] = { id = id, name = name, ugc = false }
+        end
+        pcall(function()
+            for _, tagged in ipairs(game:GetService("CollectionService"):GetTagged("RelicsUGCSkin")) do
+                local id = tagged:GetAttribute("ID")
+                if type(id) == "number" and not seen[id] then
+                    seen[id] = true
+                    local display = tagged:GetAttribute("DisplayName")
+                    out[#out + 1] = { id = id, name = type(display) == "string" and display or tagged.Name, ugc = true }
+                end
+            end
+        end)
+        return out
+    end
+
+    function M.GetBoombox()
+        return fakeC.BoomboxSlot
+    end
+
+    function M.SetBoombox(id)
+        if not active then
+            log("Activa Unlock All primero")
+            return false
+        end
+        fakeC.BoomboxSlot = type(id) == "number" and id or nil
+        log("Boombox visual ->", tostring(fakeC.BoomboxSlot))
+        pcall(function() Loadout.Changed:Fire() end)
+        return true
