@@ -1,0 +1,101 @@
+, 8), Position = UDim2.fromOffset(2, 4), BackgroundColor3 = C.Dim, BorderSizePixel = 0, Parent = statusRow})
+    corner(dot, 99)
+    local status = mk("TextLabel", {Size = UDim2.new(1, -16, 0, 16), Position = UDim2.fromOffset(16, 0), BackgroundTransparency = 1, Text = t("secure"), TextColor3 = C.Dim,
+        Font = Enum.Font.GothamSemibold, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, Parent = statusRow})
+    local track = mk("Frame", {Size = UDim2.new(1, 0, 0, 3), Position = UDim2.fromOffset(0, 24), BackgroundColor3 = C.Field, BorderSizePixel = 0, ClipsDescendants = true, Parent = statusRow})
+    corner(track, 99)
+    local fill = mk("Frame", {Size = UDim2.fromScale(0, 1), BackgroundColor3 = C.Accent, BorderSizePixel = 0, Parent = track})
+    corner(fill, 99)
+    local fillLoop = nil
+
+    local state = {busy = false, authorized = false, closed = false, kind = "secure", color = C.Dim, removed = false}
+    local function statusText()
+        local k = state.kind
+        if k == "link_copied" then return t("link_copied") .. " \194\183 " .. HydraKey.PORTAL end
+        if k == "portal" then return t("portal") .. ": " .. HydraKey.PORTAL end
+        if k == "invalid_expired" and state.removed then return t("invalid_expired") .. " \194\183 " .. t("removed") end
+        return t(k)
+    end
+    local function setStatus(kind, color, working)
+        state.kind, state.color = kind, color
+        status.Text = statusText()
+        status.TextColor3 = color
+        dot.BackgroundColor3 = color
+        if fillLoop then fillLoop:Cancel() fillLoop = nil end
+        fill.BackgroundColor3 = color
+        if working then
+            fill.Size, fill.Position = UDim2.fromScale(0.3, 1), UDim2.fromScale(-0.3, 0)
+            fillLoop = TweenService:Create(fill, TweenInfo.new(0.9, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1), {Position = UDim2.fromScale(1, 0)})
+            fillLoop:Play()
+        else
+            fill.Position = UDim2.fromScale(0, 0)
+            fill.Size = UDim2.fromScale(0, 1)
+            tween(fill, 0.45, {Size = UDim2.fromScale(color == C.Dim and 0 or 1, 1)})
+        end
+    end
+    local function refresh()
+        sub.Text = t("sub")
+        for i, s in ipairs(stepPills) do s.label.Text = t("step" .. i) end
+        input.PlaceholderText = t("placeholder")
+        link.Text = t("link")
+        check.Text = state.busy and t("checking") or (state.authorized and t("granted") or t("check"))
+        status.Text = statusText()
+    end
+    task.spawn(function()
+        local ok, translator = pcall(function() return LocalizationService:GetTranslatorForPlayerAsync(player) end)
+        if ok and translator then
+            setLang(translator.LocaleId)
+            refresh()
+            pcall(function()
+                translator:GetPropertyChangedSignal("LocaleId"):Connect(function() setLang(translator.LocaleId) refresh() end)
+            end)
+        end
+    end)
+
+    local function refreshFormat()
+        local key = HydraKey.normalize(input.Text)
+        local blocks = 0
+        local rest = key:match("^YINYANG%-(.*)$")
+        if rest then
+            for part in rest:gmatch("[^%-]+") do
+                if part:match("^%w%w%w$") then blocks = blocks + 1 end
+            end
+        end
+        local ready = HydraKey.isFormat(key)
+        counter.Text = math.min(blocks, 5) .. "/5"
+        counter.TextColor3 = ready and C.OK or C.Dim
+        markSteps(ready and 3 or (key ~= "" and 2 or 1))
+    end
+    input:GetPropertyChangedSignal("Text"):Connect(refreshFormat)
+    input.Focused:Connect(function() tween(fieldStroke, 0.18, {Color = C.Accent, Transparency = 0.15}) end)
+    input.FocusLost:Connect(function() tween(fieldStroke, 0.25, {Color = C.Stroke, Transparency = 0.55}) end)
+
+    local function shake()
+        local base = panel.Position
+        for _, dx in ipairs({10, -8, 6, -4, 0}) do
+            tween(panel, 0.05, {Position = UDim2.new(base.X.Scale, base.X.Offset + dx, base.Y.Scale, base.Y.Offset)}, Enum.EasingStyle.Sine)
+            task.wait(0.05)
+        end
+        panel.Position = base
+    end
+    local function dismiss()
+        pcall(function() ringSpin:Cancel() end)
+        if fillLoop then pcall(function() fillLoop:Cancel() end) end
+        tween(shade, 0.22, {BackgroundTransparency = 1})
+        local out = tween(scale, 0.22, {Scale = 0.9}, Enum.EasingStyle.Quad, Enum.EasingDirection.In)
+        out.Completed:Wait()
+        if gui.Parent then gui:Destroy() end
+    end
+
+    local function tryAccess(value, fromCache)
+        if state.busy or state.closed then return end
+        state.busy = true
+        state.removed = false
+        input.Text = HydraKey.normalize(value)
+        check.Text = t("checking")
+        setStatus(fromCache and "revalidating" or "contacting", C.Accent, true)
+        local valid, kind = HydraKey.validate(input.Text)
+        if valid then
+            HydraKey.save(input.Text)
+            state.authorized = true
+           
