@@ -1,0 +1,101 @@
+HumanoidDescriptionFromUserId(LocalPlayer.UserId) end)
+            if ok then Avatar.ownDesc = desc end
+        end
+        if Avatar.ownDesc then pcall(Avatar.strip, rig) pcall(Avatar.applySafe, humanoid, Avatar.ownDesc) end
+    end
+    Avatar.saved.RightLeg = nil
+    if Avatar.korblox then pcall(Avatar.setKorblox, true) end
+    if Avatar.deleted then pcall(Avatar.removeHeadItems, rig) end
+    Avatar.mark(rig)
+end
+function Avatar.hasSaved() return Avatar.look ~= nil or Avatar.korblox or Avatar.deleted end
+
+Avatar.version = 1
+function Avatar.mark(rig)
+    if rig then pcall(function() rig:SetAttribute("HydraLook", Avatar.version) end) end
+end
+function Avatar.bump(rig)
+    Avatar.version = Avatar.version + 1
+    Avatar.mark(rig or (Avatar.rig()))
+end
+
+function Avatar.applyUser(info)
+    if Avatar.busy then return false, "Esper\195\161 un momento" end
+    local rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then return false, "Entr\195\161 a una partida primero" end
+    Avatar.busy = true
+    local okDesc, desc = pcall(function() return Players:GetHumanoidDescriptionFromUserId(info.id) end)
+    if not okDesc or not desc then Avatar.busy = false return false, "No se pudo cargar el avatar" end
+    rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then Avatar.busy = false return false, "Entr\195\161 a una partida primero" end
+    pcall(Avatar.strip, rig)
+    local ok = Avatar.applySafe(humanoid, desc)
+    if not ok then Avatar.busy = false return false, "No se pudo aplicar el avatar" end
+    Avatar.saved.RightLeg = nil
+    Avatar.remember(desc, true)
+    if Avatar.korblox then pcall(Avatar.setKorblox, true) end
+    if Avatar.deleted then pcall(Avatar.removeHeadItems, rig) end
+    Avatar.bump(rig)
+    Avatar.busy = false
+    return true, "\226\156\147 Avatar aplicado"
+end
+function Avatar.reset()
+    if Avatar.busy then return false, "Esper\195\161 un momento" end
+    local rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then return false, "Entr\195\161 a una partida primero" end
+    Avatar.busy = true
+    local okDesc, desc = pcall(function() return Players:GetHumanoidDescriptionFromUserId(LocalPlayer.UserId) end)
+    if not okDesc or not desc then Avatar.busy = false return false, "No se pudo cargar tu avatar" end
+    Avatar.ownDesc = desc
+
+    for _, id in ipairs({"avKorblox", "avHeadless", "avDeleted"}) do
+        local option = Hydra.Options[id]
+        if option then option:Set(false, true) end
+    end
+    Avatar.korblox, Avatar.deleted = false, false
+    Avatar.saved = {}
+    Avatar.setHeadless(false)
+    Avatar.look = nil
+    Avatar.saveFile()
+    rig, humanoid = Avatar.rig()
+    if not (rig and humanoid) then Avatar.busy = false return false, "Entr\195\161 a una partida primero" end
+    pcall(Avatar.strip, rig)
+    local ok = Avatar.applySafe(humanoid, desc)
+    Avatar.bump(rig)
+    Avatar.busy = false
+    if not ok then return false, "No se pudo restablecer" end
+    return true, "\226\156\147 Tu skin original volvi\195\179"
+end
+
+Hydra:AddTranslations({
+    ["Avatar"] = "Avatar",
+    ["Esper\195\161 un momento"] = "Wait a moment", ["Entr\195\161 a una partida primero"] = "Join a match first",
+    ["No se pudo cargar el avatar"] = "The avatar could not be loaded", ["No se pudo aplicar el avatar"] = "The avatar could not be applied",
+    ["\226\156\147 Avatar aplicado"] = "\226\156\147 Avatar applied", ["No se pudo cargar tu avatar"] = "Your avatar could not be loaded",
+    ["No se pudo restablecer"] = "Could not reset", ["\226\156\147 Tu skin original volvi\195\179"] = "\226\156\147 Your original skin is back",
+    ["Restablecer skin"] = "Reset skin", ["Vuelve a tu avatar original"] = "Goes back to your original avatar",
+    ["Pierna Korblox"] = "Korblox leg", ["Pierna derecha Korblox"] = "Korblox right leg",
+    ["Cabeza invisible"] = "Invisible head", ["Sin cabeza y sin accesorios de la cabeza"] = "No head and no head accessories",
+    ["Se pone cuando entres a una partida"] = "It applies when you join a match",
+})
+
+TabExtra:Section("Avatar", "A")
+local AvatarSearch = TabExtra:PlayerSearch({Placeholder = "Nombre de usuario", ButtonText = "Aplicar",
+    Callback = function(info) return Avatar.applyUser(info) end})
+TabExtra:Button({Title = "Restablecer skin", Desc = "Vuelve a tu avatar original", Icon = "A",
+    Callback = function()
+        task.spawn(function()
+            local ok, message = Avatar.reset()
+            AvatarSearch:SetStatus(message, ok and "ok" or "bad")
+            Hydra:Notify(Hydra:T(message))
+        end)
+    end})
+TabExtra:Toggle({Id = "avKorblox", Title = "Pierna Korblox", Desc = "Pierna derecha Korblox", Icon = "A",
+    Callback = function(on)
+        Avatar.korblox = on
+        task.spawn(function()
+            if not Avatar.rig() then
+                if on then Hydra:Notify(Hydra:T("Se pone cuando entres a una partida")) end
+                return
+            end
+            if not on and Avatar.saved.RightLeg == nil then Avatar.bump() return end
