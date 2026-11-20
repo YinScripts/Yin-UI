@@ -1,0 +1,113 @@
+            pcall(Avatar.setKorblox, on)
+            Avatar.bump()
+        end)
+    end})
+local HeadlessToggle, DeletedToggle
+HeadlessToggle = TabExtra:Toggle({Id = "avHeadless", Title = "Headless", Desc = "Cabeza invisible", Icon = "A",
+    Callback = function(on)
+        if on and DeletedToggle and DeletedToggle:Get() then DeletedToggle:Set(false, true) Avatar.deleted = false end
+        Avatar.setHeadless(on or (DeletedToggle ~= nil and DeletedToggle:Get()))
+    end})
+DeletedToggle = TabExtra:Toggle({Id = "avDeleted", Title = "Headless + Deleted", Desc = "Sin cabeza y sin accesorios de la cabeza", Icon = "A",
+    Callback = function(on)
+        if on and HeadlessToggle:Get() then HeadlessToggle:Set(false, true) end
+        Avatar.deleted = on
+        Avatar.setHeadless(on or HeadlessToggle:Get())
+        if on then pcall(Avatar.removeHeadItems, (Avatar.rig())) end
+        Avatar.bump()
+    end})
+Avatar.korblox, Avatar.deleted = Hydra.Options.avKorblox:Get(), DeletedToggle:Get()
+
+Avatar.loadFile()
+task.spawn(function()
+    while true do
+        task.wait(0.5)
+        local rig = Avatar.rig()
+        Avatar.current = rig
+        if rig and not Avatar.busy then
+            local mark = rig:GetAttribute("HydraLook")
+            if mark ~= Avatar.version and (Avatar.hasSaved() or mark ~= nil) then
+                task.wait(0.6)
+                if Avatar.rig() == rig and not Avatar.busy then
+                    Avatar.busy = true
+                    pcall(Avatar.reapply)
+                    Avatar.busy = false
+                end
+            end
+        end
+    end
+end)
+
+TabExtra:Section("Unlock All", "\226\156\142")
+local UnlockToggle
+UnlockToggle = TabExtra:Toggle({Id = "unlockAll", Title = "Unlock All", Desc = "Desbloquea todo de forma visual (solo lo ves vos)", Icon = "\226\156\142", Keybind = true, Floating = true,
+    Callback = function(on)
+        if not UA then
+            Hydra:Notify("Unlock All: " .. Hydra:T("No disponible en este ejecutor"))
+            task.defer(function() UnlockToggle:Set(false, true) end)
+            return
+        end
+        if not on then
+            pcall(UA.Disable)
+            return
+        end
+        local logStart = type(UA.Log) == "table" and #UA.Log or 0
+        pcall(UA.Enable)
+        Unlock.Waiting = Unlock.Waiting + 1
+        local token = Unlock.Waiting
+
+        task.spawn(function()
+            local t0 = os.clock()
+            while os.clock() - t0 < 20 and token == Unlock.Waiting do
+                local okOn, isOn = pcall(UA.IsEnabled)
+                if okOn and isOn then
+                    Hydra:Notify(Hydra:T("Unlock All activo"))
+                    if Unlock.AutoLook then task.wait(0.5) Unlock.loadLook() end
+                    local boombox = Hydra.Options.uaBoombox and Hydra.Options.uaBoombox:Get()
+                    if boombox ~= nil then pcall(UA.SetBoombox, boombox) end
+                    return
+                end
+
+                local failed = false
+                for i = logStart + 1, (type(UA.Log) == "table" and #UA.Log or 0) do
+                    local line = tostring(UA.Log[i]):gsub("^%[Hydra%-UnlockAll%]%s*", "")
+                    if string.find(line, "^ABORTADO") or string.find(line, "^FALLO") then failed = true end
+                end
+                if failed then break end
+                task.wait(0.3)
+            end
+            if token ~= Unlock.Waiting then return end
+            Hydra:Notify(Hydra:T("Unlock All no se pudo activar"))
+            task.defer(function() UnlockToggle:Set(false, true) end)
+        end)
+    end})
+
+for _, kind in ipairs({
+    {"Cosmetic", "Cosm\195\169ticos"}, {"Character", "Personajes"}, {"Unusual", "Unusuals"}, {"Perk", "Perks"},
+    {"CarryAnimation", "Animaci\195\179n de cargar"}, {"Nametag", "Nametags"}, {"Boombox", "Boombox"},
+}) do
+    local typeName = kind[1]
+    UnlockToggle:Toggle({Id = "uaType" .. typeName, Title = kind[2], Default = true,
+        Callback = function(on) if UA then pcall(UA.SetType, typeName, on) end end})
+end
+
+for _, kind in ipairs({{"Perk", "Perk en partida"}, {"Nametag", "Nametag en partida"}, {"Boombox", "Boombox en partida"}}) do
+    local typeName = kind[1]
+    UnlockToggle:Toggle({Id = "uaInGame" .. typeName, Title = kind[2], Desc = "Tambi\195\169n se ve durante la ronda", Default = true,
+        Callback = function(on) if UA then pcall(UA.SetInGame, typeName, on) end end})
+end
+UnlockToggle:Dropdown({Id = "uaBoombox", Title = "Skin del boombox", Desc = "Eleg\195\173 cualquiera",
+    Options = function()
+        local list = {}
+        if UA then
+            local ok, skins = pcall(UA.GetBoomboxSkins)
+            if ok and type(skins) == "table" then
+                for _, skin in ipairs(skins) do list[#list + 1] = {value = skin.id, text = skin.name} end
+            end
+        end
+        return list
+    end,
+    Callback = function(id)
+        if UA and UA.IsEnabled() then pcall(UA.SetBoombox, id) end
+    end})
+UnlockToggle:Button({Title = "Look aleatorio", Des
