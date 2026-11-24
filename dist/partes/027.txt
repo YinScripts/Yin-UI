@@ -1,4 +1,17 @@
-      ErisRainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(40, 10, 15), Color3.fromRGB(255, 255, 255)},
+
+            BorderSizePixel = 0,
+            ZIndex = 13,
+        })
+        local barGrad = mk("UIGradient", {Parent = bar})
+
+        local previewData = {
+            Off = {Color3.fromRGB(230, 230, 230), Color3.fromRGB(180, 180, 180), Color3.fromRGB(120, 120, 120)},
+            WhiteCyan = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(130, 225, 255), Color3.fromRGB(90, 180, 255)},
+            WhitePink = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 145, 205), Color3.fromRGB(220, 90, 170)},
+            Rainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 210, 0), Color3.fromRGB(80, 120, 255)},
+            RainbowFast = {Color3.fromRGB(255, 0, 180), Color3.fromRGB(0, 220, 255), Color3.fromRGB(255, 170, 0)},
+            RainbowDarkWhite = {Color3.fromRGB(10, 10, 10), Color3.fromRGB(120, 120, 120), Color3.fromRGB(255, 255, 255)},
+            ErisRainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(40, 10, 15), Color3.fromRGB(255, 255, 255)},
             FireEffect = {Color3.fromRGB(255, 70, 20), Color3.fromRGB(255, 140, 50), Color3.fromRGB(255, 220, 120)},
             NeonPulse = {Color3.fromRGB(0, 255, 170), Color3.fromRGB(120, 255, 220), Color3.fromRGB(210, 255, 240)},
             GoldenShine = {Color3.fromRGB(255, 210, 60), Color3.fromRGB(255, 240, 170), Color3.fromRGB(255, 255, 255)},
@@ -712,25 +725,4 @@
         local cached = self.Instances[id]
         if cached and cached.Parent == parent and cached.ClassName == spec.className then
             return cached, self.Created[id] == true
-        end
-        local managedName = self.Namespace .. "_" .. id
-        local named = parent:FindFirstChild(managedName)
-        if named and named.ClassName == spec.className then
-            self.Instances[id] = named
-            return named, self.Created[id] == true
-        end
-        local existing = parent:FindFirstChildOfClass(spec.className)
-        if existing then
-            self.Instances[id] = existing
-            return existing, false
-        end
-        if allowCreate == false then
-            return nil, "no existe " .. spec.className
-        end
-        local ok, created = shaderSafe(function()
-            local instance = Instance.new(spec.className)
-            instance.Name = managedName
-            instance.Parent = parent
-            pcall(function()
-                instance:SetAttribute("YinYangShaderManaged", true)
-        
+  

@@ -1,4 +1,9 @@
-al on = it.Key == selected
+   local G = {Frame = list, Chips = {}}
+        function G:Set(items, selected, onPick)
+            for _, c in ipairs(G.Chips) do c:Destroy() end
+            table.clear(G.Chips)
+            for i, it in ipairs(items) do
+                local on = it.Key == selected
                 local b = Btn(list, {LayoutOrder = i, Font = Enum.Font.GothamMedium, TextSize = 11, Text = it.Text, TextTruncate = Enum.TextTruncate.AtEnd},
                     on and "Accent" or "Background", on and "AccentText" or "Text")
                 Kit.Corner(b, 8)
@@ -685,8 +690,4 @@ do
             TextSize = 13, Font = Enum.Font.GothamBlack, ZIndex = 12}, badge)
         num:SetAttribute("ThemeTextRole", "Text")
         num:SetAttribute("IgnoreTextEffect", true)
-        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum.Font.GothamBold,
-            Role = "TextDim", Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -64, 0, 14)})
-        caption.TextWrapped = false
-        caption.TextTruncate = Enum.TextTruncate.AtEnd
-        local input = new("TextB
+        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum

@@ -1,4 +1,24 @@
-ighting.Brightness or lighting.Brightness,
+f.FlashBase = nil
+        if base and restore then
+            pcall(function()
+                for property, value in pairs(base) do ShaderLightingService[property] = value end
+            end)
+        end
+        if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
+        self.BoltFolder = nil
+    end
+
+    -- Destello real: 2-4 pulsos rápidos con oscuridad entre medio, ilumina hasta las sombras, y se apaga suave
+    function ShaderRain:Flash(strength, withBolt)
+        if not self.Enabled then return end
+        strength = math.clamp(tonumber(strength) or 1, 0.2, 1.4)
+        self.FlashToken = (self.FlashToken or 0) + 1
+        local token = self.FlashToken
+        local lighting = ShaderLightingService
+        local base = self.FlashBase
+        if not base then
+            base = {
+                Brightness = ShaderManualLighting.Brightness or lighting.Brightness,
                 ExposureCompensation = ShaderManualLighting.ExposureCompensation or lighting.ExposureCompensation,
                 OutdoorAmbient = lighting.OutdoorAmbient,
                 Ambient = lighting.Ambient,
@@ -957,24 +977,4 @@ ighting.Brightness or lighting.Brightness,
 
     local function shaderCreateSection(parent, titleES, titleEN, descriptionES, descriptionEN)
         local SECTION_ICONS = {
-            Lighting = 100212473103391, Atmosphere = 119344776018521, Clouds = 112291901900440, ColorCorrection = 118538685614420,
-            ["Bloom y Blur"] = 81463911885004, DepthOfField = 93221074040832, SunRays = 82603845614781, ["Overdrive local"] = 98854559186277, Acciones = 100875301344852,
-        }
-        local section = mk("Frame", {
-            Parent = parent,
-            Size = UDim2.new(1, -8, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0.24,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
-            LayoutOrder = #ShaderUISections + 1,
-            ZIndex = 312,
-        })
-        section:SetAttribute("ThemeRole", "Secondary")
-        corner(section, 14)
-        stroke(section, Theme.Stroke, 1.2, 0.55)
-
-        mk("UIPadding", {
-            Parent = section,
-        
+            Lighting = 100212473103391, Atmosphere =

@@ -55,6 +55,11 @@ local function BuildAjustesExtras(Window, AutoTabAjustes, getSlidersHidden, setS
         SaveConfig()
     end)
 
+    AutoTabAjustes:CreateToggle("Nieve (tema Navidad)", "Snow (Christmas theme)",
+        not Window.GetSnowEnabled or Window.GetSnowEnabled(), function(state)
+        if Window.SetSnowEnabled then Window.SetSnowEnabled(state) end
+    end)
+
     RowKit.SettingsHeader(page, 92038302677245, "Plataforma", "Platform", "Ajusta el tamaño de la ventana al dispositivo", "Fits the window size to your device")
     RowKit.Segmented(page, {
         { key = "Auto",   es = "Auto",  en = "Auto"   },

@@ -1,4 +1,9 @@
- function(text)
+o, how are you today?" or "Hola, ¿cómo estás hoy?"
+            local out = Tr.roblox(sample, Tr.lang)
+            Tr.robloxOk = type(out) == "string" and out ~= "" and out ~= sample
+            return Tr.robloxOk
+        end
+        Tr.one = function(text)
             if Tr.probe() then
                 local out = Tr.roblox(text, Tr.lang)
                 if out and out ~= "" then return out, nil end
@@ -1095,12 +1100,4 @@ function YinYang:CreateWindow(title_text, startTheme, options)
         uiVisible = false
 
         if activeWindowTween then
-            pcall(function() activeWindowTween:Cancel() end)
-            activeWindowTween = nil
-        end
-
-        ShadowFrame.Visible = false
-
-        local tw1 = TweenService:Create(
-            MainScale,
-            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDi
+            pcall(function() activeWind

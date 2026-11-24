@@ -1,4 +1,25 @@
-extW = math.max(40, cellW - sidePad * 2)
+X) - 8)
+        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
+
+        rowData.Row.Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH)
+        rowData.Row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
+        rowData.Row.BackgroundTransparency = 0.22
+
+        if rowData.Accent then
+            rowData.Accent.Size = UDim2.new(1, 0, 0, 3)
+            rowData.Accent.Position = UDim2.new(0, 0, 0, 0)
+        end
+
+        if rowData.Cover then
+            rowData.Cover.Size = UDim2.fromOffset(coverSize, coverSize)
+            rowData.Cover.Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad)
+        end
+
+        local titleTop = coverPad + coverSize + 4
+        local sidePad = m.compact and 7 or 9
+        local textW = math.max(40, cellW - sidePad * 2)
 
         if rowData.Title then
             rowData.Title.Size = UDim2.fromOffset(textW, 24)
@@ -1145,19 +1166,4 @@ extW = math.max(40, cellW - sidePad * 2)
             local b = mk("ImageButton", {Name = name, Parent = B.root,
                 AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, right, 0.5, 0),
                 Size = UDim2.fromOffset(27, 27), BackgroundTransparency = 1,
-                Image = asset(image), ImageColor3 = Color3.new(1, 1, 1),
-                ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 16})
-            b.Activated:Connect(callback)
-            return b
-        end
-        B.previous = button("Previous", -91, 124844823753990, previousTrack)
-        B.previous.Rotation = 180
-        B.play = button("PlayPause", -62, 135609604299893, togglePlayback)
-        B.next = button("Next", -33, 124844823753990, nextTrack)
-        B.close = mk("TextButton", {Parent = B.root, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.fromOffset(24, 27),
-            BackgroundTransparency = 1, Text = "×", TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.Gotham, TextSize = 20, AutoButtonColor = false, ZIndex = 16})
-        B.close.Activated:Connect(function()
-            destroyCurrentSound()
-  
+                Image = asset(image), ImageColor3 = Color3.ne

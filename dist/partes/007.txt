@@ -311,6 +311,11 @@ local function BuildAjustesExtras(Window, AutoTabAjustes, getSlidersHidden, setS
         SaveConfig()
     end)
 
+    AutoTabAjustes:CreateToggle("Nieve (tema Navidad)", "Snow (Christmas theme)",
+        not Window.GetSnowEnabled or Window.GetSnowEnabled(), function(state)
+        if Window.SetSnowEnabled then Window.SetSnowEnabled(state) end
+    end)
+
     RowKit.SettingsHeader(page, 92038302677245, "Plataforma", "Platform", "Ajusta el tamaño de la ventana al dispositivo", "Fits the window size to your device")
     RowKit.Segmented(page, {
         { key = "Auto",   es = "Auto",  en = "Auto"   },
@@ -890,9 +895,4 @@ do
         Kit.Corner(list, 10)
         Kit.Pad(list, 6, 6, 6, 6)
         Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / (o.Columns or 2), -4, 0, 26), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder}, list)
-        local G = {Frame = list, Chips = {}}
-        function G:Set(items, selected, onPick)
-            for _, c in ipairs(G.Chips) do c:Destroy() end
-            table.clear(G.Chips)
-            for i, it in ipairs(items) do
-                loc
+     

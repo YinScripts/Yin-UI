@@ -1,4 +1,27 @@
-tLabel", {
+ation = 135,
+        Color = ColorSequence.new(Color3.fromRGB(69, 10, 245), Color3.fromRGB(196, 239, 217)),
+    })
+    mk("UIStroke", {Parent = FavPage.Cover, Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 0.75})
+    FavPage.CoverHeart = mk("ImageLabel", {
+        Parent = FavPage.Cover,
+        Size = UDim2.new(0.42, 0, 0.42, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Image = FavPage.HEART_ON,
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 43,
+    })
+
+    FavPage.Info = mk("Frame", {
+        Parent = FavPage.Hero,
+        Size = UDim2.new(1, -190, 0, 136),
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 172, 1, -18),
+        BackgroundTransparency = 1,
+        ZIndex = 42,
+    })
+    FavPage.Kind = mk("TextLabel", {
         Parent = FavPage.Info,
         Size = UDim2.new(1, 0, 0, 16),
         Position = UDim2.new(0, 0, 0, 14),
@@ -1153,18 +1176,4 @@ clearSongRows = function()
         })
         FA.hero:SetAttribute("ThemeRole", "Secondary")
         corner(FA.hero, 16)
-        stroke(FA.hero, Theme.Stroke, 1, 0.55)
-        local heroIcon = mk("Frame", {
-            Parent = FA.hero, Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0, 14, 0.5, -23),
-            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 10,
-        })
-        heroIcon:SetAttribute("ThemeRole", "Accent")
-        corner(heroIcon, 14)
-        RowKit.Icon(heroIcon, 118538685614420, 24, 11, "Accent")
-        local heroTitle = mk("TextLabel", {
-            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 24), Position = UDim2.new(0, 72, 0, 14), BackgroundTransparency = 1,
-            Text = "Fan Art", TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 20,
-            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
-        })
-        heroTitle:SetAttribute("ThemeTextRole", "Text")
-        local her
+        stroke(F

@@ -1,4 +1,8 @@
-ox", {Size = UDim2.new(1, -64, 0, 28), Position = UDim2.fromOffset(52, 24), BackgroundTransparency = 1,
+.Font.GothamBold,
+            Role = "TextDim", Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -64, 0, 14)})
+        caption.TextWrapped = false
+        caption.TextTruncate = Enum.TextTruncate.AtEnd
+        local input = new("TextBox", {Size = UDim2.new(1, -64, 0, 28), Position = UDim2.fromOffset(52, 24), BackgroundTransparency = 1,
             BorderSizePixel = 0, ClearTextOnFocus = false, Font = Enum.Font.GothamBold, PlaceholderText = o.Placeholder or "",
             PlaceholderColor3 = caption.TextColor3, Text = "", TextColor3 = p.Text, TextSize = 14, TextXAlignment = Enum.TextXAlignment.Left,
             TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12}, card)
@@ -765,9 +769,4 @@ function YinYang._BuildChatGlobal(ctx)
     local request = getRequest()
     local OverlayParent = ctx.OverlayParent or LocalPlayer:WaitForChild("PlayerGui")
     pcall(function()
-        local old = OverlayParent:FindFirstChild(CONFIG.NAME .. "_UI")
-        if old then old:Destroy() end
-    end)
-    local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
-    -- capa aparte solo para lo que va fuera de la ventana (avisos al costado)
-    local ScreenGui
+        local old = OverlayParent:F

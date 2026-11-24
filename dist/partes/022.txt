@@ -1,4 +1,23 @@
-ewState == "loading" then
+   end
+            end))
+
+            track(Click.MouseEnter:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.62 }):Play()
+            end))
+            track(Click.MouseLeave:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.78 }):Play()
+            end))
+
+            local knobOFF = UDim2.new(0, 2, 0.5, -12)
+            local knobON  = UDim2.new(1, -26, 0.5, -12)
+
+            local function setVisualState(newState)
+                local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+                Holder:SetAttribute("ScriptState", newState)
+
+                if newState == "loading" then
                     startSpinner()
                     TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.Accent }):Play()
                     TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.Accent }):Play()
@@ -867,20 +886,4 @@ ewState == "loading" then
                     end
                     function ctl.SetHome(cf)
                         env.home = cf
-                        if ctl.state == "sit" then
-                            env.model:PivotTo(cf)
-                            moveShadow(cf.Position, 0)
-                        end
-                    end
-                    -- dónde está "el agarre" (pecho) respecto al centro del personaje
-                    local function holdOffset() return env.H * 0.2 end
-                    function ctl.Grab()
-                        if not env then return end
-                        local piv = env.model:GetPivot()
-                        ctl.hold = piv.Position + Vector3.new(0, holdOffset(), 0)
-                        ctl.holdTarget = ctl.hold
-                        ctl.state, ctl.stateT = "held", 0
-                    end
-                    function ctl.MoveTo(p)
-                        if ctl.state ~= "held" then return end
-                        -- los pies no puede
+               

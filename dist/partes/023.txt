@@ -1,4 +1,20 @@
-n quedar bajo el piso
+         if ctl.state == "sit" then
+                            env.model:PivotTo(cf)
+                            moveShadow(cf.Position, 0)
+                        end
+                    end
+                    -- dónde está "el agarre" (pecho) respecto al centro del personaje
+                    local function holdOffset() return env.H * 0.2 end
+                    function ctl.Grab()
+                        if not env then return end
+                        local piv = env.model:GetPivot()
+                        ctl.hold = piv.Position + Vector3.new(0, holdOffset(), 0)
+                        ctl.holdTarget = ctl.hold
+                        ctl.state, ctl.stateT = "held", 0
+                    end
+                    function ctl.MoveTo(p)
+                        if ctl.state ~= "held" then return end
+                        -- los pies no pueden quedar bajo el piso
                         ctl.holdTarget = Vector3.new(p.X, math.max(p.Y, env.standY + holdOffset() + env.H * 0.05), p.Z)
                     end
                     function ctl.Release()
@@ -822,24 +838,4 @@ n quedar bajo el piso
                 for _, obj in ipairs(fw:GetDescendants()) do
                     swapThemeColor(obj, Theme)
                 end
-                swapThemeColor(fw, Theme)
-                if floatData.RefreshVisual then
-                    pcall(floatData.RefreshVisual)
-                end
-            end
-        end
-        -- ventanas del script hechas con el kit (YinYang.Kit)
-        if YinYang.Kit and YinYang.Kit._Repaint then pcall(YinYang.Kit._Repaint, Theme) end
-
-        applyTextColorToAll(Theme.Text)
-        if self._RefreshCompactNavigation then self._RefreshCompactNavigation() end
-        for _, t in pairs(self.Tabs or {}) do
-            if t.Page and t.Page.Visible and t.Button then
-                t.Button.BackgroundColor3 = Theme.TabActive
-                t.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
-            end
-        end
-
-        applyThemeExtras()
-        if self._ApplyFullBackground then self._ApplyFullBackground() end
-        local themedTabIcons = ThemeTabIcons[them
+                sw

@@ -1,4 +1,18 @@
-oSub = mk("TextLabel", {
+A.hero, Theme.Stroke, 1, 0.55)
+        local heroIcon = mk("Frame", {
+            Parent = FA.hero, Size = UDim2.fromOffset(46, 46), Position = UDim2.new(0, 14, 0.5, -23),
+            BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8, BorderSizePixel = 0, ZIndex = 10,
+        })
+        heroIcon:SetAttribute("ThemeRole", "Accent")
+        corner(heroIcon, 14)
+        RowKit.Icon(heroIcon, 118538685614420, 24, 11, "Accent")
+        local heroTitle = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 24), Position = UDim2.new(0, 72, 0, 14), BackgroundTransparency = 1,
+            Text = "Fan Art", TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 20,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
+        })
+        heroTitle:SetAttribute("ThemeTextRole", "Text")
+        local heroSub = mk("TextLabel", {
             Parent = FA.hero, Size = UDim2.new(1, -170, 0, 14), Position = UDim2.new(0, 72, 0, 40), BackgroundTransparency = 1,
             Text = GetText("Arte de la comunidad de Yin Yang", "Art from the Yin Yang community"), TextColor3 = Theme.TextDim,
             Font = Enum.Font.GothamMedium, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,

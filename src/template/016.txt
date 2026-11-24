@@ -835,8 +835,19 @@
     end
 
     -- Nieve (solo con el tema Navidad): pocos copos cayendo dentro de la ventana. No reciben toques.
-    local Snow = { Layer = nil, Conn = nil, Flakes = {} }
+    local Snow = { Layer = nil, Conn = nil, Flakes = {}, Enabled = true }
+    -- preferencia del usuario (Ajustes > Nieve), en su propio archivo para no tocar el formato de la config
+    pcall(function()
+        if isfile and isfile("Yin_Yang_Snow.txt") and readfile("Yin_Yang_Snow.txt") == "off" then Snow.Enabled = false end
+    end)
+    function Window.GetSnowEnabled() return Snow.Enabled end
+    function Window.SetSnowEnabled(on)
+        Snow.Enabled = on == true
+        pcall(function() if writefile then writefile("Yin_Yang_Snow.txt", Snow.Enabled and "on" or "off") end end)
+        Window._SetSnow(Theme.FullBackground == true)
+    end
     function Window._SetSnow(on)
+        on = on and Snow.Enabled
         if on and not Snow.Layer then
             local layer = mk("Frame", {
                 Name = "YYSnow", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 60,

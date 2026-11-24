@@ -1,4 +1,26 @@
-oBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
+o editable -> registro para guardar (pasa por CL.Sanitize)
+    local function recToSaved(r, id)
+        local s = {
+            Id = id,
+            Name = r.Name,
+            NoBackground = r.NoBackground,
+            BgColor = r.BgColor and colorToArray(r.BgColor) or nil,
+            BorderColor = r.BorderColor and colorToArray(r.BorderColor) or nil,
+            Created = os.time(),
+            Layers = {},
+            ClickSound = r.ClickSound,
+            IdleSound = r.IdleSound,
+        }
+        for i, lay in ipairs(r.Layers) do
+            local c = table.clone(lay)
+            c.Color = lay.Color and colorToArray(lay.Color) or nil
+            s.Layers[i] = c
+        end
+        return CL.Sanitize(s)
+    end
+    -- capas que se pueden dibujar ya (las que tienen imagen)
+    local function drawableIcon(r)
+        local icon = { NoBackground = r.NoBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
         for _, lay in ipairs(r.Layers) do
             local img = CL.CleanAsset(lay.Image)
             if img ~= "" then
@@ -710,26 +732,3 @@ oBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
             fill.Size = UDim2.fromScale(a, 1)
             knob.Position = UDim2.fromScale(a, 0.5)
             s.Value.Text = fmtNum(v, c[3]) .. (c[5] or "")
-            if fire then onChange(v) end
-        end
-        function s.Configure(cfgNew, es2, en2, v)
-            s.cfg = cfgNew
-            if es2 then L(s.Label, es2, en2) end
-            s.Set(v or s.value, false)
-        end
-        function s.At(x)
-            local a, w = track.AbsolutePosition.X, track.AbsoluteSize.X
-            if w <= 0 then return end
-            local c = s.cfg
-            s.Set(c[1] + math.clamp((x - a) / w, 0, 1) * (c[2] - c[1]), true)
-        end
-        hit.InputBegan:Connect(function(input)
-            if isPress(input) then
-                activeSlider = s
-                Content.ScrollingEnabled = false
-                TweenService:Create(knob, TweenInfo.new(0.1), { Size = UDim2.fromOffset(20, 20) }):Play()
-                s.At(input.Position.X)
-            end
-        end)
-        s.Knob = knob
-        s.Set(value

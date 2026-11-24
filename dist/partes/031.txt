@@ -1,4 +1,24 @@
-    PaddingTop = UDim.new(0, 10),
+ 119344776018521, Clouds = 112291901900440, ColorCorrection = 118538685614420,
+            ["Bloom y Blur"] = 81463911885004, DepthOfField = 93221074040832, SunRays = 82603845614781, ["Overdrive local"] = 98854559186277, Acciones = 100875301344852,
+        }
+        local section = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -8, 0, 0),
+            AutomaticSize = Enum.AutomaticSize.Y,
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.24,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            LayoutOrder = #ShaderUISections + 1,
+            ZIndex = 312,
+        })
+        section:SetAttribute("ThemeRole", "Secondary")
+        corner(section, 14)
+        stroke(section, Theme.Stroke, 1.2, 0.55)
+
+        mk("UIPadding", {
+            Parent = section,
+            PaddingTop = UDim.new(0, 10),
             PaddingBottom = UDim.new(0, 10),
             PaddingLeft = UDim.new(0, 10),
             PaddingRight = UDim.new(0, 10),
@@ -851,27 +871,4 @@
         ShaderCustomRefresh()
         shaderAddConnection(ShaderCustomWindow:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
             task.defer(ShaderCustomRefresh)
-        end))
-        task.defer(function()
-            task.wait()
-            ShaderCustomRefresh()
-        end)
-        Window._refreshShaderCustomTheme()
-    end
-
-    Window._refreshShaderCustomTheme = function()
-        if not ShaderCustomWindow or not ShaderCustomWindow.Parent then return end
-        swapThemeColor(ShaderCustomWindow, Theme)
-        for _, obj in ipairs(ShaderCustomWindow:GetDescendants()) do
-            swapThemeColor(obj, Theme)
-        end
-        if ShaderCustomBackdrop then
-            ShaderCustomBackdrop.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-        end
-    end
-
-    ShaderSavedState = shaderLoadPersistence()
-    if ShaderSavedState then
-        if type(ShaderSavedState.demoEnabled) == "boolean" then ShaderDemoEnabled = ShaderSavedState.demoEnabled end
-        if type(ShaderSavedState.preset) == "string" then
-            local
+        e

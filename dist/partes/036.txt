@@ -1,4 +1,19 @@
- 1
+), { Scale = 1 }):Play()
+            if not pause(0.7) then break end
+            dToast.Visible = false
+            TweenService:Create(dBtn, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), { Position = UDim2.fromScale(0.13, 0.45) }):Play()
+            TweenService:Create(dBtnScale, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), { Scale = 0.6 }):Play()
+            TweenService:Create(dFinger, TweenInfo.new(0.5, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromScale(0.85, 0.9) }):Play()
+            caption("Tu botón flotante, a tu gusto", "Your floating button, your way")
+            if not pause(2.2) then break end
+        end
+    end
+    local function startDemo()
+        demoGen += 1
+        task.spawn(runDemo, demoGen)
+    end
+    local function stopDemo()
+        demoGen += 1
         if ringTween then ringTween:Cancel() ringTween = nil end
     end
     return startDemo, stopDemo
@@ -952,32 +967,4 @@
             rowHeight = compact and 64 or 70,
             rowCover = compact and 44 or 50,
             rowTitleSize = compact and 14 or 15,
-            rowArtistSize = compact and 10 or 11,
-            rowDurationSize = compact and 10 or 11,
-            rowTitleRight = compact and -154 or -184,
-            rowDurationX = compact and -128 or -150,
-            rowPlusX = compact and -76 or -92,
-            rowPlayX = compact and -34 or -42,
-            gridColumns = gridColumns,
-            cardHeight = cardHeight,
-            coverMax = coverMax,
-            gridGapY = gridGapY,
-            gridGapX = gridGapX,
-        }
-    end
-
-
-    local SpotifyRoot = mk("Frame", {
-        Parent = SPage,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ClipsDescendants = false,
-        LayoutOrder = 1,
-        AutomaticSize = Enum.AutomaticSize.None,
-        ZIndex = 10,
-    })
-
-    mk("UIPadding", {
-        Parent = SpotifyRoot,
-        PaddingTop = U
+           

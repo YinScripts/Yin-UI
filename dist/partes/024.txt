@@ -1,4 +1,24 @@
-eName]
+apThemeColor(fw, Theme)
+                if floatData.RefreshVisual then
+                    pcall(floatData.RefreshVisual)
+                end
+            end
+        end
+        -- ventanas del script hechas con el kit (YinYang.Kit)
+        if YinYang.Kit and YinYang.Kit._Repaint then pcall(YinYang.Kit._Repaint, Theme) end
+
+        applyTextColorToAll(Theme.Text)
+        if self._RefreshCompactNavigation then self._RefreshCompactNavigation() end
+        for _, t in pairs(self.Tabs or {}) do
+            if t.Page and t.Page.Visible and t.Button then
+                t.Button.BackgroundColor3 = Theme.TabActive
+                t.Button.TextColor3 = Color3.fromRGB(255, 255, 255)
+            end
+        end
+
+        applyThemeExtras()
+        if self._ApplyFullBackground then self._ApplyFullBackground() end
+        local themedTabIcons = ThemeTabIcons[themeName]
         local tabIconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
         for _, t in pairs(self.Tabs or {}) do
             local newIcon = nil
@@ -1017,26 +1037,4 @@ eName]
                         if pcall(entry.SetValue, v) then
                             applied = applied + 1
                         else
-                            skipped = skipped + 1
-                        end
-                    else
-                        skipped = skipped + 1
-                    end
-                end
-
-                playSound(Sounds.Click, 0.6)
-                if applied == 0 then
-                    setStatus("warn", "No se aplicó ningún ajuste", "No settings were applied")
-                elseif skipped > 0 then
-                    setStatus("ok",
-                        applied .. " aplicado(s) · " .. skipped .. " omitido(s)",
-                        applied .. " applied · " .. skipped .. " skipped")
-                else
-                    setStatus("ok",
-                        applied .. " ajuste(s) aplicados",
-                        applied .. " setting(s) applied")
-                end
-            end)
-        end
-
-        local function openExportSta
+  

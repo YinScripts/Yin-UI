@@ -1,4 +1,22 @@
-     self:_restoreSkyMirror()
+   if not active[part] and not near and not self.CharacterApplied[part] then
+                    local original = self.Original[part]
+                    if original ~= nil and part and part.Parent then pcall(function() part.Reflectance = original end) end
+                    self.Original[part] = nil
+                    self.Applied[part] = nil
+                end
+            end
+        end
+        if self.SceneCoverage and #self.SceneQueue == 0 then self:QueueSceneCoverage() end
+        self:_refreshContact()
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:Restore()
+        for part, original in pairs(self.Original) do
+            if part and part.Parent then pcall(function() part.Reflectance = original end) end
+        end
+        self.Original, self.Applied, self.ModelApplied, self.CharacterApplied = {}, {}, {}, {}
+        self:_restoreSkyMirror()
         self:_restoreTextures()
         self:_clearContact()
         self:_clearMirror()
@@ -994,24 +1012,4 @@
     function ShaderRain:_endFlash(restore)
         self.FlashToken = (self.FlashToken or 0) + 1
         local base = self.FlashBase
-        self.FlashBase = nil
-        if base and restore then
-            pcall(function()
-                for property, value in pairs(base) do ShaderLightingService[property] = value end
-            end)
-        end
-        if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
-        self.BoltFolder = nil
-    end
-
-    -- Destello real: 2-4 pulsos rápidos con oscuridad entre medio, ilumina hasta las sombras, y se apaga suave
-    function ShaderRain:Flash(strength, withBolt)
-        if not self.Enabled then return end
-        strength = math.clamp(tonumber(strength) or 1, 0.2, 1.4)
-        self.FlashToken = (self.FlashToken or 0) + 1
-        local token = self.FlashToken
-        local lighting = ShaderLightingService
-        local base = self.FlashBase
-        if not base then
-            base = {
-                Brightness = ShaderManualL
+        sel

@@ -1,4 +1,32 @@
-Dim.new(0, 0),
+ rowArtistSize = compact and 10 or 11,
+            rowDurationSize = compact and 10 or 11,
+            rowTitleRight = compact and -154 or -184,
+            rowDurationX = compact and -128 or -150,
+            rowPlusX = compact and -76 or -92,
+            rowPlayX = compact and -34 or -42,
+            gridColumns = gridColumns,
+            cardHeight = cardHeight,
+            coverMax = coverMax,
+            gridGapY = gridGapY,
+            gridGapX = gridGapX,
+        }
+    end
+
+
+    local SpotifyRoot = mk("Frame", {
+        Parent = SPage,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = false,
+        LayoutOrder = 1,
+        AutomaticSize = Enum.AutomaticSize.None,
+        ZIndex = 10,
+    })
+
+    mk("UIPadding", {
+        Parent = SpotifyRoot,
+        PaddingTop = UDim.new(0, 0),
         PaddingLeft = UDim.new(0, 0),
         PaddingRight = UDim.new(0, 0),
         PaddingBottom = UDim.new(0, 0),
@@ -1184,25 +1212,4 @@ Dim.new(0, 0),
         local m = getSpotifyMetrics()
         local cardH = m.cardHeight
         local coverPad = m.compact and 6 or 8
-        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
-        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(42, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.coverMax))
-
-        rowData.Row.Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH)
-        rowData.Row.BackgroundColor3 = Color3.fromRGB(24, 24, 24)
-        rowData.Row.BackgroundTransparency = 0.22
-
-        if rowData.Accent then
-            rowData.Accent.Size = UDim2.new(1, 0, 0, 3)
-            rowData.Accent.Position = UDim2.new(0, 0, 0, 0)
-        end
-
-        if rowData.Cover then
-            rowData.Cover.Size = UDim2.fromOffset(coverSize, coverSize)
-            rowData.Cover.Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad)
-        end
-
-        local titleTop = coverPad + coverSize + 4
-        local sidePad = m.compact and 7 or 9
-        local t
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGap

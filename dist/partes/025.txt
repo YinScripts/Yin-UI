@@ -1,4 +1,26 @@
-ts()
+                          skipped = skipped + 1
+                        end
+                    else
+                        skipped = skipped + 1
+                    end
+                end
+
+                playSound(Sounds.Click, 0.6)
+                if applied == 0 then
+                    setStatus("warn", "No se aplicó ningún ajuste", "No settings were applied")
+                elseif skipped > 0 then
+                    setStatus("ok",
+                        applied .. " aplicado(s) · " .. skipped .. " omitido(s)",
+                        applied .. " applied · " .. skipped .. " skipped")
+                else
+                    setStatus("ok",
+                        applied .. " ajuste(s) aplicados",
+                        applied .. " setting(s) applied")
+                end
+            end)
+        end
+
+        local function openExportStats()
             local Panel = openPanel("Export Stats", "Export Stats", 400, 470, "rbxassetid://116421707362805",
                 "Elegí qué pestañas compartir", "Choose which tabs to share")
 
@@ -1084,29 +1106,4 @@ ts()
         {"Background", "Fondo", "Background"},
         {"Secondary", "Secundario", "Secondary"},
         {"AccentOff", "Acento apagado", "Inactive accent"},
-        {"Text", "Texto", "Text"},
-        {"TextDim", "Texto tenue", "Dim text"},
-        {"Stroke", "Bordes", "Borders"},
-        {"Accent", "Acento", "Accent"},
-        {"ToggleOn", "Toggle activo", "Active toggle"},
-    }
-
-    local ColorGridHolder = mk("Frame", {
-        Parent = EditorContent,
-        Size = UDim2.new(1, -4, 0, 184),
-        BackgroundTransparency = 1,
-        LayoutOrder = 1,
-        ZIndex = 202,
-    })
-    mk("UIGridLayout", {
-        Parent = ColorGridHolder,
-        CellSize = UDim2.new(0.25, -6, 0, 88),
-        CellPadding = UDim2.new(0, 6, 0, 8),
-        FillDirection = Enum.FillDirection.Horizontal,
-        FillDirectionMaxCells = 4,
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-
-    local openThemeColorPicker = function() end
-    EditorMock.OnPick = function(role) openThemeColorPicker(role) end
-    local ColorPickerOverlay = mk("Frame", {
+        {"Text", "Texto", "T

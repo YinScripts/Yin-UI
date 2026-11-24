@@ -1,4 +1,29 @@
+ext"},
+        {"TextDim", "Texto tenue", "Dim text"},
+        {"Stroke", "Bordes", "Borders"},
+        {"Accent", "Acento", "Accent"},
+        {"ToggleOn", "Toggle activo", "Active toggle"},
+    }
 
+    local ColorGridHolder = mk("Frame", {
+        Parent = EditorContent,
+        Size = UDim2.new(1, -4, 0, 184),
+        BackgroundTransparency = 1,
+        LayoutOrder = 1,
+        ZIndex = 202,
+    })
+    mk("UIGridLayout", {
+        Parent = ColorGridHolder,
+        CellSize = UDim2.new(0.25, -6, 0, 88),
+        CellPadding = UDim2.new(0, 6, 0, 8),
+        FillDirection = Enum.FillDirection.Horizontal,
+        FillDirectionMaxCells = 4,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local openThemeColorPicker = function() end
+    EditorMock.OnPick = function(role) openThemeColorPicker(role) end
+    local ColorPickerOverlay = mk("Frame", {
         Parent = Main,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundColor3 = Color3.fromRGB(0, 0, 0),
@@ -1093,16 +1118,3 @@
             Size = UDim2.new(1, 0, 0, 3),
             Position = UDim2.new(0, 0, 1, -3),
             BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePixel = 0,
-            ZIndex = 13,
-        })
-        local barGrad = mk("UIGradient", {Parent = bar})
-
-        local previewData = {
-            Off = {Color3.fromRGB(230, 230, 230), Color3.fromRGB(180, 180, 180), Color3.fromRGB(120, 120, 120)},
-            WhiteCyan = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(130, 225, 255), Color3.fromRGB(90, 180, 255)},
-            WhitePink = {Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 145, 205), Color3.fromRGB(220, 90, 170)},
-            Rainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(255, 210, 0), Color3.fromRGB(80, 120, 255)},
-            RainbowFast = {Color3.fromRGB(255, 0, 180), Color3.fromRGB(0, 220, 255), Color3.fromRGB(255, 170, 0)},
-            RainbowDarkWhite = {Color3.fromRGB(10, 10, 10), Color3.fromRGB(120, 120, 120), Color3.fromRGB(255, 255, 255)},
-      

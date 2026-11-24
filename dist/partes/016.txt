@@ -1,4 +1,12 @@
-rection.In),
+owTween:Cancel() end)
+            activeWindowTween = nil
+        end
+
+        ShadowFrame.Visible = false
+
+        local tw1 = TweenService:Create(
+            MainScale,
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
             { Scale = 1 }
         )
         local tw2 = TweenService:Create(
@@ -1125,14 +1133,4 @@ rection.In),
                 TitleLabel.TextColor3 = Color3.new(
                     (Theme.TitleText or Theme.Accent).R * sine,
                     (Theme.TitleText or Theme.Accent).G * sine,
-                    (Theme.TitleText or Theme.Accent).B * sine
-                )
-            end
-        end))
-    end
-
-    do
-        local drag = false
-        local dragStart, startPos
-        TopBar.InputBegan:Connect(function(input)
-            if (inp
+                

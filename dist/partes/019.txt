@@ -1,4 +1,18 @@
-w(0, accent),
+der.Thickness = 1.4
+                end
+                local keyGradient = keyBorder and mk("UIGradient", {Parent = keyBorder,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.07, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
+                local function updateRim()
+                    local accent = Theme.Accent or Theme.Stroke
+                    local second = Theme.ToggleOn or accent
+                    dividerGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
+                        ColorSequenceKeypoint.new(1, second),
+                    })
+                    rimGradient.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, accent),
                         ColorSequenceKeypoint.new(0.70, accent),
                         ColorSequenceKeypoint.new(1, accent),
                     })
@@ -931,25 +945,4 @@ w(0, accent),
                 BackgroundTransparency = 0,
                 ZIndex = 10
             })
-            AccentBar:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-            corner(AccentBar, 999)
-
-            local LabelTxt = mk("TextLabel", {
-                Parent = Holder,
-                Size = UDim2.new(1, textOffW, 0, 22),
-                Position = UDim2.new(0, 22, 0, 13),
-                BackgroundTransparency = 1,
-                Text = displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBlack,
-                TextSize = 15,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 10
-            })
-            LabelTxt:SetAttribute("ThemeTextRole", "Text")
-            LabelTxt:SetAttribute("TextSpanish", textSpanish)
-            LabelTxt:SetAttribute("TextEnglish", textEnglish)
-
-            local StateLabel = mk("TextLabel", {
-        
+            AccentBar:SetAttribute("Theme

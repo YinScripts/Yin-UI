@@ -1,4 +1,24 @@
-ngWindow()
+serInputService.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1
+                    or input.UserInputType == Enum.UserInputType.Touch then
+                        task.defer(function() dragging = false end)
+                        dragStart = nil
+                    end
+                end))
+
+                table.insert(Window.FloatingToggles, {Window = FloatingWindow, Name = displayText})
+            end
+
+            toggleFloating = function()
+                if isMirror and mirrorSource then
+                    pcall(mirrorSource.ToggleFloating)
+                    syncExternalState()
+                    return
+                end
+                playSound(Sounds.Click, 0.6)
+                if not isFloating then
+                    isFloating = true
+                    createFloatingWindow()
                     DetachBtn.Text = "←"
                 else
                     isFloating   = false
@@ -1049,23 +1069,4 @@ ngWindow()
                 if inp.UserInputType == Enum.UserInputType.MouseButton1
                 or inp.UserInputType == Enum.UserInputType.Touch then
                     spawnRipple(inp.Position)
-                end
-            end))
-
-            track(Click.MouseEnter:Connect(function()
-                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { BackgroundTransparency = 0.62 }):Play()
-            end))
-            track(Click.MouseLeave:Connect(function()
-                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { BackgroundTransparency = 0.78 }):Play()
-            end))
-
-            local knobOFF = UDim2.new(0, 2, 0.5, -12)
-            local knobON  = UDim2.new(1, -26, 0.5, -12)
-
-            local function setVisualState(newState)
-                local ti = TweenInfo.new(0.2, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-                Holder:SetAttribute("ScriptState", newState)
-
-                if n
+             

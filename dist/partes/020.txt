@@ -1,4 +1,25 @@
-        Parent = Holder,
+Role", state and "ToggleOn" or "AccentOff")
+            corner(AccentBar, 999)
+
+            local LabelTxt = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, textOffW, 0, 22),
+                Position = UDim2.new(0, 22, 0, 13),
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish", textSpanish)
+            LabelTxt:SetAttribute("TextEnglish", textEnglish)
+
+            local StateLabel = mk("TextLabel", {
+                Parent = Holder,
                 Size = UDim2.new(1, textOffW, 0, 16),
                 Position = UDim2.new(0, 22, 0, 36),
                 BackgroundTransparency = 1,
@@ -982,24 +1003,4 @@
                     end
                 end))
 
-                track(UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1
-                    or input.UserInputType == Enum.UserInputType.Touch then
-                        task.defer(function() dragging = false end)
-                        dragStart = nil
-                    end
-                end))
-
-                table.insert(Window.FloatingToggles, {Window = FloatingWindow, Name = displayText})
-            end
-
-            toggleFloating = function()
-                if isMirror and mirrorSource then
-                    pcall(mirrorSource.ToggleFloating)
-                    syncExternalState()
-                    return
-                end
-                playSound(Sounds.Click, 0.6)
-                if not isFloating then
-                    isFloating = true
-                    createFloati
+                track(U

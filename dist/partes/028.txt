@@ -1,4 +1,25 @@
-        instance:SetAttribute("YinYangShaderTarget", id)
+      end
+        local managedName = self.Namespace .. "_" .. id
+        local named = parent:FindFirstChild(managedName)
+        if named and named.ClassName == spec.className then
+            self.Instances[id] = named
+            return named, self.Created[id] == true
+        end
+        local existing = parent:FindFirstChildOfClass(spec.className)
+        if existing then
+            self.Instances[id] = existing
+            return existing, false
+        end
+        if allowCreate == false then
+            return nil, "no existe " .. spec.className
+        end
+        local ok, created = shaderSafe(function()
+            local instance = Instance.new(spec.className)
+            instance.Name = managedName
+            instance.Parent = parent
+            pcall(function()
+                instance:SetAttribute("YinYangShaderManaged", true)
+                instance:SetAttribute("YinYangShaderTarget", id)
             end)
             return instance
         end)
@@ -908,22 +929,4 @@
             local keepRadius = profile.reflectionRadius * 1.15
             for part in pairs(self.Applied) do
                 local near = part and part.Parent and distance[part] ~= nil and distance[part] <= keepRadius
-                if not active[part] and not near and not self.CharacterApplied[part] then
-                    local original = self.Original[part]
-                    if original ~= nil and part and part.Parent then pcall(function() part.Reflectance = original end) end
-                    self.Original[part] = nil
-                    self.Applied[part] = nil
-                end
-            end
-        end
-        if self.SceneCoverage and #self.SceneQueue == 0 then self:QueueSceneCoverage() end
-        self:_refreshContact()
-        self:_refreshSceneShadows()
-    end
-
-    function ShaderReflections:Restore()
-        for part, original in pairs(self.Original) do
-            if part and part.Parent then pcall(function() part.Reflectance = original end) end
-        end
-        self.Original, self.Applied, self.ModelApplied, self.CharacterApplied = {}, {}, {}, {}
-   
+             

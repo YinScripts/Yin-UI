@@ -1,4 +1,7 @@
-   corner(UI.BackCount, 9)
+n = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
+            TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 11, Visible = false, ZIndex = 5,
+        }, UI.BackButton)
+        corner(UI.BackCount, 9)
         mk("UIPadding", {PaddingLeft = UDim.new(0, 5), PaddingRight = UDim.new(0, 5)}, UI.BackCount)
         UI.HeaderAvatar = mk("ImageLabel", {
             Size = UDim2.fromOffset(40, 40), Position = UDim2.fromOffset(52, 9),
@@ -840,10 +843,4 @@
         hideMessageActions()
         cancelReply()
         StickerPanel.Visible = false
-        reactionPickerTargetKey = nil
-        Chat.hideOverlays()
-        if kind == "private" then
-            uid = tonumber(uid)
-            if not uid or uid == LocalPlayer.UserId then return end
-            Chat.kind = "private"
-            Chat.room = Chat.dmR
+        reactionPickerTar

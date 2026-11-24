@@ -1,3 +1,26 @@
+UDim.new(0, 12),
+    })
+
+    local Hero = card(1, 150)
+    Hero.ClipsDescendants = true
+    local HeroImg = mk("ImageLabel", {
+        Parent = Hero, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+        Image = "rbxassetid://125311226076728", ImageTransparency = 0.45,
+        ScaleType = Enum.ScaleType.Crop, ZIndex = 10,
+    })
+    corner(HeroImg, 16)
+    local HeroShade = mk("Frame", {
+        Parent = Hero, Size = UDim2.new(1, 0, 1, 0), BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0, ZIndex = 11,
+    })
+    HeroShade:SetAttribute("ThemeRole", "Secondary")
+    corner(HeroShade, 16)
+    mk("UIGradient", {
+        Parent = HeroShade,
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.05),
+            NumberSequenceKeypoint.new(0.6, 0.45),
+            NumberSequenceKeypoint.new(1, 0.9),
         }),
     })
 
@@ -915,26 +938,4 @@
         end
         return r
     end
-    -- estado editable -> registro para guardar (pasa por CL.Sanitize)
-    local function recToSaved(r, id)
-        local s = {
-            Id = id,
-            Name = r.Name,
-            NoBackground = r.NoBackground,
-            BgColor = r.BgColor and colorToArray(r.BgColor) or nil,
-            BorderColor = r.BorderColor and colorToArray(r.BorderColor) or nil,
-            Created = os.time(),
-            Layers = {},
-            ClickSound = r.ClickSound,
-            IdleSound = r.IdleSound,
-        }
-        for i, lay in ipairs(r.Layers) do
-            local c = table.clone(lay)
-            c.Color = lay.Color and colorToArray(lay.Color) or nil
-            s.Layers[i] = c
-        end
-        return CL.Sanitize(s)
-    end
-    -- capas que se pueden dibujar ya (las que tienen imagen)
-    local function drawableIcon(r)
-        local icon = { NoBackground = r.N
+    -- estad

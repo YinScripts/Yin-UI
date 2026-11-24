@@ -1,4 +1,14 @@
-ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
+    (Theme.TitleText or Theme.Accent).B * sine
+                )
+            end
+        end))
+    end
+
+    do
+        local drag = false
+        local dragStart, startPos
+        TopBar.InputBegan:Connect(function(input)
+            if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
                 drag = true
                 dragStart = input.Position
                 startPos = Main.Position
@@ -486,8 +496,19 @@ ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == En
     end
 
     -- Nieve (solo con el tema Navidad): pocos copos cayendo dentro de la ventana. No reciben toques.
-    local Snow = { Layer = nil, Conn = nil, Flakes = {} }
+    local Snow = { Layer = nil, Conn = nil, Flakes = {}, Enabled = true }
+    -- preferencia del usuario (Ajustes > Nieve), en su propio archivo para no tocar el formato de la config
+    pcall(function()
+        if isfile and isfile("Yin_Yang_Snow.txt") and readfile("Yin_Yang_Snow.txt") == "off" then Snow.Enabled = false end
+    end)
+    function Window.GetSnowEnabled() return Snow.Enabled end
+    function Window.SetSnowEnabled(on)
+        Snow.Enabled = on == true
+        pcall(function() if writefile then writefile("Yin_Yang_Snow.txt", Snow.Enabled and "on" or "off") end end)
+        Window._SetSnow(Theme.FullBackground == true)
+    end
     function Window._SetSnow(on)
+        on = on and Snow.Enabled
         if on and not Snow.Layer then
             local layer = mk("Frame", {
                 Name = "YYSnow", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 60,
@@ -976,28 +997,4 @@ ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == En
         local width   = preset.Width
         local height  = preset.Height
 
-        if screen.X > 0 and screen.Y > 0 then
-            width  = math.min(width,  math.floor(screen.X * 0.92))
-            height = math.min(height, math.floor(screen.Y * 0.92))
-        end
-
-        shownSize = UDim2.new(0, width, 0, height)
-        if Main and not isMaximized then
-            Main.Size        = shownSize
-            normalWindowSize = shownSize
-        end
-    end
-
-    Window.UpdateWindowSize()
-    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(Window.UpdateWindowSize)
-
-    function Window:SetLibraryVersion(isLarge)
-        LibrarySizeMode = isLarge and "Large" or "Small"
-        self.LibrarySizeMode = LibrarySizeMode
-        self.LibraryHeight = getCurrentLibraryPreset().Height
-        SavedConfig.LibrarySizeMode = LibrarySizeMode
-        SavedConfig.LibraryHeight = self.LibraryHeight
-        SaveConfig()
-        Window.UpdateWindowSize()
-    end
-
+        if screen.X > 0 and sc

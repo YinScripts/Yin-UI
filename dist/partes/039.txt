@@ -1,4 +1,19 @@
-          SpotifyState.IsPlaying = false
+w(1, 1, 1),
+                ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 16})
+            b.Activated:Connect(callback)
+            return b
+        end
+        B.previous = button("Previous", -91, 124844823753990, previousTrack)
+        B.previous.Rotation = 180
+        B.play = button("PlayPause", -62, 135609604299893, togglePlayback)
+        B.next = button("Next", -33, 124844823753990, nextTrack)
+        B.close = mk("TextButton", {Parent = B.root, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -4, 0.5, 0), Size = UDim2.fromOffset(24, 27),
+            BackgroundTransparency = 1, Text = "×", TextColor3 = Color3.fromRGB(220, 220, 220),
+            Font = Enum.Font.Gotham, TextSize = 20, AutoButtonColor = false, ZIndex = 16})
+        B.close.Activated:Connect(function()
+            destroyCurrentSound()
+            SpotifyState.IsPlaying = false
             SpotifyState.CurrentTrack = nil
             SpotifyState.CurrentPausedPosition = 0
             syncPlaybackUI()
@@ -985,27 +1000,4 @@
     corner(FavPage.Cover, 6)
     mk("UIGradient", {
         Parent = FavPage.Cover,
-        Rotation = 135,
-        Color = ColorSequence.new(Color3.fromRGB(69, 10, 245), Color3.fromRGB(196, 239, 217)),
-    })
-    mk("UIStroke", {Parent = FavPage.Cover, Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 0.75})
-    FavPage.CoverHeart = mk("ImageLabel", {
-        Parent = FavPage.Cover,
-        Size = UDim2.new(0.42, 0, 0.42, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        BackgroundTransparency = 1,
-        Image = FavPage.HEART_ON,
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 43,
-    })
-
-    FavPage.Info = mk("Frame", {
-        Parent = FavPage.Hero,
-        Size = UDim2.new(1, -190, 0, 136),
-        AnchorPoint = Vector2.new(0, 1),
-        Position = UDim2.new(0, 172, 1, -18),
-        BackgroundTransparency = 1,
-        ZIndex = 42,
-    })
-    FavPage.Kind = mk("Tex
+        Rot

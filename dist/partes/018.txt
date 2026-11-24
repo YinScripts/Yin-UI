@@ -1,3 +1,28 @@
+reen.Y > 0 then
+            width  = math.min(width,  math.floor(screen.X * 0.92))
+            height = math.min(height, math.floor(screen.Y * 0.92))
+        end
+
+        shownSize = UDim2.new(0, width, 0, height)
+        if Main and not isMaximized then
+            Main.Size        = shownSize
+            normalWindowSize = shownSize
+        end
+    end
+
+    Window.UpdateWindowSize()
+    ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(Window.UpdateWindowSize)
+
+    function Window:SetLibraryVersion(isLarge)
+        LibrarySizeMode = isLarge and "Large" or "Small"
+        self.LibrarySizeMode = LibrarySizeMode
+        self.LibraryHeight = getCurrentLibraryPreset().Height
+        SavedConfig.LibrarySizeMode = LibrarySizeMode
+        SavedConfig.LibraryHeight = self.LibraryHeight
+        SaveConfig()
+        Window.UpdateWindowSize()
+    end
+
     Window.LibrarySizeMode = LibrarySizeMode
     Window.LibraryHeight = getCurrentLibraryPreset().Height
 
@@ -987,18 +1012,4 @@
                     keyBorder.Color = Color3.new(1, 1, 1)
                     keyBorder.Transparency = 0.12
                     keyBorder:SetAttribute("ThemeRole", nil)
-                    keyBorder.Thickness = 1.4
-                end
-                local keyGradient = keyBorder and mk("UIGradient", {Parent = keyBorder,
-                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
-                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.07, 0),
-                        NumberSequenceKeypoint.new(1, 0)})})
-                local function updateRim()
-                    local accent = Theme.Accent or Theme.Stroke
-                    local second = Theme.ToggleOn or accent
-                    dividerGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, accent),
-                        ColorSequenceKeypoint.new(1, second),
-                    })
-                    rimGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.ne
+                    keyBor
