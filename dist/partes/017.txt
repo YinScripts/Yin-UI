@@ -485,6 +485,43 @@ ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == En
         return nav ~= nil
     end
 
+    -- Nieve (solo con el tema Navidad): pocos copos cayendo dentro de la ventana. No reciben toques.
+    local Snow = { Layer = nil, Conn = nil, Flakes = {} }
+    function Window._SetSnow(on)
+        if on and not Snow.Layer then
+            local layer = mk("Frame", {
+                Name = "YYSnow", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 60,
+            }, Main)
+            pcall(function() layer.Interactable = false end)
+            for i = 1, 16 do
+                local size = math.random(3, 6)
+                local x, y = math.random(), math.random()
+                local f = mk("Frame", {
+                    Size = UDim2.new(0, size, 0, size), Position = UDim2.new(x, 0, y, 0),
+                    BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.2 + math.random() * 0.4,
+                    BorderSizePixel = 0, ZIndex = 60,
+                }, layer)
+                pcall(function() f.Interactable = false end)
+                corner(f, 6)
+                Snow.Flakes[i] = { f = f, x = x, y = y, v = 0.035 + math.random() * 0.045,
+                    t = math.random() * 6.28, amp = 0.008 + math.random() * 0.012 }
+            end
+            Snow.Layer = layer
+            Snow.Conn = RunService.Heartbeat:Connect(function(dt)
+                if not layer.Parent or not Main.Visible then return end
+                for _, k in ipairs(Snow.Flakes) do
+                    k.y = k.y + k.v * dt
+                    k.t = k.t + dt * 1.2
+                    if k.y > 1.04 then k.y = -0.04; k.x = math.random() end
+                    k.f.Position = UDim2.new(k.x + math.sin(k.t) * k.amp, 0, k.y, 0)
+                end
+            end)
+        elseif not on and Snow.Layer then
+            if Snow.Conn then Snow.Conn:Disconnect() end
+            pcall(function() Snow.Layer:Destroy() end)
+            Snow.Layer, Snow.Conn, Snow.Flakes = nil, nil, {}
+        end
+    end
     function Window._ApplyFullBackground()
         if not (BackgroundArt and BackgroundArt.Parent) then return end
         local full = Theme.FullBackground == true
@@ -541,6 +578,7 @@ ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == En
         for _, img in ipairs(Window._NavidadIcons) do
             if img.Parent then Window._ApplyNavidadIcon(img) end
         end
+        pcall(Window._SetSnow, full)
     end
     Window._ApplyFullBackground()
     -- al maximizar/restaurar cambia la esquina de Main: el fondo completo la sigue
@@ -963,58 +1001,3 @@ ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == En
         Window.UpdateWindowSize()
     end
 
-    Window.LibrarySizeMode = LibrarySizeMode
-    Window.LibraryHeight = getCurrentLibraryPreset().Height
-
-    -- Opcional: reutiliza la mecanica de iconos de TestUI_sprite_v7 sin cambiar
-    -- la navegacion original por defecto. Solo se activa desde Ajustes.
-    local TabIconCarousel = {
-        Enabled = false,
-        Items = {},
-        Offset = 0,
-        Velocity = 0,
-        ViewW = 0,
-        Anim = nil,
-        ActiveTab = nil,
-        Spin = 0,
-        LastOffset = 0,
-    }
-
-    local TAB_ICON_SIZE = 42
-    local TAB_ICON_GAP = 6
-    local TAB_ICON_STEP = TAB_ICON_SIZE + TAB_ICON_GAP
-    local TAB_DRAG_THRESHOLD = 7
-    local TAB_FRICTION = 4.2
-    local TAB_SPIN_GAIN = 0.6
-    local TAB_SPIN_MAX = 24
-    local TAB_SPIN_DECAY = 9
-
-    local function tabCarouselScale()
-        local s = MainScale.Scale
-        if type(s) ~= "number" or s < 0.05 then return 1 end
-        return s
-    end
-
-    local function applyTabCarouselSpin()
-        local spin = TabIconCarousel.Spin
-        for _, item in ipairs(TabIconCarousel.Items) do
-            local rotor = item.Tab and item.Tab.IconLabel
-            if rotor then
-                rotor.Rotation = spin * (0.6 + 0.8 * (item.Dist or 0))
-            end
-        end
-    end
-
-    local function renderTabCarousel()
-        if not TabIconCarousel.Enabled then return end
-        local count = #TabIconCarousel.Items
-        local viewW = TabIconCarousel.ViewW
-        if count == 0 or viewW <= 0 then return end
-
-        local length = count * TAB_ICON_STEP
-        TabIconCarousel.Offset = TabIconCarousel.Offset % length
-        local moved = ((TabIconCarousel.Offset - (TabIconCarousel.LastOffset or TabIconCarousel.Offset) + length / 2) % length) - length / 2
-        TabIconCarousel.LastOffset = TabIconCarousel.Offset
-        TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
-
-        for index, item in ipairs(TabIconCarousel.Items) do

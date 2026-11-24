@@ -1,4 +1,47 @@
-       BackgroundVideo.Visible = false
+eName]
+        local tabIconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
+        for _, t in pairs(self.Tabs or {}) do
+            local newIcon = nil
+            if themedTabIcons then
+                newIcon = themedTabIcons[t.NameEnglish] or themedTabIcons[t.NameSpanish]
+            end
+            t.IconAsset = newIcon or t.DefaultIconAsset
+            if t.IconLabel then
+                t.IconLabel.Image = t.IconAsset or ""
+                t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
+                YinIcons.applyTab(t.IconLabel, t.NameEnglish, t.NameSpanish)
+                t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
+                t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
+                if t.NameLabel then
+                    t.NameLabel.Position = UDim2.new(0, 14 + tabIconSize, 0, 0)
+                    t.NameLabel.Size = UDim2.new(1, -(24 + tabIconSize), 1, 0)
+                end
+            end
+            if t.CompactButton then
+                local compactIcon = t.CompactButton:FindFirstChild("Icon")
+                if compactIcon then
+                    compactIcon.Image = t.IconAsset or ""
+                    compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
+                    YinIcons.applyTab(compactIcon, t.NameEnglish, t.NameSpanish)
+                end
+            end
+        end
+
+        self._slideshowToken = (self._slideshowToken or 0) + 1
+        self._videoToken = (self._videoToken or 0) + 1
+        local mediaToken = self._videoToken
+        self._videoFailureCache = self._videoFailureCache or {}
+
+        if self._videoConnection then
+            pcall(function() self._videoConnection:Disconnect() end)
+            self._videoConnection = nil
+        end
+
+        if BackgroundVideo then
+            pcall(function()
+                BackgroundVideo:Pause()
+                BackgroundVideo.Playing = false
+                BackgroundVideo.Visible = false
                 BackgroundVideo.Video = ""
             end)
         end
@@ -996,45 +1039,4 @@
             end)
         end
 
-        local function openExportStats()
-            local Panel = openPanel("Export Stats", "Export Stats", 400, 470, "rbxassetid://116421707362805",
-                "Elegí qué pestañas compartir", "Choose which tabs to share")
-
-            local items = buildIdMap()
-            local tabNames, tabSet, tabCount = {}, {}, {}
-            for _, item in ipairs(items) do
-                if not tabSet[item.tab] then
-                    tabSet[item.tab] = true
-                    table.insert(tabNames, item.tab)
-                end
-                tabCount[item.tab] = (tabCount[item.tab] or 0) + 1
-            end
-
-            local checked = {}
-            for _, name in ipairs(tabNames) do
-                checked[name] = true
-            end
-
-            -- Resumen
-            local Summary = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.new(1, -32, 0, 54),
-                Position = UDim2.new(0, 16, 0, 84),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.3,
-                BorderSizePixel = 0,
-                ZIndex = 502,
-            })
-            Summary:SetAttribute("ThemeRole", "Secondary")
-            corner(Summary, 12)
-            stroke(Summary, Theme.Stroke, 1, 0.6)
-            local BigNum = mk("TextLabel", {
-                Parent = Summary, Size = UDim2.new(0, 64, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1,
-                Text = "0", TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 26, ZIndex = 503,
-            })
-            BigNum:SetAttribute("ThemeTextRole", "Accent")
-            BigNum:SetAttribute("IgnoreTextEffect", true)
-            local SumText = mk("TextLabel", {
-                Parent = Summary, Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 78, 0, 10), BackgroundTransparency = 1,
-                Text = "", TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12,
-                TextXAlignment = Enum.Text
+        local function openExportSta

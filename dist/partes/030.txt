@@ -1,4 +1,42 @@
-base.Brightness + 0.35 * k
+ighting.Brightness or lighting.Brightness,
+                ExposureCompensation = ShaderManualLighting.ExposureCompensation or lighting.ExposureCompensation,
+                OutdoorAmbient = lighting.OutdoorAmbient,
+                Ambient = lighting.Ambient,
+            }
+            self.FlashBase = base
+        end
+        local bolt, distance = nil, 300
+        if withBolt then
+            local ok, folder, boltDistance = pcall(function() return self:_spawnBolt() end)
+            if ok and folder then
+                if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
+                bolt, distance = folder, boltDistance
+                self.BoltFolder = folder
+            end
+        end
+        local flashColor = Color3.fromRGB(206, 216, 255)
+        local function setBolt(visible)
+            if not bolt then return end
+            for _, part in ipairs(bolt:GetChildren()) do
+                if part:IsA("BasePart") then part.Transparency = visible and 0 or 1 end
+            end
+        end
+        task.spawn(function()
+            local pulses = self.Random:NextInteger(2, 4)
+            for pulse = 1, pulses do
+                if token ~= self.FlashToken or not self.Enabled then break end
+                local k = strength * (pulse == 1 and 1 or self.Random:NextNumber(0.45, 0.9))
+                pcall(function()
+                    lighting.Brightness = math.min(10, base.Brightness + 2.6 * k)
+                    lighting.ExposureCompensation = math.min(3, base.ExposureCompensation + 0.8 * k)
+                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.78 * k)
+                    lighting.Ambient = base.Ambient:Lerp(flashColor, 0.45 * k)
+                end)
+                setBolt(true)
+                task.wait(self.Random:NextNumber(0.04, 0.09))
+                if token ~= self.FlashToken then break end
+                pcall(function()
+                    lighting.Brightness = base.Brightness + 0.35 * k
                     lighting.ExposureCompensation = base.ExposureCompensation + 0.1 * k
                     lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
                     lighting.Ambient = base.Ambient
@@ -939,58 +977,4 @@ base.Brightness + 0.35 * k
 
         mk("UIPadding", {
             Parent = section,
-            PaddingTop = UDim.new(0, 10),
-            PaddingBottom = UDim.new(0, 10),
-            PaddingLeft = UDim.new(0, 10),
-            PaddingRight = UDim.new(0, 10),
-        })
-        mk("UIListLayout", {
-            Parent = section,
-            Padding = UDim.new(0, 8),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        })
-
-        local head = mk("TextButton", {
-            Parent = section,
-            Size = UDim2.new(1, 0, 0, 34),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            LayoutOrder = 0,
-            ZIndex = 313,
-        })
-        local icon = mk("Frame", {
-            Parent = head,
-            Size = UDim2.fromOffset(34, 34),
-            BackgroundColor3 = Theme.Accent,
-            BackgroundTransparency = 0.82,
-            BorderSizePixel = 0,
-            ZIndex = 314,
-        })
-        icon:SetAttribute("ThemeRole", "Accent")
-        corner(icon, 10)
-        RowKit.Icon(icon, SECTION_ICONS[titleES] or "◆", 18, 315, "Accent")
-        local title = mk("TextLabel", {
-            Parent = head,
-            Size = UDim2.new(1, -110, 0, 18),
-            Position = UDim2.new(0, 44, 0, 0),
-            BackgroundTransparency = 1,
-            Text = GetText(titleES, titleEN),
-            TextColor3 = Theme.Accent,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 14,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 314,
-        })
-        title:SetAttribute("ThemeTextRole", "Accent")
-        title:SetAttribute("TextSpanish", titleES)
-        title:SetAttribute("TextEnglish", titleEN)
-        local count = mk("TextLabel", {
-            Parent = head,
-            Size = UDim2.new(1, -110, 0, 14),
-            Position = UDim2.new(0, 44, 0, 19),
-            BackgroundTransparency = 1,
-            Text = "",
-            TextColor3 = Theme.TextDim,
-            Font 
+        

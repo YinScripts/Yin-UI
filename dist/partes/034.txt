@@ -1,4 +1,54 @@
-Keypoint.new(0.25, Color3.fromRGB(255, 210, 80)),
+oBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
+        for _, lay in ipairs(r.Layers) do
+            local img = CL.CleanAsset(lay.Image)
+            if img ~= "" then
+                local c = table.clone(lay)
+                c.Image = img
+                table.insert(icon.Layers, c)
+            end
+        end
+        return icon
+    end
+
+    -- =====================================================================
+    -- VENTANA DEL EDITOR
+    -- =====================================================================
+    local Overlay = mk("Frame", {
+        Parent = Main,
+        Name = "LogoStudioOverlay",
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BackgroundTransparency = 0.3,
+        BorderSizePixel = 0,
+        Visible = false,
+        Active = true,
+        ZIndex = Z,
+    })
+    local Panel = mk("Frame", {
+        Parent = Overlay,
+        Size = UDim2.new(0.94, 0, 0.94, 0),
+        Position = UDim2.fromScale(0.5, 0.5),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = Z + 1,
+    })
+    Panel:SetAttribute("ThemeRole", "Background")
+    corner(Panel, 16)
+    stroke(Panel, Theme.Stroke, 1.5, 0.2)
+    local PanelScale = mk("UIScale", { Parent = Panel, Scale = 1 })
+
+    -- cabecera con insignia que gira
+    local Badge = mk("Frame", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 2 })
+    Badge:SetAttribute("ThemeRole", "Accent")
+    corner(Badge, 9)
+    local BadgeStroke = mk("UIStroke", { Parent = Badge, Thickness = 1.5, Color = WHITE })
+    local BadgeGrad = mk("UIGradient", {
+        Parent = BadgeStroke,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
+            ColorSequenceKeypoint.new(0.25, Color3.fromRGB(255, 210, 80)),
             ColorSequenceKeypoint.new(0.5, Color3.fromRGB(110, 255, 160)),
             ColorSequenceKeypoint.new(0.75, Color3.fromRGB(90, 170, 255)),
             ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 90, 90)),
@@ -682,38 +732,4 @@ Keypoint.new(0.25, Color3.fromRGB(255, 210, 80)),
             end
         end)
         s.Knob = knob
-        s.Set(value, false)
-        return s
-    end
-    UserInputService.InputChanged:Connect(function(input)
-        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
-        if activeSlider then activeSlider.At(input.Position.X) end
-        if PK.drag then pickAt(input.Position) end
-    end)
-    UserInputService.InputEnded:Connect(function(input)
-        if not isPress(input) then return end
-        if activeSlider then
-            TweenService:Create(activeSlider.Knob, TweenInfo.new(0.15), { Size = UDim2.fromOffset(16, 16) }):Play()
-            activeSlider = nil
-            Content.ScrollingEnabled = true
-        end
-        PK.drag = nil
-    end)
-
-    -- muestra de color tocable (abre el selector)
-    local function swatchRow(parent, order, es, en, getColor, setColor, defaultEs, defaultEn)
-        local row = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
-        label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -150, 1, 0), ZIndex = Z + 5 })
-        local sw = mk("TextButton", { Parent = row, Size = UDim2.fromOffset(64, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -78, 0.5, 0), Text = "", ZIndex = Z + 5 })
-        corner(sw, 8)
-        mk("UIStroke", { Parent = sw, Color = WHITE, Thickness = 1.5, Transparency = 0.4 })
-        local reset = button(row, defaultEs, defaultEn, "Background", { Size = UDim2.fromOffset(72, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), TextSize = 10 })
-        local api = {}
-        function api.Refresh()
-            local c = getColor()
-            sw.BackgroundColor3 = c or Theme.Accent
-            reset.BackgroundTransparency = c and 0.2 or 0.75
-        end
-        sw.MouseButton1Click:Connect(function()
-            local before = getColor()
-            openPicker(es, en, before or Theme.
+        s.Set(value

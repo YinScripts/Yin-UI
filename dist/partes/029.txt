@@ -1,4 +1,60 @@
-kyMirrorEnabled = enabled == true
+     self:_restoreSkyMirror()
+        self:_restoreTextures()
+        self:_clearContact()
+        self:_clearMirror()
+    end
+
+    function ShaderReflections:SetIntensity(value)
+        local newValue = math.clamp(tonumber(value) or self.Intensity, 0.05, 0.60)
+        if newValue == self.Intensity then
+            if self.Enabled then self:Refresh() end
+            return
+        end
+        self.Intensity = newValue
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetWetness(value)
+        local newValue = math.clamp(tonumber(value) or self.Wetness, 0.10, 1)
+        if newValue == self.Wetness then
+            if self.Enabled then self:Refresh() end
+            return
+        end
+        self.Wetness = newValue
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSurfaceMode(mode)
+        local newMode = mode == "Floors" and "Floors" or "All"
+        -- mismo valor: no se restaura nada (antes cada preset hacía Restore y el efecto se apagaba un momento)
+        if newMode == self.SurfaceMode then return end
+        self.SurfaceMode = newMode
+        if self.Enabled then
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSceneCoverage(enabled)
+        enabled = enabled == true
+        if enabled == self.SceneCoverage then return end
+        self.SceneCoverage = enabled
+        if self.Enabled then
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetSkyMirrorEnabled(enabled)
+        self.SkyMirrorEnabled = enabled == true
         if not self.SkyMirrorEnabled then
             self:_restoreSkyMirror()
         end
@@ -958,42 +1014,4 @@ kyMirrorEnabled = enabled == true
         local base = self.FlashBase
         if not base then
             base = {
-                Brightness = ShaderManualLighting.Brightness or lighting.Brightness,
-                ExposureCompensation = ShaderManualLighting.ExposureCompensation or lighting.ExposureCompensation,
-                OutdoorAmbient = lighting.OutdoorAmbient,
-                Ambient = lighting.Ambient,
-            }
-            self.FlashBase = base
-        end
-        local bolt, distance = nil, 300
-        if withBolt then
-            local ok, folder, boltDistance = pcall(function() return self:_spawnBolt() end)
-            if ok and folder then
-                if self.BoltFolder then pcall(function() self.BoltFolder:Destroy() end) end
-                bolt, distance = folder, boltDistance
-                self.BoltFolder = folder
-            end
-        end
-        local flashColor = Color3.fromRGB(206, 216, 255)
-        local function setBolt(visible)
-            if not bolt then return end
-            for _, part in ipairs(bolt:GetChildren()) do
-                if part:IsA("BasePart") then part.Transparency = visible and 0 or 1 end
-            end
-        end
-        task.spawn(function()
-            local pulses = self.Random:NextInteger(2, 4)
-            for pulse = 1, pulses do
-                if token ~= self.FlashToken or not self.Enabled then break end
-                local k = strength * (pulse == 1 and 1 or self.Random:NextNumber(0.45, 0.9))
-                pcall(function()
-                    lighting.Brightness = math.min(10, base.Brightness + 2.6 * k)
-                    lighting.ExposureCompensation = math.min(3, base.ExposureCompensation + 0.8 * k)
-                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.78 * k)
-                    lighting.Ambient = base.Ambient:Lerp(flashColor, 0.45 * k)
-                end)
-                setBolt(true)
-                task.wait(self.Random:NextNumber(0.04, 0.09))
-                if token ~= self.FlashToken then break end
-                pcall(function()
-                    lighting.Brightness = 
+                Brightness = ShaderManualL

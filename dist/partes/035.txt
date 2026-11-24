@@ -1,4 +1,38 @@
-Accent, function(c)
+, false)
+        return s
+    end
+    UserInputService.InputChanged:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        if activeSlider then activeSlider.At(input.Position.X) end
+        if PK.drag then pickAt(input.Position) end
+    end)
+    UserInputService.InputEnded:Connect(function(input)
+        if not isPress(input) then return end
+        if activeSlider then
+            TweenService:Create(activeSlider.Knob, TweenInfo.new(0.15), { Size = UDim2.fromOffset(16, 16) }):Play()
+            activeSlider = nil
+            Content.ScrollingEnabled = true
+        end
+        PK.drag = nil
+    end)
+
+    -- muestra de color tocable (abre el selector)
+    local function swatchRow(parent, order, es, en, getColor, setColor, defaultEs, defaultEn)
+        local row = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
+        label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -150, 1, 0), ZIndex = Z + 5 })
+        local sw = mk("TextButton", { Parent = row, Size = UDim2.fromOffset(64, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -78, 0.5, 0), Text = "", ZIndex = Z + 5 })
+        corner(sw, 8)
+        mk("UIStroke", { Parent = sw, Color = WHITE, Thickness = 1.5, Transparency = 0.4 })
+        local reset = button(row, defaultEs, defaultEn, "Background", { Size = UDim2.fromOffset(72, 28), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, 0, 0.5, 0), TextSize = 10 })
+        local api = {}
+        function api.Refresh()
+            local c = getColor()
+            sw.BackgroundColor3 = c or Theme.Accent
+            reset.BackgroundTransparency = c and 0.2 or 0.75
+        end
+        sw.MouseButton1Click:Connect(function()
+            local before = getColor()
+            openPicker(es, en, before or Theme.Accent, function(c)
                 setColor(c)
                 api.Refresh()
                 changed()
@@ -753,30 +787,4 @@ Accent, function(c)
         task.spawn(runDemo, demoGen)
     end
     local function stopDemo()
-        demoGen += 1
-        if ringTween then ringTween:Cancel() ringTween = nil end
-    end
-    return startDemo, stopDemo
-    end)()
-
-    -- lo que incluye
-    local PList = mk("Frame", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = 2, ZIndex = Z + 2 })
-    PList:SetAttribute("ThemeRole", "Secondary")
-    corner(PList, 12)
-    pad(PList, 10, 12, 12, 10)
-    list(PList, 7)
-    for i, f in ipairs({
-        { "Hasta 30 logos propios con tus imágenes", "Up to 30 custom logos with your images" },
-        { "3 capas con 7 movimientos, tinte y tamaño", "3 layers with 7 movements, tint and size" },
-        { "Vista previa realista y en tu botón real", "Realistic preview and on your real button" },
-        { "Sonidos propios y códigos para compartir", "Custom sounds and share codes" },
-        { "Estudio de Toggles Flotantes completo", "Full Floating Toggle Studio" },
-    }) do
-        local row = mk("Frame", { Parent = PList, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = i, ZIndex = Z + 3 })
-        local dot = mk("Frame", { Parent = row, Size = UDim2.fromOffset(14, 14), Position = UDim2.fromOffset(0, 2), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 3 })
-        corner(dot, 999)
-        goldGradient(dot, 45)
-        corner(mk("Frame", { Parent = dot, Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = Z + 4 }), 999)
-        label(row, f[1], f[2], 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -22, 1, 0), Position = UDim2.fromOffset(22, 0), ZIndex = Z + 3 })
-    end
-    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any ex
+        demoGen +=

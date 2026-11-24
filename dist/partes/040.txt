@@ -1,4 +1,59 @@
-Size = Enum.AutomaticSize.X,
+tLabel", {
+        Parent = FavPage.Info,
+        Size = UDim2.new(1, 0, 0, 16),
+        Position = UDim2.new(0, 0, 0, 14),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 43,
+    })
+    FavPage.text(FavPage.Kind, "Playlist", "Playlist")
+    FavPage.Title = mk("TextLabel", {
+        Parent = FavPage.Info,
+        Size = UDim2.new(1, 0, 0, 72),
+        Position = UDim2.new(0, 0, 0, 32),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 34,
+        TextWrapped = true,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = 43,
+    })
+    FavPage.text(FavPage.Title, "Canciones que te gustan", "Liked Songs")
+    FavPage.Meta = mk("Frame", {
+        Parent = FavPage.Info,
+        Size = UDim2.new(1, 0, 0, 22),
+        Position = UDim2.new(0, 0, 1, -22),
+        BackgroundTransparency = 1,
+        ZIndex = 43,
+    })
+    mk("UIListLayout", {
+        Parent = FavPage.Meta,
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 6),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+    FavPage.Avatar = mk("ImageLabel", {
+        Parent = FavPage.Meta,
+        Size = UDim2.fromOffset(22, 22),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BorderSizePixel = 0,
+        Image = ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(LocalPlayer.UserId) or 0),
+        LayoutOrder = 1,
+        ZIndex = 44,
+    })
+    corner(FavPage.Avatar, 999)
+    FavPage.Owner = mk("TextLabel", {
+        Parent = FavPage.Meta,
+        Size = UDim2.fromOffset(0, 22),
+        AutomaticSize = Enum.AutomaticSize.X,
         BackgroundTransparency = 1,
         Text = tostring(LocalPlayer.Name),
         Font = Enum.Font.GothamBold,
@@ -1112,34 +1167,4 @@ clearSongRows = function()
             TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 10,
         })
         heroTitle:SetAttribute("ThemeTextRole", "Text")
-        local heroSub = mk("TextLabel", {
-            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 14), Position = UDim2.new(0, 72, 0, 40), BackgroundTransparency = 1,
-            Text = GetText("Arte de la comunidad de Yin Yang", "Art from the Yin Yang community"), TextColor3 = Theme.TextDim,
-            Font = Enum.Font.GothamMedium, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 10,
-        })
-        heroSub:SetAttribute("ThemeTextRole", "TextDim")
-        heroSub:SetAttribute("TextSpanish", "Arte de la comunidad de Yin Yang")
-        heroSub:SetAttribute("TextEnglish", "Art from the Yin Yang community")
-        local countES = #FanArt_Items .. (#FanArt_Items == 1 and " obra" or " obras")
-        local countEN = #FanArt_Items .. (#FanArt_Items == 1 and " piece" or " pieces")
-        local heroCount = mk("TextLabel", {
-            Parent = FA.hero, Size = UDim2.new(0, 0, 0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -14, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8,
-            Text = GetText(countES, countEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 10,
-        })
-        heroCount:SetAttribute("ThemeRole", "Accent")
-        heroCount:SetAttribute("ThemeTextRole", "Accent")
-        heroCount:SetAttribute("TextSpanish", countES)
-        heroCount:SetAttribute("TextEnglish", countEN)
-        heroCount:SetAttribute("IgnoreTextEffect", true)
-        corner(heroCount, 999)
-        mk("UIPadding", {Parent = heroCount, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-        -- Visor a pantalla completa (se crea una sola vez)
-        FA.viewer = mk("Frame", {
-            Parent = Main,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 0.12,
-     
+        local her

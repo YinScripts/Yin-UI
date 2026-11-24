@@ -1,4 +1,45 @@
-XAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
+ts()
+            local Panel = openPanel("Export Stats", "Export Stats", 400, 470, "rbxassetid://116421707362805",
+                "Elegí qué pestañas compartir", "Choose which tabs to share")
+
+            local items = buildIdMap()
+            local tabNames, tabSet, tabCount = {}, {}, {}
+            for _, item in ipairs(items) do
+                if not tabSet[item.tab] then
+                    tabSet[item.tab] = true
+                    table.insert(tabNames, item.tab)
+                end
+                tabCount[item.tab] = (tabCount[item.tab] or 0) + 1
+            end
+
+            local checked = {}
+            for _, name in ipairs(tabNames) do
+                checked[name] = true
+            end
+
+            -- Resumen
+            local Summary = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, -32, 0, 54),
+                Position = UDim2.new(0, 16, 0, 84),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.3,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            Summary:SetAttribute("ThemeRole", "Secondary")
+            corner(Summary, 12)
+            stroke(Summary, Theme.Stroke, 1, 0.6)
+            local BigNum = mk("TextLabel", {
+                Parent = Summary, Size = UDim2.new(0, 64, 1, 0), Position = UDim2.new(0, 10, 0, 0), BackgroundTransparency = 1,
+                Text = "0", TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 26, ZIndex = 503,
+            })
+            BigNum:SetAttribute("ThemeTextRole", "Accent")
+            BigNum:SetAttribute("IgnoreTextEffect", true)
+            local SumText = mk("TextLabel", {
+                Parent = Summary, Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 78, 0, 10), BackgroundTransparency = 1,
+                Text = "", TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12,
+                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
             })
             SumText:SetAttribute("ThemeTextRole", "Text")
             local SumSub = mk("TextLabel", {
@@ -1069,55 +1110,3 @@ XAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
     local openThemeColorPicker = function() end
     EditorMock.OnPick = function(role) openThemeColorPicker(role) end
     local ColorPickerOverlay = mk("Frame", {
-        Parent = Main,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.28,
-        BorderSizePixel = 0,
-        Visible = false,
-        Active = true,
-        ZIndex = 260,
-    })
-    local ColorPickerPanel = mk("Frame", {
-        Parent = ColorPickerOverlay,
-        Size = UDim2.new(0.86, 0, 0.72, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        ZIndex = 261,
-    })
-    ColorPickerPanel:SetAttribute("ThemeRole", "Background")
-    corner(ColorPickerPanel, 12)
-    stroke(ColorPickerPanel, Theme.Stroke, 1.4, 0.2)
-
-    local PickerTitle = mk("TextLabel", {
-        Parent = ColorPickerPanel,
-        Size = UDim2.new(1, -58, 0, 30),
-        Position = UDim2.new(0, 14, 0, 8),
-        BackgroundTransparency = 1,
-        Text = GetText("Selector de color", "Color picker"),
-        TextColor3 = Theme.Text,
-        TextSize = 15,
-        Font = Enum.Font.GothamBold,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 262,
-    })
-    PickerTitle:SetAttribute("ThemeTextRole", "Text")
-    PickerTitle:SetAttribute("TextSpanish", "Selector de color")
-    PickerTitle:SetAttribute("TextEnglish", "Color picker")
-
-    local PickerHint = mk("TextLabel", {
-        Parent = ColorPickerPanel,
-        Size = UDim2.new(1, -58, 0, 16),
-        Position = UDim2.new(0, 14, 0, 35),
-        BackgroundTransparency = 1,
-        Text = GetText("Toca el área para elegir saturación y brillo", "Tap the area to choose saturation and brightness"),
-        TextColor3 = Theme.TextDim,
-        TextSize = 9,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 262,
-    })
-    PickerHint:SetAttribute("ThemeTextRole", "TextDim")
-    PickerHint:SetAttribute("TextSpanish", "Toca el área para elegir saturaci

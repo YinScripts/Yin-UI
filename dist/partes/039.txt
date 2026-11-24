@@ -1,4 +1,40 @@
-ext then B.artist.Text = PlayerSongArtist.Text end
+          SpotifyState.IsPlaying = false
+            SpotifyState.CurrentTrack = nil
+            SpotifyState.CurrentPausedPosition = 0
+            syncPlaybackUI()
+        end)
+        function B.layout()
+            if not B.active then return end
+            -- AbsoluteSize ya incluye MainScale; convertir a unidades locales evita aplicar la escala dos veces.
+            local parentScale = math.max(MainScale.Scale, 0.01)
+            local width = math.clamp((TopBar.AbsoluteSize.X / parentScale) * 0.37, 180, 280)
+            BoomboxPill.Size = UDim2.fromOffset(width, 30)
+            BoomboxPill.Position = UDim2.new(0.5, -width / 2, 0, 3)
+            BannerFrame.Position = UDim2.new(0.5, -width / 2 - 6, 0, 18)
+        end
+        TopBar:GetPropertyChangedSignal("AbsoluteSize"):Connect(B.layout)
+        MainScale:GetPropertyChangedSignal("Scale"):Connect(B.layout)
+        SpotifyState.RefreshBoombox = function()
+            local sound = SpotifyState.CurrentSound
+            local active = sound ~= nil and SpotifyState.CurrentTrack ~= nil
+            if active ~= B.active then
+                B.active = active
+                B.root.Visible = active
+                Boom.Disc.Visible = not active
+                BoomboxInput.Visible = not active
+                BoomboxPlaceholder.Visible = not active and BoomboxInput.Text == ""
+                BannerFrame.Visible = not (Window._SpotifyAmbient and Window._SpotifyAmbient.Active)
+                if active then
+                    B.layout()
+                else
+                    BoomboxPill.Size = UDim2.fromOffset(155, 28)
+                    BoomboxPill.Position = UDim2.new(0.5, -77, 0.5, -18)
+                    BannerFrame.Position = UDim2.new(0.5, -83, 0.5, 0)
+                end
+            end
+            if not active then return end
+            if B.title.Text ~= PlayerSongTitle.Text then B.title.Text = PlayerSongTitle.Text end
+            if B.artist.Text ~= PlayerSongArtist.Text then B.artist.Text = PlayerSongArtist.Text end
             if B.cover.Image ~= AlbumArt.Image then B.cover.Image = AlbumArt.Image end
             B.play.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
             local current = math.max(0, tonumber(sound.TimePosition) or 0)
@@ -972,59 +1008,4 @@ ext then B.artist.Text = PlayerSongArtist.Text end
         BackgroundTransparency = 1,
         ZIndex = 42,
     })
-    FavPage.Kind = mk("TextLabel", {
-        Parent = FavPage.Info,
-        Size = UDim2.new(1, 0, 0, 16),
-        Position = UDim2.new(0, 0, 0, 14),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 43,
-    })
-    FavPage.text(FavPage.Kind, "Playlist", "Playlist")
-    FavPage.Title = mk("TextLabel", {
-        Parent = FavPage.Info,
-        Size = UDim2.new(1, 0, 0, 72),
-        Position = UDim2.new(0, 0, 0, 32),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 34,
-        TextWrapped = true,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 43,
-    })
-    FavPage.text(FavPage.Title, "Canciones que te gustan", "Liked Songs")
-    FavPage.Meta = mk("Frame", {
-        Parent = FavPage.Info,
-        Size = UDim2.new(1, 0, 0, 22),
-        Position = UDim2.new(0, 0, 1, -22),
-        BackgroundTransparency = 1,
-        ZIndex = 43,
-    })
-    mk("UIListLayout", {
-        Parent = FavPage.Meta,
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 6),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    FavPage.Avatar = mk("ImageLabel", {
-        Parent = FavPage.Meta,
-        Size = UDim2.fromOffset(22, 22),
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-        BorderSizePixel = 0,
-        Image = ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(LocalPlayer.UserId) or 0),
-        LayoutOrder = 1,
-        ZIndex = 44,
-    })
-    corner(FavPage.Avatar, 999)
-    FavPage.Owner = mk("TextLabel", {
-        Parent = FavPage.Meta,
-        Size = UDim2.fromOffset(0, 22),
-        Automatic
+    FavPage.Kind = mk("Tex

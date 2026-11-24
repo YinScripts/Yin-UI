@@ -1,4 +1,41 @@
-tl.hold - prev) / math.max(dt, 1 / 120)
+n quedar bajo el piso
+                        ctl.holdTarget = Vector3.new(p.X, math.max(p.Y, env.standY + holdOffset() + env.H * 0.05), p.Z)
+                    end
+                    function ctl.Release()
+                        if ctl.state ~= "held" then return end
+                        local v = ctl.holdVel
+                        -- conserva el envión (limitado) y cae
+                        ctl.vel = Vector3.new(math.clamp(v.X, -18, 18), math.clamp(v.Y, -10, 14), 0)
+                        ctl.pos = ctl.hold - Vector3.new(0, holdOffset(), 0)
+                        ctl.state, ctl.stateT = "fall", 0
+                    end
+                    function ctl.IsBusy()
+                        return ctl.state ~= "sit"
+                    end
+
+                    function ctl.Step(dt)
+                        ctl.t += dt
+                        ctl.stateT += dt
+                        local t = ctl.t
+                        -- mirar a los lados (solo sentado)
+                        if ctl.t >= ctl.lookNext then
+                            local r = math.random()
+                            ctl.lookTarget = r < 0.25 and 0 or ((r < 0.62 and -1 or 1) * (32 + math.random() * 26))
+                            ctl.lookNext = ctl.t + 1.8 + math.random() * 2.6
+                        end
+                        local k = math.min(1, dt * 2.6)
+                        ctl.look += (ctl.lookTarget - ctl.look) * k
+                        ctl.torso += (ctl.lookTarget * 0.22 - ctl.torso) * k
+
+                        if not env or ctl.state == "sit" then
+                            HomeAnim.Apply(rig, sitPose(t))
+                            return
+                        end
+                        local face = facing()
+                        if ctl.state == "held" then
+                            local prev = ctl.hold
+                            ctl.hold = prev:Lerp(ctl.holdTarget, math.min(1, dt * 16))
+                            local hv = (ctl.hold - prev) / math.max(dt, 1 / 120)
                             ctl.holdVel = ctl.holdVel:Lerp(hv, 0.5)
                             -- balanceo tipo péndulo: se inclina al revés del movimiento y oscila al frenar
                             ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, math.clamp(hv.X * 5, -60, 60), 90, 7, dt)
@@ -805,47 +842,4 @@ tl.hold - prev) / math.max(dt, 1 / 120)
 
         applyThemeExtras()
         if self._ApplyFullBackground then self._ApplyFullBackground() end
-        local themedTabIcons = ThemeTabIcons[themeName]
-        local tabIconSize = math.clamp(tonumber((Theme.IconSizes or {}).Tab) or 24, 12, 32)
-        for _, t in pairs(self.Tabs or {}) do
-            local newIcon = nil
-            if themedTabIcons then
-                newIcon = themedTabIcons[t.NameEnglish] or themedTabIcons[t.NameSpanish]
-            end
-            t.IconAsset = newIcon or t.DefaultIconAsset
-            if t.IconLabel then
-                t.IconLabel.Image = t.IconAsset or ""
-                t.IconLabel.ImageColor3 = Theme.TabIcon or Color3.fromRGB(255, 255, 255)
-                YinIcons.applyTab(t.IconLabel, t.NameEnglish, t.NameSpanish)
-                t.IconLabel.Size = UDim2.new(0, tabIconSize, 0, tabIconSize)
-                t.IconLabel.Position = UDim2.new(0, 7, 0.5, -(tabIconSize / 2))
-                if t.NameLabel then
-                    t.NameLabel.Position = UDim2.new(0, 14 + tabIconSize, 0, 0)
-                    t.NameLabel.Size = UDim2.new(1, -(24 + tabIconSize), 1, 0)
-                end
-            end
-            if t.CompactButton then
-                local compactIcon = t.CompactButton:FindFirstChild("Icon")
-                if compactIcon then
-                    compactIcon.Image = t.IconAsset or ""
-                    compactIcon.ImageColor3 = Theme.TabIcon or Theme.Text
-                    YinIcons.applyTab(compactIcon, t.NameEnglish, t.NameSpanish)
-                end
-            end
-        end
-
-        self._slideshowToken = (self._slideshowToken or 0) + 1
-        self._videoToken = (self._videoToken or 0) + 1
-        local mediaToken = self._videoToken
-        self._videoFailureCache = self._videoFailureCache or {}
-
-        if self._videoConnection then
-            pcall(function() self._videoConnection:Disconnect() end)
-            self._videoConnection = nil
-        end
-
-        if BackgroundVideo then
-            pcall(function()
-                BackgroundVideo:Pause()
-                BackgroundVideo.Playing = false
-         
+        local themedTabIcons = ThemeTabIcons[them

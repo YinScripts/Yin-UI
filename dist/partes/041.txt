@@ -1,4 +1,34 @@
-       BorderSizePixel = 0,
+oSub = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(1, -170, 0, 14), Position = UDim2.new(0, 72, 0, 40), BackgroundTransparency = 1,
+            Text = GetText("Arte de la comunidad de Yin Yang", "Art from the Yin Yang community"), TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium, TextSize = 10, TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 10,
+        })
+        heroSub:SetAttribute("ThemeTextRole", "TextDim")
+        heroSub:SetAttribute("TextSpanish", "Arte de la comunidad de Yin Yang")
+        heroSub:SetAttribute("TextEnglish", "Art from the Yin Yang community")
+        local countES = #FanArt_Items .. (#FanArt_Items == 1 and " obra" or " obras")
+        local countEN = #FanArt_Items .. (#FanArt_Items == 1 and " piece" or " pieces")
+        local heroCount = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(0, 0, 0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -14, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8,
+            Text = GetText(countES, countEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 10,
+        })
+        heroCount:SetAttribute("ThemeRole", "Accent")
+        heroCount:SetAttribute("ThemeTextRole", "Accent")
+        heroCount:SetAttribute("TextSpanish", countES)
+        heroCount:SetAttribute("TextEnglish", countEN)
+        heroCount:SetAttribute("IgnoreTextEffect", true)
+        corner(heroCount, 999)
+        mk("UIPadding", {Parent = heroCount, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        -- Visor a pantalla completa (se crea una sola vez)
+        FA.viewer = mk("Frame", {
+            Parent = Main,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
             Active = true,
             Visible = false,
             ZIndex = 400,

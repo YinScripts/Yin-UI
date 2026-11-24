@@ -1,4 +1,49 @@
-             self.Tweens[instance][property] = tween
+        instance:SetAttribute("YinYangShaderTarget", id)
+            end)
+            return instance
+        end)
+        if not ok then return nil, "no se pudo crear " .. spec.className .. ": " .. tostring(created) end
+        self.Instances[id] = created
+        self.Created[id] = true
+        return created, true
+    end
+
+    function ShaderCore:_remember(instance, property)
+        self.Original[instance] = self.Original[instance] or {}
+        if self.Original[instance][property] ~= nil then return true end
+        local ok, value = shaderSafe(function() return instance[property] end)
+        if not ok then return false, value end
+        self.Original[instance][property] = value
+        return true
+    end
+
+    function ShaderCore:_cancel(instance, property)
+        local byProperty = self.Tweens[instance]
+        local tween = byProperty and byProperty[property]
+        if tween then
+            pcall(function() tween:Cancel() end)
+            byProperty[property] = nil
+        end
+    end
+
+    function ShaderCore:_set(instance, property, value, options)
+        local readable, current = shaderSafe(function() return instance[property] end)
+        if not readable then return false, "propiedad no disponible: " .. tostring(property) end
+        local remembered, rememberError = self:_remember(instance, property)
+        if not remembered then return false, rememberError end
+        self:_cancel(instance, property)
+
+        if options and options.tween then
+            local tweenOk, tween = shaderSafe(function()
+                return TweenService:Create(instance, TweenInfo.new(
+                    options.duration or 1,
+                    options.easingStyle or Enum.EasingStyle.Exponential,
+                    options.easingDirection or Enum.EasingDirection.Out
+                ), {[property] = value})
+            end)
+            if tweenOk and tween then
+                self.Tweens[instance] = self.Tweens[instance] or {}
+                self.Tweens[instance][property] = tween
                 local played = pcall(function() tween:Play() end)
                 if played then return true, true end
             end
@@ -881,60 +926,4 @@
             if part and part.Parent then pcall(function() part.Reflectance = original end) end
         end
         self.Original, self.Applied, self.ModelApplied, self.CharacterApplied = {}, {}, {}, {}
-        self:_restoreSkyMirror()
-        self:_restoreTextures()
-        self:_clearContact()
-        self:_clearMirror()
-    end
-
-    function ShaderReflections:SetIntensity(value)
-        local newValue = math.clamp(tonumber(value) or self.Intensity, 0.05, 0.60)
-        if newValue == self.Intensity then
-            if self.Enabled then self:Refresh() end
-            return
-        end
-        self.Intensity = newValue
-        if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetWetness(value)
-        local newValue = math.clamp(tonumber(value) or self.Wetness, 0.10, 1)
-        if newValue == self.Wetness then
-            if self.Enabled then self:Refresh() end
-            return
-        end
-        self.Wetness = newValue
-        if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetSurfaceMode(mode)
-        local newMode = mode == "Floors" and "Floors" or "All"
-        -- mismo valor: no se restaura nada (antes cada preset hacía Restore y el efecto se apagaba un momento)
-        if newMode == self.SurfaceMode then return end
-        self.SurfaceMode = newMode
-        if self.Enabled then
-            self:Restore()
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetSceneCoverage(enabled)
-        enabled = enabled == true
-        if enabled == self.SceneCoverage then return end
-        self.SceneCoverage = enabled
-        if self.Enabled then
-            self:Restore()
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetSkyMirrorEnabled(enabled)
-        self.S
+   

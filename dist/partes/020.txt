@@ -1,4 +1,46 @@
-1, 0.6)
+        Parent = Holder,
+                Size = UDim2.new(1, textOffW, 0, 16),
+                Position = UDim2.new(0, 22, 0, 36),
+                BackgroundTransparency = 1,
+                Text = "●  " .. (state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")),
+                TextColor3 = state and Theme.ToggleOn or Theme.TextDim,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                Visible = not hasDesc,
+                ZIndex = 10
+            })
+            StateLabel:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+            RowKit.Chip(StateLabel, state and "ToggleOn" or "AccentOff")
+            StateLabel.Position = UDim2.new(0, 22, 0, 38)
+
+            if hasDesc then
+                mk("TextLabel", {
+                    Parent = Holder,
+                    Size = UDim2.new(1, textOffW, 1, -50),
+                    Position = UDim2.new(0, 22, 0, 36),
+                    BackgroundTransparency = 1,
+                    Text = credit.description,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamMedium,
+                    TextSize = 12,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextYAlignment = Enum.TextYAlignment.Top,
+                    TextWrapped = true,
+                    ZIndex = 10
+                }):SetAttribute("ThemeTextRole", "Text")
+            end
+
+            local Switch = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 52, 0, 28),
+                Position = UDim2.new(1, -66, 0.5, -14),
+                BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
+                ZIndex = 10
+            })
+            Switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            corner(Switch, 999)
+            stroke(Switch, Theme.Stroke, 1, 0.6)
 
             local TrackShadow = mk("Frame", {
                 Parent = Switch,
@@ -960,50 +1002,4 @@
                 playSound(Sounds.Click, 0.6)
                 if not isFloating then
                     isFloating = true
-                    createFloatingWindow()
-                    DetachBtn.Text = "←"
-                else
-                    isFloating   = false
-                    FloatLabel   = nil
-                    if FloatingWindow then FloatingWindow:Destroy(); FloatingWindow = nil end
-                    if FloatingGlow   then FloatingGlow:Destroy();   FloatingGlow   = nil end
-                    DetachBtn.Text = "↗"
-                    isLocked   = false
-                    PinBtn.Image = "rbxassetid://83537941312438"
-                end
-                for _, refresh in ipairs(favoriteControlRefreshers) do pcall(refresh) end
-            end
-
-            toggleLock = function()
-                if isMirror and mirrorSource then
-                    pcall(mirrorSource.ToggleLock)
-                    syncExternalState()
-                    return
-                end
-                if not isFloating then return end
-                playSound(Sounds.Click, 0.5)
-                isLocked = not isLocked
-                if isLocked then FloatPos.Save(nameSpanish .. "::" .. textSpanish, FloatingWindow, Window.ScreenGui) else FloatPos.SetLocked(nameSpanish .. "::" .. textSpanish, false) end
-                PinBtn.Image = isLocked
-                    and "rbxassetid://91959170037380"
-                    or  "rbxassetid://83537941312438"
-                for _, refresh in ipairs(favoriteControlRefreshers) do pcall(refresh) end
-            end
-
-            DetachBtn.MouseButton1Click:Connect(toggleFloating)
-            PinBtn.MouseButton1Click:Connect(toggleLock)
-
-            resetScrollTop(TabPage)
-
-            if not isMirror then
-                Window._RegisterGlobalOption(self, {
-                    Id = nameSpanish .. "::" .. textSpanish,
-                    NameSpanish = textSpanish,
-                    NameEnglish = textEnglish,
-                    Holder = Holder,
-                    Kind = "Button",
-                })
-            end
-
-            return {
-                Holde
+                    createFloati
