@@ -1,4 +1,42 @@
-Scale = mk("UIScale", {Parent = Card, Scale = 1})
+      ErisRainbow = {Color3.fromRGB(255, 70, 70), Color3.fromRGB(40, 10, 15), Color3.fromRGB(255, 255, 255)},
+            FireEffect = {Color3.fromRGB(255, 70, 20), Color3.fromRGB(255, 140, 50), Color3.fromRGB(255, 220, 120)},
+            NeonPulse = {Color3.fromRGB(0, 255, 170), Color3.fromRGB(120, 255, 220), Color3.fromRGB(210, 255, 240)},
+            GoldenShine = {Color3.fromRGB(255, 210, 60), Color3.fromRGB(255, 240, 170), Color3.fromRGB(255, 255, 255)},
+            IceBlue = {Color3.fromRGB(120, 220, 255), Color3.fromRGB(200, 240, 255), Color3.fromRGB(245, 250, 255)},
+            PurpleGlow = {Color3.fromRGB(170, 90, 255), Color3.fromRGB(220, 180, 255), Color3.fromRGB(255, 245, 255)},
+            MatrixGreen = {Color3.fromRGB(0, 200, 60), Color3.fromRGB(80, 255, 120), Color3.fromRGB(190, 255, 200)},
+            Sunset = {Color3.fromRGB(255, 140, 80), Color3.fromRGB(255, 80, 150), Color3.fromRGB(180, 80, 255)},
+        }
+
+        local entry = {
+            frame = preview,
+            mode = mode,
+            text = PreviewLabel,
+            glowGrad = glowGrad,
+            barGrad = barGrad,
+        }
+        local sample = previewData[mode] or previewData.Off
+        setPreviewStripColors(entry, sample[1], sample[2], sample[3])
+        table.insert(effectPreviews, entry)
+
+        return preview
+    end
+
+    local function createEffectRow(mode, titleES, titleEN, descES, descEN, accentColor, layoutOrder)
+        local Card = mk("Frame", {
+            Parent = EffectsUI.Grid,
+            Size = UDim2.new(0.5, -5, 0, 136),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.20,
+            BorderSizePixel = 0,
+            ZIndex = 10,
+            LayoutOrder = layoutOrder,
+        })
+        Card:SetAttribute("ThemeRole", "Secondary")
+        corner(Card, 14)
+        local CardStroke = stroke(Card, Theme.Stroke, 1.5, 0.75)
+        CardStroke:SetAttribute("ThemeRole", "Stroke")
+        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
 
         local preview = createPreview(Card, mode, accentColor)
 
@@ -695,49 +733,4 @@ Scale = mk("UIScale", {Parent = Card, Scale = 1})
             instance.Parent = parent
             pcall(function()
                 instance:SetAttribute("YinYangShaderManaged", true)
-                instance:SetAttribute("YinYangShaderTarget", id)
-            end)
-            return instance
-        end)
-        if not ok then return nil, "no se pudo crear " .. spec.className .. ": " .. tostring(created) end
-        self.Instances[id] = created
-        self.Created[id] = true
-        return created, true
-    end
-
-    function ShaderCore:_remember(instance, property)
-        self.Original[instance] = self.Original[instance] or {}
-        if self.Original[instance][property] ~= nil then return true end
-        local ok, value = shaderSafe(function() return instance[property] end)
-        if not ok then return false, value end
-        self.Original[instance][property] = value
-        return true
-    end
-
-    function ShaderCore:_cancel(instance, property)
-        local byProperty = self.Tweens[instance]
-        local tween = byProperty and byProperty[property]
-        if tween then
-            pcall(function() tween:Cancel() end)
-            byProperty[property] = nil
-        end
-    end
-
-    function ShaderCore:_set(instance, property, value, options)
-        local readable, current = shaderSafe(function() return instance[property] end)
-        if not readable then return false, "propiedad no disponible: " .. tostring(property) end
-        local remembered, rememberError = self:_remember(instance, property)
-        if not remembered then return false, rememberError end
-        self:_cancel(instance, property)
-
-        if options and options.tween then
-            local tweenOk, tween = shaderSafe(function()
-                return TweenService:Create(instance, TweenInfo.new(
-                    options.duration or 1,
-                    options.easingStyle or Enum.EasingStyle.Exponential,
-                    options.easingDirection or Enum.EasingDirection.Out
-                ), {[property] = value})
-            end)
-            if tweenOk and tween then
-                self.Tweens[instance] = self.Tweens[instance] or {}
-   
+        

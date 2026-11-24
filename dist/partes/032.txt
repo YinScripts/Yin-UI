@@ -1,4 +1,44 @@
-ss) end
+ savedPreset = ShaderSavedState.preset
+            if savedPreset == "BlackSilhouette" then savedPreset = "depthstyle" end
+            if ShaderManager.Presets[savedPreset] then
+                ShaderDemoPreset = savedPreset
+            end
+        end
+        if type(ShaderSavedState.quality) == "string" and ShaderQualityProfiles[ShaderSavedState.quality] then
+            ShaderSceneQuality = ShaderSavedState.quality
+        end
+    end
+
+    local initialDemoReport
+    -- Optimización > "Shaders apagados": no se aplica nada al iniciar
+    if ShaderDemoEnabled and not PerfOpt.Flags.NoShaders then
+        initialDemoReport = shaderApplyPreset(ShaderDemoPreset, false)
+    else
+        initialDemoReport = shaderRestoreAll()
+    end
+    shaderWarn(initialDemoReport, "Demo inicial")
+
+    if ShaderSavedState and not PerfOpt.Flags.NoShaders then
+        local restoreCustomOverrides = ShaderSavedState.customMode == true
+        if restoreCustomOverrides and type(ShaderSavedState.custom) == "table" then
+            ShaderCustomOverrides = ShaderSavedState.custom
+            for _, spec in ipairs(shaderCustomSpecs()) do
+                if spec.id then
+                    local value = ShaderCustomOverrides[spec.id]
+                    if type(value) == "number" or type(value) == "boolean" then
+                        if type(spec.onChange) == "function" then
+                            pcall(spec.onChange, value)
+                        else
+                            shaderApplySingle(spec.target, spec.property, value)
+                        end
+                    end
+                end
+            end
+        end
+        local overdrive = ShaderSavedState.overdrive
+        if type(overdrive) == "table" then
+            if type(overdrive.reflectionIntensity) == "number" then ShaderReflections:SetIntensity(overdrive.reflectionIntensity) end
+            if type(overdrive.wetness) == "number" then ShaderReflections:SetWetness(overdrive.wetness) end
             if type(overdrive.surfaceMode) == "string" then ShaderReflections:SetSurfaceMode(overdrive.surfaceMode) end
             if type(overdrive.sceneCoverage) == "boolean" then ShaderReflections:SetSceneCoverage(overdrive.sceneCoverage) end
             if type(overdrive.skyMirror) == "boolean" then ShaderReflections:SetSkyMirrorEnabled(overdrive.skyMirror) end
@@ -840,45 +880,3 @@ ss) end
             NumberSequenceKeypoint.new(0, 0.05),
             NumberSequenceKeypoint.new(0.6, 0.45),
             NumberSequenceKeypoint.new(1, 0.9),
-        }),
-    })
-
-    local VersionChip = text({
-        Parent = Hero, Size = UDim2.new(0, 0, 0, 20), AutomaticSize = Enum.AutomaticSize.X,
-        Position = UDim2.new(0, 16, 0, 16), BackgroundColor3 = Theme.Accent,
-        Font = Enum.Font.GothamBlack, TextSize = 10, TextColor3 = Theme.Text,
-        Text = "v28  •  SCRIPT HUB", ZIndex = 13,
-    }, nil, nil, "Text")
-    VersionChip.BackgroundTransparency = 0.8
-    VersionChip:SetAttribute("ThemeRole", "Accent")
-    corner(VersionChip, 999)
-    mk("UIPadding", {Parent = VersionChip, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-    local HeroTitle = text({
-        Parent = Hero, Size = UDim2.new(0.62, 0, 0, 38), Position = UDim2.new(0, 16, 0, 40),
-        Font = Enum.Font.GothamBlack, TextSize = 32, TextColor3 = Theme.Text, Text = "Yin Yang",
-        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
-    }, nil, nil, "Text")
-    local heroShine = mk("UIGradient", {
-        Parent = HeroTitle,
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0.3),
-            NumberSequenceKeypoint.new(0.5, 0),
-            NumberSequenceKeypoint.new(1, 0.3),
-        }),
-        Offset = Vector2.new(-1, 0),
-    })
-    pcall(function()
-        TweenService:Create(heroShine, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 1.2), {Offset = Vector2.new(1, 0)}):Play()
-    end)
-
-    text({
-        Parent = Hero, Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 16, 0, 82),
-        Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.TextDim,
-        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
-        TextWrapped = true, ZIndex = 13,
-    }, "Gracias por usar Yin Yang v28.\nHecho con dedicación para la comunidad.",
-       "Thank you for using Yin Yang v28.\nMade with dedication for the community.", "TextDim")
-
-    local Logo = mk("ImageLabel", {
-        Par

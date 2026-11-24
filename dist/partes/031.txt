@@ -1,4 +1,58 @@
-= Enum.Font.GothamMedium,
+    PaddingTop = UDim.new(0, 10),
+            PaddingBottom = UDim.new(0, 10),
+            PaddingLeft = UDim.new(0, 10),
+            PaddingRight = UDim.new(0, 10),
+        })
+        mk("UIListLayout", {
+            Parent = section,
+            Padding = UDim.new(0, 8),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+
+        local head = mk("TextButton", {
+            Parent = section,
+            Size = UDim2.new(1, 0, 0, 34),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            LayoutOrder = 0,
+            ZIndex = 313,
+        })
+        local icon = mk("Frame", {
+            Parent = head,
+            Size = UDim2.fromOffset(34, 34),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.82,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        icon:SetAttribute("ThemeRole", "Accent")
+        corner(icon, 10)
+        RowKit.Icon(icon, SECTION_ICONS[titleES] or "◆", 18, 315, "Accent")
+        local title = mk("TextLabel", {
+            Parent = head,
+            Size = UDim2.new(1, -110, 0, 18),
+            Position = UDim2.new(0, 44, 0, 0),
+            BackgroundTransparency = 1,
+            Text = GetText(titleES, titleEN),
+            TextColor3 = Theme.Accent,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 314,
+        })
+        title:SetAttribute("ThemeTextRole", "Accent")
+        title:SetAttribute("TextSpanish", titleES)
+        title:SetAttribute("TextEnglish", titleEN)
+        local count = mk("TextLabel", {
+            Parent = head,
+            Size = UDim2.new(1, -110, 0, 14),
+            Position = UDim2.new(0, 44, 0, 19),
+            BackgroundTransparency = 1,
+            Text = "",
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
             TextSize = 10,
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 314,
@@ -820,44 +874,4 @@
     if ShaderSavedState then
         if type(ShaderSavedState.demoEnabled) == "boolean" then ShaderDemoEnabled = ShaderSavedState.demoEnabled end
         if type(ShaderSavedState.preset) == "string" then
-            local savedPreset = ShaderSavedState.preset
-            if savedPreset == "BlackSilhouette" then savedPreset = "depthstyle" end
-            if ShaderManager.Presets[savedPreset] then
-                ShaderDemoPreset = savedPreset
-            end
-        end
-        if type(ShaderSavedState.quality) == "string" and ShaderQualityProfiles[ShaderSavedState.quality] then
-            ShaderSceneQuality = ShaderSavedState.quality
-        end
-    end
-
-    local initialDemoReport
-    -- Optimización > "Shaders apagados": no se aplica nada al iniciar
-    if ShaderDemoEnabled and not PerfOpt.Flags.NoShaders then
-        initialDemoReport = shaderApplyPreset(ShaderDemoPreset, false)
-    else
-        initialDemoReport = shaderRestoreAll()
-    end
-    shaderWarn(initialDemoReport, "Demo inicial")
-
-    if ShaderSavedState and not PerfOpt.Flags.NoShaders then
-        local restoreCustomOverrides = ShaderSavedState.customMode == true
-        if restoreCustomOverrides and type(ShaderSavedState.custom) == "table" then
-            ShaderCustomOverrides = ShaderSavedState.custom
-            for _, spec in ipairs(shaderCustomSpecs()) do
-                if spec.id then
-                    local value = ShaderCustomOverrides[spec.id]
-                    if type(value) == "number" or type(value) == "boolean" then
-                        if type(spec.onChange) == "function" then
-                            pcall(spec.onChange, value)
-                        else
-                            shaderApplySingle(spec.target, spec.property, value)
-                        end
-                    end
-                end
-            end
-        end
-        local overdrive = ShaderSavedState.overdrive
-        if type(overdrive) == "table" then
-            if type(overdrive.reflectionIntensity) == "number" then ShaderReflections:SetIntensity(overdrive.reflectionIntensity) end
-            if type(overdrive.wetness) == "number" then ShaderReflections:SetWetness(overdrive.wetne
+            local

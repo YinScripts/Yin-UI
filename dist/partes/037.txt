@@ -1,4 +1,67 @@
-{
+Dim.new(0, 0),
+        PaddingLeft = UDim.new(0, 0),
+        PaddingRight = UDim.new(0, 0),
+        PaddingBottom = UDim.new(0, 0),
+    })
+
+    local SpotifyRootLayout = mk("UIListLayout", {
+        Parent = SpotifyRoot,
+        Padding = UDim.new(0, 0),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    local SongList, SongListLayout
+
+    local function updateSpotifyCanvas()
+        SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    end
+
+    local function updateSongListCanvas()
+        local contentY = 0
+        pcall(function()
+            contentY = SongListLayout.AbsoluteContentSize.Y
+        end)
+
+        local rowCount = #SpotifyState.RowButtons
+        if contentY <= 0 and rowCount > 0 then
+            local m = getSpotifyMetrics()
+            local columns = m.gridColumns
+            local rows = math.ceil(rowCount / columns)
+            contentY = (rows * m.cardHeight) + math.max(0, (rows - 1) * m.gridGapY)
+        end
+
+        SongList.CanvasSize = UDim2.new(0, 0, 0, math.max(0, math.floor(contentY + 16)))
+    end
+
+
+    local SpotifyShell = mk("Frame", {
+        Parent = SpotifyRoot,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = spotifyPanel,
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ClipsDescendants = true,
+        ZIndex = 10,
+    })
+    corner(SpotifyShell, 18)
+    -- El fondo continuo ya separa el contenido: sin borde divisorio en Spotify.
+
+    local SpotifyPages = mk("UIPageLayout", {
+        Parent = SpotifyShell,
+        FillDirection = Enum.FillDirection.Horizontal,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+        Animated = true,
+        TweenTime = 0.28,
+        EasingStyle = Enum.EasingStyle.Quart,
+        EasingDirection = Enum.EasingDirection.Out,
+        TouchInputEnabled = false,
+        GamepadInputEnabled = false,
+        ScrollWheelInputEnabled = false,
+        Circular = false,
+    })
+
+    local PlayerPage = mk("Frame", {
         Parent = SpotifyShell,
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
@@ -1142,53 +1205,4 @@
 
         local titleTop = coverPad + coverSize + 4
         local sidePad = m.compact and 7 or 9
-        local textW = math.max(40, cellW - sidePad * 2)
-
-        if rowData.Title then
-            rowData.Title.Size = UDim2.fromOffset(textW, 24)
-            rowData.Title.Position = UDim2.new(0, sidePad, 0, titleTop)
-            rowData.Title.TextSize = m.compact and 11 or 13
-        end
-
-        if rowData.Artist then
-            rowData.Artist.Size = UDim2.fromOffset(textW, 12)
-            rowData.Artist.Position = UDim2.new(0, sidePad, 0, titleTop + 24)
-            rowData.Artist.TextSize = m.compact and 9 or 10
-        end
-
-        if rowData.Duration then
-            rowData.Duration.Visible = m.cardHeight >= 125
-            rowData.Duration.Size = UDim2.fromOffset(44, 16)
-            rowData.Duration.Position = UDim2.new(0, sidePad, 0, titleTop + 24 + 16)
-            rowData.Duration.TextSize = 9
-            rowData.Duration.TextXAlignment = Enum.TextXAlignment.Left
-        end
-
-        if rowData.Plus then
-            rowData.Plus.AnchorPoint = Vector2.new(1, 1)
-            rowData.Plus.Size = UDim2.fromOffset(28, 28)
-            rowData.Plus.Position = UDim2.new(1, -7, 1, -5)
-        end
-
-        if rowData.Play then
-            rowData.Play.AnchorPoint = Vector2.new(1, 1)
-            rowData.Play.Size = UDim2.fromOffset(20, 20)
-            rowData.Play.Position = UDim2.new(1, -8, 0, coverPad + coverSize - 4)
-        end
-
-        if rowData.TapArea then
-            rowData.TapArea.Size = UDim2.new(1, 0, 1, 0)
-            rowData.TapArea.ZIndex = 14
-        end
-    end
-
-    local function refreshSpotifyUILayout()
-        applySpotifyNowPlayingLayout()
-        local width = spotifyLogicalSize(SongList).X
-        local columns = 3
-        local gapX = width < 420 and 8 or 12
-        local gapY = width < 420 and 12 or 16
-        local side = 4
-        local availableW = math.max(0, width - (side * 2) - (gapX * (columns - 1)))
-        local cellW = math.max(90, math.floor(availableW / columns))
-        local logicalHeight = spotifyLogicalSize
+        local t

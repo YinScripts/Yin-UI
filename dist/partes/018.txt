@@ -1,3 +1,58 @@
+    Window.LibrarySizeMode = LibrarySizeMode
+    Window.LibraryHeight = getCurrentLibraryPreset().Height
+
+    -- Opcional: reutiliza la mecanica de iconos de TestUI_sprite_v7 sin cambiar
+    -- la navegacion original por defecto. Solo se activa desde Ajustes.
+    local TabIconCarousel = {
+        Enabled = false,
+        Items = {},
+        Offset = 0,
+        Velocity = 0,
+        ViewW = 0,
+        Anim = nil,
+        ActiveTab = nil,
+        Spin = 0,
+        LastOffset = 0,
+    }
+
+    local TAB_ICON_SIZE = 42
+    local TAB_ICON_GAP = 6
+    local TAB_ICON_STEP = TAB_ICON_SIZE + TAB_ICON_GAP
+    local TAB_DRAG_THRESHOLD = 7
+    local TAB_FRICTION = 4.2
+    local TAB_SPIN_GAIN = 0.6
+    local TAB_SPIN_MAX = 24
+    local TAB_SPIN_DECAY = 9
+
+    local function tabCarouselScale()
+        local s = MainScale.Scale
+        if type(s) ~= "number" or s < 0.05 then return 1 end
+        return s
+    end
+
+    local function applyTabCarouselSpin()
+        local spin = TabIconCarousel.Spin
+        for _, item in ipairs(TabIconCarousel.Items) do
+            local rotor = item.Tab and item.Tab.IconLabel
+            if rotor then
+                rotor.Rotation = spin * (0.6 + 0.8 * (item.Dist or 0))
+            end
+        end
+    end
+
+    local function renderTabCarousel()
+        if not TabIconCarousel.Enabled then return end
+        local count = #TabIconCarousel.Items
+        local viewW = TabIconCarousel.ViewW
+        if count == 0 or viewW <= 0 then return end
+
+        local length = count * TAB_ICON_STEP
+        TabIconCarousel.Offset = TabIconCarousel.Offset % length
+        local moved = ((TabIconCarousel.Offset - (TabIconCarousel.LastOffset or TabIconCarousel.Offset) + length / 2) % length) - length / 2
+        TabIconCarousel.LastOffset = TabIconCarousel.Offset
+        TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
+
+        for index, item in ipairs(TabIconCarousel.Items) do
             local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
             item.Button.Position = UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
             local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
@@ -946,37 +1001,4 @@
                         ColorSequenceKeypoint.new(1, second),
                     })
                     rimGradient.Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, accent),
-                        ColorSequenceKeypoint.new(0.70, accent),
-                        ColorSequenceKeypoint.new(1, accent),
-                    })
-                    if keyGradient then
-                        keyGradient.Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0, second),
-                            ColorSequenceKeypoint.new(0.12, second),
-                            ColorSequenceKeypoint.new(0.35, accent),
-                            ColorSequenceKeypoint.new(1, accent),
-                        })
-                    end
-                end
-                Holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(updateRim)
-                updateRim()
-                if status then status.BackgroundTransparency = 1 end
-                local function layoutOptionCard()
-                    if not Holder.Parent then return end
-                    local logicalWidth = Holder.AbsoluteSize.X / math.max(MainScale.Scale, 0.01)
-                    if logicalWidth <= 0 then return end
-                    local narrow = logicalWidth < 330
-                    Holder.Size = UDim2.new(1, 0, 0, narrow and 118 or 92)
-                    if narrow then
-                        panel.Rotation = 0
-                        panel.Size = UDim2.new(1, -16, 0, 67)
-                        panel.Position = UDim2.new(0.5, 0, 1, -38.5)
-                    else
-                        local angle = math.rad(16)
-                        local panelWidth = logicalWidth * 2
-                        local panelHeight = math.max(276, 2 * (92 + logicalWidth * math.sin(angle)))
-                        -- Centro del borde izquierdo después de rotar, igual al centro de la línea.
-                        local edgeX, edgeY = logicalWidth * 0.40, 46
-                        panel.Size = UDim2.fromOffset(panelWidth, panelHeight)
-                        panel.Position = UDim2.fromOffset(edgeX + panelWidth * math.cos(a
+                        ColorSequenceKeypoint.ne

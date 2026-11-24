@@ -1,4 +1,45 @@
-ent = Hero, Size = UDim2.new(0, 104, 0, 104), AnchorPoint = Vector2.new(1, 0.5),
+        }),
+    })
+
+    local VersionChip = text({
+        Parent = Hero, Size = UDim2.new(0, 0, 0, 20), AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 16, 0, 16), BackgroundColor3 = Theme.Accent,
+        Font = Enum.Font.GothamBlack, TextSize = 10, TextColor3 = Theme.Text,
+        Text = "v28  •  SCRIPT HUB", ZIndex = 13,
+    }, nil, nil, "Text")
+    VersionChip.BackgroundTransparency = 0.8
+    VersionChip:SetAttribute("ThemeRole", "Accent")
+    corner(VersionChip, 999)
+    mk("UIPadding", {Parent = VersionChip, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+    local HeroTitle = text({
+        Parent = Hero, Size = UDim2.new(0.62, 0, 0, 38), Position = UDim2.new(0, 16, 0, 40),
+        Font = Enum.Font.GothamBlack, TextSize = 32, TextColor3 = Theme.Text, Text = "Yin Yang",
+        TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 13,
+    }, nil, nil, "Text")
+    local heroShine = mk("UIGradient", {
+        Parent = HeroTitle,
+        Transparency = NumberSequence.new({
+            NumberSequenceKeypoint.new(0, 0.3),
+            NumberSequenceKeypoint.new(0.5, 0),
+            NumberSequenceKeypoint.new(1, 0.3),
+        }),
+        Offset = Vector2.new(-1, 0),
+    })
+    pcall(function()
+        TweenService:Create(heroShine, TweenInfo.new(2.2, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, false, 1.2), {Offset = Vector2.new(1, 0)}):Play()
+    end)
+
+    text({
+        Parent = Hero, Size = UDim2.new(0.6, 0, 0, 40), Position = UDim2.new(0, 16, 0, 82),
+        Font = Enum.Font.GothamMedium, TextSize = 12, TextColor3 = Theme.TextDim,
+        TextXAlignment = Enum.TextXAlignment.Left, TextYAlignment = Enum.TextYAlignment.Top,
+        TextWrapped = true, ZIndex = 13,
+    }, "Gracias por usar Yin Yang v28.\nHecho con dedicación para la comunidad.",
+       "Thank you for using Yin Yang v28.\nMade with dedication for the community.", "TextDim")
+
+    local Logo = mk("ImageLabel", {
+        Parent = Hero, Size = UDim2.new(0, 104, 0, 104), AnchorPoint = Vector2.new(1, 0.5),
         Position = UDim2.new(1, -18, 0.5, 0), BackgroundTransparency = 1,
         Image = "rbxassetid://117780544348814", ScaleType = Enum.ScaleType.Fit, ZIndex = 13,
     })
@@ -896,54 +937,4 @@ ent = Hero, Size = UDim2.new(0, 104, 0, 104), AnchorPoint = Vector2.new(1, 0.5),
     end
     -- capas que se pueden dibujar ya (las que tienen imagen)
     local function drawableIcon(r)
-        local icon = { NoBackground = r.NoBackground, BgColor = r.BgColor, BorderColor = r.BorderColor, Layers = {} }
-        for _, lay in ipairs(r.Layers) do
-            local img = CL.CleanAsset(lay.Image)
-            if img ~= "" then
-                local c = table.clone(lay)
-                c.Image = img
-                table.insert(icon.Layers, c)
-            end
-        end
-        return icon
-    end
-
-    -- =====================================================================
-    -- VENTANA DEL EDITOR
-    -- =====================================================================
-    local Overlay = mk("Frame", {
-        Parent = Main,
-        Name = "LogoStudioOverlay",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.new(0, 0, 0),
-        BackgroundTransparency = 0.3,
-        BorderSizePixel = 0,
-        Visible = false,
-        Active = true,
-        ZIndex = Z,
-    })
-    local Panel = mk("Frame", {
-        Parent = Overlay,
-        Size = UDim2.new(0.94, 0, 0.94, 0),
-        Position = UDim2.fromScale(0.5, 0.5),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        Active = true,
-        ZIndex = Z + 1,
-    })
-    Panel:SetAttribute("ThemeRole", "Background")
-    corner(Panel, 16)
-    stroke(Panel, Theme.Stroke, 1.5, 0.2)
-    local PanelScale = mk("UIScale", { Parent = Panel, Scale = 1 })
-
-    -- cabecera con insignia que gira
-    local Badge = mk("Frame", { Parent = Panel, Size = UDim2.fromOffset(30, 30), Position = UDim2.fromOffset(14, 10), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 2 })
-    Badge:SetAttribute("ThemeRole", "Accent")
-    corner(Badge, 9)
-    local BadgeStroke = mk("UIStroke", { Parent = Badge, Thickness = 1.5, Color = WHITE })
-    local BadgeGrad = mk("UIGradient", {
-        Parent = BadgeStroke,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 90, 90)),
-            ColorSequence
+        local icon = { NoBackground = r.N

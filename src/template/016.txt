@@ -834,6 +834,43 @@
         return nav ~= nil
     end
 
+    -- Nieve (solo con el tema Navidad): pocos copos cayendo dentro de la ventana. No reciben toques.
+    local Snow = { Layer = nil, Conn = nil, Flakes = {} }
+    function Window._SetSnow(on)
+        if on and not Snow.Layer then
+            local layer = mk("Frame", {
+                Name = "YYSnow", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, ZIndex = 60,
+            }, Main)
+            pcall(function() layer.Interactable = false end)
+            for i = 1, 16 do
+                local size = math.random(3, 6)
+                local x, y = math.random(), math.random()
+                local f = mk("Frame", {
+                    Size = UDim2.new(0, size, 0, size), Position = UDim2.new(x, 0, y, 0),
+                    BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.2 + math.random() * 0.4,
+                    BorderSizePixel = 0, ZIndex = 60,
+                }, layer)
+                pcall(function() f.Interactable = false end)
+                corner(f, 6)
+                Snow.Flakes[i] = { f = f, x = x, y = y, v = 0.035 + math.random() * 0.045,
+                    t = math.random() * 6.28, amp = 0.008 + math.random() * 0.012 }
+            end
+            Snow.Layer = layer
+            Snow.Conn = RunService.Heartbeat:Connect(function(dt)
+                if not layer.Parent or not Main.Visible then return end
+                for _, k in ipairs(Snow.Flakes) do
+                    k.y = k.y + k.v * dt
+                    k.t = k.t + dt * 1.2
+                    if k.y > 1.04 then k.y = -0.04; k.x = math.random() end
+                    k.f.Position = UDim2.new(k.x + math.sin(k.t) * k.amp, 0, k.y, 0)
+                end
+            end)
+        elseif not on and Snow.Layer then
+            if Snow.Conn then Snow.Conn:Disconnect() end
+            pcall(function() Snow.Layer:Destroy() end)
+            Snow.Layer, Snow.Conn, Snow.Flakes = nil, nil, {}
+        end
+    end
     function Window._ApplyFullBackground()
         if not (BackgroundArt and BackgroundArt.Parent) then return end
         local full = Theme.FullBackground == true
@@ -890,6 +927,7 @@
         for _, img in ipairs(Window._NavidadIcons) do
             if img.Parent then Window._ApplyNavidadIcon(img) end
         end
+        pcall(Window._SetSnow, full)
     end
     Window._ApplyFullBackground()
     -- al maximizar/restaurar cambia la esquina de Main: el fondo completo la sigue

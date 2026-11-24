@@ -1,4 +1,29 @@
+ewState == "loading" then
+                    startSpinner()
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(IconRingStroke, ti, { Color = Theme.Accent, Transparency = 0 }):Play()
+                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.Accent }):Play()
+                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.75 }):Play()
+                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.Accent }):Play()
+                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.Accent }):Play()
+                    StatusLabel.Text = GetText("Cargando...", "Loading...")
+                    TweenService:Create(Knob, ti, { Position = knobON }):Play()
 
+                elseif newState == "active" then
+                    stopSpinner()
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(IconRingStroke, ti, { Color = Theme.ToggleOn, Transparency = 0 }):Play()
+                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.ToggleOn, BackgroundTransparency = 0.75 }):Play()
+                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.ToggleOn }):Play()
+                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.ToggleOn }):Play()
+                    StatusLabel.Text = GetText("Activo", "Active")
+                    TweenService:Create(Knob, ti, { Position = knobON }):Play()
+
+                else
+                    stopSpinner()
                     TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
                     TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
                     TweenService:Create(IconRingStroke, ti, { Color = Theme.AccentOff, Transparency = 0.3 }):Play()
@@ -858,41 +883,4 @@
                     end
                     function ctl.MoveTo(p)
                         if ctl.state ~= "held" then return end
-                        -- los pies no pueden quedar bajo el piso
-                        ctl.holdTarget = Vector3.new(p.X, math.max(p.Y, env.standY + holdOffset() + env.H * 0.05), p.Z)
-                    end
-                    function ctl.Release()
-                        if ctl.state ~= "held" then return end
-                        local v = ctl.holdVel
-                        -- conserva el envión (limitado) y cae
-                        ctl.vel = Vector3.new(math.clamp(v.X, -18, 18), math.clamp(v.Y, -10, 14), 0)
-                        ctl.pos = ctl.hold - Vector3.new(0, holdOffset(), 0)
-                        ctl.state, ctl.stateT = "fall", 0
-                    end
-                    function ctl.IsBusy()
-                        return ctl.state ~= "sit"
-                    end
-
-                    function ctl.Step(dt)
-                        ctl.t += dt
-                        ctl.stateT += dt
-                        local t = ctl.t
-                        -- mirar a los lados (solo sentado)
-                        if ctl.t >= ctl.lookNext then
-                            local r = math.random()
-                            ctl.lookTarget = r < 0.25 and 0 or ((r < 0.62 and -1 or 1) * (32 + math.random() * 26))
-                            ctl.lookNext = ctl.t + 1.8 + math.random() * 2.6
-                        end
-                        local k = math.min(1, dt * 2.6)
-                        ctl.look += (ctl.lookTarget - ctl.look) * k
-                        ctl.torso += (ctl.lookTarget * 0.22 - ctl.torso) * k
-
-                        if not env or ctl.state == "sit" then
-                            HomeAnim.Apply(rig, sitPose(t))
-                            return
-                        end
-                        local face = facing()
-                        if ctl.state == "held" then
-                            local prev = ctl.hold
-                            ctl.hold = prev:Lerp(ctl.holdTarget, math.min(1, dt * 16))
-                            local hv = (c
+                        -- los pies no puede

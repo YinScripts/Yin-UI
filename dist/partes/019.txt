@@ -1,4 +1,37 @@
-ngle) / 2,
+w(0, accent),
+                        ColorSequenceKeypoint.new(0.70, accent),
+                        ColorSequenceKeypoint.new(1, accent),
+                    })
+                    if keyGradient then
+                        keyGradient.Color = ColorSequence.new({
+                            ColorSequenceKeypoint.new(0, second),
+                            ColorSequenceKeypoint.new(0.12, second),
+                            ColorSequenceKeypoint.new(0.35, accent),
+                            ColorSequenceKeypoint.new(1, accent),
+                        })
+                    end
+                end
+                Holder:GetPropertyChangedSignal("BackgroundColor3"):Connect(updateRim)
+                updateRim()
+                if status then status.BackgroundTransparency = 1 end
+                local function layoutOptionCard()
+                    if not Holder.Parent then return end
+                    local logicalWidth = Holder.AbsoluteSize.X / math.max(MainScale.Scale, 0.01)
+                    if logicalWidth <= 0 then return end
+                    local narrow = logicalWidth < 330
+                    Holder.Size = UDim2.new(1, 0, 0, narrow and 118 or 92)
+                    if narrow then
+                        panel.Rotation = 0
+                        panel.Size = UDim2.new(1, -16, 0, 67)
+                        panel.Position = UDim2.new(0.5, 0, 1, -38.5)
+                    else
+                        local angle = math.rad(16)
+                        local panelWidth = logicalWidth * 2
+                        local panelHeight = math.max(276, 2 * (92 + logicalWidth * math.sin(angle)))
+                        -- Centro del borde izquierdo después de rotar, igual al centro de la línea.
+                        local edgeX, edgeY = logicalWidth * 0.40, 46
+                        panel.Size = UDim2.fromOffset(panelWidth, panelHeight)
+                        panel.Position = UDim2.fromOffset(edgeX + panelWidth * math.cos(angle) / 2,
                             edgeY + panelWidth * math.sin(angle) / 2)
                         panel.Rotation = 16
                     end
@@ -919,46 +952,4 @@ ngle) / 2,
             LabelTxt:SetAttribute("TextEnglish", textEnglish)
 
             local StateLabel = mk("TextLabel", {
-                Parent = Holder,
-                Size = UDim2.new(1, textOffW, 0, 16),
-                Position = UDim2.new(0, 22, 0, 36),
-                BackgroundTransparency = 1,
-                Text = "●  " .. (state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")),
-                TextColor3 = state and Theme.ToggleOn or Theme.TextDim,
-                Font = Enum.Font.GothamMedium,
-                TextSize = 11,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                Visible = not hasDesc,
-                ZIndex = 10
-            })
-            StateLabel:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
-            RowKit.Chip(StateLabel, state and "ToggleOn" or "AccentOff")
-            StateLabel.Position = UDim2.new(0, 22, 0, 38)
-
-            if hasDesc then
-                mk("TextLabel", {
-                    Parent = Holder,
-                    Size = UDim2.new(1, textOffW, 1, -50),
-                    Position = UDim2.new(0, 22, 0, 36),
-                    BackgroundTransparency = 1,
-                    Text = credit.description,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamMedium,
-                    TextSize = 12,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextYAlignment = Enum.TextYAlignment.Top,
-                    TextWrapped = true,
-                    ZIndex = 10
-                }):SetAttribute("ThemeTextRole", "Text")
-            end
-
-            local Switch = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.new(0, 52, 0, 28),
-                Position = UDim2.new(1, -66, 0.5, -14),
-                BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
-                ZIndex = 10
-            })
-            Switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-            corner(Switch, 999)
-            stroke(Switch, Theme.Stroke, 
+        
