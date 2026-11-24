@@ -1,4 +1,111 @@
-ex = Z + 3 })
+r(c)
+                api.Refresh()
+                changed()
+            end, function()
+                setColor(before)
+                api.Refresh()
+                changed()
+            end)
+        end)
+        reset.MouseButton1Click:Connect(function()
+            setColor(nil)
+            api.Refresh()
+            changed()
+        end)
+        api.Row = row
+        return api
+    end
+
+    -- =====================================================================
+    -- 3) BOTÓN BASE
+    -- =====================================================================
+    sectionTitle(Content, "BOTÓN BASE", "BASE BUTTON", 4, "El círculo de atrás y su borde", "The circle behind and its border")
+    local BaseCard = card(Content, 5)
+    pad(BaseCard, 10, 10, 10, 10)
+    list(BaseCard, 8)
+    local baseChips = chips(BaseCard, { { "circle", "Con círculo", "With circle" }, { "none", "Solo imagen", "Image only" } }, 1, function(k)
+        ED.rec.NoBackground = k == "none"
+        refreshBaseCard()
+        changed()
+    end)
+    local bgSwatch = swatchRow(BaseCard, 2, "Color del círculo", "Circle color", function() return ED.rec.BgColor end, function(c) ED.rec.BgColor = c end, "Del tema", "Theme")
+    local borderSwatch = swatchRow(BaseCard, 3, "Color del borde", "Border color", function() return ED.rec.BorderColor end, function(c) ED.rec.BorderColor = c end, "Del tema", "Theme")
+    refreshBaseCard = function()
+        baseChips.Set(ED.rec.NoBackground and "none" or "circle")
+        bgSwatch.Row.Visible = not ED.rec.NoBackground
+        borderSwatch.Row.Visible = not ED.rec.NoBackground
+        bgSwatch.Refresh()
+        borderSwatch.Refresh()
+    end
+
+    -- =====================================================================
+    -- 4) CAPAS
+    -- =====================================================================
+    sectionTitle(Content, "CAPAS", "LAYERS", 6, "Hasta 3 imágenes, cada una con su propio movimiento · la 1 queda atrás", "Up to 3 images, each with its own movement · layer 1 is at the back")
+    local LayersHolder = mk("Frame", { Parent = Content, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 7, ZIndex = Z + 2 })
+    list(LayersHolder, 10)
+    local imageToken = {}
+
+    -- revisa si la imagen carga (ContentProvider) y lo muestra en la píldora de la capa
+    local function checkImage(index, url, pill)
+        imageToken[index] = (imageToken[index] or 0) + 1
+        local my = imageToken[index]
+        local function show(es, en, color)
+            if imageToken[index] ~= my or not pill.Parent then return end
+            L(pill, es, en)
+            pill.BackgroundColor3 = color
+        end
+        if url == "" then
+            show("Sin imagen", "No image", Color3.fromRGB(120, 120, 130))
+            return
+        end
+        show("Cargando...", "Loading...", Color3.fromRGB(200, 150, 40))
+        task.spawn(function()
+            local result = nil
+            pcall(function()
+                ContentProvider:PreloadAsync({ url }, function(_, status)
+                    result = status
+                end)
+            end)
+            if result == Enum.AssetFetchStatus.Success then
+                show("Lista", "Ready", Color3.fromRGB(40, 170, 90))
+            elseif result == Enum.AssetFetchStatus.Failure then
+                show("No carga", "Not loading", Color3.fromRGB(205, 60, 70))
+            else
+                show("Sin respuesta", "No answer", Color3.fromRGB(120, 120, 130))
+            end
+        end)
+    end
+
+    local function layerCard(index)
+        local lay = ED.rec.Layers[index]
+        local c = card(LayersHolder, index)
+        pad(c, 10, 10, 10, 10)
+        list(c, 8)
+
+        -- cabecera: número + estado de la imagen + quitar
+        local head = mk("Frame", { Parent = c, Size = UDim2.new(1, 0, 0, 24), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = Z + 3 })
+        local num = mk("TextLabel", { Parent = head, Size = UDim2.fromOffset(24, 24), BackgroundColor3 = Theme.Accent, Text = tostring(index), TextColor3 = Theme.AccentText, TextSize = 12, Font = Enum.Font.GothamBlack, ZIndex = Z + 4 })
+        num:SetAttribute("ThemeRole", "Accent")
+        num:SetAttribute("ThemeTextRole", "AccentText")
+        num:SetAttribute("IgnoreTextEffect", true)
+        corner(num, 999)
+        label(head, "Capa " .. index, "Layer " .. index, 12, Enum.Font.GothamBlack, "Text", { Size = UDim2.fromOffset(70, 24), Position = UDim2.fromOffset(32, 0), ZIndex = Z + 4 })
+        local pill = mk("TextLabel", { Parent = head, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(100, 3), BackgroundColor3 = Color3.fromRGB(120, 120, 130), TextColor3 = WHITE, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = Z + 4 })
+        pill:SetAttribute("IgnoreTextEffect", true)
+        corner(pill, 999)
+        pad(pill, 0, 8, 8, 0)
+        if #ED.rec.Layers > 1 then
+            local del = button(head, "Quitar", "Remove", "Background", { Size = UDim2.fromOffset(66, 24), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), TextSize = 10 })
+            del.MouseButton1Click:Connect(function()
+                table.remove(ED.rec.Layers, index)
+                rebuildLayerCards()
+                changed()
+            end)
+        end
+
+        -- imagen: miniatura + ID + botón de miniatura (rbxthumb) por si el ID es de un decal
+        local imgRow = mk("Frame", { Parent = c, Size = UDim2.new(1, 0, 0, 48), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
         local thumbBox = mk("Frame", { Parent = imgRow, Size = UDim2.fromOffset(48, 48), BackgroundColor3 = Color3.fromRGB(230, 230, 236), BorderSizePixel = 0, ZIndex = Z + 4 })
         corner(thumbBox, 10)
         local thumb = mk("ImageLabel", { Parent = thumbBox, Size = UDim2.new(1, -6, 1, -6), Position = UDim2.fromOffset(3, 3), BackgroundTransparency = 1, Image = CL.CleanAsset(lay.Image), ImageColor3 = lay.Color or WHITE, ScaleType = Enum.ScaleType.Fit, ZIndex = Z + 5 })
@@ -667,104 +774,4 @@ ex = Z + 3 })
         corner(mk("Frame", { Parent = dot, Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = Z + 4 }), 999)
         label(row, f[1], f[2], 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -22, 1, 0), Position = UDim2.fromOffset(22, 0), ZIndex = Z + 3 })
     end
-    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any executor.", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, 0, 0, 26), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, LayoutOrder = 3, ZIndex = Z + 2 })
-
-    local PBuy = mk("TextButton", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = WHITE, Text = "", LayoutOrder = 4, ZIndex = Z + 3 })
-    corner(PBuy, 12)
-    goldGradient(PBuy, 0)
-    local PBuyText = mk("TextLabel", { Parent = PBuy, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(50, 28, 6), TextSize = 14, Font = Enum.Font.GothamBlack, ZIndex = Z + 4 })
-    PBuyText:SetAttribute("IgnoreTextEffect", true)
-    local PShine = mk("Frame", { Parent = PBuy, Size = UDim2.new(0.25, 0, 1, 0), Position = UDim2.fromScale(-0.3, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.6, BorderSizePixel = 0, Rotation = 0, ZIndex = Z + 4 })
-    mk("UIGradient", { Parent = PShine, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }) })
-    PBuy.ClipsDescendants = true
-    TweenService:Create(PShine, TweenInfo.new(2.2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, false, 0.8), { Position = UDim2.fromScale(1.1, 0) }):Play()
-    RowKit.Control(PBuy)
-    PBuy.BackgroundColor3 = WHITE
-    PBuy.BackgroundTransparency = 0
-    PBuy:SetAttribute("ThemeRole", nil)
-    local PCheck = button(RightCol, "Ya lo compré · verificar", "I already bought it · verify", "Secondary", { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 5, TextSize = 12 })
-    local PStatus = label(RightCol, "", "", 10, Enum.Font.GothamBold, "TextDim", { Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 6, ZIndex = Z + 2 })
-
-    local function refreshBuyText()
-        if PR.price then
-            L(PBuyText, "Comprar · R$ " .. PR.price, "Buy · R$ " .. PR.price)
-        else
-            L(PBuyText, "Comprar en Roblox", "Buy on Roblox")
-        end
-    end
-    local function closeSheet()
-        TweenService:Create(PScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.92 }):Play()
-        task.delay(0.14, function() PSheet.Visible = false end)
-        stopDemo()
-    end
-    local function showSheet()
-        refreshBuyText()
-        if PR.checking then
-            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
-        else
-            L(PStatus, "", "")
-        end
-        PSheet.Visible = true
-        startDemo()
-        PScale.Scale = 0.9
-        TweenService:Create(PScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-    end
-    PClose.MouseButton1Click:Connect(closeSheet)
-    PBuy.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.6)
-        local ok = pcall(function()
-            MPS:PromptGamePassPurchase(LocalPlayer, PASS_ID)
-        end)
-        if type(setclipboard) == "function" then pcall(setclipboard, PASS_URL) end
-        if ok then
-            L(PStatus, "Se abrió la compra de Roblox · el link también quedó copiado", "Roblox purchase opened · link also copied")
-        else
-            L(PStatus, "Link copiado: compralo en el navegador y tocá Ya lo compré", "Link copied: buy it in the browser and tap I already bought it")
-        end
-    end)
-    PCheck.MouseButton1Click:Connect(function()
-        L(PStatus, "Verificando tu cuenta...", "Checking your account...")
-        PR.check()
-    end)
-
-    -- entrada única al editor: sin el pase se muestra la hoja premium
-    local function guardedOpen(id)
-        if PR.owned then
-            openEditor(id)
-        else
-            showSheet()
-        end
-    end
-    LS.Open = guardedOpen
-    LS.Premium = PR
-    FloatingPillV5.Studio.SetPremium(PR, showSheet) -- el mismo pase desbloquea el Estudio de Toggles Flotantes
-    -- la hoja reacciona cuando termina una verificación o una compra
-    table.insert(PR.listeners, function(owned)
-        if not PSheet.Visible then return end
-        refreshBuyText()
-        if PR.checking then
-            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
-        elseif owned then
-            L(PStatus, "¡Listo! Ya tenés el Studio Logos", "Done! You now have Studio Logos")
-            playSound(Sounds.Click, 0.6)
-            task.delay(0.9, closeSheet)
-        else
-            L(PStatus, "Todavía no figura la compra en tu cuenta", "The purchase isn't on your account yet")
-        end
-    end)
-
-    -- =====================================================================
-    -- PESTAÑA LOGO: sección "MIS LOGOS"
-    -- =====================================================================
-    local function header(order, es, en, subEs, subEn)
-        local h = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11 })
-        local t = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(4, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
-        t:SetAttribute("ThemeTextRole", "Text")
-        L(t, es, en)
-        local d = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 13), Position = UDim2.fromOffset(4, 19), BackgroundTransparency = 1, TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12 })
-        d:SetAttribute("ThemeTextRole", "TextDim")
-        d:SetAttribute("IgnoreTextEffect", true)
-        L(d, subEs, subEn)
-        return h, d
-    end
-   
+    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any executor.", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, 0, 0, 26), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, LayoutOrder = 3

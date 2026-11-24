@@ -1,4 +1,91 @@
-t * 0.05, biggest * 1.08)
+dulo: se inclina al revés del movimiento y oscila al frenar
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, math.clamp(hv.X * 5, -60, 60), 90, 7, dt)
+                            ctl.pitch, ctl.pitchV = spring(ctl.pitch, ctl.pitchV, math.clamp(-hv.Y * 3, -35, 35), 80, 7, dt)
+                            local wob = math.clamp(ctl.holdVel.Magnitude / 10, 0.18, 1)
+                            HomeAnim.Apply(rig, heldPose(t, wob))
+                            env.model:PivotTo(CFrame.new(ctl.hold) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)) * CFrame.new(0, -holdOffset(), 0))
+                            moveShadow(ctl.hold, ctl.hold.Y - holdOffset() - env.standY)
+                        elseif ctl.state == "fall" then
+                            local g = env.H * 14 -- gravedad proporcional al tamaño (se siente igual en R6 y R15)
+                            ctl.vel = Vector3.new(ctl.vel.X * (1 - math.min(1, dt * 1.5)), ctl.vel.Y - g * dt, 0)
+                            ctl.pos = ctl.pos + ctl.vel * dt
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, 0, 40, 5, dt)
+                            HomeAnim.Apply(rig, fallPose(t))
+                            if ctl.pos.Y <= env.standY then
+                                ctl.pos = Vector3.new(ctl.pos.X, env.standY, ctl.pos.Z)
+                                ctl.state, ctl.stateT = "land", 0
+                            end
+                            env.model:PivotTo(CFrame.new(ctl.pos) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)))
+                            moveShadow(ctl.pos, ctl.pos.Y - env.standY)
+                        elseif ctl.state == "land" then
+                            ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, 0, 60, 8, dt)
+                            HomeAnim.Apply(rig, landPose(ctl.stateT / 0.5))
+                            env.model:PivotTo(CFrame.new(ctl.pos) * face * CFrame.Angles(0, 0, math.rad(ctl.roll)))
+                            moveShadow(ctl.pos, 0)
+                            if ctl.stateT >= 0.55 then
+                                ctl.state, ctl.stateT = "walk", 0
+                                ctl.walkPhase = 0
+                                ctl.walkFace = face
+                            end
+                        elseif ctl.state == "walk" then
+                            local home = env.home.Position
+                            local to = Vector3.new(home.X - ctl.pos.X, 0, home.Z - ctl.pos.Z)
+                            local dist = to.Magnitude
+                            if dist < 0.15 then
+                                ctl.pos = Vector3.new(home.X, env.standY, home.Z)
+                                ctl.state, ctl.stateT = "sitdown", 0
+                                ctl.fromFace = ctl.walkFace
+                            else
+                                local speed = env.H * 1.3
+                                local stepLen = math.min(dist, speed * dt)
+                                ctl.pos = ctl.pos + to.Unit * stepLen
+                                -- gira de a poco hacia donde camina
+                                local want = CFrame.new(Vector3.new(), to.Unit)
+                                ctl.walkFace = ctl.walkFace:Lerp(want, math.min(1, dt * 8))
+                                ctl.walkPhase += dt * 11
+                                HomeAnim.Apply(rig, walkPose(ctl.walkPhase))
+                                env.model:PivotTo(CFrame.new(ctl.pos) * ctl.walkFace)
+                                moveShadow(ctl.pos, 0)
+                            end
+                        elseif ctl.state == "sitdown" then
+                            -- se da vuelta hacia la cámara y se sienta igual que antes
+                            local u = math.clamp(ctl.stateT / 0.7, 0, 1)
+                            local e = ease(u)
+                            HomeAnim.Apply(rig, lerpPose({}, sitPose(t), e))
+                            env.model:PivotTo(CFrame.new(ctl.pos) * ctl.fromFace:Lerp(face, e))
+                            if u >= 1 then
+                                ctl.state, ctl.stateT = "sit", 0
+                                ctl.roll, ctl.rollV, ctl.pitch, ctl.pitchV = 0, 0, 0, 0
+                                env.model:PivotTo(env.home)
+                                moveShadow(env.home.Position, 0)
+                            end
+                        end
+                    end
+                    return ctl
+                end
+
+                local model = getSourceModel()
+                if model then
+                    model.Name = "HomeAvatarModel"
+                    cleanModel(model)
+                    model.Parent = World
+
+                    local root = model:FindFirstChild("HumanoidRootPart") or model:FindFirstChild("UpperTorso") or model:FindFirstChild("Torso")
+                    if root and model.PrimaryPart == nil then
+                        pcall(function() model.PrimaryPart = root end)
+                    end
+
+                    pcall(function()
+                        model:PivotTo(CFrame.new(0, 0, 0) * CFrame.Angles(0, math.rad(180), 0))
+                    end)
+
+                    local okBox, cf, size = pcall(function()
+                        return model:GetBoundingBox()
+                    end)
+                    if okBox and cf and size then
+                        local biggest = math.max(size.X, size.Y, size.Z)
+                        local focus = cf.Position + Vector3.new(0, size.Y * 0.22, 0)
+                        local camPos = focus + Vector3.new(0.25, -biggest * 0.05, biggest * 1.08)
                         Camera.CFrame = CFrame.new(camPos, focus)
                     else
                         Camera.CFrame = CFrame.new(Vector3.new(0.25, 2.0, 5.0), Vector3.new(0, 3.0, 0))
@@ -764,110 +851,4 @@ t * 0.05, biggest * 1.08)
             end)
         end
         if self._RefreshTabIconLayout then
-            self._RefreshTabIconLayout()
-        end
-
-        if BackgroundArt then
-            BackgroundArt.Visible = true
-        end
-
-        if BackgroundArt then
-            pcall(function()
-                local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
-                local videoData = ThemeBackgroundVideos[themeName]
-                if themeData and themeData.Video and themeData.Video ~= "" then
-                    local rawVideoId = tostring(themeData.Video):match("^%s*(.-)%s*$")
-                    local numericVideoId = rawVideoId and rawVideoId:match("(%d+)")
-                    local normalizedVideoId = numericVideoId and ("rbxassetid://" .. numericVideoId) or rawVideoId
-                    videoData = {
-                        Id = normalizedVideoId,
-                        Ids = {normalizedVideoId},
-                        Looped = themeData.VideoLooped ~= false,
-                        Volume = math.clamp(tonumber(themeData.VideoVolume) or 0, 0, 1),
-                    }
-                end
-
-                local function applyImages()
-                    if not BackgroundArt or not BackgroundArt.Parent then return end
-                    BackgroundArt.Visible = true
-                    if self._themeSprite then return end
-                    if not (themeData and themeData.Images and #themeData.Images > 1) then
-                        BackgroundArt.Image = (themeData and themeData.Background) or ThemeBackgroundImages[themeName] or ""
-                        return
-                    end
-
-                    local token = self._slideshowToken
-                    local images = themeData.Images
-                    local interval = tonumber(themeData.ImageInterval) or 5
-                    BackgroundArt.Image = images[1]
-                    task.spawn(function()
-                        local i = 1
-                        while self._slideshowToken == token and self._videoToken == mediaToken do
-                            task.wait(interval)
-                            if self._slideshowToken ~= token or self._videoToken ~= mediaToken then break end
-                            i = (i % #images) + 1
-                            if BackgroundArt and BackgroundArt.Parent and BackgroundArt.Visible then
-                                BackgroundArt.Image = images[i]
-                            end
-                        end
-                    end)
-                end
-
-                if videoData and videoData.Id and BackgroundVideo then
-                    local candidates = videoData.Ids or {videoData.Id}
-                    local candidateIndex = 1
-                    local activated = false
-                    local finished = false
-
-                    local function markFailure(videoId)
-                        self._videoFailureCache[videoId] = true
-                    end
-
-                    local function activateVideo()
-                        if activated or self._videoToken ~= mediaToken then return end
-                        activated = true
-                        finished = true
-                        BackgroundArt.Visible = false
-                        BackgroundVideo.Visible = true
-                        if not PerfOpt.Flags.StaticBackground then
-                            pcall(function() BackgroundVideo:Play() end)
-                        end
-                        print("Video de fondo reproduciendo: " .. tostring(BackgroundVideo.Video))
-                    end
-
-                    local function tryNextVideo()
-                        if activated or finished or self._videoToken ~= mediaToken then return end
-                        while candidateIndex <= #candidates and self._videoFailureCache[candidates[candidateIndex]] do
-                            candidateIndex = candidateIndex + 1
-                        end
-                        if candidateIndex > #candidates then
-                            finished = true
-                            BackgroundVideo.Visible = false
-                            BackgroundArt.Visible = true
-                            print("Videos de J1 no disponibles; se mantiene el fondo de imagen")
-                            return
-                        end
-
-                        local videoId = candidates[candidateIndex]
-                        candidateIndex = candidateIndex + 1
-                        local loaded = false
-                        pcall(function()
-                            BackgroundVideo:Pause()
-                            BackgroundVideo.Playing = false
-                            BackgroundVideo.Visible = false
-                            BackgroundVideo.Looped = videoData.Looped ~= false
-                            BackgroundVideo.Volume = math.clamp(tonumber(videoData.Volume) or 0, 0, 1)
-                            BackgroundVideo.Video = videoId
-                            self._videoConnection = BackgroundVideo.Loaded:Connect(function()
-                                loaded = true
-                                activateVideo()
-                            end)
-                        end)
-                        print("Video de fondo solicitado: " .. tostring(videoId))
-
-                        task.spawn(function()
-                            local deadline = tick() + 6
-                            while self._videoToken == mediaToken and BackgroundVideo.Parent and not loaded and not BackgroundVideo.IsLoaded and tick() < deadline do
-                                task.wait(0.15)
-                            end
-                       
+  

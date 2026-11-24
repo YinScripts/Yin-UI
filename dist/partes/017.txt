@@ -1,4 +1,4 @@
-e
+
                 dragStart = input.Position
                 startPos = Main.Position
             end
@@ -1018,4 +1018,4 @@ e
 
         for index, item in ipairs(TabIconCarousel.Items) do
             local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
-            item.Button.Position = 
+            item.Button.Position = U

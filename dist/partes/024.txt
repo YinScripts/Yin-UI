@@ -1,4 +1,110 @@
-     if self._videoToken ~= mediaToken or activated then return end
+          self._RefreshTabIconLayout()
+        end
+
+        if BackgroundArt then
+            BackgroundArt.Visible = true
+        end
+
+        if BackgroundArt then
+            pcall(function()
+                local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[themeName]
+                local videoData = ThemeBackgroundVideos[themeName]
+                if themeData and themeData.Video and themeData.Video ~= "" then
+                    local rawVideoId = tostring(themeData.Video):match("^%s*(.-)%s*$")
+                    local numericVideoId = rawVideoId and rawVideoId:match("(%d+)")
+                    local normalizedVideoId = numericVideoId and ("rbxassetid://" .. numericVideoId) or rawVideoId
+                    videoData = {
+                        Id = normalizedVideoId,
+                        Ids = {normalizedVideoId},
+                        Looped = themeData.VideoLooped ~= false,
+                        Volume = math.clamp(tonumber(themeData.VideoVolume) or 0, 0, 1),
+                    }
+                end
+
+                local function applyImages()
+                    if not BackgroundArt or not BackgroundArt.Parent then return end
+                    BackgroundArt.Visible = true
+                    if self._themeSprite then return end
+                    if not (themeData and themeData.Images and #themeData.Images > 1) then
+                        BackgroundArt.Image = (themeData and themeData.Background) or ThemeBackgroundImages[themeName] or ""
+                        return
+                    end
+
+                    local token = self._slideshowToken
+                    local images = themeData.Images
+                    local interval = tonumber(themeData.ImageInterval) or 5
+                    BackgroundArt.Image = images[1]
+                    task.spawn(function()
+                        local i = 1
+                        while self._slideshowToken == token and self._videoToken == mediaToken do
+                            task.wait(interval)
+                            if self._slideshowToken ~= token or self._videoToken ~= mediaToken then break end
+                            i = (i % #images) + 1
+                            if BackgroundArt and BackgroundArt.Parent and BackgroundArt.Visible then
+                                BackgroundArt.Image = images[i]
+                            end
+                        end
+                    end)
+                end
+
+                if videoData and videoData.Id and BackgroundVideo then
+                    local candidates = videoData.Ids or {videoData.Id}
+                    local candidateIndex = 1
+                    local activated = false
+                    local finished = false
+
+                    local function markFailure(videoId)
+                        self._videoFailureCache[videoId] = true
+                    end
+
+                    local function activateVideo()
+                        if activated or self._videoToken ~= mediaToken then return end
+                        activated = true
+                        finished = true
+                        BackgroundArt.Visible = false
+                        BackgroundVideo.Visible = true
+                        if not PerfOpt.Flags.StaticBackground then
+                            pcall(function() BackgroundVideo:Play() end)
+                        end
+                        print("Video de fondo reproduciendo: " .. tostring(BackgroundVideo.Video))
+                    end
+
+                    local function tryNextVideo()
+                        if activated or finished or self._videoToken ~= mediaToken then return end
+                        while candidateIndex <= #candidates and self._videoFailureCache[candidates[candidateIndex]] do
+                            candidateIndex = candidateIndex + 1
+                        end
+                        if candidateIndex > #candidates then
+                            finished = true
+                            BackgroundVideo.Visible = false
+                            BackgroundArt.Visible = true
+                            print("Videos de J1 no disponibles; se mantiene el fondo de imagen")
+                            return
+                        end
+
+                        local videoId = candidates[candidateIndex]
+                        candidateIndex = candidateIndex + 1
+                        local loaded = false
+                        pcall(function()
+                            BackgroundVideo:Pause()
+                            BackgroundVideo.Playing = false
+                            BackgroundVideo.Visible = false
+                            BackgroundVideo.Looped = videoData.Looped ~= false
+                            BackgroundVideo.Volume = math.clamp(tonumber(videoData.Volume) or 0, 0, 1)
+                            BackgroundVideo.Video = videoId
+                            self._videoConnection = BackgroundVideo.Loaded:Connect(function()
+                                loaded = true
+                                activateVideo()
+                            end)
+                        end)
+                        print("Video de fondo solicitado: " .. tostring(videoId))
+
+                        task.spawn(function()
+                            local deadline = tick() + 6
+                            while self._videoToken == mediaToken and BackgroundVideo.Parent and not loaded and not BackgroundVideo.IsLoaded and tick() < deadline do
+                                task.wait(0.15)
+                            end
+                            if self._videoToken ~= mediaToken or activated then return end
                             if BackgroundVideo.IsLoaded then
                                 activateVideo()
                             else
@@ -929,115 +1035,4 @@
                 TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
             })
             SumText:SetAttribute("ThemeTextRole", "Text")
-            local SumSub = mk("TextLabel", {
-                Parent = Summary, Size = UDim2.new(1, -190, 0, 14), Position = UDim2.new(0, 78, 0, 28), BackgroundTransparency = 1,
-                Text = "", TextColor3 = Theme.TextDim, Font = Enum.Font.GothamMedium, TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
-            })
-            SumSub:SetAttribute("ThemeTextRole", "TextDim")
-
-            local function quickButton(es, en, xOffset)
-                local b = mk("TextButton", {
-                    Parent = Summary, Size = UDim2.fromOffset(52, 26), AnchorPoint = Vector2.new(1, 0.5),
-                    Position = UDim2.new(1, xOffset, 0.5, 0), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25,
-                    Text = GetText(es, en), TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 10,
-                    AutoButtonColor = false, ZIndex = 504,
-                })
-                b:SetAttribute("ThemeRole", "Background")
-                b:SetAttribute("ThemeTextRole", "Text")
-                setBilingual(b, es, en)
-                corner(b, 999)
-                stroke(b, Theme.Stroke, 1, 0.55)
-                return b
-            end
-            local AllBtn = quickButton("Todas", "All", -66)
-            local NoneBtn = quickButton("Ninguna", "None", -8)
-
-            local ListScroll = mk("ScrollingFrame", {
-                Parent = Panel,
-                Size = UDim2.new(1, -32, 1, -216),
-                Position = UDim2.new(0, 16, 0, 148),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ScrollBarThickness = 3,
-                ScrollBarImageColor3 = Theme.Accent,
-                AutomaticCanvasSize = Enum.AutomaticSize.Y,
-                CanvasSize = UDim2.new(0, 0, 0, 0),
-                ZIndex = 502,
-            })
-            mk("UIListLayout", {
-                Parent = ListScroll,
-                SortOrder = Enum.SortOrder.LayoutOrder,
-                Padding = UDim.new(0, 6),
-            })
-            mk("UIPadding", {Parent = ListScroll, PaddingRight = UDim.new(0, 6), PaddingTop = UDim.new(0, 2), PaddingBottom = UDim.new(0, 2)})
-
-            local _, ExportBtn, setStatus = addFooter(Panel, -52, "Exportar y copiar", "Export & copy", 160)
-
-            if #tabNames == 0 then
-                local Empty = mk("TextLabel", {
-                    Parent = ListScroll,
-                    Size = UDim2.new(1, 0, 0, 60),
-                    BackgroundTransparency = 1,
-                    Text = GetText("No hay sliders para exportar todavía.", "There are no sliders to export yet."),
-                    TextColor3 = Theme.TextDim,
-                    Font = Enum.Font.GothamMedium,
-                    TextSize = 12,
-                    TextWrapped = true,
-                    ZIndex = 503,
-                })
-                Empty:SetAttribute("ThemeTextRole", "TextDim")
-                setBilingual(Empty, "No hay sliders para exportar todavía.", "There are no sliders to export yet.")
-            end
-
-            local rowsUI = {}
-            local function refreshSummary()
-                local total, tabsOn = 0, 0
-                for _, name in ipairs(tabNames) do
-                    if checked[name] then
-                        total = total + (tabCount[name] or 0)
-                        tabsOn = tabsOn + 1
-                    end
-                end
-                BigNum.Text = tostring(total)
-                SumText.Text = GetText("ajustes para exportar", "settings to export")
-                SumSub.Text = GetText(tabsOn .. " de " .. #tabNames .. " pestañas", tabsOn .. " of " .. #tabNames .. " tabs")
-                ExportBtn.BackgroundTransparency = total > 0 and 0 or 0.5
-            end
-
-            local function paintRow(r, animate)
-                local on = checked[r.name]
-                local info = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-                TweenService:Create(r.box, info, {BackgroundColor3 = on and Theme.Accent or Theme.Background, BackgroundTransparency = on and 0 or 0.2}):Play()
-                r.box:SetAttribute("ThemeRole", on and "Accent" or "Background")
-                r.mark.Visible = on
-                r.stroke.Color = on and Theme.Accent or Theme.Stroke
-                r.stroke.Transparency = on and 0.25 or 0.6
-                r.stroke:SetAttribute("ThemeRole", on and "Accent" or "Stroke")
-                r.row.BackgroundTransparency = on and 0.2 or 0.5
-            end
-
-            for i, tabName in ipairs(tabNames) do
-                local Row = mk("Frame", {
-                    Parent = ListScroll,
-                    Size = UDim2.new(1, 0, 0, 46),
-                    BackgroundColor3 = Theme.Secondary,
-                    BackgroundTransparency = 0.2,
-                    BorderSizePixel = 0,
-                    LayoutOrder = i,
-                    ZIndex = 503,
-                })
-                Row:SetAttribute("ThemeRole", "Secondary")
-                corner(Row, 12)
-                local rowStroke = stroke(Row, Theme.Accent, 1.2, 0.25)
-
-                local Box = mk("Frame", {
-                    Parent = Row,
-                    Size = UDim2.fromOffset(22, 22),
-                    Position = UDim2.new(0, 12, 0.5, -11),
-                    BackgroundColor3 = Theme.Accent,
-                    BorderSizePixel = 0,
-                    ZIndex = 504,
-                })
-                corner(Box, 7)
-                stroke(Box, Theme.
+            

@@ -1,4 +1,117 @@
-Service:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
+tion = UDim2.new(0, 1, 0, 1),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.82,
+                ZIndex = 10
+            })
+            corner(TrackShadow, 999)
+
+            local KnobShadow = mk("Frame", {
+                Parent = Switch,
+                Size = UDim2.new(0, 24, 0, 24),
+                Position = state and UDim2.new(1, -27, 0.5, -11) or UDim2.new(0, 3, 0.5, -11),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.55,
+                ZIndex = 11
+            })
+            corner(KnobShadow, 999)
+
+            local Knob = mk("Frame", {
+                Parent = Switch,
+                Size = UDim2.new(0, 24, 0, 24),
+                Position = state and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                ZIndex = 12
+            })
+            corner(Knob, 999)
+
+            local Click = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 13
+            })
+
+            if hasBadge then
+                local credAvatarSize = 60
+                local credGap        = 10
+                local credNameH      = 18
+                local credBlockH     = credAvatarSize + credGap + credNameH
+                local credTopPad     = math.max(0, (holderH - credBlockH) / 2)
+                local credAvatarTop  = credTopPad
+                local credNameTop    = credTopPad + credAvatarSize + credGap
+
+                if credit.imageId then
+                    local avatarRing = mk("Frame", {
+                        Parent = Holder,
+                        Size = UDim2.new(0, credAvatarSize, 0, credAvatarSize),
+                        Position = UDim2.new(1, -134, 0, credAvatarTop),
+                        BackgroundColor3 = Theme.Secondary,
+                        ZIndex = 10
+                    })
+                    avatarRing:SetAttribute("ThemeRole", "Secondary")
+                    corner(avatarRing, 999)
+                    stroke(avatarRing, Theme.Stroke, 2.5, 0.30)
+
+                    local avatarImg = mk("ImageLabel", {
+                        Parent = avatarRing,
+                        Size = UDim2.new(1, -4, 1, -4),
+                        Position = UDim2.new(0, 2, 0, 2),
+                        BackgroundTransparency = 1,
+                        Image = credit.imageId,
+                        ZIndex = 11
+                    })
+                    corner(avatarImg, 999)
+                end
+
+                if credit.name then
+                    mk("TextLabel", {
+                        Parent = Holder,
+                        Size = UDim2.new(0, 78, 0, credNameH),
+                        Position = UDim2.new(1, -142, 0, credNameTop),
+                        BackgroundTransparency = 1,
+                        Text = credit.name,
+                        TextColor3 = Theme.Text,
+                        Font = Enum.Font.GothamBold,
+                        TextSize = 14,
+                        TextXAlignment = Enum.TextXAlignment.Center,
+                        TextTruncate = Enum.TextTruncate.AtEnd,
+                        ZIndex = 10
+                    }):SetAttribute("ThemeTextRole", "Text")
+                end
+            end
+
+            local knobOFF       = UDim2.new(0, 2,  0.5, -12)
+            local knobON        = UDim2.new(1, -26, 0.5, -12)
+            local shadowOFF     = UDim2.new(0, 3,  0.5, -11)
+            local shadowON      = UDim2.new(1, -27, 0.5, -11)
+            local knobNormal    = UDim2.new(0, 24, 0, 24)
+            local knobSquishON  = UDim2.new(0, 30, 0, 22)
+            local knobSquishOFF = UDim2.new(0, 30, 0, 22)
+
+            local function applyVisual(newState, animate)
+                local t = animate and 0.18 or 0
+                local ti = TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+
+                local trackColor = newState and Theme.ToggleOn or Theme.AccentOff
+                local barColor   = newState and Theme.ToggleOn or Theme.AccentOff
+                TweenService:Create(Switch,     ti, {BackgroundColor3 = trackColor}):Play()
+                TweenService:Create(AccentBar,  ti, {BackgroundColor3 = barColor}):Play()
+                Switch:SetAttribute("ThemeRole",    newState and "ToggleOn" or "AccentOff")
+                AccentBar:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
+
+                local stateText  = "●  " .. (newState and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"))
+                local stateColor = newState and Theme.ToggleOn or Theme.TextDim
+                StateLabel.Text = stateText
+                TweenService:Create(StateLabel, ti, {TextColor3 = stateColor, BackgroundColor3 = newState and Theme.ToggleOn or Theme.AccentOff}):Play()
+                StateLabel:SetAttribute("ThemeTextRole", newState and "ToggleOn" or "TextDim")
+                StateLabel:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
+                TweenService:Create(HolderStroke, ti, {Color = newState and Theme.ToggleOn or Theme.Stroke, Transparency = newState and 0.35 or 0.55}):Play()
+                HolderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
+
+                if animate then
+                    local squishSize = newState and knobSquishON or knobSquishOFF
+                    TweenService:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.EasingDirection.In),
                         {Size = squishSize}):Play()
                     task.delay(0.08, function()
                         TweenService:Create(Knob,       ti, {Size = knobNormal,
@@ -892,141 +1005,4 @@ Service:Create(Knob,       TweenInfo.new(0.08, Enum.EasingStyle.Quad, Enum.Easin
                 Fire = function()
                     if not onCooldown then
                         pcall(cb)
-                        startCooldown()
-                    end
-                end,
-                SetCooldown = function(secs)
-                    cooldown = secs or cooldown
-                end,
-                SyncExternalState = syncExternalState,
-            }
-        end
-
-        function Tab:CreateSlider(text, min, max, default, callback, isMirror)
-            local value = default or min
-            local pendingValue = value
-            local isDragging = false
-            local lastUpdateTime = 0
-            local UPDATE_THROTTLE = 0.008
-
-            local Carousel = nil
-            local children = TabPage:GetChildren()
-            for i = #children, 1, -1 do
-                local child = children[i]
-                if child:IsA("GuiObject") then
-                    if child:GetAttribute("IsSliderCarouselSection") and Tab._LastSliderCarousel
-                    and Tab._LastSliderCarousel.Section == child then
-                        Carousel = Tab._LastSliderCarousel
-                    end
-                    break
-                end
-            end
-
-            if not Carousel then
-                local SliderSection = mk("Frame", {
-                    Parent = TabPage,
-                    Size = UDim2.new(1, 0, 0, 134),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 9
-                })
-                SliderSection:SetAttribute("IsSliderCarouselSection", true)
-
-                local Viewport = mk("Frame", {
-                    Parent = SliderSection,
-                    Size = UDim2.new(1, -8, 0, 110),
-                    Position = UDim2.new(0, 4, 0, 0),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ClipsDescendants = true,
-                    ZIndex = 10
-                })
-
-                local PrevBtn = mk("TextButton", {
-                    Parent = Viewport,
-                    Size = UDim2.new(0, 38, 0, 38),
-                    Position = UDim2.new(0, 4, 0.5, -19),
-                    BackgroundColor3 = Theme.Background,
-                    BackgroundTransparency = 0.18,
-                    BorderSizePixel = 0,
-                    Text = "‹",
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 30,
-                    AutoButtonColor = false,
-                    ZIndex = 60
-                })
-                corner(PrevBtn, 19)
-                stroke(PrevBtn, Theme.Stroke, 1, 0.5)
-
-                local NextBtn = mk("TextButton", {
-                    Parent = Viewport,
-                    Size = UDim2.new(0, 38, 0, 38),
-                    Position = UDim2.new(1, -42, 0.5, -19),
-                    BackgroundColor3 = Theme.Background,
-                    BackgroundTransparency = 0.18,
-                    BorderSizePixel = 0,
-                    Text = "›",
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 30,
-                    AutoButtonColor = false,
-                    ZIndex = 60
-                })
-                corner(NextBtn, 19)
-                stroke(NextBtn, Theme.Stroke, 1, 0.5)
-
-                local DotHolder = mk("Frame", {
-                    Parent = SliderSection,
-                    Size = UDim2.new(1, -80, 0, 16),
-                    Position = UDim2.new(0, 40, 0, 114),
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 60
-                })
-                mk("UIListLayout", {
-                    Parent = DotHolder,
-                    FillDirection = Enum.FillDirection.Horizontal,
-                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
-                    VerticalAlignment = Enum.VerticalAlignment.Center,
-                    Padding = UDim.new(0, 6),
-                    SortOrder = Enum.SortOrder.LayoutOrder
-                })
-
-                Carousel = {
-                    Section = SliderSection,
-                    Viewport = Viewport,
-                    PrevBtn = PrevBtn,
-                    NextBtn = NextBtn,
-                    DotHolder = DotHolder,
-                    Cards = {},
-                    Dots = {},
-                    ActiveIndex = 1,
-                    Reflow = nil,
-                    GoTo = nil,
-                }
-                Tab._LastSliderCarousel = Carousel
-
-                local function refreshDots()
-                    local count = #Carousel.Cards
-                    for i, dot in ipairs(Carousel.Dots) do
-                        dot.BackgroundColor3 = (i == Carousel.ActiveIndex) and Theme.Text or Theme.AccentOff
-                        dot.BackgroundTransparency = (i == Carousel.ActiveIndex) and 0 or 0.35
-                        dot.Size = (i == Carousel.ActiveIndex)
-                            and UDim2.new(0, 20, 0, 7)
-                            or UDim2.new(0, 7, 0, 7)
-                    end
-                    Carousel.PrevBtn.Visible = count > 1
-                    Carousel.NextBtn.Visible = count > 1
-                    Carousel.DotHolder.Visible = count > 1
-                end
-
-                local function reflow()
-                    local count = #Carousel.Cards
-                    if count == 0 then
-                        refreshDots()
-                        return
-                    end
-
-                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
-                    local cardWidth = math.clamp(viewportWidth * 0.52, 240
+                        startCool

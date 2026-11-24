@@ -1,4 +1,4 @@
-e.Cubic, Enum.EasingDirection.In),
+.Cubic, Enum.EasingDirection.In),
             { BackgroundTransparency = 1 }
         )
 
@@ -1131,4 +1131,4 @@ e.Cubic, Enum.EasingDirection.In),
         local dragStart, startPos
         TopBar.InputBegan:Connect(function(input)
             if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
-                drag = tru
+                drag = true

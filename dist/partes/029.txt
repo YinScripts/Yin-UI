@@ -1,4 +1,149 @@
-lf.MirrorScanElapsed = self.MirrorScanElapsed + delta
+          self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetStripTexturesEnabled(enabled)
+        self.StripTextures = enabled == true
+        if not self.StripTextures then
+            self:_restoreTextures()
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetObjectMirrorEnabled(enabled)
+        self.ObjectMirrorEnabled = enabled == true
+        if not self.ObjectMirrorEnabled then
+            self:_clearMirror()
+        elseif self.Enabled then
+            self.MirrorScanElapsed = 0
+            self:_refreshMirror()
+        end
+    end
+
+    function ShaderReflections:SetContactStrength(value)
+        self.ContactStrength = math.clamp(tonumber(value) or self.ContactStrength, 0.05, 0.60)
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetContactEnabled(enabled)
+        self.ContactEnabled = enabled == true
+        self:_refreshContact()
+    end
+
+    function ShaderReflections:SetModelDetailEnabled(enabled)
+        self.ModelDetailEnabled = enabled == true
+        if not self.ModelDetailEnabled then
+            for part in pairs(self.ModelApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+            end
+            self.ModelApplied = {}
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            self:Refresh()
+        end
+    end
+
+    function ShaderReflections:SetCharacterSpecularEnabled(enabled)
+        self.CharacterSpecularEnabled = enabled == true
+        if not self.CharacterSpecularEnabled then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetExcludeLocalAvatar(enabled)
+        self.ExcludeLocalAvatar = enabled == true
+        if self.ExcludeLocalAvatar then
+            for part in pairs(self.CharacterApplied) do
+                local original = self.Original[part]
+                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
+                self.Original[part] = nil
+                self.Applied[part] = nil
+                self.ModelApplied[part] = nil
+            end
+            self.CharacterApplied = {}
+        end
+        self:_refreshContact()
+        if self.Enabled then self:Refresh() end
+    end
+
+    function ShaderReflections:SetShadowEnabled(enabled)
+        enabled = enabled == true
+        if self.ShadowEnabled == enabled then
+            if enabled then self:_refreshSceneShadows() else self:_clearSceneShadows() end
+            return
+        end
+        self.ShadowEnabled = enabled
+        if not enabled then
+            self:_clearSceneShadows()
+            return
+        end
+        self.ShadowElapsed = 0
+        self.ShadowConnection = RunService.Heartbeat:Connect(function(delta)
+            self.ShadowElapsed = self.ShadowElapsed + delta
+            if self.ShadowElapsed >= 0.34 then
+                self.ShadowElapsed = 0
+                self:_refreshSceneShadows()
+            end
+        end)
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:SetShadowStrength(value)
+        self.ShadowStrength = math.clamp(tonumber(value) or self.ShadowStrength, 0.05, 0.70)
+        self:_refreshSceneShadows()
+    end
+
+    function ShaderReflections:SetEnabled(enabled)
+        enabled = enabled == true
+        if self.Enabled == enabled then
+            if enabled then self:Refresh() end
+            return
+        end
+        self.Enabled = enabled
+        if not enabled then
+            if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
+            if self.CharacterConn then self.CharacterConn:Disconnect(); self.CharacterConn = nil end
+            self:Restore()
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+            return
+        end
+        self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+        self:Refresh()
+        self:QueueSceneCoverage()
+        self.Elapsed = 0
+        self.Connection = RunService.Heartbeat:Connect(function(delta)
+            self.Elapsed = self.Elapsed + delta
+            self.ContactElapsed = self.ContactElapsed + delta
+            self.SceneElapsed = self.SceneElapsed + delta
+            if self.SceneElapsed >= 0.08 then
+                self.SceneElapsed = 0
+                self:_processSceneCoverage(90)
+            end
+            if self.ContactElapsed >= 0.12 then
+                self.ContactElapsed = 0
+                self:_refreshContact()
+            end
+            if self.ShadowElapsed >= 0.34 and not self.ShadowConnection then
+                self.ShadowElapsed = 0
+                self:_refreshSceneShadows()
+            end
+            self.MirrorScanElapsed = self.MirrorScanElapsed + delta
             self.MirrorStepElapsed = self.MirrorStepElapsed + delta
             if self.ObjectMirrorEnabled then
                 if self.MirrorScanElapsed >= 0.5 then
@@ -848,131 +993,4 @@ lf.MirrorScanElapsed = self.MirrorScanElapsed + delta
                 pcall(function()
                     lighting.Brightness = base.Brightness + 0.35 * k
                     lighting.ExposureCompensation = base.ExposureCompensation + 0.1 * k
-                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
-                    lighting.Ambient = base.Ambient
-                end)
-                setBolt(pulse == pulses)
-                task.wait(self.Random:NextNumber(0.05, 0.15))
-            end
-            if token ~= self.FlashToken then return end
-            setBolt(false)
-            if bolt then pcall(function() bolt:Destroy() end) end
-            if self.BoltFolder == bolt then self.BoltFolder = nil end
-            TweenService:Create(lighting, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), base):Play()
-            task.delay(0.55, function()
-                if token == self.FlashToken then self.FlashBase = nil end
-            end)
-        end)
-        self:_thunder(distance, strength, withBolt)
-    end
-
-    function ShaderRain:SetStormEnabled(enabled)
-        local wasStorm = self.StormEnabled
-        self.StormEnabled = enabled == true
-        self.StormToken = self.StormToken + 1
-        local token = self.StormToken
-        -- el cielo se pone más negro con tormenta (si el cielo lo puso la lluvia y no un preset)
-        if self.Enabled and self.SkySnapshot and wasStorm ~= self.StormEnabled then self:_applySky() end
-        if not self.Enabled or not self.StormEnabled then return end
-        task.spawn(function()
-            while self.Enabled and self.StormEnabled and token == self.StormToken do
-                task.wait(self.Random:NextNumber(self.StormGapMin or 5, self.StormGapMax or 12))
-                if self.Enabled and self.StormEnabled and token == self.StormToken then
-                    -- a veces rayo con canal visible, a veces relámpago dentro de las nubes
-                    local strike = self.Random:NextNumber() < 0.55
-                    self:Flash(strike and self.Random:NextNumber(0.85, 1.15) or self.Random:NextNumber(0.35, 0.6), strike)
-                end
-            end
-        end)
-    end
-
-    function ShaderRain:SetEnabled(enabled)
-        enabled = enabled == true
-        local was = self.Enabled
-        self.Enabled = enabled
-        if not self.Enabled then
-            self.StormToken = self.StormToken + 1
-            self:_endFlash(true)
-            self:_destroyRig()
-            if was then self:_restoreSky(true) end
-            return
-        end
-        self:_refreshDropColor()
-        self:_createRig()
-        self:_syncVisuals()
-        if not was then self:_applySky() end
-        if self.SoundEnabled then pcall(function() self:_ensureSound():Play() end) end
-        if self.StormEnabled then self:SetStormEnabled(true) end
-    end
-
-    function ShaderRain:Destroy()
-        self.Enabled, self.StormEnabled = false, false
-        self.StormToken = self.StormToken + 1
-        self:_endFlash(false)
-        self:_destroyRig()
-        -- cambio de preset: el preset nuevo ya puso su cielo, solo se descarta la foto
-        self:_restoreSky(false)
-    end
-
-    -- ==================== "Nivel 0": cámara de cinta perdida (found footage / VHS) ====================
-    -- Sin balanceo de cámara: solo cómo se ve y se siente. Lente abierto, grano, líneas de escaneo,
-    -- viñeta, parpadeo de exposición, auto-exposición al mirar las luces, desenfoque al girar rápido
-    -- y tirones de "tracking" de cinta cada tanto. Todo se restaura al cambiar de modo.
-    local ShaderFootage = {
-        Enabled = false,
-        Gui = nil,
-        Connection = nil,
-        SavedFov = nil,
-        TargetFov = 88,
-        BaseBlur = 2,
-        Grain = {},
-        Lines = nil,
-        Flicker = nil,
-        Band = nil,
-        LastLook = nil,
-        Blur = 2,
-        NextGlitch = 0,
-        GlitchT = nil,
-        Acc = 0,
-        Rng = Random.new(),
-        -- sonido de fondo propio: lo único que se escucha en "Nivel 0" (ID pendiente de Nick)
-        AmbientSoundId = "rbxassetid://120812539198119",
-        AmbientVolume = 0.7, -- 70 % (bajado un 30 %)
-        Ambient = nil,
-        Muted = {},
-        MuteConnections = {},
-        MuteToken = 0,
-    }
-
-    -- Silencio total: todos los sonidos del juego (y de la librería) a volumen 0, guardando el original.
-    -- Si el juego intenta subirles el volumen, se vuelven a silenciar al instante. Al salir, todo vuelve.
-    function ShaderFootage:_muteSound(sound)
-        if not self.Enabled or not sound or self.Muted[sound] ~= nil then return end
-        if PerfOpt.IsOwnInstance(sound) then return end
-        local ok = pcall(function()
-            self.Muted[sound] = sound.Volume
-            sound.Volume = 0
-        end)
-        if not ok then self.Muted[sound] = nil return end
-        local okSignal, connection = pcall(function()
-            return sound:GetPropertyChangedSignal("Volume"):Connect(function()
-                if self.Enabled and self.Muted[sound] ~= nil and sound.Volume > 0 then
-                    self.Muted[sound] = sound.Volume
-                    sound.Volume = 0
-                end
-            end)
-        end)
-        if okSignal and connection then table.insert(self.MuteConnections, connection) end
-    end
-
-    function ShaderFootage:_muteAll()
-        self.MuteToken = self.MuteToken + 1
-        local token = self.MuteToken
-        local okAdded, added = pcall(function()
-            return game.DescendantAdded:Connect(function(instance)
-                if instance:IsA("Sound") then task.defer(function() self:_muteSound(instance) end) end
-            end)
-        end)
-        if okAdded and added then table.insert(self.MuteConnections, added) end
-        task.spawn(function()
-            local okList, list = pcall(function()
+                    lighting.OutdoorAmbie

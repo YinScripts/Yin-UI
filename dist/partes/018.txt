@@ -1,4 +1,4 @@
-UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
+Dim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
             local d = math.abs((x + TAB_ICON_SIZE / 2) - viewW / 2) / math.max(viewW / 2, 1)
             local edge = math.clamp((d - 0.6) / 0.4, 0, 1)
             item.Scale.Scale = 1 - 0.2 * edge
@@ -425,6 +425,121 @@ UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
         function Tab:ResetContentContainer()
             self._ContentParent = TabPage
             return TabPage
+        end
+
+        -- Selector de secciones al inicio de la pestaña (tipo "Chat | Work").
+        -- segments = { {Id = "mov", Es = "Movimiento", En = "Movement"}, ... }
+        -- assign(child) -> Id de la sección de ese elemento, o nil para que se vea siempre.
+        -- Lo que no es de la sección elegida se aparta (sin padre), no se destruye: conserva estado y conexiones.
+        function Tab:CreateSegments(segments, assign)
+            segments = segments or {}
+            assign = assign or function() return nil end
+            local TweenService = game:GetService("TweenService")
+            local parked = Instance.new("Folder")
+            parked.Name = "YYSegmentParking"
+            local Bar = mk("Frame", {
+                Name = "YYSegments",
+                Size = UDim2.new(1, 0, 0, 44),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.55,
+                BorderSizePixel = 0,
+                LayoutOrder = -1000000000,
+                ZIndex = 9,
+            }, TabPage)
+            Bar:SetAttribute("ThemeRole", "Secondary")
+            corner(Bar, 22)
+            stroke(Bar, Theme.Stroke, 1, 0.55)
+            local Scroll = mk("ScrollingFrame", {
+                Size = UDim2.new(1, -8, 1, -8),
+                Position = UDim2.fromOffset(4, 4),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ScrollBarThickness = 0,
+                ScrollingDirection = Enum.ScrollingDirection.X,
+                AutomaticCanvasSize = Enum.AutomaticSize.X,
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                ZIndex = 9,
+            }, Bar)
+            mk("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 4),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+            }, Scroll)
+
+            local buttons, selected, applying = {}, nil, false
+            local count = #segments
+            local function apply()
+                if not selected or applying then return end
+                applying = true
+                local pool = {}
+                for _, ch in ipairs(TabPage:GetChildren()) do pool[#pool + 1] = ch end
+                for _, ch in ipairs(parked:GetChildren()) do pool[#pool + 1] = ch end
+                for _, ch in ipairs(pool) do
+                    if ch ~= Bar and ch:IsA("GuiObject") then
+                        local ok, id = pcall(assign, ch)
+                        local show = (not ok) or id == nil or id == selected
+                        local target = show and TabPage or parked
+                        if ch.Parent ~= target then ch.Parent = target end
+                    end
+                end
+                applying = false
+            end
+            local function paint()
+                for id, b in pairs(buttons) do
+                    local on = id == selected
+                    TweenService:Create(b, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = on and 0.05 or 1, TextTransparency = on and 0 or 0.4 }):Play()
+                end
+            end
+            local function choose(id)
+                selected = id
+                paint()
+                apply()
+                TabPage.CanvasPosition = Vector2.new(0, 0)
+            end
+            for i, seg in ipairs(segments) do
+                local fits = count > 0 and count <= 4
+                local b = mk("TextButton", {
+                    Name = "Seg_" .. tostring(seg.Id),
+                    LayoutOrder = i,
+                    AutoButtonColor = false,
+                    Size = fits and UDim2.new(1 / count, -4 + 4 / count, 1, 0) or UDim2.new(0, 104, 1, 0),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    Text = GetText(seg.Es or tostring(seg.Id), seg.En or seg.Es or tostring(seg.Id)),
+                    TextColor3 = Theme.Text,
+                    TextTransparency = 0.4,
+                    TextScaled = true,
+                    Font = Enum.Font.GothamBold,
+                    ZIndex = 10,
+                }, Scroll)
+                b:SetAttribute("ThemeRole", "Background")
+                b:SetAttribute("ThemeTextRole", "Text")
+                if seg.Es then b:SetAttribute("TextSpanish", seg.Es) end
+                if seg.En then b:SetAttribute("TextEnglish", seg.En) end
+                mk("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 9 }, b)
+                mk("UIPadding", {
+                    PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
+                    PaddingTop = UDim.new(0, 7), PaddingBottom = UDim.new(0, 7),
+                }, b)
+                corner(b, 18)
+                stroke(b, Theme.Stroke, 1, 0.75)
+                buttons[seg.Id] = b
+                b.MouseButton1Click:Connect(function() choose(seg.Id) end)
+            end
+            -- lo que se agregue después a la pestaña también se ordena por sección
+            TabPage.ChildAdded:Connect(function(ch)
+                if selected and not applying and ch ~= Bar then task.defer(apply) end
+            end)
+            if segments[1] then choose(segments[1].Id) end
+            return {
+                Select = choose,
+                Refresh = apply,
+                GetSelected = function() return selected end,
+                Bar = Bar,
+            }
         end
 
         local function Select()
@@ -867,110 +982,4 @@ UDim2.new(0, x + TAB_ICON_SIZE / 2, 0.5, 0)
                             edgeY + panelWidth * math.sin(angle) / 2)
                         panel.Rotation = 16
                     end
-                    separator.Visible = not narrow
-                    rim.Position = narrow and UDim2.fromOffset(1, 1) or UDim2.new(0.40, 0, 0, 1)
-                    rim.Size = narrow and UDim2.new(1, -2, 1, -2) or UDim2.new(0.60, -1, 1, -2)
-                    if label then
-                        label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(0.38, -26, 0, 22)
-                        label.Position = UDim2.new(0, 16, 0, narrow and 4 or 13)
-                    end
-                    if status then
-                        status.Position = UDim2.new(0, 16, 0, narrow and 25 or 38)
-                    end
-                    local y = narrow and 48 or 18
-                    HolderSwitch.Position = UDim2.new(1, -66, 0, y)
-                    ComboBtn.Position = UDim2.new(1, -194, 0, y + 2)
-                    FavBtn.Position = UDim2.new(1, -164, 0, y - 1)
-                    DetachBtn.Position = UDim2.new(1, -130, 0, y)
-                    PinBtn.Position = UDim2.new(1, -98, 0, y)
-                    KeybindBtn.Position = narrow and UDim2.new(0, 14, 1, -27) or UDim2.new(0.38, 12, 1, -27)
-                    KeybindBtn.Size = narrow and UDim2.new(1, -28, 0, 20) or UDim2.new(0.62, -26, 0, 20)
-                    HolderClick.Size = narrow and UDim2.new(1, 0, 0, 44) or UDim2.new(0.38, -6, 1, 0)
-                end
-                Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutOptionCard)
-                layoutOptionCard()
-            end
-            -- El interruptor de la derecha también debe responder al toque directo.
-            local switchHit = mk("TextButton", {
-                Parent = HolderSwitch, Size = UDim2.fromScale(1, 1),
-                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 16,
-            })
-            switchHit.Activated:Connect(function()
-                state = not state
-                tog.SetValue(state)
-                if favRow and favRow.SetValue then favRow.SetValue(state) end
-                pcall(cb, state)
-            end)
-            HolderClick.ZIndex = 14
-            
-            
-            local FloatingWindow = nil
-            local FloatingGlow = nil
-            local animationConnection = nil
-            
-            local function createFloatingWindow()
-
-                local floatStyle    = SavedConfig.FloatingToggleStyle or "Pill"
-                local isCircleStyle = (floatStyle == "Circle")
-                local hasLinkedSlider = (_linkedSliderRef ~= nil) and not isCircleStyle
-                local floatW = isCircleStyle and 64 or 200
-                local floatH = isCircleStyle and 64 or (hasLinkedSlider and 76 or 36)
-                local usePillV5 = not isCircleStyle
-                if usePillV5 and not hasLinkedSlider then
-                    floatW = FloatingPillV5.FitWidth(displayText, 21)
-                    floatH = 30
-                end
-                local hasDial = usePillV5 and not hasLinkedSlider and type(_dialList) == "table" and #_dialList > 0
-
-                FloatingGlow = mk("Frame", {
-                    Parent = Window.ScreenGui,
-                    Size = UDim2.fromOffset(216, 48),
-                    Position = UDim2.new(0.5, -108, 0.5, -24),
-                    BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 3
-                })
-                corner(FloatingGlow, 999)
-
-                FloatingWindow = mk("Frame", {
-                    Parent = Window.ScreenGui,
-                    Size = UDim2.fromOffset(floatW, floatH),
-                    Position = UDim2.new(0.5, -floatW/2, 0.5, -floatH/2),
-                    BackgroundColor3 = isCircleStyle and Color3.fromRGB(20, 20, 26) or FloatingPillV5.OffColor(),
-                    BackgroundTransparency = isCircleStyle and 0.55 or 0.45,
-                    BorderSizePixel = 0,
-                    Active = true,
-                    Selectable = false,
-                    ZIndex = 4
-                })
-                FloatPos.Apply(favId, FloatingWindow)
-                if FloatPos.IsLocked(favId) then
-                    isLocked = true
-                    PinBtn.Image = "rbxassetid://91959170037380"
-                end
-                if not usePillV5 then
-                    FloatingWindow:SetAttribute("ThemeRole", "Secondary")
-                else
-                    FloatingWindow:SetAttribute("YYPillV5", true)
-                end
-                FloatingWindow:SetAttribute("SupportsFloatStyle", true)
-                FloatingWindow:SetAttribute("HasLinkedSlider", hasLinkedSlider)
-                if hasDial then FloatingWindow:SetAttribute("YYDialExtraPad", 12) end
-                corner(FloatingWindow, 999)
-
-                local floatStroke
-                if usePillV5 then
-                    floatStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0)
-                else
-                    floatStroke = stroke(FloatingWindow, Theme.Accent, 3, 0.20)
-                    buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
-                end
-
-                local FloatLabel = mk("TextLabel", {
-                    Parent = FloatingWindow,
-                    Size = isCircleStyle and UDim2.new(1, -24, 1, -24)
-                        or hasLinkedSlider and UDim2.new(1, -24, 0, 34)
-                        or UDim2.new(1, -24, 1, 0),
-                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
-                    BackgroundTr
+       

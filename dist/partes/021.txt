@@ -1,4 +1,141 @@
-, 320)
+down()
+                    end
+                end,
+                SetCooldown = function(secs)
+                    cooldown = secs or cooldown
+                end,
+                SyncExternalState = syncExternalState,
+            }
+        end
+
+        function Tab:CreateSlider(text, min, max, default, callback, isMirror)
+            local value = default or min
+            local pendingValue = value
+            local isDragging = false
+            local lastUpdateTime = 0
+            local UPDATE_THROTTLE = 0.008
+
+            local Carousel = nil
+            local children = TabPage:GetChildren()
+            for i = #children, 1, -1 do
+                local child = children[i]
+                if child:IsA("GuiObject") then
+                    if child:GetAttribute("IsSliderCarouselSection") and Tab._LastSliderCarousel
+                    and Tab._LastSliderCarousel.Section == child then
+                        Carousel = Tab._LastSliderCarousel
+                    end
+                    break
+                end
+            end
+
+            if not Carousel then
+                local SliderSection = mk("Frame", {
+                    Parent = TabPage,
+                    Size = UDim2.new(1, 0, 0, 134),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 9
+                })
+                SliderSection:SetAttribute("IsSliderCarouselSection", true)
+
+                local Viewport = mk("Frame", {
+                    Parent = SliderSection,
+                    Size = UDim2.new(1, -8, 0, 110),
+                    Position = UDim2.new(0, 4, 0, 0),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ClipsDescendants = true,
+                    ZIndex = 10
+                })
+
+                local PrevBtn = mk("TextButton", {
+                    Parent = Viewport,
+                    Size = UDim2.new(0, 38, 0, 38),
+                    Position = UDim2.new(0, 4, 0.5, -19),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.18,
+                    BorderSizePixel = 0,
+                    Text = "‹",
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 30,
+                    AutoButtonColor = false,
+                    ZIndex = 60
+                })
+                corner(PrevBtn, 19)
+                stroke(PrevBtn, Theme.Stroke, 1, 0.5)
+
+                local NextBtn = mk("TextButton", {
+                    Parent = Viewport,
+                    Size = UDim2.new(0, 38, 0, 38),
+                    Position = UDim2.new(1, -42, 0.5, -19),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 0.18,
+                    BorderSizePixel = 0,
+                    Text = "›",
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 30,
+                    AutoButtonColor = false,
+                    ZIndex = 60
+                })
+                corner(NextBtn, 19)
+                stroke(NextBtn, Theme.Stroke, 1, 0.5)
+
+                local DotHolder = mk("Frame", {
+                    Parent = SliderSection,
+                    Size = UDim2.new(1, -80, 0, 16),
+                    Position = UDim2.new(0, 40, 0, 114),
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 60
+                })
+                mk("UIListLayout", {
+                    Parent = DotHolder,
+                    FillDirection = Enum.FillDirection.Horizontal,
+                    HorizontalAlignment = Enum.HorizontalAlignment.Center,
+                    VerticalAlignment = Enum.VerticalAlignment.Center,
+                    Padding = UDim.new(0, 6),
+                    SortOrder = Enum.SortOrder.LayoutOrder
+                })
+
+                Carousel = {
+                    Section = SliderSection,
+                    Viewport = Viewport,
+                    PrevBtn = PrevBtn,
+                    NextBtn = NextBtn,
+                    DotHolder = DotHolder,
+                    Cards = {},
+                    Dots = {},
+                    ActiveIndex = 1,
+                    Reflow = nil,
+                    GoTo = nil,
+                }
+                Tab._LastSliderCarousel = Carousel
+
+                local function refreshDots()
+                    local count = #Carousel.Cards
+                    for i, dot in ipairs(Carousel.Dots) do
+                        dot.BackgroundColor3 = (i == Carousel.ActiveIndex) and Theme.Text or Theme.AccentOff
+                        dot.BackgroundTransparency = (i == Carousel.ActiveIndex) and 0 or 0.35
+                        dot.Size = (i == Carousel.ActiveIndex)
+                            and UDim2.new(0, 20, 0, 7)
+                            or UDim2.new(0, 7, 0, 7)
+                    end
+                    Carousel.PrevBtn.Visible = count > 1
+                    Carousel.NextBtn.Visible = count > 1
+                    Carousel.DotHolder.Visible = count > 1
+                end
+
+                local function reflow()
+                    local count = #Carousel.Cards
+                    if count == 0 then
+                        refreshDots()
+                        return
+                    end
+
+                    local viewportWidth = Carousel.Viewport.AbsoluteSize.X
+                    local cardWidth = math.clamp(viewportWidth * 0.52, 240, 320)
                     local cardHeight = 96
                     local step = cardWidth * 0.78
                     local centerX = viewportWidth * 0.5 - cardWidth * 0.5
@@ -908,124 +1045,4 @@
                 else
                     stopSpinner()
                     TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
-                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
-                    TweenService:Create(IconRingStroke, ti, { Color = Theme.AccentOff, Transparency = 0.3 }):Play()
-                    TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.TextDim }):Play()
-                    TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.AccentOff, BackgroundTransparency = 0.15 }):Play()
-                    TweenService:Create(StatusDot, ti, { BackgroundColor3 = Theme.TextDim }):Play()
-                    TweenService:Create(StatusLabel, ti, { TextColor3 = Theme.TextDim }):Play()
-                    StatusLabel.Text = GetText("Inactivo", "Idle")
-                    TweenService:Create(Knob, ti, { Position = knobOFF }):Play()
-                end
-            end
-
-            Click.MouseButton1Click:Connect(function()
-                if loading then return end
-                playSound(Sounds.Click, 0.6)
-
-                if not active then
-                    loading = true
-                    setVisualState("loading")
-                    task.spawn(function()
-                        local ok, err = pcall(function()
-                            _G["_YY_CLASSIC_LOADING_KEY"] = tostring(scriptKey)
-                            local chunk = loadstring(game:HttpGet(url, true))
-                            if type(chunk) ~= "function" then
-                                error("el archivo externo no devolvió código ejecutable")
-                            end
-                            chunk()
-                            _G["_YY_CLASSIC_LOADING_KEY"] = nil
-                        end)
-                        _G["_YY_CLASSIC_LOADING_KEY"] = nil
-                        loading = false
-                        if ok then
-                            active = true
-                            setVisualState("active")
-                        else
-                            active = false
-                            setVisualState("idle")
-                            local errColor = Color3.fromRGB(240, 80, 80)
-                            StatusLabel.Text = GetText("Error al cargar", "Load failed")
-                            StatusLabel.TextColor3 = errColor
-                            StatusDot.BackgroundColor3 = errColor
-                            StatusBadge.BackgroundColor3 = errColor
-                            StatusBadge.BackgroundTransparency = 0.78
-                            StatusBadge.Size = UDim2.fromOffset(104, 20)
-                            task.delay(2.5, function()
-                                StatusBadge.Size = UDim2.fromOffset(78, 20)
-                                if not active and not loading then setVisualState("idle") end
-                            end)
-                            warn("[YinYang] CreateScriptToggle: error al cargar '" .. tostring(scriptKey) .. "': " .. tostring(err))
-                        end
-                    end)
-                else
-                    active = false
-                    setVisualState("idle")
-                    local stopKey = "_YY_STOP_" .. tostring(scriptKey)
-                    if _G[stopKey] then
-                        pcall(_G[stopKey])
-                    end
-                end
-            end)
-
-            Window._RegisterGlobalOption(self, {
-                Id = nameSpanish .. "::" .. textSpanish,
-                NameSpanish = textSpanish,
-                NameEnglish = textEnglish,
-                Holder = Holder,
-                Kind = "Script",
-            })
-
-            return Holder
-        end
-
-        function Tab:CreateLabel(textSpanish, textEnglishOrSize, fontSize)
-            local contentParent = self._ContentParent or TabPage
-            local textEnglish = textSpanish
-            if type(textEnglishOrSize) == "number" then
-                fontSize = textEnglishOrSize
-                textEnglish = textSpanish
-            elseif type(textEnglishOrSize) == "string" then
-                textEnglish = textEnglishOrSize
-            end
-            
-            fontSize = fontSize or 14
-            local displayText = GetText(textSpanish, textEnglish)
-            
-            local Label = mk("TextLabel", {
-                Parent = contentParent,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                Text = displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold,
-                TextSize = fontSize,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextWrapped = true,
-                ZIndex = 9
-            })
-            Label:SetAttribute("ThemeTextRole", "Text")
-            Label:SetAttribute("TextSpanish", textSpanish)
-            Label:SetAttribute("TextEnglish", textEnglish)
-            if contentParent == TabPage then resetScrollTop(TabPage) end
-            return Label
-        end
-
-        function Tab:CreateDivider()
-            local contentParent = self._ContentParent or TabPage
-            if self._homeBuilt then
-                return nil
-            end
-            local Divider = mk("Frame", {
-                Parent = contentParent,
-                Size = UDim2.new(1, 0, 0, 1),
-                BackgroundColor3 = Theme.Stroke,
-                ZIndex = 9
-            })
-            Divider:SetAttribute("ThemeRole", "Stroke")
-            return Divider
-        end
-
-        function Tab:CreateImageGrid(titleSpanish, titleEnglish, items, callback, selectable)
-            local contentParent = self._ContentParent or TabP
+                    TweenService:Create(AccentBar, ti, {

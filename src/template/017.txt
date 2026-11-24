@@ -609,6 +609,121 @@
             return TabPage
         end
 
+        -- Selector de secciones al inicio de la pestaña (tipo "Chat | Work").
+        -- segments = { {Id = "mov", Es = "Movimiento", En = "Movement"}, ... }
+        -- assign(child) -> Id de la sección de ese elemento, o nil para que se vea siempre.
+        -- Lo que no es de la sección elegida se aparta (sin padre), no se destruye: conserva estado y conexiones.
+        function Tab:CreateSegments(segments, assign)
+            segments = segments or {}
+            assign = assign or function() return nil end
+            local TweenService = game:GetService("TweenService")
+            local parked = Instance.new("Folder")
+            parked.Name = "YYSegmentParking"
+            local Bar = mk("Frame", {
+                Name = "YYSegments",
+                Size = UDim2.new(1, 0, 0, 44),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.55,
+                BorderSizePixel = 0,
+                LayoutOrder = -1000000000,
+                ZIndex = 9,
+            }, TabPage)
+            Bar:SetAttribute("ThemeRole", "Secondary")
+            corner(Bar, 22)
+            stroke(Bar, Theme.Stroke, 1, 0.55)
+            local Scroll = mk("ScrollingFrame", {
+                Size = UDim2.new(1, -8, 1, -8),
+                Position = UDim2.fromOffset(4, 4),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                ScrollBarThickness = 0,
+                ScrollingDirection = Enum.ScrollingDirection.X,
+                AutomaticCanvasSize = Enum.AutomaticSize.X,
+                CanvasSize = UDim2.new(0, 0, 0, 0),
+                ZIndex = 9,
+            }, Bar)
+            mk("UIListLayout", {
+                FillDirection = Enum.FillDirection.Horizontal,
+                Padding = UDim.new(0, 4),
+                SortOrder = Enum.SortOrder.LayoutOrder,
+                VerticalAlignment = Enum.VerticalAlignment.Center,
+            }, Scroll)
+
+            local buttons, selected, applying = {}, nil, false
+            local count = #segments
+            local function apply()
+                if not selected or applying then return end
+                applying = true
+                local pool = {}
+                for _, ch in ipairs(TabPage:GetChildren()) do pool[#pool + 1] = ch end
+                for _, ch in ipairs(parked:GetChildren()) do pool[#pool + 1] = ch end
+                for _, ch in ipairs(pool) do
+                    if ch ~= Bar and ch:IsA("GuiObject") then
+                        local ok, id = pcall(assign, ch)
+                        local show = (not ok) or id == nil or id == selected
+                        local target = show and TabPage or parked
+                        if ch.Parent ~= target then ch.Parent = target end
+                    end
+                end
+                applying = false
+            end
+            local function paint()
+                for id, b in pairs(buttons) do
+                    local on = id == selected
+                    TweenService:Create(b, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = on and 0.05 or 1, TextTransparency = on and 0 or 0.4 }):Play()
+                end
+            end
+            local function choose(id)
+                selected = id
+                paint()
+                apply()
+                TabPage.CanvasPosition = Vector2.new(0, 0)
+            end
+            for i, seg in ipairs(segments) do
+                local fits = count > 0 and count <= 4
+                local b = mk("TextButton", {
+                    Name = "Seg_" .. tostring(seg.Id),
+                    LayoutOrder = i,
+                    AutoButtonColor = false,
+                    Size = fits and UDim2.new(1 / count, -4 + 4 / count, 1, 0) or UDim2.new(0, 104, 1, 0),
+                    BackgroundColor3 = Theme.Background,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    Text = GetText(seg.Es or tostring(seg.Id), seg.En or seg.Es or tostring(seg.Id)),
+                    TextColor3 = Theme.Text,
+                    TextTransparency = 0.4,
+                    TextScaled = true,
+                    Font = Enum.Font.GothamBold,
+                    ZIndex = 10,
+                }, Scroll)
+                b:SetAttribute("ThemeRole", "Background")
+                b:SetAttribute("ThemeTextRole", "Text")
+                if seg.Es then b:SetAttribute("TextSpanish", seg.Es) end
+                if seg.En then b:SetAttribute("TextEnglish", seg.En) end
+                mk("UITextSizeConstraint", { MaxTextSize = 14, MinTextSize = 9 }, b)
+                mk("UIPadding", {
+                    PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8),
+                    PaddingTop = UDim.new(0, 7), PaddingBottom = UDim.new(0, 7),
+                }, b)
+                corner(b, 18)
+                stroke(b, Theme.Stroke, 1, 0.75)
+                buttons[seg.Id] = b
+                b.MouseButton1Click:Connect(function() choose(seg.Id) end)
+            end
+            -- lo que se agregue después a la pestaña también se ordena por sección
+            TabPage.ChildAdded:Connect(function(ch)
+                if selected and not applying and ch ~= Bar then task.defer(apply) end
+            end)
+            if segments[1] then choose(segments[1].Id) end
+            return {
+                Select = choose,
+                Refresh = apply,
+                GetSelected = function() return selected end,
+                Bar = Bar,
+            }
+        end
+
         local function Select()
             TabIconCarousel.ActiveTab = Tab
             for _, t in pairs(Window.Tabs) do

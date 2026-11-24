@@ -1,4 +1,155 @@
-Enum.Font.GothamBold,
+     Parent = ColorPickerPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -38, 0, 8),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = "×",
+        TextColor3 = Theme.Text,
+        TextSize = 21,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 263,
+    })
+    PickerClose:SetAttribute("ThemeRole", "Secondary")
+    PickerClose:SetAttribute("ThemeTextRole", "Text")
+    corner(PickerClose, 8)
+
+    local PickerArea = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.49, -8, 0.48, 0),
+        Position = UDim2.new(0, 14, 0, 60),
+        BackgroundColor3 = Color3.fromHSV(0, 1, 1),
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 262,
+    })
+    corner(PickerArea, 8)
+    stroke(PickerArea, Theme.Stroke, 1, 0.36)
+    local WhiteLayer = mk("Frame", {
+        Parent = PickerArea,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(1, 1, 1),
+        BorderSizePixel = 0,
+        ZIndex = 263,
+    })
+    corner(WhiteLayer, 8)
+    local WhiteGradient = Instance.new("UIGradient")
+    WhiteGradient.Color = ColorSequence.new(Color3.new(1, 1, 1))
+    WhiteGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 0),
+        NumberSequenceKeypoint.new(1, 1),
+    })
+    WhiteGradient.Parent = WhiteLayer
+    local BlackLayer = mk("Frame", {
+        Parent = WhiteLayer,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.new(0, 0, 0),
+        BorderSizePixel = 0,
+        ZIndex = 264,
+    })
+    corner(BlackLayer, 8)
+    local BlackGradient = Instance.new("UIGradient")
+    BlackGradient.Rotation = 90
+    BlackGradient.Color = ColorSequence.new(Color3.new(0, 0, 0))
+    BlackGradient.Transparency = NumberSequence.new({
+        NumberSequenceKeypoint.new(0, 1),
+        NumberSequenceKeypoint.new(1, 0),
+    })
+    BlackGradient.Parent = BlackLayer
+    local SVHandle = mk("Frame", {
+        Parent = PickerArea,
+        Size = UDim2.new(0, 17, 0, 17),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(8, 8, 8),
+        BorderSizePixel = 0,
+        ZIndex = 265,
+    })
+    corner(SVHandle, 20)
+    stroke(SVHandle, Color3.fromRGB(255, 255, 255), 2, 0)
+
+    local HueBar = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0, 16, 0.48, 0),
+        Position = UDim2.new(0.51, 0, 0, 60),
+        BackgroundColor3 = Color3.fromRGB(255, 0, 0),
+        BorderSizePixel = 0,
+        Active = true,
+        ZIndex = 262,
+    })
+    corner(HueBar, 8)
+    local HueGradient = Instance.new("UIGradient")
+    HueGradient.Rotation = 90
+    HueGradient.Color = ColorSequence.new({
+        ColorSequenceKeypoint.new(0.00, Color3.fromRGB(255, 0, 0)),
+        ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+        ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)),
+        ColorSequenceKeypoint.new(0.50, Color3.fromRGB(0, 255, 255)),
+        ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)),
+        ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+        ColorSequenceKeypoint.new(1.00, Color3.fromRGB(255, 0, 0)),
+    })
+    HueGradient.Parent = HueBar
+    local HueHandle = mk("Frame", {
+        Parent = HueBar,
+        Size = UDim2.new(1, 8, 0, 5),
+        Position = UDim2.new(0.5, 0, 0, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 265,
+    })
+    corner(HueHandle, 4)
+
+    local PickerPreview = mk("Frame", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.42, -6, 0, 34),
+        Position = UDim2.new(0.57, -6, 0, 61),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 262,
+    })
+    corner(PickerPreview, 7)
+    stroke(PickerPreview, Theme.Stroke, 1, 0.34)
+
+    local function createPickerInput(labelSpanish, labelEnglish, yOffset)
+        local field = mk("TextBox", {
+            Parent = ColorPickerPanel,
+            Size = UDim2.new(0.42, -6, 0, 29),
+            Position = UDim2.new(0.57, -6, 0, yOffset),
+            BackgroundColor3 = Theme.Secondary,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderText = GetText(labelSpanish, labelEnglish),
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 262,
+        })
+        field:SetAttribute("ThemeRole", "Secondary")
+        field:SetAttribute("ThemeTextRole", "Text")
+        field:SetAttribute("PlaceholderSpanish", labelSpanish)
+        field:SetAttribute("PlaceholderEnglish", labelEnglish)
+        corner(field, 7)
+        return field
+    end
+    local PickerHex = createPickerInput("#RRGGBB · Hex", "#RRGGBB · Hex", 101)
+    local PickerRed = createPickerInput("Rojo", "Red", 136)
+    local PickerGreen = createPickerInput("Verde", "Green", 171)
+    local PickerBlue = createPickerInput("Azul", "Blue", 206)
+
+    local PickerCancel = mk("TextButton", {
+        Parent = ColorPickerPanel,
+        Size = UDim2.new(0.44, -4, 0, 34),
+        Position = UDim2.new(0, 14, 1, -45),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
         ZIndex = 262,
     })
     PickerCancel:SetAttribute("ThemeRole", "Secondary")
@@ -940,122 +1091,4 @@ Enum.Font.GothamBold,
 
         local preview = createPreview(Card, mode, accentColor)
 
-        local TitleLabel = mk("TextLabel", {
-            Parent = Card,
-            Size = UDim2.new(1, -20, 0, 18),
-            Position = UDim2.new(0, 10, 0, 76),
-            BackgroundTransparency = 1,
-            Text = GetText(titleES, titleEN),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 13,
-            TextColor3 = Theme.Text,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 11,
-        })
-        TitleLabel:SetAttribute("ThemeTextRole", "Text")
-        TitleLabel:SetAttribute("TextSpanish", titleES)
-        TitleLabel:SetAttribute("TextEnglish", titleEN)
-
-        local DescLabel = mk("TextLabel", {
-            Parent = Card,
-            Size = UDim2.new(1, -20, 0, 30),
-            Position = UDim2.new(0, 10, 0, 96),
-            BackgroundTransparency = 1,
-            Text = GetText(descES, descEN),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            TextColor3 = Theme.TextDim,
-            TextWrapped = true,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextYAlignment = Enum.TextYAlignment.Top,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 11,
-        })
-        DescLabel:SetAttribute("ThemeTextRole", "TextDim")
-        DescLabel:SetAttribute("TextSpanish", descES)
-        DescLabel:SetAttribute("TextEnglish", descEN)
-
-        local Badge = mk("Frame", {
-            Parent = preview,
-            Size = UDim2.fromOffset(0, 18),
-            AutomaticSize = Enum.AutomaticSize.X,
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -6, 0, 6),
-            BackgroundColor3 = accentColor,
-            BackgroundTransparency = 0.0,
-            BorderSizePixel = 0,
-            ZIndex = 14,
-            Visible = isEffectActive(mode),
-        })
-        Badge:SetAttribute("ThemeRole", "Accent")
-        corner(Badge, 999)
-        mk("UIPadding", {Parent = Badge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
-        mk("UIListLayout", {Parent = Badge, FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center, Padding = UDim.new(0, 4), SortOrder = Enum.SortOrder.LayoutOrder})
-        local BadgeCheck = mk("Frame", {Parent = Badge, Size = UDim2.fromOffset(10, 10), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 15})
-        RowKit.Icon(BadgeCheck, 103456899356871, 10, 15, "AccentText")
-        local BadgeLabel = mk("TextLabel", {
-            Parent = Badge,
-            Size = UDim2.new(0, 0, 1, 0),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundTransparency = 1,
-            LayoutOrder = 1,
-            Text = GetText("ACTIVO", "ACTIVE"),
-            Font = Enum.Font.GothamBlack,
-            TextSize = 9,
-            TextColor3 = Theme.AccentText,
-            ZIndex = 15,
-        })
-        BadgeLabel:SetAttribute("ThemeTextRole", "AccentText")
-        BadgeLabel:SetAttribute("TextSpanish", "ACTIVO")
-        BadgeLabel:SetAttribute("TextEnglish", "ACTIVE")
-        BadgeLabel:SetAttribute("IgnoreTextEffect", true)
-
-        local Clicker = mk("TextButton", {
-            Parent = Card,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 16,
-        })
-
-        local function press()
-            playSound(Sounds.Click, 0.6)
-            CardScale.Scale = 0.95
-            TweenService:Create(CardScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            Window:SetTextEffect(mode)
-            refreshEffectRows()
-        end
-
-        Clicker.MouseButton1Click:Connect(press)
-
-        Clicker.MouseEnter:Connect(function()
-            TweenService:Create(CardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
-            TweenService:Create(Card, TweenInfo.new(0.12, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = isEffectActive(mode) and 0.04 or 0.12}):Play()
-        end)
-        Clicker.MouseLeave:Connect(function()
-            TweenService:Create(CardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            TweenService:Create(Card, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                {BackgroundTransparency = isEffectActive(mode) and 0.06 or 0.20}):Play()
-        end)
-
-        table.insert(effectRows, {
-            card = Card,
-            badge = Badge,
-            stroke = CardStroke,
-            mode = mode,
-            title = TitleLabel,
-            desc = DescLabel,
-            accent = accentColor,
-            titleES = titleES,
-            titleEN = titleEN,
-        })
-    end
-
-    local effectSpecs = {
-        {mode = "Off", titleES = "Normal (Blanco)", titleEN = "Normal (White)", descES = "Sin efecto - color del tema", descEN = "No effect - theme color", accent = Color3.fromRGB(200, 200, 200)},
-        {mode = "WhiteCyan", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
-        {mode = "WhitePink", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
-        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del
+        local TitleLabel = mk("TextLabel"

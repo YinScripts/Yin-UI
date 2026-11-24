@@ -1,4 +1,141 @@
-onRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
+ true, true end
+            end
+        end
+
+        local assigned, errorMessage = shaderSafe(function() instance[property] = value end)
+        if not assigned then return false, errorMessage end
+        return true, false
+    end
+
+    function ShaderCore:Apply(patch, options)
+        self:_assertAlive()
+        options = options or {}
+        local report = {ok = true, applied = {}, failed = {}, created = {}}
+        for targetId, properties in pairs(patch or {}) do
+            local instance, targetError = self:_resolve(targetId, true)
+            if not instance then
+                report.ok = false
+                table.insert(report.failed, {target = targetId, error = targetError})
+            else
+                if self.Created[targetId] then table.insert(report.created, targetId) end
+                for property, value in pairs(properties) do
+                    local ok, tweenedOrError = self:_set(instance, property, value, options)
+                    if ok then
+                        table.insert(report.applied, {target = targetId, property = property, tweened = tweenedOrError})
+                    else
+                        report.ok = false
+                        table.insert(report.failed, {target = targetId, property = property, error = tweenedOrError})
+                    end
+                end
+            end
+        end
+        return report
+    end
+
+    function ShaderCore:ApplyPreset(name, options)
+        self:_assertAlive()
+        local preset = self.Presets[name]
+        if not preset then
+            return {ok = false, applied = {}, created = {}, failed = {{target = name, error = "preset no registrado"}}}
+        end
+        local report = self:Apply(shaderCopy(preset), options)
+        if report.ok then self.ActivePreset = name end
+        return report
+    end
+
+    function ShaderCore:RegisterPreset(name, preset)
+        self:_assertAlive()
+        assert(type(name) == "string" and type(preset) == "table", "preset inválido")
+        self.Presets[name] = shaderCopy(preset)
+    end
+
+    function ShaderCore:RegisterTarget(id, spec)
+        self:_assertAlive()
+        assert(type(id) == "string" and type(spec) == "table", "target inválido")
+        self.Targets[id] = shaderCopy(spec)
+        self.Instances[id] = nil
+        return self
+    end
+
+    function ShaderCore:GetTarget(id, createIfMissing)
+        self:_assertAlive()
+        return self:_resolve(id, createIfMissing ~= false)
+    end
+
+    function ShaderCore:Read(targetId, properties)
+        self:_assertAlive()
+        local instance, errorMessage = self:_resolve(targetId, false)
+        if not instance then return nil, errorMessage end
+        local result = {}
+        for property in pairs(properties or {}) do
+            local ok, value = shaderSafe(function() return instance[property] end)
+            if ok then result[property] = value end
+        end
+        return result
+    end
+
+    function ShaderCore:ApplyTo(instance, properties, options)
+        self:_assertAlive()
+        assert(instance and instance.Parent, "instancia Roblox inválida")
+        local report = {ok = true, applied = {}, failed = {}, created = {}}
+        for property, value in pairs(properties or {}) do
+            local ok, tweenedOrError = self:_set(instance, property, value, options or {})
+            if ok then
+                table.insert(report.applied, {target = instance.Name, property = property, tweened = tweenedOrError})
+            else
+                report.ok = false
+                table.insert(report.failed, {target = instance.Name, property = property, error = tweenedOrError})
+            end
+        end
+        return report
+    end
+
+    function ShaderCore:Restore(options)
+        self:_assertAlive()
+        options = options or {}
+        local report = {ok = true, restored = {}, failed = {}}
+        for instance, properties in pairs(self.Original) do
+            if instance and instance.Parent then
+                for property, value in pairs(properties) do
+                    self:_cancel(instance, property)
+                    local ok, errorMessage = shaderSafe(function() instance[property] = value end)
+                    if ok then
+                        table.insert(report.restored, {target = instance.Name, property = property})
+                    else
+                        report.ok = false
+                        table.insert(report.failed, {target = instance.Name, property = property, error = errorMessage})
+                    end
+                end
+            end
+        end
+        if options.destroyCreated then
+            for id, created in pairs(self.Created) do
+                if created and self.Instances[id] and self.Instances[id].Parent then
+                    pcall(function() self.Instances[id]:Destroy() end)
+                end
+                self.Instances[id] = nil
+                self.Created[id] = nil
+            end
+        end
+        self.ActivePreset = nil
+        return report
+    end
+
+    function ShaderCore:Destroy()
+        if self.Destroyed then return end
+        self:Restore({destroyCreated = true})
+        self.Destroyed = true
+    end
+
+    function ShaderCore:GetCatalog()
+        return shaderCopy(ShaderPropertyCatalog)
+    end
+
+    local ShaderManager = ShaderCore.new()
+
+    local ShaderQualityProfiles = {
+        Lite = {reflectionRadius = 56, reflectionLimit = 60, shadowRadius = 34, shadowLimit = 8, rainRate = 42, rainRadius = 25, mirrorRadius = 40, mirrorLimit = 52, rainDrops = 36, rainSplashes = 10},
+        Balanced = {reflectionRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainRate = 72, rainRadius = 34, mirrorRadius = 54, mirrorLimit = 112, rainDrops = 80, rainSplashes = 24},
         Cinematic = {reflectionRadius = 104, reflectionLimit = 180, shadowRadius = 62, shadowLimit = 20, rainRate = 108, rainRadius = 44, mirrorRadius = 72, mirrorLimit = 175, rainDrops = 130, rainSplashes = 40},
         Ultra = {reflectionRadius = 140, reflectionLimit = 300, shadowRadius = 78, shadowLimit = 28, rainRate = 132, rainRadius = 54, mirrorRadius = 96, mirrorLimit = 280, rainDrops = 190, rainSplashes = 60},
     }
@@ -803,149 +940,4 @@ onRadius = 82, reflectionLimit = 120, shadowRadius = 48, shadowLimit = 14, rainR
             self:_restoreSkyMirror()
         end
         if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetStripTexturesEnabled(enabled)
-        self.StripTextures = enabled == true
-        if not self.StripTextures then
-            self:_restoreTextures()
-        end
-        if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetObjectMirrorEnabled(enabled)
-        self.ObjectMirrorEnabled = enabled == true
-        if not self.ObjectMirrorEnabled then
-            self:_clearMirror()
-        elseif self.Enabled then
-            self.MirrorScanElapsed = 0
-            self:_refreshMirror()
-        end
-    end
-
-    function ShaderReflections:SetContactStrength(value)
-        self.ContactStrength = math.clamp(tonumber(value) or self.ContactStrength, 0.05, 0.60)
-        self:_refreshContact()
-    end
-
-    function ShaderReflections:SetContactEnabled(enabled)
-        self.ContactEnabled = enabled == true
-        self:_refreshContact()
-    end
-
-    function ShaderReflections:SetModelDetailEnabled(enabled)
-        self.ModelDetailEnabled = enabled == true
-        if not self.ModelDetailEnabled then
-            for part in pairs(self.ModelApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-            end
-            self.ModelApplied = {}
-        end
-        if self.Enabled then
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            self:Refresh()
-        end
-    end
-
-    function ShaderReflections:SetCharacterSpecularEnabled(enabled)
-        self.CharacterSpecularEnabled = enabled == true
-        if not self.CharacterSpecularEnabled then
-            for part in pairs(self.CharacterApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-                self.ModelApplied[part] = nil
-            end
-            self.CharacterApplied = {}
-        end
-        if self.Enabled then self:Refresh() end
-    end
-
-    function ShaderReflections:SetExcludeLocalAvatar(enabled)
-        self.ExcludeLocalAvatar = enabled == true
-        if self.ExcludeLocalAvatar then
-            for part in pairs(self.CharacterApplied) do
-                local original = self.Original[part]
-                if part and part.Parent and original ~= nil then pcall(function() part.Reflectance = original end) end
-                self.Original[part] = nil
-                self.Applied[part] = nil
-                self.ModelApplied[part] = nil
-            end
-            self.CharacterApplied = {}
-        end
-        self:_refreshContact()
-        if self.Enabled then self:Refresh() end
-    end
-
-    function ShaderReflections:SetShadowEnabled(enabled)
-        enabled = enabled == true
-        if self.ShadowEnabled == enabled then
-            if enabled then self:_refreshSceneShadows() else self:_clearSceneShadows() end
-            return
-        end
-        self.ShadowEnabled = enabled
-        if not enabled then
-            self:_clearSceneShadows()
-            return
-        end
-        self.ShadowElapsed = 0
-        self.ShadowConnection = RunService.Heartbeat:Connect(function(delta)
-            self.ShadowElapsed = self.ShadowElapsed + delta
-            if self.ShadowElapsed >= 0.34 then
-                self.ShadowElapsed = 0
-                self:_refreshSceneShadows()
-            end
-        end)
-        self:_refreshSceneShadows()
-    end
-
-    function ShaderReflections:SetShadowStrength(value)
-        self.ShadowStrength = math.clamp(tonumber(value) or self.ShadowStrength, 0.05, 0.70)
-        self:_refreshSceneShadows()
-    end
-
-    function ShaderReflections:SetEnabled(enabled)
-        enabled = enabled == true
-        if self.Enabled == enabled then
-            if enabled then self:Refresh() end
-            return
-        end
-        self.Enabled = enabled
-        if not enabled then
-            if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
-            if self.CharacterConn then self.CharacterConn:Disconnect(); self.CharacterConn = nil end
-            self:Restore()
-            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-            return
-        end
-        self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
-        self:Refresh()
-        self:QueueSceneCoverage()
-        self.Elapsed = 0
-        self.Connection = RunService.Heartbeat:Connect(function(delta)
-            self.Elapsed = self.Elapsed + delta
-            self.ContactElapsed = self.ContactElapsed + delta
-            self.SceneElapsed = self.SceneElapsed + delta
-            if self.SceneElapsed >= 0.08 then
-                self.SceneElapsed = 0
-                self:_processSceneCoverage(90)
-            end
-            if self.ContactElapsed >= 0.12 then
-                self.ContactElapsed = 0
-                self:_refreshContact()
-            end
-            if self.ShadowElapsed >= 0.34 and not self.ShadowConnection then
-                self.ShadowElapsed = 0
-                self:_refreshSceneShadows()
-            end
-            se
+  

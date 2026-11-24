@@ -1106,4 +1106,4 @@ function YinYang:CreateWindow(title_text, startTheme, options)
         )
         local tw2 = TweenService:Create(
             Main,
-            TweenInfo.new(0.25, Enum.EasingStyl
+            TweenInfo.new(0.25, Enum.EasingStyle

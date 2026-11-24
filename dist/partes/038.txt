@@ -1,4 +1,146 @@
-Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
+
+        end
+        local m = getSpotifyMetrics()
+        local rowAvailW = math.max(0, width - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local rowCoverSize = math.floor(math.min(math.max(42, math.floor(rowAvailW / m.gridColumns) - 20), m.coverMax))
+        local cellH = m.cardHeight
+        if SongListLayout then
+            SongListLayout.FillDirectionMaxCells = columns
+            SongListLayout.CellPadding = UDim2.fromOffset(gapX, gapY)
+            SongListLayout.CellSize = UDim2.fromOffset(cellW, cellH)
+        end
+        if SpotifyState.CatalogLoaded then
+            -- anti-lag: las tarjetas solo se re-arman si cambió el layout (mover la ventana no cambia nada)
+            local layoutKey = table.concat({ columns, gapX, gapY, cellW, cellH, rowCoverSize, tostring(m.compact) }, "|")
+            if SpotifyState._LayoutKey ~= layoutKey then
+                SpotifyState._LayoutKey = layoutKey
+                for _, rowData in pairs(SpotifyState.RowButtons) do
+                    local background = rowData.Row.BackgroundColor3
+                    applySpotifyRowLayout(rowData)
+                    rowData.Row.BackgroundColor3 = background
+                end
+                -- Las tarjetas especiales dependen del tamaño de la ventana.
+                if SpotifyState._FavoritesTile then safeDestroy(SpotifyState._FavoritesTile) SpotifyState._FavoritesTile = nil end
+                if SpotifyState._MySongsTile then safeDestroy(SpotifyState._MySongsTile) SpotifyState._MySongsTile = nil end
+                renderSongRows()
+            end
+        end
+        updateSpotifyCanvas()
+    end
+
+    local layoutRefreshQueued = false
+    local function queueSpotifyLayoutRefresh()
+        -- anti-lag: durante la animación de abrir/cerrar (MainScale distinto de 1) el tamaño real no cambia
+        if MainScale.Scale ~= 1 or not Main.Visible or not SPage.Visible then
+            return
+        end
+        if layoutRefreshQueued then
+            return
+        end
+        layoutRefreshQueued = true
+        task.defer(function()
+            task.wait()
+            layoutRefreshQueued = false
+            if Main.Visible and SPage.Visible and MainScale.Scale == 1 then
+                pcall(refreshSpotifyUILayout)
+            end
+        end)
+    end
+
+    SPage:GetPropertyChangedSignal("Visible"):Connect(queueSpotifyLayoutRefresh)
+    Main:GetPropertyChangedSignal("Visible"):Connect(queueSpotifyLayoutRefresh)
+    SPage:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
+    SongList:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
+    ContentArea:GetPropertyChangedSignal("AbsoluteSize"):Connect(queueSpotifyLayoutRefresh)
+
+    local function isLiked(index)
+        return SpotifyState.CurrentLiked[index] == true
+    end
+
+    local function loadSpotifyFavorites()
+        SpotifyState.CurrentLiked = {}
+        local savedFavorites = type(SavedConfig.SpotifyFavorites) == "table" and SavedConfig.SpotifyFavorites or {}
+        for index, track in ipairs(SpotifyState.Catalog) do
+            if savedFavorites[tostring(track.Id)] == true then
+                SpotifyState.CurrentLiked[index] = true
+            end
+        end
+    end
+
+    local function saveSpotifyFavorite(index)
+        local track = SpotifyState.Catalog[index]
+        if not track then
+            return
+        end
+        SavedConfig.SpotifyFavorites = type(SavedConfig.SpotifyFavorites) == "table" and SavedConfig.SpotifyFavorites or {}
+        local id = tostring(track.Id)
+        if SpotifyState.CurrentLiked[index] == true then
+            SavedConfig.SpotifyFavorites[id] = true
+        else
+            SavedConfig.SpotifyFavorites[id] = nil
+        end
+        SaveConfig()
+    end
+
+    local function updateTrackRow(rowData, index)
+        local track = SpotifyState.Catalog[index]
+        if not rowData or not rowData.Row or not track then
+            return
+        end
+
+        applySpotifyRowLayout(rowData)
+
+        local active = (index == SpotifyState.SelectedIndex)
+        rowData.Row.BackgroundColor3 = active and Color3.fromRGB(38, 38, 44) or Color3.fromRGB(22, 22, 26)
+
+        if rowData.Accent then
+            rowData.Accent.Visible = active
+        end
+
+        if rowData.Cover then
+            rowData.Cover.Image = resolveTrackCoverImage(track)
+        end
+
+        if rowData.Title then
+            rowData.Title.Text = track.Name
+            rowData.Title.TextColor3 = active and spotifyGreen or spotifyText
+        end
+
+        if rowData.Artist then
+            rowData.Artist.Text = track.Artist
+            rowData.Artist.TextColor3 = active and Color3.fromRGB(100, 220, 120) or spotifyDim
+        end
+
+        if rowData.Duration then
+            rowData.Duration.Text = track.Duration
+        end
+
+        if rowData.Plus then
+            pcall(function()
+                rowData.Plus.BackgroundTransparency = 1
+                rowData.Plus.Image = asset(116559368303288)
+                rowData.Plus.ImageColor3 = spotifyText
+            end)
+        end
+
+        if rowData.Play then
+            pcall(function()
+                rowData.Play.Image = asset(135609604299893)
+                rowData.Play.ImageTransparency = 0
+                rowData.Play.BackgroundTransparency = 1
+                rowData.Play.ImageColor3 = spotifyText
+            end)
+        end
+    end
+
+    local function refreshAllRows()
+        for i, rowData in pairs(SpotifyState.RowButtons) do
+            updateTrackRow(rowData, i)
+        end
+    end
+
+    renderSongRows = function()
+        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
         local order = getVisibleRenderOrder()
         local displayOrder = 1
         local query = normalizeSearchText(SpotifyState.SearchQuery or "")
@@ -1005,99 +1147,4 @@ Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de
             if B.title.Text ~= PlayerSongTitle.Text then B.title.Text = PlayerSongTitle.Text end
             if B.artist.Text ~= PlayerSongArtist.Text then B.artist.Text = PlayerSongArtist.Text end
             if B.cover.Image ~= AlbumArt.Image then B.cover.Image = AlbumArt.Image end
-            B.play.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
-            local current = math.max(0, tonumber(sound.TimePosition) or 0)
-            local duration = tonumber(sound.TimeLength) or 0
-            if duration <= 0 then duration = durationToSeconds(SpotifyState.CurrentTrack.Duration) end
-            B.time.Text = secondsToClock(current)
-            B.total.Text = secondsToClock(duration)
-            B.fill.Size = UDim2.new(duration > 0 and math.clamp(current / duration, 0, 1) or 0, 0, 1, 0)
-        end
-        SpotifyState.RefreshBoombox()
-    end
-
-    -- Barra compacta y navegación inspiradas en el reproductor móvil.
-    -- Reutilizan el catálogo real y el mismo estado de reproducción.
-    do
-        local N = {lastProgress = -1}
-        N.openCatalog = mk("TextButton", {
-            Parent = NowPlayingCard, Size = UDim2.fromOffset(102, 27),
-            Position = UDim2.fromOffset(12, 7), BackgroundColor3 = Color3.fromRGB(24, 24, 27),
-            BackgroundTransparency = 0.22, BorderSizePixel = 0,
-            Text = GetText("♫  Catálogo", "♫  Catalog"), Font = Enum.Font.GothamBold,
-            TextColor3 = spotifyText, TextSize = 11, AutoButtonColor = false, ZIndex = 25,
-        })
-        if Window._SpotifyAmbient then
-            Window._SpotifyAmbient.LayoutPlayer = function(compact)
-                N.openCatalog.Position = UDim2.fromOffset(compact and 72 or 12, 7)
-            end
-            Window._SpotifyAmbient.LayoutPlayer(Window.CompactNavigation == true)
-        end
-        N.openCatalog:SetAttribute("TextSpanish", "♫  Catálogo")
-        N.openCatalog:SetAttribute("TextEnglish", "♫  Catalog")
-        corner(N.openCatalog, 14)
-        stroke(N.openCatalog, Color3.fromRGB(130, 130, 135), 1, 0.80)
-        N.openCatalog.Activated:Connect(function() SpotifyPages:JumpTo(CatalogPage) end)
-
-        N.root = mk("Frame", {
-            Parent = CatalogPage, Name = "SpotifyBottomNavigation",
-            Size = UDim2.new(1, 0, 0, 90), AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-            BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 55,
-        })
-        N.mini = mk("TextButton", {
-            Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
-            BackgroundColor3 = Color3.fromRGB(32, 32, 36), BackgroundTransparency = 0.24, BorderSizePixel = 0,
-            Text = "", AutoButtonColor = false, ClipsDescendants = true, ZIndex = 56,
-        })
-        corner(N.mini, 8)
-        spotifyGlass(N.mini, 56)
-        N.cover = mk("ImageLabel", {
-            Parent = N.mini, Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(5, 5),
-            BackgroundColor3 = Color3.fromRGB(25, 25, 28), BorderSizePixel = 0,
-            Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 57,
-        })
-        corner(N.cover, 5)
-        N.title = mk("TextLabel", {
-            Parent = N.mini, Size = UDim2.new(1, -100, 0, 20), Position = UDim2.fromOffset(51, 5),
-            BackgroundTransparency = 1, Text = GetText("Selecciona una canción", "Select a song"),
-            Font = Enum.Font.GothamBold, TextColor3 = spotifyText, TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
-        })
-        N.artist = mk("TextLabel", {
-            Parent = N.mini, Size = UDim2.new(1, -100, 0, 16), Position = UDim2.fromOffset(51, 24),
-            BackgroundTransparency = 1, Text = "", Font = Enum.Font.GothamMedium,
-            TextColor3 = Color3.fromRGB(205, 205, 210), TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
-        })
-        N.play = mk("ImageButton", {
-            Parent = N.mini, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -10, 0.5, -1), BackgroundTransparency = 1,
-            Image = asset(135609604299893), ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 59,
-        })
-        N.progress = mk("Frame", {
-            Parent = N.mini, Size = UDim2.fromOffset(0, 2), Position = UDim2.new(0, 0, 1, -2),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, ZIndex = 58,
-        })
-        N.mini.Activated:Connect(function() SpotifyPages:JumpTo(PlayerPage) end)
-        N.play.Activated:Connect(togglePlayback)
-
-        N.nav = mk("Frame", {
-            Parent = N.root, Size = UDim2.new(1, -16, 0, 36), Position = UDim2.new(0, 8, 0, 53),
-            BackgroundTransparency = 1, ZIndex = 56,
-        })
-        function N.button(index, iconName, fallback, es, en)
-            local button = mk("TextButton", {
-                Parent = N.nav, Size = UDim2.new(1/3, 0, 1, 0), Position = UDim2.new((index-1)/3, 0, 0, 0),
-                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 57,
-            })
-            local content = mk("Frame", {
-                Parent = button, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 57,
-            })
-            mk("UIListLayout", {
-                Parent = content, FillDirection = Enum.FillDirection.Horizontal,
-                HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
-                SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
-            })
-            local glyph = mk("TextLabel", {
-                Parent = content, S
+            B.play

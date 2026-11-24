@@ -1,4 +1,110 @@
-ansparency = 1,
+             separator.Visible = not narrow
+                    rim.Position = narrow and UDim2.fromOffset(1, 1) or UDim2.new(0.40, 0, 0, 1)
+                    rim.Size = narrow and UDim2.new(1, -2, 1, -2) or UDim2.new(0.60, -1, 1, -2)
+                    if label then
+                        label.Size = narrow and UDim2.new(1, -28, 0, 22) or UDim2.new(0.38, -26, 0, 22)
+                        label.Position = UDim2.new(0, 16, 0, narrow and 4 or 13)
+                    end
+                    if status then
+                        status.Position = UDim2.new(0, 16, 0, narrow and 25 or 38)
+                    end
+                    local y = narrow and 48 or 18
+                    HolderSwitch.Position = UDim2.new(1, -66, 0, y)
+                    ComboBtn.Position = UDim2.new(1, -194, 0, y + 2)
+                    FavBtn.Position = UDim2.new(1, -164, 0, y - 1)
+                    DetachBtn.Position = UDim2.new(1, -130, 0, y)
+                    PinBtn.Position = UDim2.new(1, -98, 0, y)
+                    KeybindBtn.Position = narrow and UDim2.new(0, 14, 1, -27) or UDim2.new(0.38, 12, 1, -27)
+                    KeybindBtn.Size = narrow and UDim2.new(1, -28, 0, 20) or UDim2.new(0.62, -26, 0, 20)
+                    HolderClick.Size = narrow and UDim2.new(1, 0, 0, 44) or UDim2.new(0.38, -6, 1, 0)
+                end
+                Holder:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutOptionCard)
+                layoutOptionCard()
+            end
+            -- El interruptor de la derecha también debe responder al toque directo.
+            local switchHit = mk("TextButton", {
+                Parent = HolderSwitch, Size = UDim2.fromScale(1, 1),
+                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 16,
+            })
+            switchHit.Activated:Connect(function()
+                state = not state
+                tog.SetValue(state)
+                if favRow and favRow.SetValue then favRow.SetValue(state) end
+                pcall(cb, state)
+            end)
+            HolderClick.ZIndex = 14
+            
+            
+            local FloatingWindow = nil
+            local FloatingGlow = nil
+            local animationConnection = nil
+            
+            local function createFloatingWindow()
+
+                local floatStyle    = SavedConfig.FloatingToggleStyle or "Pill"
+                local isCircleStyle = (floatStyle == "Circle")
+                local hasLinkedSlider = (_linkedSliderRef ~= nil) and not isCircleStyle
+                local floatW = isCircleStyle and 64 or 200
+                local floatH = isCircleStyle and 64 or (hasLinkedSlider and 76 or 36)
+                local usePillV5 = not isCircleStyle
+                if usePillV5 and not hasLinkedSlider then
+                    floatW = FloatingPillV5.FitWidth(displayText, 21)
+                    floatH = 30
+                end
+                local hasDial = usePillV5 and not hasLinkedSlider and type(_dialList) == "table" and #_dialList > 0
+
+                FloatingGlow = mk("Frame", {
+                    Parent = Window.ScreenGui,
+                    Size = UDim2.fromOffset(216, 48),
+                    Position = UDim2.new(0.5, -108, 0.5, -24),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 3
+                })
+                corner(FloatingGlow, 999)
+
+                FloatingWindow = mk("Frame", {
+                    Parent = Window.ScreenGui,
+                    Size = UDim2.fromOffset(floatW, floatH),
+                    Position = UDim2.new(0.5, -floatW/2, 0.5, -floatH/2),
+                    BackgroundColor3 = isCircleStyle and Color3.fromRGB(20, 20, 26) or FloatingPillV5.OffColor(),
+                    BackgroundTransparency = isCircleStyle and 0.55 or 0.45,
+                    BorderSizePixel = 0,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex = 4
+                })
+                FloatPos.Apply(favId, FloatingWindow)
+                if FloatPos.IsLocked(favId) then
+                    isLocked = true
+                    PinBtn.Image = "rbxassetid://91959170037380"
+                end
+                if not usePillV5 then
+                    FloatingWindow:SetAttribute("ThemeRole", "Secondary")
+                else
+                    FloatingWindow:SetAttribute("YYPillV5", true)
+                end
+                FloatingWindow:SetAttribute("SupportsFloatStyle", true)
+                FloatingWindow:SetAttribute("HasLinkedSlider", hasLinkedSlider)
+                if hasDial then FloatingWindow:SetAttribute("YYDialExtraPad", 12) end
+                corner(FloatingWindow, 999)
+
+                local floatStroke
+                if usePillV5 then
+                    floatStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0)
+                else
+                    floatStroke = stroke(FloatingWindow, Theme.Accent, 3, 0.20)
+                    buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
+                end
+
+                local FloatLabel = mk("TextLabel", {
+                    Parent = FloatingWindow,
+                    Size = isCircleStyle and UDim2.new(1, -24, 1, -24)
+                        or hasLinkedSlider and UDim2.new(1, -24, 0, 34)
+                        or UDim2.new(1, -24, 1, 0),
+                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
+                    BackgroundTransparency = 1,
                     Text = displayText,
                     TextColor3 = Theme.Text,
                     Font = Enum.Font.GothamBlack,
@@ -856,117 +962,4 @@ ansparency = 1,
             local TrackShadow = mk("Frame", {
                 Parent = Switch,
                 Size = UDim2.new(1, -2, 1, -2),
-                Position = UDim2.new(0, 1, 0, 1),
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                BackgroundTransparency = 0.82,
-                ZIndex = 10
-            })
-            corner(TrackShadow, 999)
-
-            local KnobShadow = mk("Frame", {
-                Parent = Switch,
-                Size = UDim2.new(0, 24, 0, 24),
-                Position = state and UDim2.new(1, -27, 0.5, -11) or UDim2.new(0, 3, 0.5, -11),
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                BackgroundTransparency = 0.55,
-                ZIndex = 11
-            })
-            corner(KnobShadow, 999)
-
-            local Knob = mk("Frame", {
-                Parent = Switch,
-                Size = UDim2.new(0, 24, 0, 24),
-                Position = state and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                ZIndex = 12
-            })
-            corner(Knob, 999)
-
-            local Click = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                ZIndex = 13
-            })
-
-            if hasBadge then
-                local credAvatarSize = 60
-                local credGap        = 10
-                local credNameH      = 18
-                local credBlockH     = credAvatarSize + credGap + credNameH
-                local credTopPad     = math.max(0, (holderH - credBlockH) / 2)
-                local credAvatarTop  = credTopPad
-                local credNameTop    = credTopPad + credAvatarSize + credGap
-
-                if credit.imageId then
-                    local avatarRing = mk("Frame", {
-                        Parent = Holder,
-                        Size = UDim2.new(0, credAvatarSize, 0, credAvatarSize),
-                        Position = UDim2.new(1, -134, 0, credAvatarTop),
-                        BackgroundColor3 = Theme.Secondary,
-                        ZIndex = 10
-                    })
-                    avatarRing:SetAttribute("ThemeRole", "Secondary")
-                    corner(avatarRing, 999)
-                    stroke(avatarRing, Theme.Stroke, 2.5, 0.30)
-
-                    local avatarImg = mk("ImageLabel", {
-                        Parent = avatarRing,
-                        Size = UDim2.new(1, -4, 1, -4),
-                        Position = UDim2.new(0, 2, 0, 2),
-                        BackgroundTransparency = 1,
-                        Image = credit.imageId,
-                        ZIndex = 11
-                    })
-                    corner(avatarImg, 999)
-                end
-
-                if credit.name then
-                    mk("TextLabel", {
-                        Parent = Holder,
-                        Size = UDim2.new(0, 78, 0, credNameH),
-                        Position = UDim2.new(1, -142, 0, credNameTop),
-                        BackgroundTransparency = 1,
-                        Text = credit.name,
-                        TextColor3 = Theme.Text,
-                        Font = Enum.Font.GothamBold,
-                        TextSize = 14,
-                        TextXAlignment = Enum.TextXAlignment.Center,
-                        TextTruncate = Enum.TextTruncate.AtEnd,
-                        ZIndex = 10
-                    }):SetAttribute("ThemeTextRole", "Text")
-                end
-            end
-
-            local knobOFF       = UDim2.new(0, 2,  0.5, -12)
-            local knobON        = UDim2.new(1, -26, 0.5, -12)
-            local shadowOFF     = UDim2.new(0, 3,  0.5, -11)
-            local shadowON      = UDim2.new(1, -27, 0.5, -11)
-            local knobNormal    = UDim2.new(0, 24, 0, 24)
-            local knobSquishON  = UDim2.new(0, 30, 0, 22)
-            local knobSquishOFF = UDim2.new(0, 30, 0, 22)
-
-            local function applyVisual(newState, animate)
-                local t = animate and 0.18 or 0
-                local ti = TweenInfo.new(t, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
-
-                local trackColor = newState and Theme.ToggleOn or Theme.AccentOff
-                local barColor   = newState and Theme.ToggleOn or Theme.AccentOff
-                TweenService:Create(Switch,     ti, {BackgroundColor3 = trackColor}):Play()
-                TweenService:Create(AccentBar,  ti, {BackgroundColor3 = barColor}):Play()
-                Switch:SetAttribute("ThemeRole",    newState and "ToggleOn" or "AccentOff")
-                AccentBar:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
-
-                local stateText  = "●  " .. (newState and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"))
-                local stateColor = newState and Theme.ToggleOn or Theme.TextDim
-                StateLabel.Text = stateText
-                TweenService:Create(StateLabel, ti, {TextColor3 = stateColor, BackgroundColor3 = newState and Theme.ToggleOn or Theme.AccentOff}):Play()
-                StateLabel:SetAttribute("ThemeTextRole", newState and "ToggleOn" or "TextDim")
-                StateLabel:SetAttribute("ThemeRole", newState and "ToggleOn" or "AccentOff")
-                TweenService:Create(HolderStroke, ti, {Color = newState and Theme.ToggleOn or Theme.Stroke, Transparency = newState and 0.35 or 0.55}):Play()
-                HolderStroke:SetAttribute("ThemeRole", newState and "ToggleOn" or "Stroke")
-
-                if animate then
-                    local squishSize = newState and knobSquishON or knobSquishOFF
-                    Tween
+                Posi

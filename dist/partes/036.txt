@@ -1,4 +1,104 @@
- local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
+, ZIndex = Z + 2 })
+
+    local PBuy = mk("TextButton", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = WHITE, Text = "", LayoutOrder = 4, ZIndex = Z + 3 })
+    corner(PBuy, 12)
+    goldGradient(PBuy, 0)
+    local PBuyText = mk("TextLabel", { Parent = PBuy, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, TextColor3 = Color3.fromRGB(50, 28, 6), TextSize = 14, Font = Enum.Font.GothamBlack, ZIndex = Z + 4 })
+    PBuyText:SetAttribute("IgnoreTextEffect", true)
+    local PShine = mk("Frame", { Parent = PBuy, Size = UDim2.new(0.25, 0, 1, 0), Position = UDim2.fromScale(-0.3, 0), BackgroundColor3 = WHITE, BackgroundTransparency = 0.6, BorderSizePixel = 0, Rotation = 0, ZIndex = Z + 4 })
+    mk("UIGradient", { Parent = PShine, Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(0.5, 0.2), NumberSequenceKeypoint.new(1, 1) }) })
+    PBuy.ClipsDescendants = true
+    TweenService:Create(PShine, TweenInfo.new(2.2, Enum.EasingStyle.Quad, Enum.EasingDirection.InOut, -1, false, 0.8), { Position = UDim2.fromScale(1.1, 0) }):Play()
+    RowKit.Control(PBuy)
+    PBuy.BackgroundColor3 = WHITE
+    PBuy.BackgroundTransparency = 0
+    PBuy:SetAttribute("ThemeRole", nil)
+    local PCheck = button(RightCol, "Ya lo compré · verificar", "I already bought it · verify", "Secondary", { Size = UDim2.new(1, 0, 0, 34), LayoutOrder = 5, TextSize = 12 })
+    local PStatus = label(RightCol, "", "", 10, Enum.Font.GothamBold, "TextDim", { Size = UDim2.new(1, 0, 0, 14), TextXAlignment = Enum.TextXAlignment.Center, LayoutOrder = 6, ZIndex = Z + 2 })
+
+    local function refreshBuyText()
+        if PR.price then
+            L(PBuyText, "Comprar · R$ " .. PR.price, "Buy · R$ " .. PR.price)
+        else
+            L(PBuyText, "Comprar en Roblox", "Buy on Roblox")
+        end
+    end
+    local function closeSheet()
+        TweenService:Create(PScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.92 }):Play()
+        task.delay(0.14, function() PSheet.Visible = false end)
+        stopDemo()
+    end
+    local function showSheet()
+        refreshBuyText()
+        if PR.checking then
+            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        else
+            L(PStatus, "", "")
+        end
+        PSheet.Visible = true
+        startDemo()
+        PScale.Scale = 0.9
+        TweenService:Create(PScale, TweenInfo.new(0.32, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+    end
+    PClose.MouseButton1Click:Connect(closeSheet)
+    PBuy.MouseButton1Click:Connect(function()
+        playSound(Sounds.Click, 0.6)
+        local ok = pcall(function()
+            MPS:PromptGamePassPurchase(LocalPlayer, PASS_ID)
+        end)
+        if type(setclipboard) == "function" then pcall(setclipboard, PASS_URL) end
+        if ok then
+            L(PStatus, "Se abrió la compra de Roblox · el link también quedó copiado", "Roblox purchase opened · link also copied")
+        else
+            L(PStatus, "Link copiado: compralo en el navegador y tocá Ya lo compré", "Link copied: buy it in the browser and tap I already bought it")
+        end
+    end)
+    PCheck.MouseButton1Click:Connect(function()
+        L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        PR.check()
+    end)
+
+    -- entrada única al editor: sin el pase se muestra la hoja premium
+    local function guardedOpen(id)
+        if PR.owned then
+            openEditor(id)
+        else
+            showSheet()
+        end
+    end
+    LS.Open = guardedOpen
+    LS.Premium = PR
+    FloatingPillV5.Studio.SetPremium(PR, showSheet) -- el mismo pase desbloquea el Estudio de Toggles Flotantes
+    -- la hoja reacciona cuando termina una verificación o una compra
+    table.insert(PR.listeners, function(owned)
+        if not PSheet.Visible then return end
+        refreshBuyText()
+        if PR.checking then
+            L(PStatus, "Verificando tu cuenta...", "Checking your account...")
+        elseif owned then
+            L(PStatus, "¡Listo! Ya tenés el Studio Logos", "Done! You now have Studio Logos")
+            playSound(Sounds.Click, 0.6)
+            task.delay(0.9, closeSheet)
+        else
+            L(PStatus, "Todavía no figura la compra en tu cuenta", "The purchase isn't on your account yet")
+        end
+    end)
+
+    -- =====================================================================
+    -- PESTAÑA LOGO: sección "MIS LOGOS"
+    -- =====================================================================
+    local function header(order, es, en, subEs, subEn)
+        local h = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 34), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 11 })
+        local t = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 18), Position = UDim2.fromOffset(4, 0), BackgroundTransparency = 1, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 12 })
+        t:SetAttribute("ThemeTextRole", "Text")
+        L(t, es, en)
+        local d = mk("TextLabel", { Parent = h, Size = UDim2.new(1, -10, 0, 13), Position = UDim2.fromOffset(4, 19), BackgroundTransparency = 1, TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12 })
+        d:SetAttribute("ThemeTextRole", "TextDim")
+        d:SetAttribute("IgnoreTextEffect", true)
+        L(d, subEs, subEn)
+        return h, d
+    end
+    local _, MineSub = header(2, "MIS LOGOS", "MY LOGOS", "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
     local MineGrid = mk("Frame", { Parent = LogoPage, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, BorderSizePixel = 0, LayoutOrder = 3 })
     mk("UIGridLayout", { Parent = MineGrid, CellSize = UDim2.new(1 / 3, -6, 0, 118), CellPadding = UDim2.new(0, 8, 0, 8), SortOrder = Enum.SortOrder.LayoutOrder, HorizontalAlignment = Enum.HorizontalAlignment.Left })
     header(9, "CATÁLOGO", "CATALOG", "Los íconos oficiales de Yin Yang", "Official Yin Yang icons")
@@ -922,182 +1022,4 @@
         Size = UDim2.new(1, 0, 1, 0),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
-        LayoutOrder = 1,
-        ClipsDescendants = true,
-        ZIndex = 10,
-    })
-
-    local CatalogPage = mk("Frame", {
-        Parent = SpotifyShell,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = 2,
-        ClipsDescendants = true,
-        ZIndex = 10,
-    })
-
-    local NowPlayingCard = mk("Frame", {
-        Parent = PlayerPage,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = spotifyPanel,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder = 1,
-        ZIndex = 11,
-    })
-    corner(NowPlayingCard, 16)
-    stroke(NowPlayingCard, Color3.fromRGB(90, 90, 96), 1, 0.45)
-
-    local NowPlayingBackdrop = mk("ImageLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, 0, 1, 0),
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.05,
-        BorderSizePixel = 0,
-        Image = "",
-        ImageTransparency = 1,
-        Visible = false,
-        ScaleType = Enum.ScaleType.Crop,
-        ZIndex = 11,
-    })
-    corner(NowPlayingBackdrop, 16)
-
-    local NowPlayingShade = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, 0, 1, 0),
-        Visible = false, -- el oscurecimiento uniforme pertenece al fondo de toda la ventana
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.45,
-        BorderSizePixel = 0,
-        ZIndex = 12,
-    })
-    corner(NowPlayingShade, 16)
-
-    local MoreTopBtn = mk("ImageButton", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 18, 0, 18),
-        Position = UDim2.new(1, -26, 0, 10),
-        AnchorPoint = Vector2.new(0, 0),
-        BackgroundTransparency = 1,
-        Image = asset(117978708573781),
-        ImageColor3 = spotifyText,
-        AutoButtonColor = false,
-        ZIndex = 13,
-    })
-
-    local AlbumArt = mk("ImageLabel", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(0, 176, 0, 176),
-        Position = UDim2.new(0.5, -88, 0, 14),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.82,
-        BorderSizePixel = 0,
-        Image = "",
-        ScaleType = Enum.ScaleType.Crop,
-        ZIndex = 12,
-    })
-    corner(AlbumArt, 16)
-    stroke(AlbumArt, spotifyGreen, 2.5, 0.10)
-    buildAnimatedBorder(AlbumArt, spotifyGreen, UDim.new(0, 16), true)
-
-    local AlbumFallback = mk("Frame", {
-        Parent = AlbumArt,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        ZIndex = 13,
-    })
-
-    local AlbumFallbackText = mk("TextLabel", {
-        Parent = AlbumFallback,
-        Size = UDim2.new(1, -12, 1, -12),
-        Position = UDim2.new(0, 6, 0, 6),
-        BackgroundTransparency = 1,
-        Text = "♪",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 56,
-        TextColor3 = spotifyGreen,
-        ZIndex = 13,
-    })
-
-    local InfoFrame = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 80),
-        Position = UDim2.new(0, 14, 0, 212),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 20,
-    })
-
-    local PlayerSongTitle = mk("TextLabel", {
-        Parent = InfoFrame,
-        Size = UDim2.new(1, 0, 0, 30),
-        Position = UDim2.new(0, 0, 0, 0),
-        BackgroundTransparency = 1,
-        Text = GetText("Selecciona una canción", "Select a song"),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 22,
-        TextColor3 = spotifyText,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local PlayerSongArtist = mk("TextLabel", {
-        Parent = InfoFrame,
-        Size = UDim2.new(1, 0, 0, 20),
-        Position = UDim2.new(0, 0, 0, 32),
-        BackgroundTransparency = 1,
-        Text = GetText("El catálogo se carga desde GitHub", "The catalog loads from GitHub"),
-        Font = Enum.Font.GothamMedium,
-        TextSize = 14,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local PlayerMeta = mk("TextLabel", {
-        Parent = InfoFrame,
-        Size = UDim2.new(1, 0, 0, 16),
-        Position = UDim2.new(0, 0, 0, 56),
-        BackgroundTransparency = 1,
-        Text = GetText("Esperando canción", "Waiting for a song"),
-        Font = Enum.Font.GothamMedium,
-        TextSize = 11,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-
-    local ProgressTrack = mk("Frame", {
-        Parent = NowPlayingCard,
-        Size = UDim2.new(1, -28, 0, 5),
-        Position = UDim2.new(0, 14, 0, 306),
-        BackgroundColor3 = Color3.fromRGB(58, 58, 58),
-        BorderSizePixel = 0,
-        ZIndex = 12,
-    })
-    corner(ProgressTrack, 999)
-
-    local SeekThumb = mk("Frame", {
-        Parent = ProgressTrack,
-        Size = UDim2.fromOffset(13, 13),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0, 0, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 15,
-        Visible = false,
-    })
-    corner(SeekThumb, 999)
-
-    local SeekTooltip = mk("Frame", {
-        Parent = ProgressTrack,
-        Size = UDim2.fromOffset(52, 26),
-        AnchorPoint = Vector2.new(0.5, 1),
-        Position = UDim2.new(0, 0, 0, -8),
-        BackgroundTransparency = 1,
-       
+        LayoutOrder 

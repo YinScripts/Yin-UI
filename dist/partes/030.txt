@@ -1,4 +1,131 @@
- return game:GetDescendants() end)
+nt = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
+                    lighting.Ambient = base.Ambient
+                end)
+                setBolt(pulse == pulses)
+                task.wait(self.Random:NextNumber(0.05, 0.15))
+            end
+            if token ~= self.FlashToken then return end
+            setBolt(false)
+            if bolt then pcall(function() bolt:Destroy() end) end
+            if self.BoltFolder == bolt then self.BoltFolder = nil end
+            TweenService:Create(lighting, TweenInfo.new(0.5, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), base):Play()
+            task.delay(0.55, function()
+                if token == self.FlashToken then self.FlashBase = nil end
+            end)
+        end)
+        self:_thunder(distance, strength, withBolt)
+    end
+
+    function ShaderRain:SetStormEnabled(enabled)
+        local wasStorm = self.StormEnabled
+        self.StormEnabled = enabled == true
+        self.StormToken = self.StormToken + 1
+        local token = self.StormToken
+        -- el cielo se pone más negro con tormenta (si el cielo lo puso la lluvia y no un preset)
+        if self.Enabled and self.SkySnapshot and wasStorm ~= self.StormEnabled then self:_applySky() end
+        if not self.Enabled or not self.StormEnabled then return end
+        task.spawn(function()
+            while self.Enabled and self.StormEnabled and token == self.StormToken do
+                task.wait(self.Random:NextNumber(self.StormGapMin or 5, self.StormGapMax or 12))
+                if self.Enabled and self.StormEnabled and token == self.StormToken then
+                    -- a veces rayo con canal visible, a veces relámpago dentro de las nubes
+                    local strike = self.Random:NextNumber() < 0.55
+                    self:Flash(strike and self.Random:NextNumber(0.85, 1.15) or self.Random:NextNumber(0.35, 0.6), strike)
+                end
+            end
+        end)
+    end
+
+    function ShaderRain:SetEnabled(enabled)
+        enabled = enabled == true
+        local was = self.Enabled
+        self.Enabled = enabled
+        if not self.Enabled then
+            self.StormToken = self.StormToken + 1
+            self:_endFlash(true)
+            self:_destroyRig()
+            if was then self:_restoreSky(true) end
+            return
+        end
+        self:_refreshDropColor()
+        self:_createRig()
+        self:_syncVisuals()
+        if not was then self:_applySky() end
+        if self.SoundEnabled then pcall(function() self:_ensureSound():Play() end) end
+        if self.StormEnabled then self:SetStormEnabled(true) end
+    end
+
+    function ShaderRain:Destroy()
+        self.Enabled, self.StormEnabled = false, false
+        self.StormToken = self.StormToken + 1
+        self:_endFlash(false)
+        self:_destroyRig()
+        -- cambio de preset: el preset nuevo ya puso su cielo, solo se descarta la foto
+        self:_restoreSky(false)
+    end
+
+    -- ==================== "Nivel 0": cámara de cinta perdida (found footage / VHS) ====================
+    -- Sin balanceo de cámara: solo cómo se ve y se siente. Lente abierto, grano, líneas de escaneo,
+    -- viñeta, parpadeo de exposición, auto-exposición al mirar las luces, desenfoque al girar rápido
+    -- y tirones de "tracking" de cinta cada tanto. Todo se restaura al cambiar de modo.
+    local ShaderFootage = {
+        Enabled = false,
+        Gui = nil,
+        Connection = nil,
+        SavedFov = nil,
+        TargetFov = 88,
+        BaseBlur = 2,
+        Grain = {},
+        Lines = nil,
+        Flicker = nil,
+        Band = nil,
+        LastLook = nil,
+        Blur = 2,
+        NextGlitch = 0,
+        GlitchT = nil,
+        Acc = 0,
+        Rng = Random.new(),
+        -- sonido de fondo propio: lo único que se escucha en "Nivel 0" (ID pendiente de Nick)
+        AmbientSoundId = "rbxassetid://120812539198119",
+        AmbientVolume = 0.7, -- 70 % (bajado un 30 %)
+        Ambient = nil,
+        Muted = {},
+        MuteConnections = {},
+        MuteToken = 0,
+    }
+
+    -- Silencio total: todos los sonidos del juego (y de la librería) a volumen 0, guardando el original.
+    -- Si el juego intenta subirles el volumen, se vuelven a silenciar al instante. Al salir, todo vuelve.
+    function ShaderFootage:_muteSound(sound)
+        if not self.Enabled or not sound or self.Muted[sound] ~= nil then return end
+        if PerfOpt.IsOwnInstance(sound) then return end
+        local ok = pcall(function()
+            self.Muted[sound] = sound.Volume
+            sound.Volume = 0
+        end)
+        if not ok then self.Muted[sound] = nil return end
+        local okSignal, connection = pcall(function()
+            return sound:GetPropertyChangedSignal("Volume"):Connect(function()
+                if self.Enabled and self.Muted[sound] ~= nil and sound.Volume > 0 then
+                    self.Muted[sound] = sound.Volume
+                    sound.Volume = 0
+                end
+            end)
+        end)
+        if okSignal and connection then table.insert(self.MuteConnections, connection) end
+    end
+
+    function ShaderFootage:_muteAll()
+        self.MuteToken = self.MuteToken + 1
+        local token = self.MuteToken
+        local okAdded, added = pcall(function()
+            return game.DescendantAdded:Connect(function(instance)
+                if instance:IsA("Sound") then task.defer(function() self:_muteSound(instance) end) end
+            end)
+        end)
+        if okAdded and added then table.insert(self.MuteConnections, added) end
+        task.spawn(function()
+            local okList, list = pcall(function() return game:GetDescendants() end)
             if not okList then return end
             for index, instance in ipairs(list) do
                 if token ~= self.MuteToken or not self.Enabled then return end
@@ -869,148 +996,4 @@
             TextXAlignment = Enum.TextXAlignment.Left,
             ZIndex = 314,
         })
-        count:SetAttribute("ThemeTextRole", "TextDim")
-        local chevron = mk("TextLabel", {
-            Parent = head,
-            Size = UDim2.fromOffset(30, 30),
-            AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, 0, 0.5, 0),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.3,
-            Text = "▾",
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 14,
-            ZIndex = 314,
-        })
-        chevron:SetAttribute("ThemeRole", "Background")
-        chevron:SetAttribute("ThemeTextRole", "Text")
-        corner(chevron, 999)
-
-        local body = mk("Frame", {
-            Parent = section,
-            Size = UDim2.new(1, 0, 0, 0),
-            AutomaticSize = Enum.AutomaticSize.Y,
-            BackgroundTransparency = 1,
-            LayoutOrder = 2,
-            ZIndex = 312,
-        })
-        mk("UIListLayout", {
-            Parent = body,
-            Padding = UDim.new(0, 8),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        })
-
-        if descriptionES and descriptionEN then
-            local description = mk("TextLabel", {
-                Parent = body,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                Text = GetText(descriptionES, descriptionEN),
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamMedium,
-                TextSize = 10,
-                TextWrapped = true,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                LayoutOrder = 0,
-                ZIndex = 313,
-            })
-            description:SetAttribute("ThemeTextRole", "TextDim")
-            description:SetAttribute("TextSpanish", descriptionES)
-            description:SetAttribute("TextEnglish", descriptionEN)
-        end
-
-        local entry = {es = titleES, en = titleEN, frame = section, body = body, icon = SECTION_ICONS[titleES] or "◆"}
-        entry.setOpen = function(open)
-            entry.open = open == true
-            body.Visible = entry.open
-            chevron.Rotation = entry.open and 0 or -90
-        end
-        entry.updateCount = function()
-            local n = 0
-            for _, child in ipairs(body:GetChildren()) do
-                if child:IsA("Frame") or child:IsA("TextButton") then n = n + 1 end
-            end
-            count.Text = GetText(n .. " ajustes", n .. " settings")
-        end
-        head.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.4)
-            entry.setOpen(not entry.open)
-        end)
-        entry.setOpen(#ShaderUISections == 0 or titleES == "Acciones")
-        table.insert(ShaderUISections, entry)
-
-        return body
-    end
-
-    local function shaderCreateToggle(parent, spec)
-        local state = shaderReadCustomValue(spec, spec.default, "boolean")
-        local holder = mk("Frame", {
-            Parent = parent,
-            Size = UDim2.new(1, 0, 0, 66),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.12,
-            BorderSizePixel = 0,
-            ZIndex = 313,
-        })
-        holder:SetAttribute("ThemeRole", "Background")
-        corner(holder, 12)
-        stroke(holder, Theme.Stroke, 1.1, 0.62)
-
-        local accent = mk("Frame", {
-            Parent = holder,
-            Size = UDim2.new(0, 3, 0, 30),
-            Position = UDim2.new(0, 10, 0.5, -15),
-            BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
-            BorderSizePixel = 0,
-            ZIndex = 314,
-        })
-        accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-        corner(accent, 99)
-
-        local label = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(1, -100, 0, 20),
-            Position = UDim2.new(0, 22, 0, 8),
-            BackgroundTransparency = 1,
-            Text = GetText(spec.es, spec.en),
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.GothamBold,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 314,
-        })
-        label:SetAttribute("ThemeTextRole", "Text")
-        label:SetAttribute("TextSpanish", spec.es)
-        label:SetAttribute("TextEnglish", spec.en)
-
-        local status = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(1, -100, 0, 14),
-            Position = UDim2.new(0, 22, 0, 29),
-            BackgroundTransparency = 1,
-            Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"),
-            TextColor3 = state and Theme.ToggleOn or Theme.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 9,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 314,
-        })
-        status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
-
-        local switch = mk("Frame", {
-            Parent = holder,
-            Size = UDim2.new(0, 48, 0, 25),
-            Position = UDim2.new(1, -62, 0.5, -12),
-            BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
-            BorderSizePixel = 0,
-            ZIndex = 314,
-        })
-        switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-        corner(switch, 99)
-
-        local knob = mk("Frame", {
-            Parent = switch,
-            Size = UDim2.new(0, 21, 0, 21),
-            Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5,
+        cou
