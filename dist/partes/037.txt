@@ -1,4 +1,9 @@
-= 1,
+{
+        Parent = SpotifyShell,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
         ClipsDescendants = true,
         ZIndex = 10,
     })
@@ -1186,6 +1191,4 @@
         local side = 4
         local availableW = math.max(0, width - (side * 2) - (gapX * (columns - 1)))
         local cellW = math.max(90, math.floor(availableW / columns))
-        local logicalHeight = spotifyLogicalSize(SongList).Y
-        if logicalHeight > 0 then
-            SpotifyState._CatalogCardHeight = math.clamp(math.floor((logicalHeight - gapY - 8) / 2), 84, 164)
+        local logicalHeight = spotifyLogicalSize

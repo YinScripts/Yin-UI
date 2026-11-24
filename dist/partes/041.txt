@@ -1,4 +1,10 @@
-   FA.viewerImage = mk("ImageButton", {
+       BorderSizePixel = 0,
+            Active = true,
+            Visible = false,
+            ZIndex = 400,
+        })
+        corner(FA.viewer, 10)
+        FA.viewerImage = mk("ImageButton", {
             Parent = FA.viewer, Size = UDim2.new(1, -40, 1, -90), Position = UDim2.new(0, 20, 0, 50),
             BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 401,
         })

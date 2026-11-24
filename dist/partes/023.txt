@@ -1,4 +1,6 @@
-dulo: se inclina al revés del movimiento y oscila al frenar
+tl.hold - prev) / math.max(dt, 1 / 120)
+                            ctl.holdVel = ctl.holdVel:Lerp(hv, 0.5)
+                            -- balanceo tipo péndulo: se inclina al revés del movimiento y oscila al frenar
                             ctl.roll, ctl.rollV = spring(ctl.roll, ctl.rollV, math.clamp(hv.X * 5, -60, 60), 90, 7, dt)
                             ctl.pitch, ctl.pitchV = spring(ctl.pitch, ctl.pitchV, math.clamp(-hv.Y * 3, -35, 35), 80, 7, dt)
                             local wob = math.clamp(ctl.holdVel.Magnitude / 10, 0.18, 1)
@@ -846,9 +848,4 @@ dulo: se inclina al revés del movimiento y oscila al frenar
             pcall(function()
                 BackgroundVideo:Pause()
                 BackgroundVideo.Playing = false
-                BackgroundVideo.Visible = false
-                BackgroundVideo.Video = ""
-            end)
-        end
-        if self._RefreshTabIconLayout then
-  
+         

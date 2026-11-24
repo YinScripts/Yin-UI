@@ -1,4 +1,6 @@
-e.sceneCoverage) == "boolean" then ShaderReflections:SetSceneCoverage(overdrive.sceneCoverage) end
+ss) end
+            if type(overdrive.surfaceMode) == "string" then ShaderReflections:SetSurfaceMode(overdrive.surfaceMode) end
+            if type(overdrive.sceneCoverage) == "boolean" then ShaderReflections:SetSceneCoverage(overdrive.sceneCoverage) end
             if type(overdrive.skyMirror) == "boolean" then ShaderReflections:SetSkyMirrorEnabled(overdrive.skyMirror) end
             if type(overdrive.stripTextures) == "boolean" then ShaderReflections:SetStripTexturesEnabled(overdrive.stripTextures) end
             if type(overdrive.objectMirror) == "boolean" then ShaderReflections:SetObjectMirrorEnabled(overdrive.objectMirror) end
@@ -879,6 +881,4 @@ e.sceneCoverage) == "boolean" then ShaderReflections:SetSceneCoverage(overdrive.
        "Thank you for using Yin Yang v28.\nMade with dedication for the community.", "TextDim")
 
     local Logo = mk("ImageLabel", {
-        Parent = Hero, Size = UDim2.new(0, 104, 0, 104), AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -18, 0.5, 0), BackgroundTransparency = 1,
- 
+        Par

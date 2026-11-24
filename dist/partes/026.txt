@@ -1,4 +1,8 @@
-     Parent = ColorPickerPanel,
+ón y brillo")
+    PickerHint:SetAttribute("TextEnglish", "Tap the area to choose saturation and brightness")
+
+    local PickerClose = mk("TextButton", {
+        Parent = ColorPickerPanel,
         Size = UDim2.new(0, 30, 0, 30),
         Position = UDim2.new(1, -38, 0, 8),
         BackgroundColor3 = Theme.Secondary,
@@ -1087,8 +1091,4 @@
         corner(Card, 14)
         local CardStroke = stroke(Card, Theme.Stroke, 1.5, 0.75)
         CardStroke:SetAttribute("ThemeRole", "Stroke")
-        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
-
-        local preview = createPreview(Card, mode, accentColor)
-
-        local TitleLabel = mk("TextLabel"
+        local Card

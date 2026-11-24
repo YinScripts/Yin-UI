@@ -1,4 +1,6 @@
- true, true end
+             self.Tweens[instance][property] = tween
+                local played = pcall(function() tween:Play() end)
+                if played then return true, true end
             end
         end
 
@@ -935,9 +937,4 @@
     end
 
     function ShaderReflections:SetSkyMirrorEnabled(enabled)
-        self.SkyMirrorEnabled = enabled == true
-        if not self.SkyMirrorEnabled then
-            self:_restoreSkyMirror()
-        end
-        if self.Enabled then
-  
+        self.S

@@ -1,4 +1,9 @@
-          self._RefreshTabIconLayout()
+       BackgroundVideo.Visible = false
+                BackgroundVideo.Video = ""
+            end)
+        end
+        if self._RefreshTabIconLayout then
+            self._RefreshTabIconLayout()
         end
 
         if BackgroundArt then
@@ -1032,7 +1037,4 @@
             local SumText = mk("TextLabel", {
                 Parent = Summary, Size = UDim2.new(1, -190, 0, 16), Position = UDim2.new(0, 78, 0, 10), BackgroundTransparency = 1,
                 Text = "", TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12,
-                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
-            })
-            SumText:SetAttribute("ThemeTextRole", "Text")
-            
+                TextXAlignment = Enum.Text

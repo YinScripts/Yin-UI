@@ -256,9 +256,11 @@ end
 
 function YinYang:CreateWindow(title_text, startTheme, options)
     options = type(options) == "table" and options or {}
-    startTheme = startTheme or "Senju"
-    -- Halloween terminado: Dark queda bloqueado; si la config guardada lo trae se usa Senju
-    if startTheme == "Dark" and ThemePalettes["Senju"] then startTheme = "Senju" end
+    -- Tema por defecto: Navidad (si no se pudo descargar, Senju)
+    local defaultTheme = ThemePalettes["Navidad"] and "Navidad" or "Senju"
+    startTheme = startTheme or defaultTheme
+    -- Halloween terminado: Dark queda bloqueado; si la config guardada lo trae (o no hay config) se usa el tema por defecto
+    if startTheme == "Dark" then startTheme = defaultTheme end
 
     if IsPlayerBanned(LocalPlayer) then
         pcall(function()
@@ -1101,9 +1103,4 @@ function YinYang:CreateWindow(title_text, startTheme, options)
 
         local tw1 = TweenService:Create(
             MainScale,
-            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDirection.In),
-            { Scale = 1 }
-        )
-        local tw2 = TweenService:Create(
-            Main,
-            TweenInfo.new(0.25, Enum.EasingStyle
+            TweenInfo.new(0.25, Enum.EasingStyle.Cubic, Enum.EasingDi

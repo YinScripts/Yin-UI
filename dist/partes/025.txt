@@ -1,4 +1,7 @@
-local SumSub = mk("TextLabel", {
+XAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
+            })
+            SumText:SetAttribute("ThemeTextRole", "Text")
+            local SumSub = mk("TextLabel", {
                 Parent = Summary, Size = UDim2.new(1, -190, 0, 14), Position = UDim2.new(0, 78, 0, 28), BackgroundTransparency = 1,
                 Text = "", TextColor3 = Theme.TextDim, Font = Enum.Font.GothamMedium, TextSize = 10,
                 TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 503,
@@ -1117,8 +1120,4 @@ local SumSub = mk("TextLabel", {
         ZIndex = 262,
     })
     PickerHint:SetAttribute("ThemeTextRole", "TextDim")
-    PickerHint:SetAttribute("TextSpanish", "Toca el área para elegir saturación y brillo")
-    PickerHint:SetAttribute("TextEnglish", "Tap the area to choose saturation and brightness")
-
-    local PickerClose = mk("TextButton", {
-   
+    PickerHint:SetAttribute("TextSpanish", "Toca el área para elegir saturaci

@@ -1,4 +1,6 @@
- BackgroundColor3 = Theme.AccentOff }):Play()
+
+                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
+                    TweenService:Create(AccentBar, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
                     TweenService:Create(IconRingStroke, ti, { Color = Theme.AccentOff, Transparency = 0.3 }):Play()
                     TweenService:Create(IconGlyph, ti, { TextColor3 = Theme.TextDim }):Play()
                     TweenService:Create(StatusBadge, ti, { BackgroundColor3 = Theme.AccentOff, BackgroundTransparency = 0.15 }):Play()
@@ -893,6 +895,4 @@
                         if ctl.state == "held" then
                             local prev = ctl.hold
                             ctl.hold = prev:Lerp(ctl.holdTarget, math.min(1, dt * 16))
-                            local hv = (ctl.hold - prev) / math.max(dt, 1 / 120)
-                            ctl.holdVel = ctl.holdVel:Lerp(hv, 0.5)
-                            -- balanceo tipo pén
+                            local hv = (c

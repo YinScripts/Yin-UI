@@ -1,4 +1,9 @@
-          self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
+kyMirrorEnabled = enabled == true
+        if not self.SkyMirrorEnabled then
+            self:_restoreSkyMirror()
+        end
+        if self.Enabled then
+            self.SceneQueue, self.SceneCursor, self.SceneComplete = {}, 1, false
             self:Refresh()
         end
     end
@@ -991,6 +996,4 @@
                 task.wait(self.Random:NextNumber(0.04, 0.09))
                 if token ~= self.FlashToken then break end
                 pcall(function()
-                    lighting.Brightness = base.Brightness + 0.35 * k
-                    lighting.ExposureCompensation = base.ExposureCompensation + 0.1 * k
-                    lighting.OutdoorAmbie
+                    lighting.Brightness = 

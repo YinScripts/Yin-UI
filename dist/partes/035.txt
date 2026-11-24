@@ -1,4 +1,9 @@
-r(c)
+Accent, function(c)
+                setColor(c)
+                api.Refresh()
+                changed()
+            end, function(c)
+                setColor(c)
                 api.Refresh()
                 changed()
             end, function()
@@ -774,4 +779,4 @@ r(c)
         corner(mk("Frame", { Parent = dot, Size = UDim2.fromOffset(6, 6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = Z + 4 }), 999)
         label(row, f[1], f[2], 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -22, 1, 0), Position = UDim2.fromOffset(22, 0), ZIndex = Z + 3 })
     end
-    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any executor.", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, 0, 0, 26), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, LayoutOrder = 3
+    label(RightCol, "Se guarda en tu cuenta de Roblox para siempre: cualquier dispositivo, cualquier ejecutor.", "It's saved to your Roblox account forever: any device, any ex

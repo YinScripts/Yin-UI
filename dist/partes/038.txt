@@ -1,4 +1,6 @@
-
+(SongList).Y
+        if logicalHeight > 0 then
+            SpotifyState._CatalogCardHeight = math.clamp(math.floor((logicalHeight - gapY - 8) / 2), 84, 164)
         end
         local m = getSpotifyMetrics()
         local rowAvailW = math.max(0, width - ((m.gridColumns - 1) * m.gridGapX) - 8)
@@ -1145,6 +1147,4 @@
             end
             if not active then return end
             if B.title.Text ~= PlayerSongTitle.Text then B.title.Text = PlayerSongTitle.Text end
-            if B.artist.Text ~= PlayerSongArtist.Text then B.artist.Text = PlayerSongArtist.Text end
-            if B.cover.Image ~= AlbumArt.Image then B.cover.Image = AlbumArt.Image end
-            B.play
+            if B.artist.Text ~= PlayerSongArtist.T

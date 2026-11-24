@@ -1,4 +1,8 @@
-tSize = 13,
+Size = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = tostring(LocalPlayer.Name),
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
         TextColor3 = Color3.fromRGB(255, 255, 255),
         LayoutOrder = 2,
         ZIndex = 44,
@@ -1138,10 +1142,4 @@ clearSongRows = function()
             Size = UDim2.new(1, 0, 1, 0),
             BackgroundColor3 = Color3.fromRGB(0, 0, 0),
             BackgroundTransparency = 0.12,
-            BorderSizePixel = 0,
-            Active = true,
-            Visible = false,
-            ZIndex = 400,
-        })
-        corner(FA.viewer, 10)
      

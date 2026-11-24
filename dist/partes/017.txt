@@ -1,4 +1,5 @@
-
+ut.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isMaximized then
+                drag = true
                 dragStart = input.Position
                 startPos = Main.Position
             end
@@ -1017,5 +1018,3 @@
         TabIconCarousel.Spin = math.clamp(TabIconCarousel.Spin - moved * TAB_SPIN_GAIN, -TAB_SPIN_MAX, TAB_SPIN_MAX)
 
         for index, item in ipairs(TabIconCarousel.Items) do
-            local x = (((index - 1) * TAB_ICON_STEP - TabIconCarousel.Offset + TAB_ICON_SIZE) % length) - TAB_ICON_SIZE
-            item.Button.Position = U

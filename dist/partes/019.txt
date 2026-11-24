@@ -1,4 +1,8 @@
-             separator.Visible = not narrow
+ngle) / 2,
+                            edgeY + panelWidth * math.sin(angle) / 2)
+                        panel.Rotation = 16
+                    end
+                    separator.Visible = not narrow
                     rim.Position = narrow and UDim2.fromOffset(1, 1) or UDim2.new(0.40, 0, 0, 1)
                     rim.Size = narrow and UDim2.new(1, -2, 1, -2) or UDim2.new(0.60, -1, 1, -2)
                     if label then
@@ -957,9 +961,4 @@
             })
             Switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
             corner(Switch, 999)
-            stroke(Switch, Theme.Stroke, 1, 0.6)
-
-            local TrackShadow = mk("Frame", {
-                Parent = Switch,
-                Size = UDim2.new(1, -2, 1, -2),
-                Posi
+            stroke(Switch, Theme.Stroke, 

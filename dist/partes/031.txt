@@ -1,4 +1,9 @@
-nt:SetAttribute("ThemeTextRole", "TextDim")
+= Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        count:SetAttribute("ThemeTextRole", "TextDim")
         local chevron = mk("TextLabel", {
             Parent = head,
             Size = UDim2.fromOffset(30, 30),
@@ -855,6 +860,4 @@ nt:SetAttribute("ThemeTextRole", "TextDim")
         local overdrive = ShaderSavedState.overdrive
         if type(overdrive) == "table" then
             if type(overdrive.reflectionIntensity) == "number" then ShaderReflections:SetIntensity(overdrive.reflectionIntensity) end
-            if type(overdrive.wetness) == "number" then ShaderReflections:SetWetness(overdrive.wetness) end
-            if type(overdrive.surfaceMode) == "string" then ShaderReflections:SetSurfaceMode(overdrive.surfaceMode) end
-            if type(overdriv
+            if type(overdrive.wetness) == "number" then ShaderReflections:SetWetness(overdrive.wetne

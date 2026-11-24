@@ -1,4 +1,4 @@
-, ZIndex = Z + 2 })
+ecutor.", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, 0, 0, 26), TextWrapped = true, TextTruncate = Enum.TextTruncate.None, LayoutOrder = 3, ZIndex = Z + 2 })
 
     local PBuy = mk("TextButton", { Parent = RightCol, Size = UDim2.new(1, 0, 0, 42), BackgroundColor3 = WHITE, Text = "", LayoutOrder = 4, ZIndex = Z + 3 })
     corner(PBuy, 12)
@@ -1017,9 +1017,4 @@
         Circular = false,
     })
 
-    local PlayerPage = mk("Frame", {
-        Parent = SpotifyShell,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        LayoutOrder 
+    local PlayerPage = mk("Frame", 

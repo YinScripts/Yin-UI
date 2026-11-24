@@ -1,4 +1,8 @@
-down()
+r = Holder,
+                Fire = function()
+                    if not onCooldown then
+                        pcall(cb)
+                        startCooldown()
                     end
                 end,
                 SetCooldown = function(secs)
@@ -1044,5 +1048,3 @@ down()
 
                 else
                     stopSpinner()
-                    TweenService:Create(Switch, ti, { BackgroundColor3 = Theme.AccentOff }):Play()
-                    TweenService:Create(AccentBar, ti, {

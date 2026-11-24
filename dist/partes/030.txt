@@ -1,4 +1,6 @@
-nt = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
+base.Brightness + 0.35 * k
+                    lighting.ExposureCompensation = base.ExposureCompensation + 0.1 * k
+                    lighting.OutdoorAmbient = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
                     lighting.Ambient = base.Ambient
                 end)
                 setBolt(pulse == pulses)
@@ -991,9 +993,4 @@ nt = base.OutdoorAmbient:Lerp(flashColor, 0.14 * k)
             BackgroundTransparency = 1,
             Text = "",
             TextColor3 = Theme.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 314,
-        })
-        cou
+            Font 

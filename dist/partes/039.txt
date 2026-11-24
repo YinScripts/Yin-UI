@@ -1,4 +1,6 @@
-.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+ext then B.artist.Text = PlayerSongArtist.Text end
+            if B.cover.Image ~= AlbumArt.Image then B.cover.Image = AlbumArt.Image end
+            B.play.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
             local current = math.max(0, tonumber(sound.TimePosition) or 0)
             local duration = tonumber(sound.TimeLength) or 0
             if duration <= 0 then duration = durationToSeconds(SpotifyState.CurrentTrack.Duration) end
@@ -1025,8 +1027,4 @@
     FavPage.Owner = mk("TextLabel", {
         Parent = FavPage.Meta,
         Size = UDim2.fromOffset(0, 22),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        Text = tostring(LocalPlayer.Name),
-        Font = Enum.Font.GothamBold,
-        Tex
+        Automatic
