@@ -1,4 +1,190 @@
-), { Scale = 1 }):Play()
+lack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72, 22), ZIndex = Z + 3 })
+    label(PHead, "Creá tus propios botones flotantes", "Create your own floating buttons", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -110, 0, 14), Position = UDim2.fromOffset(72, 45), ZIndex = Z + 3 })
+    local PClose = mk("TextButton", { Parent = PHead, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 19, Font = Enum.Font.GothamBold, ZIndex = Z + 4 })
+    PClose:SetAttribute("ThemeRole", "Secondary")
+    PClose:SetAttribute("ThemeTextRole", "Text")
+    corner(PClose, 999)
+    RowKit.Control(PClose)
+
+    -- cuerpo en dos columnas: demostración (cuadrado) + información y compra
+    local PBody = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 1, -74), Position = UDim2.fromOffset(0, 74), BackgroundTransparency = 1, ZIndex = Z + 2 })
+    local RightCol = mk("ScrollingFrame", {
+        Parent = PBody,
+        Size = UDim2.new(0.5, -6, 1, 0),
+        Position = UDim2.new(0.5, 6, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 2,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ZIndex = Z + 2,
+    })
+    list(RightCol, 8)
+
+    -- =================== DEMOSTRACIÓN ANIMADA ===================
+    -- Un mini estudio que se arma solo: ID -> imagen, movimiento, colores, guardar.
+    -- Corre solo mientras la ventana premium está abierta (tweens nativos + una corrutina).
+    -- Va en su propia función: BuildLogoStudio está cerca del límite de 200 locales de Luau.
+    local startDemo, stopDemo = (function()
+    local Demo = mk("Frame", { Parent = PBody, Size = UDim2.new(0.5, -6, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.25, -3, 0.5, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 2 })
+    mk("UIAspectRatioConstraint", { Parent = Demo, AspectRatio = 1 })
+    corner(Demo, 14)
+    vgrad(Demo, Color3.fromRGB(78, 150, 232), Color3.fromRGB(176, 220, 252))
+    local DemoStroke = mk("UIStroke", { Parent = Demo, Color = WHITE, Thickness = 1.5, Transparency = 0.2 })
+    goldGradient(DemoStroke, 45)
+    local DZ = Z + 3
+    local function dframe(props)
+        props.Parent = props.Parent or Demo
+        props.BorderSizePixel = 0
+        props.ZIndex = props.ZIndex or DZ
+        return mk("Frame", props)
+    end
+    local function dtext(parent, txt, size, color, props)
+        local t = mk("TextLabel", { Parent = parent, BackgroundTransparency = 1, Text = txt, TextColor3 = color or WHITE, TextSize = size, Font = Enum.Font.GothamBold, TextScaled = false, ZIndex = DZ + 2 })
+        t:SetAttribute("IgnoreTextEffect", true)
+        for k, v in pairs(props or {}) do t[k] = v end
+        return t
+    end
+    -- paisaje
+    for _, m in ipairs({ { 0.2, 0.7 }, { 0.62, 0.9 }, { 0.95, 0.6 } }) do
+        dframe({ Size = UDim2.fromScale(m[2] * 0.6, m[2] * 0.6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(m[1], 0.74), Rotation = 45, BackgroundColor3 = Color3.fromRGB(96, 128, 170), ZIndex = DZ })
+    end
+    local dGround = dframe({ Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.72), BackgroundColor3 = WHITE, ZIndex = DZ + 1 })
+    vgrad(dGround, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
+
+    -- mini panel del estudio (arriba): campo de ID + chips + colores + guardar
+    local dPanel = dframe({ Size = UDim2.new(0.92, 0, 0.3, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.04), BackgroundColor3 = Color3.fromRGB(18, 18, 24), BackgroundTransparency = 0.15, ZIndex = DZ + 2 })
+    corner(dPanel, 10)
+    local dId = dframe({ Parent = dPanel, Size = UDim2.new(0.94, 0, 0.36, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.08), BackgroundColor3 = Color3.fromRGB(40, 40, 48), ZIndex = DZ + 3 })
+    corner(dId, 6)
+    local dIdText = dtext(dId, "ID: ", 9, Color3.fromRGB(230, 230, 240), { Size = UDim2.new(1, -10, 1, 0), Position = UDim2.fromOffset(6, 0), Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = DZ + 4 })
+    local function dchip(txt, x)
+        local c = dframe({ Parent = dPanel, Size = UDim2.new(0.24, 0, 0.34, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(x, 0.56), BackgroundColor3 = Color3.fromRGB(50, 50, 60), ZIndex = DZ + 3 })
+        corner(c, 999)
+        dtext(c, txt, 8, WHITE, { Size = UDim2.fromScale(1, 1), ZIndex = DZ + 4 })
+        return c
+    end
+    local chipSpin = dchip("Girar", 0.15)
+    local swPink = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.38, 0, 0.56, 0), BackgroundColor3 = Color3.fromRGB(255, 90, 170), ZIndex = DZ + 3 })
+    corner(swPink, 999)
+    local swGold = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.56, 0), BackgroundColor3 = GOLD_A, ZIndex = DZ + 3 })
+    corner(swGold, 999)
+    local chipSave = dchip("Guardar", 0.8)
+    chipSave.BackgroundColor3 = GOLD_B
+
+    -- el botón que se va armando (misma composición que el real: círculo + capas a 1.6x)
+    local dBtn = dframe({ Size = UDim2.fromScale(0.26, 0.26), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.58), BackgroundColor3 = Color3.fromRGB(60, 60, 70), ZIndex = DZ + 5 })
+    mk("UIAspectRatioConstraint", { Parent = dBtn, AspectRatio = 1 })
+    corner(dBtn, 999)
+    mk("UIStroke", { Parent = dBtn, Color = WHITE, Thickness = 1.5, Transparency = 0.3 })
+    local dBtnScale = mk("UIScale", { Parent = dBtn, Scale = 1 })
+    local function dlayer(img, z)
+        return mk("ImageLabel", { Parent = dBtn, Size = UDim2.fromScale(1.6, 1.6), Position = UDim2.fromScale(-0.3, -0.3), BackgroundTransparency = 1, Image = img, ImageTransparency = 1, ZIndex = z })
+    end
+    -- imágenes del Yin Yang Clásico (catálogo oficial)
+    local dBase = dlayer("rbxassetid://106130066496682", DZ + 6)
+    local dRing = dlayer("rbxassetid://70721341917757", DZ + 7)
+
+    -- texto del paso + cartel de guardado
+    local dCaption = dtext(Demo, "", 10, WHITE, { Size = UDim2.new(0.9, 0, 0, 20), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, Font = Enum.Font.GothamBlack, ZIndex = DZ + 8 })
+    corner(dCaption, 999)
+    local dToast = dtext(Demo, "", 11, Color3.fromRGB(50, 28, 6), { Size = UDim2.new(0.5, 0, 0, 22), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundColor3 = WHITE, BackgroundTransparency = 0, Font = Enum.Font.GothamBlack, Visible = false, ZIndex = DZ + 9 })
+    corner(dToast, 999)
+    goldGradient(dToast, 0)
+    local dToastScale = mk("UIScale", { Parent = dToast, Scale = 1 })
+
+    -- dedo que toca (círculo blanco con onda)
+    local dFinger = dframe({ Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.85, 0.9), BackgroundColor3 = WHITE, BackgroundTransparency = 0.15, ZIndex = DZ + 10 })
+    corner(dFinger, 999)
+    mk("UIStroke", { Parent = dFinger, Color = Color3.new(0, 0, 0), Thickness = 1.5, Transparency = 0.5 })
+    local dFingerScale = mk("UIScale", { Parent = dFinger, Scale = 1 })
+
+    local demoGen = 0
+    local ringTween = nil
+    -- posición (en el cuadrado) del centro de un elemento del mini panel
+    local function centerOf(el)
+        if el.Parent == dPanel then
+            local p = el.Position
+            -- dPanel: x 0.04..0.96, y 0.04..0.34 del cuadrado
+            return UDim2.new(0.04 + p.X.Scale * 0.92, 0, 0.04 + (p.Y.Scale + 0.17) * 0.3, 0)
+        end
+        return el.Position
+    end
+    local function demoReset()
+        if ringTween then ringTween:Cancel() ringTween = nil end
+        dIdText.Text = "ID: "
+        dBase.ImageTransparency, dRing.ImageTransparency, dRing.Rotation = 1, 1, 0
+        dRing.ImageColor3 = WHITE
+        dBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
+        dBtn.Position = UDim2.fromScale(0.5, 0.58)
+        dBtnScale.Scale = 1
+        chipSpin.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
+        dToast.Visible = false
+        dCaption.Text = ""
+    end
+    local function runDemo(gen)
+        local function alive() return demoGen == gen and PSheet.Visible end
+        local function pause(t)
+            task.wait(t)
+            return alive()
+        end
+        local function tap(el)
+            TweenService:Create(dFinger, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = centerOf(el) }):Play()
+            if not pause(0.5) then return false end
+            TweenService:Create(dFingerScale, TweenInfo.new(0.08), { Scale = 0.65 }):Play()
+            -- onda del toque
+            local ring = dframe({ Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = dFinger.Position, BackgroundTransparency = 1, ZIndex = DZ + 9 })
+            corner(ring, 999)
+            local rs = mk("UIStroke", { Parent = ring, Color = WHITE, Thickness = 2 })
+            TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(40, 40) }):Play()
+            TweenService:Create(rs, TweenInfo.new(0.4), { Transparency = 1 }):Play()
+            task.delay(0.45, function() ring:Destroy() end)
+            if not pause(0.1) then return false end
+            TweenService:Create(dFingerScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            return pause(0.25)
+        end
+        local function caption(es, en)
+            dCaption.Text = GetText(es, en)
+        end
+        while alive() do
+            demoReset()
+            if not pause(0.4) then break end
+            -- 1) pegar el ID: aparece la imagen base
+            caption("1 · Pegá el ID de tu imagen", "1 · Paste your image ID")
+            if not tap(dId) then break end
+            local id = "106130066496682"
+            for i = 1, #id do
+                dIdText.Text = "ID: " .. id:sub(1, i)
+                if not pause(0.035) then break end
+            end
+            if not alive() then break end
+            dBtnScale.Scale = 0.75
+            TweenService:Create(dBase, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
+            TweenService:Create(dBtnScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+            if not pause(0.7) then break end
+            -- 2) movimiento: el anillo aparece y gira
+            caption("2 · Elegí un movimiento", "2 · Pick a movement")
+            if not tap(chipSpin) then break end
+            chipSpin.BackgroundColor3 = GOLD_B
+            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
+            ringTween = TweenService:Create(dRing, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
+            ringTween:Play()
+            if not pause(1) then break end
+            -- 3) colores: círculo rosa, anillo dorado
+            caption("3 · Cambiá los colores", "3 · Change the colors")
+            if not tap(swPink) then break end
+            TweenService:Create(dBtn, TweenInfo.new(0.35), { BackgroundColor3 = Color3.fromRGB(255, 90, 170) }):Play()
+            if not pause(0.3) then break end
+            if not tap(swGold) then break end
+            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageColor3 = GOLD_A }):Play()
+            if not pause(0.7) then break end
+            -- 4) guardar: cartel + el logo vuela a la esquina como botón flotante
+            caption("4 · Guardalo y ¡listo!", "4 · Save it and done!")
+            if not tap(chipSave) then break end
+            dToast.Text = GetText("Guardado", "Saved")
+            dToast.Visible = true
+            dToastScale.Scale = 0.6
+            TweenService:Create(dToastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
             if not pause(0.7) then break end
             dToast.Visible = false
             TweenService:Create(dBtn, TweenInfo.new(0.6, Enum.EasingStyle.Quint, Enum.EasingDirection.InOut), { Position = UDim2.fromScale(0.13, 0.45) }):Play()
@@ -636,335 +822,4 @@
             TitleLabel.TextStrokeTransparency = A.Saved.titleStroke
             DaraHubLabel.TextStrokeTransparency = A.Saved.badgeStroke
             TitleLabel.TextStrokeColor3 = A.Saved.titleStrokeColor
-            DaraHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
-            TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
-            local compact = Window.CompactNavigation == true
-            TabListArt.Visible = not compact
-            CatImage.Visible = (not compact) and Theme.ThemeName == "Dark"
-            local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 1 end
-            local side = compact and 58 or 110
-            ContentArea.Position = UDim2.new(0, side, 0, 0)
-            ContentArea.Size = UDim2.new(1, -side, 1, 0)
-            for _, tab in ipairs(Window.Tabs or {}) do
-                if tab.Button then
-                    tab.Button.BackgroundTransparency = tab.Page and tab.Page.Visible and 0 or (Theme.TransparentTabs and 1 or 0)
-                end
-            end
-            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
-        end
-        track(SPage:GetPropertyChangedSignal("Visible"):Connect(function()
-            task.defer(function()
-                if SPage.Parent then if SPage.Visible then A.enter() else A.leave() end end
-            end)
-        end))
-        if SPage.Visible then A.enter() end
-    end
-
-    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/YinScripts/Yin-music/refs/heads/main/YinYang_Spotify"
-
-    local function asset(id)
-        return "rbxassetid://" .. tostring(id)
-    end
-
-    local function trim(s)
-        return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
-    end
-
-    local function clamp(v, minV, maxV)
-        if v < minV then return minV end
-        if v > maxV then return maxV end
-        return v
-    end
-
-    local function durationToSeconds(duration)
-        if type(duration) == "number" then
-            return math.max(0, math.floor(duration))
-        end
-
-        local text = trim(duration)
-        if text == "" then
-            return 0
-        end
-
-        local mm, ss = text:match("^(%d+):(%d+)$")
-        if mm and ss then
-            return tonumber(mm) * 60 + tonumber(ss)
-        end
-
-        local numeric = tonumber(text)
-        return numeric and math.max(0, math.floor(numeric)) or 0
-    end
-
-    local function secondsToClock(seconds)
-        seconds = math.max(0, math.floor(tonumber(seconds) or 0))
-        local mm = math.floor(seconds / 60)
-        local ss = seconds % 60
-        return string.format("%d:%02d", mm, ss)
-    end
-
-    local function safeDestroy(instance)
-        if instance then
-            pcall(function()
-                instance:Destroy()
-            end)
-        end
-    end
-
-    local function destroyAllSpotifySounds()
-        local function clean(parent)
-            if not parent then
-                return
-            end
-            for _, inst in ipairs(parent:GetDescendants()) do
-                if inst:IsA("Sound") and inst.Name == "YY_Spotify_CurrentSound" then
-                    pcall(function()
-                        inst:Stop()
-                    end)
-                    safeDestroy(inst)
-                end
-            end
-        end
-
-        clean(workspace)
-        if game:GetService("SoundService") then
-            clean(game:GetService("SoundService"))
-        end
-    end
-
-    local function normalizeTrack(track, index)
-        if type(track) ~= "table" then
-            return nil
-        end
-
-        local name = track.Name or track.name or track.Title or track.title or ("Track " .. tostring(index))
-        local artist = track.Artist or track.artist or ""
-        local duration = track.Duration or track.duration or "0:00"
-        if type(duration) == "number" then
-            duration = secondsToClock(duration)
-        else
-            duration = trim(duration)
-            if duration == "" then
-                duration = "0:00"
-            end
-        end
-
-        local cover = track.Cover or track.cover or track.CoverId or track.coverId or track.coverUrl or ""
-        local coverDownloadUrl = track.CoverURL or track.coverURL or track.CoverUrl or ""
-        local audioUrl = track.AudioURL or track.audioUrl or track.AudioUrl or track.audioURL or ""
-
-        local safeName = tostring(name):lower():gsub("[^%w]+", "_"):gsub("_+", "_"):gsub("^_", ""):gsub("_$", "")
-        if safeName == "" then
-            safeName = "track_" .. tostring(index)
-        end
-
-        local cacheName = track.CacheName or track.cacheName or track.audioFile or track.AudioFile
-        if not cacheName or trim(cacheName) == "" then
-            cacheName = safeName .. ".mp3"
-        end
-
-        local coverCacheName = track.CoverCacheName or track.coverCacheName or ""
-        if trim(coverDownloadUrl) ~= "" and trim(coverCacheName) == "" then
-            local urlWithoutQuery = tostring(coverDownloadUrl):match("^[^%?#]+") or tostring(coverDownloadUrl)
-            local urlExt = urlWithoutQuery:match("%.([%w]+)$")
-            urlExt = (urlExt and urlExt ~= "" and #urlExt <= 5) and urlExt:lower() or "png"
-            coverCacheName = safeName .. "_cover." .. urlExt
-        end
-
-        local id = track.Id or track.id or track.ID or tostring(index)
-
-        return {
-            Id = id,
-            Name = tostring(name),
-            Artist = tostring(artist),
-            Duration = duration,
-            Cover = tostring(cover),
-            CoverURL = tostring(coverDownloadUrl),
-            CoverCacheName = tostring(coverCacheName),
-            AudioURL = tostring(audioUrl),
-            CacheName = tostring(cacheName),
-            IsUserSong = track.IsUserSong == true,
-            Raw = track,
-        }
-    end
-
-    local SpotifyState = {
-        Catalog = {},
-        SelectedIndex = 1,
-        IsPlaying = false,
-        IsRepeat = false,
-        CurrentLiked = {},
-        RowButtons = {},
-        HiddenRows = {},
-        CurrentSound = nil,
-        SoundProgressConnection = nil,
-        SoundEndedConnection = nil,
-        CurrentTrack = nil,
-        CurrentTrackSeconds = 0,
-        CurrentPausedPosition = 0,
-        CatalogLoaded = false,
-        SearchQuery = "",
-        PlaybackVolume = 0.75,
-        PlaybackSpeed = 1,
-        SettingsMenuVisible = false,
-        FloatingPlayerVisible = false,
-        FavoritesView = false,
-        MySongsView = false,
-        UserSongs = {},
-    }
-
-    local refreshSpotifyFloatingPlayer = function() end
-    local refreshSpotifyPlaybackMenu = function() end
-
-    local function getRenderOrder()
-        local order = {}
-        for i = 1, #SpotifyState.Catalog do
-            order[#order + 1] = i
-        end
-
-        table.sort(order, function(a, b)
-            local likedA = SpotifyState.CurrentLiked[a] == true
-            local likedB = SpotifyState.CurrentLiked[b] == true
-            if likedA ~= likedB then
-                return likedA and not likedB
-            end
-            return a < b
-        end)
-
-        return order
-    end
-
-
-    local function normalizeSearchText(value)
-        local s = tostring(value or "")
-        local replacements = {
-            ["á"] = "a", ["à"] = "a", ["ä"] = "a", ["â"] = "a", ["ã"] = "a", ["å"] = "a",
-            ["Á"] = "a", ["À"] = "a", ["Ä"] = "a", ["Â"] = "a", ["Ã"] = "a", ["Å"] = "a",
-            ["é"] = "e", ["è"] = "e", ["ë"] = "e", ["ê"] = "e",
-            ["É"] = "e", ["È"] = "e", ["Ë"] = "e", ["Ê"] = "e",
-            ["í"] = "i", ["ì"] = "i", ["ï"] = "i", ["î"] = "i",
-            ["Í"] = "i", ["Ì"] = "i", ["Ï"] = "i", ["Î"] = "i",
-            ["ó"] = "o", ["ò"] = "o", ["ö"] = "o", ["ô"] = "o", ["õ"] = "o",
-            ["Ó"] = "o", ["Ò"] = "o", ["Ö"] = "o", ["Ô"] = "o", ["Õ"] = "o",
-            ["ú"] = "u", ["ù"] = "u", ["ü"] = "u", ["û"] = "u",
-            ["Ú"] = "u", ["Ù"] = "u", ["Ü"] = "u", ["Û"] = "u",
-            ["ñ"] = "n", ["Ñ"] = "n",
-            ["ç"] = "c", ["Ç"] = "c",
-        }
-        for from, to in pairs(replacements) do
-            s = s:gsub(from, to)
-        end
-        s = s:lower()
-        s = trim(s)
-        return s
-    end
-
-    local function getVisibleRenderOrder()
-        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
-        local order = getRenderOrder()
-        local filtered = {}
-
-        for _, index in ipairs(order) do
-            local track = SpotifyState.Catalog[index]
-            local matchesView = true
-            if SpotifyState.MySongsView then
-                matchesView = track ~= nil and track.IsUserSong == true
-            elseif SpotifyState.FavoritesView then
-                matchesView = SpotifyState.CurrentLiked[index] == true
-            end
-            if matchesView then
-                filtered[#filtered + 1] = index
-            end
-        end
-
-        if query == "" then
-            return filtered
-        end
-
-        local tokens = {}
-        for token in query:gmatch("%S+") do
-            tokens[#tokens + 1] = token
-        end
-
-        table.clear(filtered)
-        for _, index in ipairs(order) do
-            local track = SpotifyState.Catalog[index]
-            if SpotifyState.MySongsView and (not track or track.IsUserSong ~= true) then
-                continue
-            end
-            if not SpotifyState.MySongsView and SpotifyState.FavoritesView and SpotifyState.CurrentLiked[index] ~= true then
-                continue
-            end
-            if track then
-                local haystack = normalizeSearchText((track.Name or "") .. " " .. (track.Artist or "") .. " " .. (track.Duration or ""))
-                local matched = true
-
-                for _, token in ipairs(tokens) do
-                    if not haystack:find(token, 1, true) then
-                        matched = false
-                        break
-                    end
-                end
-
-                if matched then
-                    filtered[#filtered + 1] = index
-                end
-            end
-        end
-        return filtered
-    end
-
-    local spotifyGreen = Color3.fromRGB(29, 185, 84)
-    local spotifyText = Color3.fromRGB(245, 245, 245)
-    local spotifyDim = Color3.fromRGB(170, 170, 170)
-
-    local spotifyPanel = Color3.fromRGB(0, 0, 0)
-
-    local function spotifyLogicalSize(gui)
-        local scale, node = 1, gui
-        while node and not node:IsA("LayerCollector") do
-            local uiScale = node:FindFirstChildOfClass("UIScale")
-            if uiScale then scale = scale * uiScale.Scale end
-            node = node.Parent
-        end
-        return gui.AbsoluteSize / math.max(scale, 0.01)
-    end
-
-    local function getSpotifyMetrics()
-        local width, height = 0, 0
-        pcall(function()
-            local logical = spotifyLogicalSize(SPage)
-            width, height = logical.X, logical.Y
-        end)
-
-        local compact = width > 0 and width < 640
-        local gridColumns = 3
-        local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
-        local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
-        -- Dos filas visibles, con límites para mantener controles legibles en móviles.
-        local cardHeight = SpotifyState._CatalogCardHeight or (height > 0 and math.clamp(math.floor((height - 166) / 2), 84, 164) or 140)
-        local coverMax = math.max(32, cardHeight - 46)
-
-        return {
-            compact = compact,
-            playerHeight = compact and 200 or 220,
-            albumSize = compact and 130 or 150,
-            albumTop = compact and 32 or 36,
-            infoLeft = compact and 154 or 174,
-            infoWidth = compact and -172 or -192,
-            titleSize = compact and 20 or 22,
-            artistSize = compact and 13 or 14,
-            metaSize = compact and 10 or 11,
-            progressBottom = compact and -30 or -34,
-            controlsBottom = compact and -46 or -52,
-            controlsHeight = compact and 40 or 44,
-            repeatX = compact and 0.06 or 0.05,
-            likeX = compact and 0.15 or 0.14,
-            playX = compact and 0.59 or 0.58,
-            nextX = compact and 0.85 or 0.87,
-            moreX = compact and 0.95 or 0.96,
-            playSize = compact and 30 or 34,
-            rowHeight = compact and 64 or 70,
-            rowCover = compact and 44 or 50,
-            rowTitleSize = compact and 14 or 15,
-           
+            Dar

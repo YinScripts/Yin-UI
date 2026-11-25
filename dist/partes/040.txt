@@ -1,4 +1,335 @@
-ation = 135,
+ = Enum.TextXAlignment.Left, ZIndex = 14,
+        })
+        Subtitle:SetAttribute("TextSpanish", "Tus canciones favoritas")
+        Subtitle:SetAttribute("TextEnglish", "Your favorite songs")
+
+        local TapArea = mk("TextButton", {
+            Parent = Card, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+            Text = "", AutoButtonColor = false, ZIndex = 16,
+        })
+        TapArea.Name = "FavoritesTapArea"
+        bindRowTap(TapArea, function()
+            FavPage.show()
+        end)
+        TapArea.MouseEnter:Connect(function()
+            TweenService:Create(Card, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(112, 46, 184)}):Play()
+        end)
+        TapArea.MouseLeave:Connect(function()
+            TweenService:Create(Card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = Color3.fromRGB(96, 38, 160)}):Play()
+        end)
+        return Card
+    end
+
+    createMySongsTile = function(layoutOrder)
+        local m = getSpotifyMetrics()
+        local cardH = m.cardHeight
+        local coverPad = m.compact and 9 or 11
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
+        local coverSize = math.floor(math.min(math.max(42, cellW - 20), m.coverMax))
+
+        local Card = mk("TextButton", {
+            Parent = SongList,
+            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
+            BackgroundColor3 = Color3.fromRGB(18, 43, 36),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            LayoutOrder = layoutOrder or 2,
+            Text = "",
+            AutoButtonColor = false,
+            ClipsDescendants = true,
+            ZIndex = 12,
+        })
+        Card.Name = "SpotifyMySongsTile"
+        corner(Card, 16)
+        local CardStroke = mk("UIStroke", {
+            Parent = Card,
+            Color = Color3.fromRGB(100, 235, 165),
+            Thickness = 1.35,
+            Transparency = 0.18,
+        })
+        local CardStrokeGradient = mk("UIGradient", {
+            Parent = CardStroke,
+            Rotation = 0,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(42, 145, 92)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(190, 255, 218)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(42, 145, 92)),
+            }),
+        })
+        TweenService:Create(CardStrokeGradient, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), {Rotation = 360}):Play()
+        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
+        local CardGradient = mk("UIGradient", {
+            Parent = Card,
+            Rotation = 135,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(26, 94, 67)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(18, 48, 39)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 22, 25)),
+            }),
+        })
+
+        local Glow = mk("Frame", {
+            Parent = Card,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = spotifyGreen,
+            BackgroundTransparency = 0.82,
+            BorderSizePixel = 0,
+            ZIndex = 12,
+        })
+        corner(Glow, 16)
+
+        mk("ImageLabel", {
+            Parent = Card,
+            Size = UDim2.fromOffset(math.floor(coverSize * 0.5), math.floor(coverSize * 0.5)),
+            Position = UDim2.new(0.5, -math.floor(coverSize * 0.25), 0, coverPad + math.floor(coverSize * 0.16)),
+            BackgroundTransparency = 1,
+            Image = asset(134397426600888),
+            ImageColor3 = Color3.fromRGB(255, 255, 255),
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 14,
+        })
+
+        mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, -22, 0, 22),
+            Position = UDim2.new(0, 11, 1, -48),
+            BackgroundTransparency = 1,
+            Text = GetText("Mis canciones", "My songs"),
+            Font = Enum.Font.GothamBold,
+            TextSize = m.compact and 13 or 15,
+            TextColor3 = Color3.new(1, 1, 1),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 14,
+        })
+        local mySongsTitle = Card:FindFirstChildWhichIsA("TextLabel")
+        if mySongsTitle then
+            mySongsTitle:SetAttribute("TextSpanish", "Mis canciones")
+            mySongsTitle:SetAttribute("TextEnglish", "My songs")
+        end
+
+        local countLabel = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, -22, 0, 16),
+            Position = UDim2.new(0, 11, 1, -27),
+            BackgroundTransparency = 1,
+            Text = GetText(tostring(#SpotifyState.UserSongs) .. " canciones propias", tostring(#SpotifyState.UserSongs) .. " personal songs"),
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextColor3 = Color3.fromRGB(205, 235, 215),
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 14,
+        })
+        countLabel.Name = "MySongsCount"
+        countLabel:SetAttribute("MySongsCountLabel", true)
+        countLabel:SetAttribute("TextSpanish", tostring(#SpotifyState.UserSongs) .. " canciones propias")
+        countLabel:SetAttribute("TextEnglish", tostring(#SpotifyState.UserSongs) .. " personal songs")
+
+        bindRowTap(Card, function()
+            SpotifyState.FavoritesView = false
+            SpotifyState.MySongsView = true
+            SongList.CanvasPosition = Vector2.new(0, 0)
+            SongSearchBox.Text = ""
+            refreshSpotifyCatalogMode()
+        end)
+        Card.MouseEnter:Connect(function()
+            TweenService:Create(Card, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(28, 78, 58)
+            }):Play()
+            TweenService:Create(CardScale, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
+        end)
+        Card.MouseLeave:Connect(function()
+            TweenService:Create(Card, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = Color3.fromRGB(18, 43, 36)
+            }):Play()
+            TweenService:Create(CardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+        return Card
+    end
+
+    FavPage.HEART_ON = asset(116559368303288)
+    FavPage.HEART_OFF = asset(116559368303288)
+    FavPage.PLAY = asset(135609604299893)
+    FavPage.PAUSE = asset(74873705394436)
+    FavPage.SEARCH = asset(121018724060431)
+    FavPage.HERO_H = 216
+    FavPage.covers = {}
+    FavPage.rows = {}
+    FavPage.history = {}
+    FavPage.signature = nil
+    FavPage.open = false
+    FavPage.query = ""
+
+    FavPage.text = function(label, es, en)
+        label:SetAttribute("TextSpanish", es)
+        label:SetAttribute("TextEnglish", en)
+        label.Text = GetText(es, en)
+    end
+
+    FavPage.tween = function(obj, t, props)
+        TweenService:Create(obj, TweenInfo.new(t, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), props):Play()
+    end
+
+    FavPage.likedList = function()
+        local list = {}
+        for i = 1, #SpotifyState.Catalog do
+            if isLiked(i) then
+                list[#list + 1] = i
+            end
+        end
+        return list
+    end
+
+    FavPage.randomFrom = function(list, exclude)
+        if #list == 0 then
+            return nil
+        end
+        if #list == 1 then
+            return list[1]
+        end
+        local pick = exclude
+        local guard = 0
+        while pick == exclude and guard < 20 do
+            pick = list[math.random(1, #list)]
+            guard = guard + 1
+        end
+        return pick
+    end
+
+    FavPage.neighbor = function(fromIndex, dir)
+        local list
+        if SpotifyState.FavQueue then
+            list = FavPage.likedList()
+        elseif SpotifyState.Shuffle then
+            list = {}
+            for i = 1, #SpotifyState.Catalog do
+                list[i] = i
+            end
+        else
+            return nil
+        end
+        if #list == 0 then
+            return nil
+        end
+        if SpotifyState.Shuffle then
+            if dir < 0 then
+                local back = table.remove(FavPage.history)
+                if back and SpotifyState.Catalog[back] then
+                    return back
+                end
+            else
+                FavPage.remember(fromIndex)
+            end
+            return FavPage.randomFrom(list, fromIndex)
+        end
+        local pos = nil
+        for p, idx in ipairs(list) do
+            if idx == fromIndex then
+                pos = p
+                break
+            end
+        end
+        if not pos then
+            return list[dir > 0 and 1 or #list]
+        end
+        pos = pos + dir
+        if pos > #list then pos = 1 end
+        if pos < 1 then pos = #list end
+        return list[pos]
+    end
+
+    FavPage.remember = function(index)
+        if index and SpotifyState.Catalog[index] then
+            table.insert(FavPage.history, index)
+            if #FavPage.history > 50 then
+                table.remove(FavPage.history, 1)
+            end
+        end
+    end
+
+    FavPage.play = function(index)
+        if SpotifyState.CurrentTrack and SpotifyState.SelectedIndex ~= index then
+            FavPage.remember(SpotifyState.SelectedIndex)
+        end
+        SpotifyState.FavQueue = true
+        playTrack(index)
+    end
+
+    FavPage.totalText = function(list)
+        local seconds = 0
+        for _, index in ipairs(list) do
+            local song = SpotifyState.Catalog[index]
+            if song then
+                seconds = seconds + durationToSeconds(song.Duration)
+            end
+        end
+        local minutes = math.max(1, math.floor(seconds / 60 + 0.5))
+        if minutes >= 60 then
+            local h, m = math.floor(minutes / 60), minutes % 60
+            return string.format("%d h %d min", h, m), string.format("%d hr %d min", h, m)
+        end
+        return string.format("%d min", minutes), string.format("%d min", minutes)
+    end
+
+    FavPage.Root = mk("Frame", {
+        Parent = CatalogPage,
+        Size = UDim2.new(1, 0, 1, -90),
+        Position = UDim2.new(1, 0, 0, 0),
+        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ClipsDescendants = true,
+        Visible = false,
+        Active = true,
+        ZIndex = 40,
+    })
+    FavPage.Root.Name = "SpotifyFavoritesPage"
+
+    FavPage.Scroll = mk("ScrollingFrame", {
+        Parent = FavPage.Root,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ScrollBarThickness = 3,
+        ScrollBarImageColor3 = Color3.fromRGB(130, 130, 130),
+        ZIndex = 41,
+    })
+    mk("UIListLayout", {
+        Parent = FavPage.Scroll,
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+
+    FavPage.Hero = mk("Frame", {
+        Parent = FavPage.Scroll,
+        Size = UDim2.new(1, 0, 0, FavPage.HERO_H),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.72,
+        BorderSizePixel = 0,
+        LayoutOrder = 1,
+        ZIndex = 41,
+    })
+    mk("UIGradient", {
+        Parent = FavPage.Hero,
+        Rotation = 90,
+        Color = ColorSequence.new(Color3.fromRGB(80, 56, 160), Color3.fromRGB(40, 28, 82)),
+    })
+
+    FavPage.Cover = mk("Frame", {
+        Parent = FavPage.Hero,
+        Size = UDim2.fromOffset(136, 136),
+        AnchorPoint = Vector2.new(0, 1),
+        Position = UDim2.new(0, 20, 1, -18),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 42,
+    })
+    corner(FavPage.Cover, 6)
+    mk("UIGradient", {
+        Parent = FavPage.Cover,
+        Rotation = 135,
         Color = ColorSequence.new(Color3.fromRGB(69, 10, 245), Color3.fromRGB(196, 239, 217)),
     })
     mk("UIStroke", {Parent = FavPage.Cover, Color = Color3.fromRGB(0, 0, 0), Thickness = 1, Transparency = 0.75})
@@ -864,316 +1195,4 @@ ation = 135,
         Play.Name = "SongPlay"
         corner(Play, 999)
 
-        bindRowTap(TapArea, function() SpotifyState.FavQueue = false playTrack(index) end)
-        Cover.Activated:Connect(function()
-            SpotifyState.FavQueue = false
-            playTrack(index)
-        end)
-
-        local _plusFired = false
-        local _playFired = false
-        local function fireLike()
-            if _plusFired then return end
-            _plusFired = true
-            toggleTrackLike(index)
-            task.defer(function() _plusFired = false end)
-        end
-        local function firePlay()
-            if _playFired then return end
-            _playFired = true
-            SpotifyState.FavQueue = false
-            playTrack(index)
-            task.defer(function() _playFired = false end)
-        end
-        Plus.Activated:Connect(fireLike)
-        Play.Activated:Connect(firePlay)
-
-        SpotifyState.RowButtons[index] = {
-            Row = Row, Accent = Accent, Cover = Cover, Title = Title, Artist = Artist,
-            Duration = Duration, Plus = Plus, Play = Play, TapArea = TapArea,
-        }
-
-        applySpotifyRowLayout(SpotifyState.RowButtons[index])
-        updateTrackRow(SpotifyState.RowButtons[index], index)
-        return Row
-    end
-clearSongRows = function()
-        for _, child in ipairs(SongList:GetChildren()) do
-            if child ~= SongListLayout and not child:IsA("UIPadding") then
-                safeDestroy(child)
-            end
-        end
-        SpotifyState.RowButtons = {}
-        SpotifyState._FavoritesTile = nil
-        SpotifyState._MySongsTile = nil
-        updateSongListCanvas()
-    end
-
-    local function renderCatalog(catalog)
-        clearSongRows()
-        SPage.CanvasPosition = Vector2.new(0, 0)
-
-        SpotifyState.Catalog = {}
-        for i, track in ipairs(catalog or {}) do
-            local normalized = normalizeTrack(track, i)
-            if normalized then
-                normalized.IsUserSong = false
-                table.insert(SpotifyState.Catalog, normalized)
-            end
-        end
-
-        SpotifyState.UserSongs = {}
-        for _, track in ipairs(loadUserSongs()) do
-            if type(track) == "table"
-                and type(track.Name) == "string"
-                and type(track.Artist) == "string"
-                and type(track.AudioURL) == "string"
-                and isDirectMp3Url(track.AudioURL) then
-                local preparedTrack = table.clone(track)
-                preparedTrack.AudioURL = normalizeDownloadUrl(preparedTrack.AudioURL)
-                if type(preparedTrack.CoverURL) == "string" then
-                    preparedTrack.CoverURL = normalizeDownloadUrl(preparedTrack.CoverURL)
-                end
-                local normalized = normalizeTrack(preparedTrack, #SpotifyState.Catalog + 1)
-                if normalized then
-                    normalized.IsUserSong = true
-                    table.insert(SpotifyState.UserSongs, normalized)
-                    table.insert(SpotifyState.Catalog, normalized)
-                end
-            end
-        end
-
-        if #SpotifyState.Catalog == 0 then
-            -- Spotify no muestra estado del catálogo en la vista visual.
-            PlayerSongTitle.Text = GetText("Catálogo vacío", "Empty catalog")
-            PlayerSongArtist.Text = GetText("Revisa el repositorio remoto", "Check the remote repository")
-            PlayerMeta.Text = GetText("Sin canciones disponibles", "No songs available")
-            AlbumArt.Image = ""
-            ProgressTimeLeft.Text = "0:00"
-            ProgressTimeRight.Text = "0:00"
-            ProgressFill.Size = UDim2.new(0, 0, 1, 0)
-            syncPlaybackUI()
-            return
-        end
-
-        -- Spotify no muestra el contador del catálogo en la vista visual.
-        loadSpotifyFavorites()
-        renderSongRows()
-        updateSongListCanvas()
-        updateSpotifyCanvas()
-
-        local order = getRenderOrder()
-        selectTrack(order[1] or 1)
-        updateProgress(SpotifyState.Catalog[1], SpotifyState.CurrentSound)
-        syncPlaybackUI()
-    end
-
-    local function loadCatalogFromRemote()
-        destroyAllSpotifySounds()
-        local catalogData = nil
-
-        local okRemote, remoteResult = pcall(function()
-            local raw = game:HttpGet(SPOTIFY_CATALOG_URL, true)
-            local loader = loadstring(raw)
-            if not loader then
-                error("loadstring_failed")
-            end
-            return loader()
-        end)
-
-        if okRemote and type(remoteResult) == "table" then
-            if type(remoteResult.Catalog) == "table" then
-                catalogData = remoteResult.Catalog
-            elseif type(remoteResult.catalog) == "table" then
-                catalogData = remoteResult.catalog
-            else
-                catalogData = remoteResult
-            end
-        else
-            warn("[Spotify] No se pudo cargar el catálogo remoto: " .. tostring(remoteResult))
-        end
-
-        if type(catalogData) ~= "table" then
-            catalogData = {}
-        end
-
-        SpotifyState.CatalogLoaded = true
-        renderCatalog(catalogData)
-        updateSpotifyCanvas()
-    end
-
-    do
-        local staticTranslations = {
-            ["Favoritos"] = "Favorites",
-            ["Tus canciones favoritas"] = "Your favorite songs",
-            ["Ajustes de reproducción"] = "Playback settings",
-            ["El catálogo se carga desde GitHub"] = "The catalog loads from GitHub",
-        }
-        for _, element in ipairs(SpotifyShell:GetDescendants()) do
-            if element:IsA("TextLabel") or element:IsA("TextButton") then
-                local english = staticTranslations[element.Text]
-                if english then
-                    element:SetAttribute("TextSpanish", element.Text)
-                    element:SetAttribute("TextEnglish", english)
-                    element.Text = GetText(element.Text, english)
-                end
-            end
-        end
-    end
-
-    table.insert(YLang.Listeners, function()
-        local titleSpanish, titleEnglish = "Selecciona una canción", "Select a song"
-        if PlayerSongTitle.Text == titleSpanish or PlayerSongTitle.Text == titleEnglish then
-            PlayerSongTitle.Text = GetText(titleSpanish, titleEnglish)
-        end
-        local artistSpanish, artistEnglish = "El catálogo se carga desde GitHub", "The catalog loads from GitHub"
-        if PlayerSongArtist.Text == artistSpanish or PlayerSongArtist.Text == artistEnglish then
-            PlayerSongArtist.Text = GetText(artistSpanish, artistEnglish)
-        end
-        local metaPairs = {
-            {"Esperando canción", "Waiting for a song"},
-            {"Pausado por el temporizador", "Paused by sleep timer"},
-            {"Reproducción pausada", "Playback paused"},
-            {"Reproducción activa", "Playback active"},
-        }
-        for _, pair in ipairs(metaPairs) do
-            if PlayerMeta.Text == pair[1] or PlayerMeta.Text == pair[2] then
-                PlayerMeta.Text = GetText(pair[1], pair[2])
-                break
-            end
-        end
-        if FP.Title and (FP.Title.Text == titleSpanish or FP.Title.Text == titleEnglish) then
-            FP.Title.Text = GetText(titleSpanish, titleEnglish)
-        end
-    end)
-
-    SpotifyPages:JumpTo(PlayerPage)
-    refreshSpotifyCatalogMode()
-    syncPlaybackUI()
-    pcall(refreshSpotifyUILayout)
-    updateSongListCanvas()
-    updateSpotifyCanvas()
-    task.defer(function()
-        pcall(updateSongListCanvas)
-        pcall(updateSpotifyCanvas)
-    end)
-    task.spawn(loadCatalogFromRemote)
-
-    RepeatBtn.MouseButton1Click:Connect(function()
-        SpotifyState.IsRepeat = not SpotifyState.IsRepeat
-        if SpotifyState.CurrentSound then
-            pcall(function()
-                SpotifyState.CurrentSound.Looped = SpotifyState.IsRepeat
-                if SpotifyState.IsRepeat and SpotifyState.CurrentSound.TimePosition > 0 then
-                    local len = SpotifyState.CurrentSound.TimeLength
-                    if len > 0 and (len - SpotifyState.CurrentSound.TimePosition) < 0.5 then
-                        SpotifyState.CurrentSound.TimePosition = 0
-                        SpotifyState.CurrentSound:Play()
-                    end
-                end
-            end)
-        end
-        syncPlaybackUI()
-    end)
-
-    LikeBtn.MouseButton1Click:Connect(function()
-        toggleTrackLike(SpotifyState.SelectedIndex)
-    end)
-
-    PlayPauseBtnOuter.InputBegan:Connect(function(input)
-        if input.UserInputType == Enum.UserInputType.Touch or
-           input.UserInputType == Enum.UserInputType.MouseButton1 then
-            PlayPauseBtn.MouseButton1Click:Fire()
-        end
-    end)
-
-    PlayPauseBtn.MouseButton1Click:Connect(function()
-        if SpotifyState.CurrentSound then
-            if SpotifyState.IsPlaying then
-                SpotifyState.IsPlaying = false
-                pcall(function()
-                    SpotifyState.CurrentPausedPosition = math.max(0, tonumber(SpotifyState.CurrentSound.TimePosition) or 0)
-                    SpotifyState.CurrentSound:Pause()
-                end)
-                PlayerMeta.Text = GetText("Reproducción pausada", "Playback paused")
-            else
-                SpotifyState.IsPlaying = true
-                pcall(function()
-                    if SpotifyState.CurrentSound and SpotifyState.CurrentPausedPosition and SpotifyState.CurrentPausedPosition > 0 then
-                        SpotifyState.CurrentSound.TimePosition = math.max(0, SpotifyState.CurrentPausedPosition)
-                    end
-                    SpotifyState.CurrentSound:Play()
-                    task.defer(function()
-                        if SpotifyState.CurrentSound and SpotifyState.IsPlaying and SpotifyState.CurrentPausedPosition and SpotifyState.CurrentPausedPosition > 0 then
-                            pcall(function()
-                                SpotifyState.CurrentSound.TimePosition = math.max(0, SpotifyState.CurrentPausedPosition)
-                            end)
-                        end
-                    end)
-                end)
-                PlayerMeta.Text = GetText("Reproducción activa", "Playback active")
-            end
-            syncPlaybackUI()
-            return
-        end
-
-        if SpotifyState.Catalog[SpotifyState.SelectedIndex] then
-            playTrack(SpotifyState.SelectedIndex)
-        end
-    end)
-
-    PrevBtn.MouseButton1Click:Connect(previousTrack)
-
-    NextBtn.MouseButton1Click:Connect(function()
-        if #SpotifyState.Catalog == 0 then
-            return
-        end
-
-        local nextIndex = SpotifyState.SelectedIndex + 1
-        if nextIndex > #SpotifyState.Catalog then
-            nextIndex = 1
-        end
-        playTrack(nextIndex)
-    end)
-
-    MoreBtn.MouseButton1Click:Connect(function()
-        PlayerMeta.Text = "Menú de opciones abierto"
-    end)
-    end
-
-    function Window:CreateFanArtTab()
-        if self.FanArtTab and self.FanArtTab.Page and self.FanArtTab.Page.Parent then
-            return self.FanArtTab
-        end
-        local TabFanArt = Window:CreateTab("Fan Art", "Fan Art", "rbxassetid://91504176503119")
-        self.FanArtTab = TabFanArt
-        local FanArtPage = TabFanArt.Page
-
-        local FanArt_Items = {
-            { name = "YYFanArt1.png", url = "https://raw.githubusercontent.com/yinyangGPX/Beta/main/file_000000001704820a8cdf28c046004a14.png" },
-        }
-
-        local fanArtExecutorOk = type(game.HttpGet) == "function"
-            and type(writefile) == "function"
-            and type(isfile) == "function"
-            and type(getcustomasset) == "function"
-
-        local function fanArtLooksLikeImage(data)
-            if type(data) ~= "string" or #data < 10 then return false end
-            return data:sub(1, 4) == "\137PNG" or data:sub(1, 3) == "\255\216\255"
-        end
-
-        local FA = {}
-
-        -- Cabecera de la galeria
-        FA.hero = mk("Frame", {
-            Parent = FanArtPage,
-            Size = UDim2.new(1, 0, 0, 74),
-            BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0.35,
-            BorderSizePixel = 0,
-            ZIndex = 9,
-        })
-        FA.hero:SetAttribute("ThemeRole", "Secondary")
-        corner(FA.hero, 16)
-        stroke(F
+        bindRowTap(Tap

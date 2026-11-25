@@ -476,6 +476,176 @@ reen.Y > 0 then
 
         Tab._ContentParent = TabPage
 
+        -- Rueda de opciones ("curve ui"): manteniendo 1 s un toggle flotante se abren, en círculo y girando
+        -- despacio, los toggles de la misma sección de la pestaña. Tocar una opción la prende/apaga.
+        if not Window._OpenRadial then
+            function Window._OpenRadial(anchor, holder)
+                if Window._RadialOpen then return end
+                local tab, top
+                for _, t in pairs(Window.Tabs or {}) do
+                    local page = t.Page
+                    local parked = t._Segments and t._Segments.Parked
+                    local cur = holder
+                    while cur and cur.Parent and cur.Parent ~= page and cur.Parent ~= parked do cur = cur.Parent end
+                    if cur and cur.Parent and (cur.Parent == page or cur.Parent == parked) then tab, top = t, cur break end
+                end
+                if not tab then return end
+                local seg = tab._Segments
+                local function segOf(child)
+                    if not seg then return true end
+                    local ok, id = pcall(seg.Assign, child)
+                    return ok and id or nil
+                end
+                local mySeg = segOf(top)
+                local options = {}
+                local fns = Window._ToggleFns or {}
+                for h, fn in pairs(fns) do
+                    if h ~= holder and h.Parent then
+                        local c = h
+                        local page, parked = tab.Page, seg and seg.Parked
+                        while c and c.Parent and c.Parent ~= page and c.Parent ~= parked do c = c.Parent end
+                        if c and c.Parent and (c.Parent == page or c.Parent == parked) and segOf(c) == mySeg then
+                            options[#options + 1] = { fn = fn, order = c.LayoutOrder }
+                        end
+                    end
+                end
+                if #options == 0 then return end
+                table.sort(options, function(a, b) return a.order < b.order end)
+                while #options > 16 do table.remove(options) end
+
+                Window._RadialOpen = true
+                local gui = Window.ScreenGui
+                local view = gui.AbsoluteSize
+                local R = math.clamp(math.min(view.X, view.Y) * 0.32, 95, 150)
+                local ap, as = anchor.AbsolutePosition, anchor.AbsoluteSize
+                local cx = math.clamp(ap.X + as.X / 2, R + 60, math.max(R + 60, view.X - R - 60))
+                local cy = math.clamp(ap.Y + as.Y / 2, R + 30, math.max(R + 30, view.Y - R - 30))
+
+                local overlay = mk("TextButton", {
+                    Name = "YYRadial", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "",
+                    AutoButtonColor = false, ZIndex = 2000,
+                }, gui)
+                local orbit = mk("Frame", {
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(0, 0),
+                    BackgroundTransparency = 1, ZIndex = 2001,
+                }, overlay)
+                corner(orbit, 999)
+                local orbitStroke = stroke(orbit, Theme.Stroke, 1, 1)
+                local dot = mk("TextButton", {
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(34, 34),
+                    BackgroundColor3 = Theme.Text, Text = "", AutoButtonColor = false, ZIndex = 2003,
+                }, overlay)
+                corner(dot, 999)
+                local pills = {}
+                local function paint(p)
+                    local on = p.fn.Get()
+                    p.btn.BackgroundColor3 = on and Theme.Accent or Theme.Secondary
+                    p.btn.TextColor3 = on and (Theme.AccentText or getContrastColor(Theme.Accent)) or Theme.Text
+                    p.stroke.Color = on and Theme.Accent or Theme.Stroke
+                end
+                local toast
+                local function showToast(text)
+                    if toast then toast:Destroy() end
+                    toast = mk("TextLabel", {
+                        AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -14, 1, -14), Size = UDim2.fromOffset(220, 34),
+                        BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.05, Text = text, TextColor3 = Theme.Text,
+                        Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 2005, TextTruncate = Enum.TextTruncate.AtEnd,
+                    }, overlay)
+                    corner(toast, 8)
+                    stroke(toast, Theme.Stroke, 1, 0.4)
+                    local mine = toast
+                    task.delay(1.6, function() if mine and mine.Parent then mine:Destroy() end end)
+                end
+                for i, o in ipairs(options) do
+                    local btn = mk("TextButton", {
+                        AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(10, 28),
+                        AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Secondary, Text = o.fn.Name(),
+                        TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = false,
+                        TextTransparency = 1, BackgroundTransparency = 1, ZIndex = 2004,
+                    }, overlay)
+                    mk("UIPadding", { PaddingLeft = UDim.new(0, 11), PaddingRight = UDim.new(0, 11) }, btn)
+                    corner(btn, 999)
+                    local st = stroke(btn, Theme.Stroke, 1, 1)
+                    local scale = mk("UIScale", { Scale = 0.3 }, btn)
+                    local p = { fn = o.fn, btn = btn, stroke = st, scale = scale, i = i }
+                    pills[#pills + 1] = p
+                    paint(p)
+                    btn.MouseButton1Click:Connect(function()
+                        if p.dragged then return end
+                        p.fn.Flip()
+                        paint(p)
+                        showToast(p.fn.Name() .. (p.fn.Get() and GetText(": activado", ": on") or GetText(": desactivado", ": off")))
+                    end)
+                end
+
+                local k, target, rot = 0, 1, 0
+                local drag = nil
+                local lastMovedAt = 0
+                local closing = false
+                local conn
+                local function close()
+                    if closing then return end
+                    closing, target = true, 0
+                end
+                dot.MouseButton1Click:Connect(close)
+                overlay.MouseButton1Click:Connect(function()
+                    if (drag and drag.moved) or os.clock() - lastMovedAt < 0.3 then return end
+                    close()
+                end)
+                local inputs = {}
+                inputs[#inputs + 1] = overlay.InputBegan:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        drag = { a = math.atan2(input.Position.Y - cy, input.Position.X - cx), r0 = rot, moved = false, input = input }
+                    end
+                end)
+                inputs[#inputs + 1] = UserInputService.InputChanged:Connect(function(input)
+                    if not drag then return end
+                    if input.UserInputType == Enum.UserInputType.MouseMovement or input == drag.input then
+                        local a = math.atan2(input.Position.Y - cy, input.Position.X - cx)
+                        if math.abs(a - drag.a) > 0.05 then drag.moved = true end
+                        rot = drag.r0 + (a - drag.a)
+                    end
+                end)
+                inputs[#inputs + 1] = UserInputService.InputEnded:Connect(function(input)
+                    if drag and (input == drag.input or input.UserInputType == Enum.UserInputType.MouseButton1) then
+                        local moved = drag.moved
+                        if moved then lastMovedAt = os.clock() end
+                        for _, p in ipairs(pills) do p.dragged = moved end
+                        task.defer(function()
+                            drag = nil
+                            for _, p in ipairs(pills) do p.dragged = false end
+                        end)
+                    end
+                end)
+                local n = #pills
+                conn = RunService.RenderStepped:Connect(function(dt)
+                    dt = math.min(dt, 0.05)
+                    k = k + (target - k) * math.min(dt * 7, 1)
+                    if not drag then rot = rot + dt * 0.18 end
+                    local e = 1 - (1 - math.clamp(k, 0, 1)) ^ 3
+                    orbit.Size = UDim2.fromOffset(2 * R * e, 2 * R * 0.82 * e)
+                    orbitStroke.Transparency = 1 - 0.55 * e
+                    dot.Size = UDim2.fromOffset(34 * e, 34 * e)
+                    for _, p in ipairs(pills) do
+                        local s = math.clamp(k * 1.25 - (p.i - 1) * 0.025, 0, 1)
+                        local ee = 1 - (1 - s) ^ 3
+                        local a = (p.i - 1) / n * math.pi * 2 + rot - math.pi / 2
+                        p.btn.Position = UDim2.fromOffset(cx + math.cos(a) * R * ee, cy + math.sin(a) * R * 0.82 * ee)
+                        p.scale.Scale = 0.3 + 0.7 * ee
+                        p.btn.TextTransparency = 1 - ee
+                        p.btn.BackgroundTransparency = 1 - ee * 0.95
+                        p.stroke.Transparency = 1 - ee * 0.6
+                    end
+                    if closing and k < 0.03 then
+                        conn:Disconnect()
+                        for _, c in ipairs(inputs) do c:Disconnect() end
+                        overlay:Destroy()
+                        Window._RadialOpen = false
+                    end
+                end)
+            end
+        end
+
         function Tab:CreateContentContainer(name)
             local container = mk("Frame", {
                 Name = name or "ContentContainer",
@@ -614,6 +784,7 @@ reen.Y > 0 then
             TabPage.ChildAdded:Connect(function(ch)
                 if selected and not applying and ch ~= Bar then task.defer(apply) end
             end)
+            self._Segments = { Assign = assign, Parked = parked, Bar = Bar }
             if segments[1] then choose(segments[1].Id) end
             return {
                 Select = choose,
@@ -827,189 +998,4 @@ reen.Y > 0 then
 
             local _linkedSliderRef    = nil
             local _linkedSliderFavRow = nil
-            local _dialList = nil -- sliders del tambor (LinkDial)
-            local favRow = nil
-            local toggleFloating
-            local toggleLock
-            local favoriteControlRefreshers = {}
-
-            local function syncFavoriteRow()
-                favoriteControlRefreshers = {}
-                if favRow then
-                    pcall(function() favRow.Holder:Destroy() end)
-                    favRow = nil
-                end
-                if _linkedSliderFavRow then
-                    pcall(function() _linkedSliderFavRow.Holder:Destroy() end)
-                    _linkedSliderFavRow = nil
-                end
-
-                if isFavorite and AutoTabFavoritosRef then
-                    favRow = AutoTabFavoritosRef:CreateToggle(textSpanish, textEnglish, state, function(newState)
-                        state = newState
-                        tog.SetValue(newState)
-                        pcall(cb, newState)
-                    end, true)
-                    Window._AddFavoriteFloatControls(
-                        favRow.Holder, toggleFloating, toggleLock,
-                        function() return isFloating end,
-                        function() return isLocked end,
-                        function(refresh) table.insert(favoriteControlRefreshers, refresh) end
-                    )
-
-                    if _linkedSliderRef then
-                        local liveValue = _linkedSliderRef._value or 50
-                        if type(_linkedSliderRef.Get) == "function" then
-                            local okGet, gotValue = pcall(_linkedSliderRef.Get)
-                            if okGet and type(gotValue) == "number" then liveValue = gotValue end
-                        end
-                        _linkedSliderFavRow = AutoTabFavoritosRef:CreateSlider(
-                            _linkedSliderRef._labelES or "Slider",
-                            _linkedSliderRef._min     or 0,
-                            _linkedSliderRef._max     or 100,
-                            liveValue,
-                            function(newVal)
-                                _linkedSliderRef._value = newVal
-                                if _linkedSliderRef._callback then
-                                    pcall(_linkedSliderRef._callback, newVal)
-                                end
-                            end,
-                            true
-                        )
-                    end
-                end
-            end
-
-            FavBtn.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.5)
-                isFavorite = not isFavorite
-                FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
-                SavedFavoriteIds[favId] = isFavorite or nil
-                syncFavoriteRow()
-                SyncFavoritesToConfig()
-            end)
-
-            local comboMember = {
-                Initial = displayText:sub(1, 1):upper(),
-                DisplayName = displayText,
-                GetState = function() return state end,
-                SetState = function(newState)
-                    state = newState
-                    tog.SetValue(newState)
-                    pcall(cb, newState)
-                end,
-            }
-
-            ComboBtn.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.5)
-                isInCombo = not isInCombo
-                ComboBtn.ImageColor3 = isInCombo and Theme.Accent or Theme.TextDim
-                ComboBtn:SetAttribute("ThemeImageRole", isInCombo and "Accent" or "TextDim")
-                if isInCombo then
-                    Window.AddComboMember(comboMember)
-                else
-                    Window.RemoveComboMember(comboMember)
-                end
-            end)
-
-            Window.RegisterKeybind(favId, KeybindBtn, function()
-                state = not state
-                tog.SetValue(state)
-                if favRow and favRow.SetValue then
-                    favRow.SetValue(state)
-                end
-                pcall(cb, state)
-            end)
-            KeybindBtn.MouseButton1Click:Connect(function()
-                Window.BeginKeybindCapture(Window.Keybinds[favId])
-            end)
-
-            tog.LinkSlider = function(self, sliderObj)
-                _linkedSliderRef = sliderObj
-                if isFavorite then
-                    syncFavoriteRow()
-                end
-            end
-
-            HolderClick.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH) or UDim2.new(1, -206, 1, 0)
-
-            -- Tarjeta de dos zonas: nombre a la izquierda y controles a la derecha.
-            if not hasCredit then
-                Holder.ClipsDescendants = true
-                Holder:SetAttribute("OptionCardV5", true)
-                Holder.BackgroundTransparency = 0.08
-                local label, status
-                for _, child in ipairs(Holder:GetChildren()) do
-                    if child:IsA("TextLabel") and child:GetAttribute("TextSpanish") == textSpanish then
-                        label = child
-                    elseif child:IsA("TextLabel") and child.Text:sub(1, 3) == "●" then
-                        status = child
-                    elseif child:IsA("Frame") and child.Size.X.Offset == 3 and child.Size.Y.Offset == 36 then
-                        child.Visible = false
-                    end
-                end
-                -- El borde del panel y la línea comparten el mismo eje geométrico.
-                local panel = mk("Frame", {
-                    Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
-                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.34,
-                    BorderSizePixel = 0, ZIndex = 9,
-                })
-                panel:SetAttribute("ThemeRole", "Background")
-                local separator = mk("Frame", {
-                    Name = "OptionDivider", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
-                    Position = UDim2.new(0.40, 0, 0.5, 0), Size = UDim2.fromOffset(2, 96),
-                    Rotation = 16, BackgroundColor3 = Color3.new(1, 1, 1),
-                    BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 10,
-                })
-                corner(separator, 2)
-                local dividerGradient = mk("UIGradient", {Parent = separator, Rotation = 90})
-                FavBtn.BackgroundColor3 = Theme.Secondary
-                FavBtn.BackgroundTransparency = 0.2
-                FavBtn:SetAttribute("ThemeRole", "Secondary")
-                corner(FavBtn, 9)
-                local favoriteBorder = stroke(FavBtn, Theme.Stroke, 1, 0.5)
-                favoriteBorder:SetAttribute("ThemeRole", "Stroke")
-                -- Borde suave de la tarjeta y cápsula inferior de tecla, como en la referencia.
-                local rim = mk("Frame", {
-                    Name = "OptionRim", Parent = Holder, Position = UDim2.new(0.40, 0, 0, 1),
-                    Size = UDim2.new(0.60, -1, 1, -2), BackgroundTransparency = 1,
-                    BorderSizePixel = 0, Active = false, ZIndex = 12,
-                })
-                corner(rim, 14)
-                local rimStroke = stroke(rim, Color3.new(1, 1, 1), 1.5, 0.12)
-                local rimGradient = mk("UIGradient", {Parent = rimStroke, Rotation = 0,
-                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
-                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
-                        NumberSequenceKeypoint.new(1, 0)})})
-                KeybindBtn.BackgroundTransparency = 1
-                KeybindBtn:SetAttribute("ThemeRole", nil)
-                local keyPlate = mk("Frame", {Parent = KeybindBtn, Name = "KeyPlate",
-                    Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Secondary,
-                    BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 14, Active = false})
-                keyPlate:SetAttribute("ThemeRole", "Secondary")
-                corner(keyPlate, 999)
-                mk("UIGradient", {Parent = keyPlate, Rotation = 25,
-                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
-                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
-                        NumberSequenceKeypoint.new(1, 0)})})
-                local keySlash = mk("Frame", {Parent = KeybindBtn, Name = "KeySlash",
-                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
-                    Size = UDim2.fromOffset(2, 20), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
-                    BackgroundTransparency = 0.05, BorderSizePixel = 0, Active = false, ZIndex = 16})
-                keySlash:SetAttribute("ThemeRole", "ToggleOn")
-                corner(keySlash, 2)
-                local keyGlow = mk("Frame", {Parent = KeybindBtn, Name = "KeySlashGlow",
-                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
-                    Size = UDim2.fromOffset(5, 21), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
-                    BackgroundTransparency = 0.75, BorderSizePixel = 0, Active = false, ZIndex = 15})
-                keyGlow:SetAttribute("ThemeRole", "ToggleOn")
-                corner(keyGlow, 3)
-                local keyCorner = KeybindBtn:FindFirstChildOfClass("UICorner")
-                if keyCorner then keyCorner.CornerRadius = UDim.new(1, 0) end
-                local keyBorder = KeybindBtn:FindFirstChildOfClass("UIStroke")
-                if keyBorder then
-                    keyBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
-                    keyBorder.Color = Color3.new(1, 1, 1)
-                    keyBorder.Transparency = 0.12
-                    keyBorder:SetAttribute("ThemeRole", nil)
-                    keyBor
+            

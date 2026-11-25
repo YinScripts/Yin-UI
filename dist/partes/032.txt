@@ -1,4 +1,306 @@
-nd))
+derRain:SetStormEnabled(value) end},
+        }
+    end
+
+    local function shaderOpenCustomWindow()
+        if ShaderCustomWindow and ShaderCustomWindow.Parent then
+            ShaderCustomWindow.Visible = true
+            if ShaderCustomBackdrop then ShaderCustomBackdrop.Visible = true end
+            ShaderCustomRefresh()
+            return
+        end
+
+        ShaderCustomControls = {}
+        ShaderUISections = {}
+        shaderDisconnectAll()
+
+        ShaderCustomBackdrop = mk("Frame", {
+            Parent = Window.ScreenGui,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            Active = false,
+            ZIndex = 300,
+        })
+
+        ShaderCustomWindow = mk("Frame", {
+            Parent = Window.ScreenGui,
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.52, 0),
+            Size = UDim2.fromOffset(460, 380),
+            Active = true,
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.04,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 301,
+        })
+        ShaderCustomWindow:SetAttribute("ThemeRole", "Background")
+        corner(ShaderCustomWindow, 16)
+        stroke(ShaderCustomWindow, Theme.Stroke, 1.5, 0.18)
+        buildAnimatedBorder(ShaderCustomWindow, Theme.Accent, UDim.new(0, 16), true)
+        mk("UISizeConstraint", {
+            Parent = ShaderCustomWindow,
+            MinSize = Vector2.new(360, 300),
+            MaxSize = Vector2.new(520, 430),
+        })
+
+        local header = mk("Frame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -8, 0, 72),
+            Position = UDim2.new(0, 4, 0, 4),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.22,
+            BorderSizePixel = 0,
+            ZIndex = 302,
+        })
+        header:SetAttribute("ThemeRole", "Secondary")
+        corner(header, 13)
+        stroke(header, Theme.Stroke, 1.1, 0.58)
+
+        local headerAccent = mk("Frame", {
+            Parent = header,
+            Size = UDim2.new(0, 4, 0, 38),
+            Position = UDim2.new(0, 16, 0.5, -19),
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            ZIndex = 303,
+        })
+        headerAccent:SetAttribute("ThemeRole", "Accent")
+        corner(headerAccent, 99)
+
+        local title = mk("TextLabel", {
+            Parent = header,
+            Size = UDim2.new(1, -150, 0, 24),
+            Position = UDim2.new(0, 30, 0, 10),
+            BackgroundTransparency = 1,
+            Text = GetText("Personalizado", "Custom"),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 18,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 303,
+        })
+        title:SetAttribute("ThemeTextRole", "Text")
+        title:SetAttribute("TextSpanish", "Personalizado")
+        title:SetAttribute("TextEnglish", "Custom")
+
+        local subtitle = mk("TextLabel", {
+            Parent = header,
+            Size = UDim2.new(1, -150, 0, 16),
+            Position = UDim2.new(0, 30, 0, 35),
+            BackgroundTransparency = 1,
+            Text = GetText("Ajustes propios de Shaders · aplicación en tiempo real", "Shader-only controls · live application"),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 303,
+        })
+        subtitle:SetAttribute("ThemeTextRole", "TextDim")
+        subtitle:SetAttribute("TextSpanish", "Ajustes propios de Shaders · aplicación en tiempo real")
+        subtitle:SetAttribute("TextEnglish", "Shader-only controls · live application")
+
+        local closeButton = mk("TextButton", {
+            Parent = header,
+            Size = UDim2.new(0, 38, 0, 38),
+            Position = UDim2.new(1, -52, 0.5, -19),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.12,
+            Text = "×",
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 24,
+            AutoButtonColor = false,
+            ZIndex = 304,
+        })
+        closeButton:SetAttribute("ThemeRole", "AccentOff")
+        corner(closeButton, 11)
+
+        local dragStrip = mk("Frame", {
+            Parent = header,
+            Size = UDim2.new(1, -92, 1, 0),
+            Position = UDim2.new(0, 0, 0, 0),
+            BackgroundTransparency = 1,
+            Active = true,
+            ZIndex = 305,
+        })
+
+        local chipBar = mk("ScrollingFrame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -28, 0, 30),
+            Position = UDim2.new(0, 14, 0, 82),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 0,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.X,
+            ScrollingDirection = Enum.ScrollingDirection.X,
+            ZIndex = 303,
+        })
+        mk("UIListLayout", {
+            Parent = chipBar,
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0, 6),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+        })
+
+        local scroll = mk("ScrollingFrame", {
+            Parent = ShaderCustomWindow,
+            Size = UDim2.new(1, -28, 1, -124),
+            Position = UDim2.new(0, 14, 0, 118),
+            BackgroundTransparency = 1,
+            BorderSizePixel = 0,
+            ScrollBarThickness = 3,
+            ScrollBarImageColor3 = Theme.Accent,
+            CanvasSize = UDim2.new(0, 0, 0, 0),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y,
+            ScrollingDirection = Enum.ScrollingDirection.Y,
+            Active = true,
+            ScrollingEnabled = true,
+            ZIndex = 302,
+        })
+        scroll:SetAttribute("ThemeRole", "Background")
+
+        local scrollPadding = mk("UIPadding", {
+            Parent = scroll,
+            PaddingLeft = UDim.new(0, 2),
+            PaddingRight = UDim.new(0, 4),
+            PaddingTop = UDim.new(0, 4),
+            PaddingBottom = UDim.new(0, 18),
+        })
+        local scrollLayout = mk("UIListLayout", {
+            Parent = scroll,
+            Padding = UDim.new(0, 10),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+        })
+
+        local closeWindow
+        closeWindow = function()
+            shaderDisconnectAll()
+            ShaderCustomControls = {}
+            if ShaderCustomWindow then ShaderCustomWindow:Destroy() end
+            if ShaderCustomBackdrop then ShaderCustomBackdrop:Destroy() end
+            ShaderCustomWindow = nil
+            ShaderCustomBackdrop = nil
+            ShaderCustomRefresh = function() end
+        end
+
+        closeButton.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            closeWindow()
+        end)
+
+        local dragging = false
+        local dragStart = nil
+        local windowStart = nil
+        dragStrip.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = true
+                dragStart = input.Position
+                windowStart = ShaderCustomWindow.Position
+            end
+        end)
+        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
+            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                local delta = input.Position - dragStart
+                ShaderCustomWindow.Position = UDim2.new(
+                    windowStart.X.Scale, windowStart.X.Offset + delta.X,
+                    windowStart.Y.Scale, windowStart.Y.Offset + delta.Y
+                )
+            end
+        end))
+        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                dragging = false
+            end
+        end))
+
+        local specs = shaderCustomSpecs()
+        local currentSection = nil
+        for _, spec in ipairs(specs) do
+            if spec.section then
+                currentSection = shaderCreateSection(scroll, spec.section[1], spec.section[2], spec.section[3], spec.section[4])
+            elseif currentSection then
+                if spec.toggle then
+                    shaderCreateToggle(currentSection, spec)
+                else
+                    shaderCreateSlider(currentSection, spec)
+                end
+            end
+        end
+
+        local footer = shaderCreateSection(scroll, "Acciones", "Actions", "Los controles se aplican en tiempo real.", "Controls apply in real time.")
+        local restore = mk("TextButton", {
+            Parent = footer,
+            Size = UDim2.new(1, 0, 0, 38),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.05,
+            Text = GetText("Restaurar valores originales", "Restore original values"),
+            TextColor3 = Theme.AccentText,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 12,
+            AutoButtonColor = false,
+            ZIndex = 314,
+        })
+        restore:SetAttribute("ThemeRole", "Accent")
+        restore:SetAttribute("TextSpanish", "Restaurar valores originales")
+        restore:SetAttribute("TextEnglish", "Restore original values")
+        corner(restore, 10)
+        restore.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            ShaderDemoEnabled = false
+            local report = shaderRestoreAll()
+            shaderWarn(report, "Restauración personalizada")
+            shaderSetModeLabel("Original")
+            ShaderCustomRefresh()
+        end)
+
+        for order, entry in ipairs(ShaderUISections) do
+            entry.updateCount()
+            local chip = mk("TextButton", {
+                Parent = chipBar,
+                Size = UDim2.new(0, 0, 0, 26),
+                AutomaticSize = Enum.AutomaticSize.X,
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.15,
+                Text = GetText(entry.es, entry.en),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBold,
+                TextSize = 11,
+                AutoButtonColor = false,
+                LayoutOrder = order,
+                ZIndex = 304,
+            })
+            chip:SetAttribute("ThemeRole", "Secondary")
+            chip:SetAttribute("ThemeTextRole", "Text")
+            chip:SetAttribute("IgnoreTextEffect", true)
+            corner(chip, 999)
+            stroke(chip, Theme.Stroke, 1, 0.6)
+            mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 30), PaddingRight = UDim.new(0, 10)})
+            RowKit.IconAt(chip, entry.icon, 14, UDim2.new(0, -21, 0.5, -7), 305, "Accent")
+            chip.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.4)
+                entry.setOpen(true)
+                task.defer(function()
+                    if not scroll.Parent then return end
+                    local y = entry.frame.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y - 4
+                    TweenService:Create(scroll, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {CanvasPosition = Vector2.new(0, math.max(0, y))}):Play()
+                end)
+            end)
+        end
+
+        ShaderCustomRefresh = function()
+            for _, control in pairs(ShaderCustomControls) do
+                if control.refresh then pcall(control.refresh) end
+            end
+        end
+        ShaderCustomRefresh()
+        shaderAddConnection(ShaderCustomWindow:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
+            task.defer(ShaderCustomRefresh)
+        end))
         task.defer(function()
             task.wait()
             ShaderCustomRefresh()
@@ -576,308 +878,4 @@ nd))
     Window.ClearReplyTarget = noop
     Window.SendServerInvite = noop
     Window.RenderInviteCard = noop
-    function Window:SendChatMessage() end
-    function Window:GetChatHistory() return Window.ChatMessages end
-    function Window:ReceiveMessage() end
-    function Window:SetUserBubbleAsset() end
-    function Window:SetUserBubbleStyle() end
-    function Window:InitializeChatStickers() end
-
-    -- ===== CHAT GLOBAL (opcional) =====
-    function Window:CreateChatTab()
-    if self.ChatTab and self.ChatTab.Page and self.ChatTab.Page.Parent then
-        return self.ChatTab
-    end
-    local ChatTab = Window:CreateTab("Chat", "Chat", "rbxassetid://82910060656954")
-    self.ChatTab = ChatTab
-    local ChatTabPage = ChatTab.Page
-    ChatTabPage.AutomaticCanvasSize = Enum.AutomaticSize.None
-    ChatTabPage.CanvasSize = UDim2.new()
-    ChatTabPage.ScrollBarThickness = 0
-    ChatTabPage.ScrollingEnabled = false
-
-    local ChatHost = mk("Frame", {
-        Parent = ChatTabPage,
-        Name = "ChatGlobalHost",
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        LayoutOrder = 1,
-        ZIndex = 9,
-    })
-    -- v15: los colores/efectos de texto de la librería no tocan el chat global
-    Window._ThemeIsolatedRoot = ChatHost
-    if Window._InvalidateTextObjects then Window._InvalidateTextObjects() end
-
-    -- globo de no leídos en el botón de la pestaña
-    local ChatBadge = mk("Frame", {
-        Parent = ChatTab.Button,
-        Size = UDim2.fromOffset(18, 18),
-        Position = UDim2.new(0, 1, 0, 1),
-        BackgroundColor3 = Color3.fromRGB(255, 55, 55),
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 20,
-    })
-    corner(ChatBadge, 999)
-    local ChatBadgeLabel = mk("TextLabel", {
-        Parent = ChatBadge,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundTransparency = 1,
-        Text = "0",
-        Font = Enum.Font.GothamBold,
-        TextSize = 10,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        ZIndex = 21,
-    })
-    local lastBadge = 0
-    local function setChatBadge(total)
-        total = tonumber(total) or 0
-        ChatBadge.Visible = total > 0
-        if total > 0 then
-            ChatBadgeLabel.Text = total > 99 and "99+" or tostring(total)
-            if total > lastBadge then
-                ChatBadge.Size = UDim2.fromOffset(10, 10)
-                TweenService:Create(ChatBadge, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(18, 18) }):Play()
-            end
-        end
-        lastBadge = total
-    end
-
-    local okChat, chatResult = pcall(YinYang._BuildChatGlobal, {
-        Host = ChatHost,
-        Glass = function(parent)
-            local image = mk("ImageLabel", {Name = "ChatGlass", Parent = parent,
-                Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-                ImageTransparency = 0.35, ScaleType = Enum.ScaleType.Stretch, ZIndex = parent.ZIndex})
-            corner(image, 18)
-            YinIcons.get("spotify-glass", function(asset) if image.Parent then image.Image = asset end end)
-        end,
-        OverlayParent = ScreenGui.Parent,
-        OnlineLabel = TopBarOnlineLabel,
-        SetBadge = setChatBadge,
-        Open = function()
-            pcall(function() Window:Show() end)
-            if ChatTab.Select then ChatTab.Select() end
-        end,
-    })
-    if okChat and type(chatResult) == "table" then
-        ChatApi = chatResult
-        local spotify = Window._SpotifyAmbient
-        if spotify and spotify.Active and spotify.Saved and spotify.Saved.visible then
-            spotify.Saved.visible[TopBarCounter] = true
-        else
-            TopBarCounter.Visible = true
-        end
-        if SavedConfig.ChatCornerMessages == false then
-            pcall(ChatApi.SetSideNotifs, false)
-        end
-        ScreenGui.Destroying:Connect(function() pcall(ChatApi.Destroy) end)
-    else
-        warn("[ChatGlobal] No se pudo iniciar el chat: " .. tostring(chatResult))
-    end
-
-    -- Vista inmersiva del chat: un único fondo del tema cubre toda la ventana.
-    do
-        local A = {Active = false}
-        Window._ChatAmbient = A
-        local shade = mk("Frame", {Name = "ChatAmbientShade", Parent = Main,
-            Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 7, 11),
-            BackgroundTransparency = 0.48, BorderSizePixel = 0, Visible = false, ZIndex = 6})
-        corner(shade, 10)
-        function A.Layout()
-            if not A.Active then return end
-            local compact = Window.CompactNavigation == true
-            local side = compact and 58 or 110
-            ContentArea.Position = UDim2.new(0, side, 0, -56)
-            ContentArea.Size = UDim2.new(1, -side, 1, 56)
-            TabListArt.Visible = false
-            CatImage.Visible = false
-            local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 1 end
-            if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(compact and 66 or 0) end
-        end
-        function A.enter()
-            if A.Active then return end
-            A.Active = true
-            A.saved = {visible = {}, top = TopBar.BackgroundTransparency,
-                tabs = TabList.BackgroundTransparency, titleSize = TitleLabel.Size,
-                titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex,
-                badgeFrameZ = DaraHubLabel.Parent.ZIndex}
-            for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
-                TitleDivider, TopBarArt, TabListArt, CatImage, Main:FindFirstChild("RotatingSubText")}) do
-                if obj then A.saved.visible[obj] = obj.Visible; obj.Visible = false end
-            end
-            BackgroundArt.Parent = Main
-            BackgroundArt.AnchorPoint = Vector2.new(0, 0)
-            BackgroundArt.Position = UDim2.fromOffset(0, 0)
-            BackgroundArt.Size = UDim2.fromScale(1, 1)
-            shade.Visible = true
-            TopBar.BackgroundTransparency = 1
-            TabList.BackgroundTransparency = 1
-            TitleLabel.Size = UDim2.fromOffset(106, 26)
-            TitleLabel.ZIndex = 60
-            DaraHubLabel.Parent.ZIndex = 60
-            DaraHubLabel.ZIndex = 61
-            A.Layout()
-        end
-        function A.leave()
-            if not A.Active then return end
-            A.Active = false
-            shade.Visible = false
-            for obj, visible in pairs(A.saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
-            Window._ApplyFullBackground()
-            TopBar.BackgroundTransparency = A.saved.top
-            TabList.BackgroundTransparency = A.saved.tabs
-            TitleLabel.Size = A.saved.titleSize
-            TitleLabel.ZIndex = A.saved.titleZ
-            DaraHubLabel.ZIndex = A.saved.badgeZ
-            DaraHubLabel.Parent.ZIndex = A.saved.badgeFrameZ
-            local compact = Window.CompactNavigation == true
-            local side = compact and 58 or 110
-            ContentArea.Position = UDim2.new(0, side, 0, 0)
-            ContentArea.Size = UDim2.new(1, -side, 1, 0)
-            TabListArt.Visible = not compact
-            CatImage.Visible = not compact and Theme.ThemeName == "Dark"
-            local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 1 end
-            if ChatApi and ChatApi.SetHeaderInset then ChatApi.SetHeaderInset(0) end
-        end
-        track(ChatTabPage:GetPropertyChangedSignal("Visible"):Connect(function()
-            task.defer(function()
-                if ChatTabPage.Parent then
-                    if ChatTabPage.Visible then A.enter() else A.leave() end
-                end
-            end)
-        end))
-        if ChatTabPage.Visible then A.enter() end
-    end
-    return ChatTab
-    end
-
-    if options.Chat == true then Window:CreateChatTab() end
-
-    RefreshLibraryLanguage = function()
-        for _, el in ipairs(Window.ScreenGui:GetDescendants()) do
-            if el:IsA("TextLabel") or el:IsA("TextButton") or el:IsA("TextBox") then
-                local sp = el:GetAttribute("TextSpanish")
-                local en = el:GetAttribute("TextEnglish")
-                if sp and en then
-                    el.Text = GetText(sp, en)
-                end
-
-                if el:IsA("TextBox") then
-                    local psp = el:GetAttribute("PlaceholderSpanish")
-                    local pen = el:GetAttribute("PlaceholderEnglish")
-                    if psp and pen then
-                        el.PlaceholderText = GetText(psp, pen)
-                    end
-                end
-            end
-        end
-    end
-
-    local lastLanguage = LibraryLanguage
-    RunService.Heartbeat:Connect(function()
-        if LibraryLanguage == lastLanguage then
-            return
-        end
-        lastLanguage = LibraryLanguage
-        RefreshLibraryLanguage()
-    end)
-
-    task.defer(function()
-        for _ = 1, 8 do
-            task.wait(0.25)
-            RefreshLibraryLanguage()
-        end
-    end)
-
-    function Window:CreateCreditsTab()
-    if self.CreditsTab and self.CreditsTab.Page and self.CreditsTab.Page.Parent then
-        return self.CreditsTab
-    end
-    local TabCreditos = Window:CreateTab("Créditos", "Credits", "rbxassetid://99086270459218")
-    self.CreditsTab = TabCreditos
-    local CredPage = TabCreditos.Page
-
-    CredPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    CredPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-    CredPage.ScrollBarThickness = 2
-    CredPage.ScrollingEnabled = true
-    CredPage.BackgroundTransparency = 1
-    CredPage:SetAttribute("ThemeRole", "Background")
-
-    local CredRoot_
-    local DISCORD_LINK = "https://discord.gg/NmV4sUQan"
-    local BLURPLE = Color3.fromRGB(88, 101, 242)
-    local GREEN = Color3.fromRGB(46, 204, 113)
-
-    local function text(props, es, en, role)
-        local label = mk("TextLabel", props)
-        label.BackgroundTransparency = 1
-        if es then
-            label.Text = GetText(es, en)
-            label:SetAttribute("TextSpanish", es)
-            label:SetAttribute("TextEnglish", en)
-        end
-        if role then label:SetAttribute("ThemeTextRole", role) end
-        return label
-    end
-
-    local function card(order, height)
-        local c = mk("Frame", {
-            Parent = CredRoot_,
-            Size = UDim2.new(1, 0, 0, height),
-            BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0.05,
-            BorderSizePixel = 0,
-            LayoutOrder = order,
-            ZIndex = 10,
-        })
-        c:SetAttribute("ThemeRole", "Secondary")
-        corner(c, 16)
-        stroke(c, Theme.Stroke, 1, 0.5)
-        return c
-    end
-
-    local function sectionLabel(order, iconId, es, en)
-        local row = mk("Frame", {
-            Parent = CredRoot_, Size = UDim2.new(1, 0, 0, 22),
-            BackgroundTransparency = 1, LayoutOrder = order, ZIndex = 10,
-        })
-        local icon = mk("ImageLabel", {
-            Parent = row, Size = UDim2.new(0, 14, 0, 14), Position = UDim2.new(0, 4, 0.5, -7),
-            BackgroundTransparency = 1, Image = "rbxassetid://" .. tostring(iconId),
-            ImageColor3 = Theme.Accent, ScaleType = Enum.ScaleType.Fit, ZIndex = 11,
-        })
-        icon:SetAttribute("ThemeImageRole", "Accent")
-        text({
-            Parent = row, Size = UDim2.new(1, -26, 1, 0), Position = UDim2.new(0, 24, 0, 0),
-            Font = Enum.Font.GothamBlack, TextSize = 12, TextColor3 = Theme.TextDim,
-            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 11,
-        }, es, en, "TextDim")
-        return row
-    end
-
-    CredRoot_ = mk("Frame", {
-        Parent = CredPage,
-        Size = UDim2.new(1, 0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 10,
-        AutomaticSize = Enum.AutomaticSize.Y,
-    })
-    mk("UIListLayout", {
-        Parent = CredRoot_,
-        Padding = UDim.new(0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Center,
-    })
-    mk("UIPadding", {
-        Parent = CredRoot_,
-        PaddingTop = UDim.new(0, 10),
-        PaddingLeft = UDim.new(0, 10),
-        PaddingRight = UDim.new(0, 10),
-        PaddingBottom = 
+    function Window:SendChatMessage() en

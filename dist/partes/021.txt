@@ -1,4 +1,255 @@
-serInputService.InputEnded:Connect(function(input)
+l PinBtn = mk("ImageButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -38, 0.5, -14),
+                BackgroundColor3 = Theme.Secondary,
+                Image    = "rbxassetid://83537941312438",
+                ImageColor3 = Theme.Text,
+                ScaleType   = Enum.ScaleType.Stretch,
+                ZIndex   = 15
+            })
+            corner(PinBtn, 6)
+            stroke(PinBtn, Theme.Stroke, 1, 0.5)
+            RowKit.Control(PinBtn)
+
+            local function syncExternalState()
+                if not isMirror or not mirrorSource then return end
+                local floating = false
+                local locked = false
+                pcall(function() floating = mirrorSource.GetFloating() end)
+                pcall(function() locked = mirrorSource.GetLocked() end)
+                DetachBtn.Text = floating and "←" or "↗"
+                PinBtn.Image = locked and "rbxassetid://91959170037380" or "rbxassetid://83537941312438"
+            end
+            syncExternalState()
+
+            if not isMirror then
+                local favId = nameSpanish .. "::" .. textSpanish
+                local isFavorite = SavedFavoriteIds[favId] or false
+                local FavBtn = mk("ImageButton", {
+                    Parent = Holder,
+                    Size = UDim2.new(0, 30, 0, 30),
+                    Position = UDim2.new(1, -104, 0.5, -15),
+                    BackgroundTransparency = 1,
+                    Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
+                    ScaleType = Enum.ScaleType.Fit,
+                    ZIndex = 15
+                })
+
+                local favRow = nil
+                local function syncFavoriteRow()
+                    favoriteControlRefreshers = {}
+                    if favRow then
+                        pcall(function() favRow.Holder:Destroy() end)
+                        favRow = nil
+                    end
+                    if isFavorite and AutoTabFavoritosRef then
+                        favRow = AutoTabFavoritosRef:CreateFloatingButton(
+                            textSpanish, textEnglish, cooldown, cb, true,
+                            {
+                                ToggleFloating = function() toggleFloating() end,
+                                ToggleLock = function() toggleLock() end,
+                                GetFloating = function() return isFloating end,
+                                GetLocked = function() return isLocked end,
+                            }
+                        )
+                        if favRow.SyncExternalState then
+                            table.insert(favoriteControlRefreshers, favRow.SyncExternalState)
+                        end
+                    end
+                end
+                FavBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.5)
+                    isFavorite = not isFavorite
+                    FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                    SavedFavoriteIds[favId] = isFavorite or nil
+                    syncFavoriteRow()
+                    SyncFavoritesToConfig()
+                end)
+
+                syncFavoriteRow()
+            end
+
+            local HolderClick = mk("TextButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, isMirror and -100 or -120, 1, 0),
+                BackgroundTransparency = 1,
+                Text     = "",
+                ZIndex   = 13
+            })
+
+            HolderClick.MouseEnter:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = RowKit.HOVER}):Play()
+            end)
+            HolderClick.MouseLeave:Connect(function()
+                TweenService:Create(Holder, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {BackgroundTransparency = RowKit.IDLE}):Play()
+            end)
+
+            HolderClick.MouseButton1Click:Connect(function()
+                if onCooldown then return end
+                playSound(Sounds.Click, 0.5)
+                RowKit.Press(Holder)
+                HolderStroke.Color = Theme.Accent
+                HolderStroke.Transparency = 0.1
+                TweenService:Create(HolderStroke, TweenInfo.new(0.45), {Color = Theme.Stroke, Transparency = 0.55}):Play()
+                pcall(cb)
+                startCooldown()
+            end)
+
+            local function createFloatingWindow()
+                FloatingGlow = mk("Frame", {
+                    Parent   = Window.ScreenGui,
+                    Size     = UDim2.fromOffset(216, 48),
+                    Position = UDim2.new(0.5, -108, 0.5, -24),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex  = 3
+                })
+                corner(FloatingGlow, 999)
+
+                local pillW = math.max(120, FloatingPillV5.FitWidth(displayText, 20))
+                FloatingWindow = mk("Frame", {
+                    Parent   = Window.ScreenGui,
+                    Size     = UDim2.fromOffset(pillW, 34),
+                    Position = UDim2.new(0.5, -pillW / 2, 0.5, -17),
+                    BackgroundColor3 = FloatingPillV5.OffColor(),
+                    BackgroundTransparency = 0.12,
+                    BorderSizePixel = 0,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex  = 4
+                })
+                FloatPos.Apply(nameSpanish .. "::" .. textSpanish, FloatingWindow)
+                if FloatPos.IsLocked(nameSpanish .. "::" .. textSpanish) then
+                    isLocked = true
+                    PinBtn.Image = "rbxassetid://91959170037380"
+                end
+                corner(FloatingWindow, 999)
+                local pillStroke = stroke(FloatingWindow, Color3.fromRGB(255, 255, 255), 2, 0.15)
+                pillStroke:SetAttribute("ThemeRole", nil)
+                mk("UIGradient", {
+                    Rotation = 90,
+                    Transparency = NumberSequence.new({
+                        NumberSequenceKeypoint.new(0, 0),
+                        NumberSequenceKeypoint.new(1, 0.35),
+                    }),
+                }, FloatingWindow)
+                local pillScale = mk("UIScale", {Scale = 1}, FloatingWindow)
+
+                FloatLabel = mk("TextLabel", {
+                    Parent   = FloatingWindow,
+                    Name     = "FloatLabel",
+                    Size     = UDim2.new(1, -24, 1, 0),
+                    Position = UDim2.new(0, 12, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text     = onCooldown and StateLabel.Text or displayText,
+                    TextColor3 = onCooldown and Color3.fromRGB(170, 170, 170) or Color3.fromRGB(255, 255, 255),
+                    Font     = Enum.Font.GothamBlack,
+                    TextSize = 20,
+                    TextXAlignment = Enum.TextXAlignment.Center,
+                    TextYAlignment = Enum.TextYAlignment.Center,
+                    TextTruncate   = Enum.TextTruncate.AtEnd,
+                    ZIndex   = 5,
+                })
+                FloatLabel:SetAttribute("IgnoreTextEffect", true)
+                FloatLabel:SetAttribute("TextSpanish",  textSpanish)
+                FloatLabel:SetAttribute("TextEnglish",  textEnglish)
+
+                local function flashBtn()
+                    pillScale.Scale = 0.9
+                    TweenService:Create(pillScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+                    TweenService:Create(FloatingWindow, TweenInfo.new(0.08),
+                        {BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.05}):Play()
+                    TweenService:Create(pillStroke, TweenInfo.new(0.08), {Transparency = 0}):Play()
+                    task.delay(0.22, function()
+                        if FloatingWindow and FloatingWindow.Parent then
+                            TweenService:Create(FloatingWindow, TweenInfo.new(0.25),
+                                {BackgroundColor3 = FloatingPillV5.OffColor(), BackgroundTransparency = 0.12}):Play()
+                            TweenService:Create(pillStroke, TweenInfo.new(0.25), {Transparency = 0.15}):Play()
+                        end
+                    end)
+                    if cooldown > 0 then
+                        local fill = mk("Frame", {
+                            Parent = FloatingWindow,
+                            Size = UDim2.new(1, 0, 1, 0),
+                            BackgroundColor3 = Theme.Accent,
+                            BackgroundTransparency = 0.7,
+                            BorderSizePixel = 0,
+                            ZIndex = 4,
+                        })
+                        corner(fill, 999)
+                        local tw = TweenService:Create(fill, TweenInfo.new(cooldown, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 1, 0)})
+                        tw.Completed:Connect(function() fill:Destroy() end)
+                        tw:Play()
+                    end
+                end
+
+                local dragging  = false
+                local dragStart = nil
+                local startPos  = nil
+
+                local FloatClick = mk("TextButton", {
+                    Parent   = FloatingWindow,
+                    Size     = UDim2.new(1, 0, 1, 0),
+                    BackgroundTransparency = 1,
+                    Text = "",
+                    AutoButtonColor = false,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex   = 6
+                })
+
+                FloatClick.MouseButton1Click:Connect(function()
+                    if dragging or onCooldown then return end
+                    playSound(Sounds.Click, 0.5)
+                    flashBtn()
+                    pcall(cb)
+                    startCooldown()
+                end)
+
+                local function syncGlow()
+                    if FloatingGlow and FloatingGlow.Parent then
+                        FloatingGlow.Size = UDim2.fromOffset(
+                            FloatingWindow.Size.X.Offset + 16,
+                            FloatingWindow.Size.Y.Offset + 12)
+                        FloatingGlow.Position = UDim2.new(
+                            FloatingWindow.Position.X.Scale,
+                            FloatingWindow.Position.X.Offset - 8,
+                            FloatingWindow.Position.Y.Scale,
+                            FloatingWindow.Position.Y.Offset - 6)
+                    end
+                end
+                syncGlow()
+                track(FloatingWindow:GetPropertyChangedSignal("Position"):Connect(syncGlow))
+
+                FloatClick.InputBegan:Connect(function(input)
+                    if (input.UserInputType == Enum.UserInputType.MouseButton1
+                    or  input.UserInputType == Enum.UserInputType.Touch)
+                    and not isLocked then
+                        dragging  = false
+                        dragStart = input.Position
+                        startPos  = FloatingWindow.Position
+                    end
+                end)
+
+                track(UserInputService.InputChanged:Connect(function(input)
+                    if dragStart and not isLocked
+                    and (input.UserInputType == Enum.UserInputType.MouseMovement
+                    or   input.UserInputType == Enum.UserInputType.Touch) then
+                        local delta = input.Position - dragStart
+                        if delta.Magnitude > 4 then
+                            dragging = true
+                            FloatingWindow.Position = UDim2.new(
+                                startPos.X.Scale, startPos.X.Offset + delta.X,
+                                startPos.Y.Scale, startPos.Y.Offset + delta.Y)
+                        end
+                    end
+                end))
+
+                track(UserInputService.InputEnded:Connect(function(input)
                     if input.UserInputType == Enum.UserInputType.MouseButton1
                     or input.UserInputType == Enum.UserInputType.Touch then
                         task.defer(function() dragging = false end)
@@ -779,294 +1030,4 @@ serInputService.InputEnded:Connect(function(input)
                 local dY = math.max(relY, btnSize.Y - relY)
                 local maxRadius = math.sqrt(dX * dX + dY * dY) * 2.1
 
-                local Ripple = Instance.new("Frame")
-                Ripple.Name = "LiquidRipple"
-                Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
-                Ripple.BackgroundColor3 = Theme.Accent
-                Ripple.BackgroundTransparency = 0.55
-                Ripple.BorderSizePixel = 0
-                Ripple.Size = UDim2.fromOffset(1, 1)
-                Ripple.Position = UDim2.fromOffset(relX, relY)
-                Ripple.ZIndex = 11
-                Ripple.Parent = BtnWrapper
-
-                local rippleCorner = Instance.new("UICorner")
-                rippleCorner.CornerRadius = UDim.new(1, 0)
-                rippleCorner.Parent = Ripple
-
-                local expandTween = TweenService:Create(
-                    Ripple,
-                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    {
-                        Size = UDim2.fromOffset(maxRadius, maxRadius),
-                        BackgroundTransparency = 0.72,
-                    }
-                )
-                expandTween:Play()
-
-                expandTween.Completed:Connect(function()
-                    local fadeTween = TweenService:Create(
-                        Ripple,
-                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-                        { BackgroundTransparency = 1 }
-                    )
-                    fadeTween:Play()
-                    fadeTween.Completed:Connect(function()
-                        pcall(function() Ripple:Destroy() end)
-                    end)
-                end)
-            end
-
-            track(Btn.MouseEnter:Connect(function()
-                TweenService:Create(
-                    Btn,
-                    TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { BackgroundTransparency = 0.28 }
-                ):Play()
-            end))
-
-            track(Btn.MouseLeave:Connect(function()
-                TweenService:Create(
-                    Btn,
-                    TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { BackgroundTransparency = 0 }
-                ):Play()
-            end))
-
-            track(Btn.InputBegan:Connect(function(input2)
-                if input2.UserInputType == Enum.UserInputType.Touch then
-                    TweenService:Create(Btn, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        { BackgroundTransparency = 0.38 }):Play()
-                end
-            end))
-
-            track(Btn.InputEnded:Connect(function(input2)
-                if input2.UserInputType == Enum.UserInputType.Touch then
-                    TweenService:Create(Btn, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        { BackgroundTransparency = 0 }):Play()
-                end
-            end))
-
-            track(Btn.InputBegan:Connect(function(input)
-                if input.UserInputType == Enum.UserInputType.MouseButton1
-                or input.UserInputType == Enum.UserInputType.Touch then
-                    spawnRipple(input.Position)
-                end
-            end))
-
-            Btn.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.6)
-                pcall(callback)
-            end)
-
-            if Window._RegisterGlobalOption then
-                Window._RegisterGlobalOption(self, {
-                    Id = textSpanish,
-                    NameSpanish = textSpanish,
-                    NameEnglish = textEnglish,
-                    Holder = BtnWrapper,
-                    Kind = "Button",
-                })
-            end
-
-            return BtnWrapper
-        end
-
-        function Tab:CreateScriptToggle(textSpanish, textEnglish, url, scriptKey)
-            local displayText = GetText(textSpanish, textEnglish)
-            local active       = false
-            local loading      = false
-
-            local Holder = mk("Frame", {
-                Parent = TabPage,
-                Size = UDim2.new(1, 0, 0, 68),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.78,
-                ClipsDescendants = true,
-                ZIndex = 9
-            }, TabPage)
-            Holder:SetAttribute("ThemeRole", "Secondary")
-            corner(Holder, 12)
-            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
-            resetScrollTop(TabPage)
-
-            local AccentBar = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.new(0, 3, 0, 40),
-                Position = UDim2.new(0, 10, 0.5, -20),
-                BackgroundColor3 = Theme.AccentOff,
-                ZIndex = 10
-            })
-            AccentBar:SetAttribute("ThemeRole", "AccentOff")
-            corner(AccentBar, 999)
-
-            local IconRing = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.fromOffset(38, 38),
-                Position = UDim2.new(0, 24, 0.5, -19),
-                BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.2,
-                ZIndex = 10
-            })
-            corner(IconRing, 999)
-            local IconRingStroke = stroke(IconRing, Theme.AccentOff, 1.5, 0.3)
-
-            local IconGlyph = mk("TextLabel", {
-                Parent = IconRing,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = string.upper(string.sub((tostring(textSpanish or ""):gsub("^%s+", "")), 1, 1)),
-                Font = Enum.Font.GothamBlack,
-                TextSize = 16,
-                TextColor3 = Theme.TextDim,
-                ZIndex = 11
-            })
-            IconGlyph:SetAttribute("ThemeTextRole", "TextDim")
-            IconGlyph:SetAttribute("IgnoreTextEffect", true)
-            if IconGlyph.Text == "" then IconGlyph.Text = "</>" end
-
-            local LabelTxt = mk("TextLabel", {
-                Parent = Holder,
-                Size = UDim2.new(1, -160, 0, 20),
-                Position = UDim2.new(0, 74, 0, 14),
-                BackgroundTransparency = 1,
-                Text = displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBlack,
-                TextSize = 15,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 10
-            })
-            LabelTxt:SetAttribute("ThemeTextRole", "Text")
-            LabelTxt:SetAttribute("TextSpanish", textSpanish)
-            LabelTxt:SetAttribute("TextEnglish", textEnglish)
-
-            local StatusBadge = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.fromOffset(78, 20),
-                Position = UDim2.new(0, 74, 0, 38),
-                BackgroundColor3 = Theme.AccentOff,
-                BackgroundTransparency = 0.15,
-                ZIndex = 10
-            })
-            corner(StatusBadge, 999)
-
-            local StatusDot = mk("Frame", {
-                Parent = StatusBadge,
-                Size = UDim2.fromOffset(6, 6),
-                Position = UDim2.new(0, 8, 0.5, -3),
-                BackgroundColor3 = Theme.TextDim,
-                ZIndex = 11
-            })
-            corner(StatusDot, 999)
-
-            local StatusLabel = mk("TextLabel", {
-                Parent = StatusBadge,
-                Size = UDim2.new(1, -20, 1, 0),
-                Position = UDim2.new(0, 18, 0, 0),
-                BackgroundTransparency = 1,
-                Text = GetText("Inactivo", "Idle"),
-                Font = Enum.Font.GothamBold,
-                TextSize = 10,
-                TextColor3 = Theme.TextDim,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 11
-            })
-
-            local Switch = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.new(0, 52, 0, 28),
-                Position = UDim2.new(1, -66, 0.5, -14),
-                BackgroundColor3 = Theme.AccentOff,
-                ZIndex = 10
-            })
-            Switch:SetAttribute("ThemeRole", "AccentOff")
-            corner(Switch, 999)
-
-            local Knob = mk("Frame", {
-                Parent = Switch,
-                Size = UDim2.fromOffset(24, 24),
-                Position = UDim2.new(0, 2, 0.5, -12),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                ZIndex = 12
-            })
-            corner(Knob, 999)
-
-            local Spinner = mk("Frame", {
-                Parent = Knob,
-                Size = UDim2.new(1, -4, 1, -4),
-                Position = UDim2.new(0, 2, 0, 2),
-                BackgroundTransparency = 1,
-                Visible = false,
-                ZIndex = 13
-            })
-            local SpinnerArc = stroke(Spinner, Theme.Accent, 2.5, 0)
-            SpinnerArc.LineJoinMode = Enum.LineJoinMode.Round
-            local SpinnerGradient = Instance.new("UIGradient", Spinner)
-            SpinnerGradient.Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0),
-                NumberSequenceKeypoint.new(0.85, 0.85),
-                NumberSequenceKeypoint.new(1, 1),
-            })
-            corner(Spinner, 999)
-            local spinnerSpin
-            local function startSpinner()
-                Spinner.Visible = true
-                spinnerSpin = RunService.Heartbeat:Connect(function(dt)
-                    SpinnerGradient.Rotation = (SpinnerGradient.Rotation + dt * 360) % 360
-                end)
-            end
-            local function stopSpinner()
-                if spinnerSpin then spinnerSpin:Disconnect(); spinnerSpin = nil end
-                Spinner.Visible = false
-            end
-
-            buildAnimatedBorder(Holder, Theme.ToggleOn, UDim.new(0, 12), true)
-
-            local Click = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                ZIndex = 14
-            })
-
-            local function spawnRipple(inputPosition)
-                local btnPos  = Holder.AbsolutePosition
-                local btnSize = Holder.AbsoluteSize
-                local relX    = inputPosition.X - btnPos.X
-                local relY    = inputPosition.Y - btnPos.Y
-                local dX      = math.max(relX, btnSize.X - relX)
-                local dY      = math.max(relY, btnSize.Y - relY)
-                local maxR    = math.sqrt(dX*dX + dY*dY) * 2.1
-                local Ripple  = Instance.new("Frame")
-                Ripple.Name                 = "LiquidRipple"
-                Ripple.AnchorPoint          = Vector2.new(0.5, 0.5)
-                Ripple.BackgroundColor3     = Theme.Accent
-                Ripple.BackgroundTransparency = 0.6
-                Ripple.BorderSizePixel      = 0
-                Ripple.Size                 = UDim2.fromOffset(1, 1)
-                Ripple.Position             = UDim2.fromOffset(relX, relY)
-                Ripple.ZIndex               = 13
-                Ripple.Parent               = Holder
-                local rc = Instance.new("UICorner")
-                rc.CornerRadius = UDim.new(1, 0)
-                rc.Parent       = Ripple
-                local ex = TweenService:Create(Ripple,
-                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                    { Size = UDim2.fromOffset(maxR, maxR), BackgroundTransparency = 0.78 })
-                ex:Play()
-                ex.Completed:Connect(function()
-                    local fd = TweenService:Create(Ripple,
-                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
-                        { BackgroundTransparency = 1 })
-                    fd:Play()
-                    fd.Completed:Connect(function() pcall(function() Ripple:Destroy() end) end)
-                end)
-            end
-            track(Click.InputBegan:Connect(function(inp)
-                if inp.UserInputType == Enum.UserInputType.MouseButton1
-                or inp.UserInputType == Enum.UserInputType.Touch then
-                    spawnRipple(inp.Position)
-             
+                local Ripple = In

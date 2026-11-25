@@ -1,4 +1,294 @@
-   end
+stance.new("Frame")
+                Ripple.Name = "LiquidRipple"
+                Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
+                Ripple.BackgroundColor3 = Theme.Accent
+                Ripple.BackgroundTransparency = 0.55
+                Ripple.BorderSizePixel = 0
+                Ripple.Size = UDim2.fromOffset(1, 1)
+                Ripple.Position = UDim2.fromOffset(relX, relY)
+                Ripple.ZIndex = 11
+                Ripple.Parent = BtnWrapper
+
+                local rippleCorner = Instance.new("UICorner")
+                rippleCorner.CornerRadius = UDim.new(1, 0)
+                rippleCorner.Parent = Ripple
+
+                local expandTween = TweenService:Create(
+                    Ripple,
+                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    {
+                        Size = UDim2.fromOffset(maxRadius, maxRadius),
+                        BackgroundTransparency = 0.72,
+                    }
+                )
+                expandTween:Play()
+
+                expandTween.Completed:Connect(function()
+                    local fadeTween = TweenService:Create(
+                        Ripple,
+                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 1 }
+                    )
+                    fadeTween:Play()
+                    fadeTween.Completed:Connect(function()
+                        pcall(function() Ripple:Destroy() end)
+                    end)
+                end)
+            end
+
+            track(Btn.MouseEnter:Connect(function()
+                TweenService:Create(
+                    Btn,
+                    TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0.28 }
+                ):Play()
+            end))
+
+            track(Btn.MouseLeave:Connect(function()
+                TweenService:Create(
+                    Btn,
+                    TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { BackgroundTransparency = 0 }
+                ):Play()
+            end))
+
+            track(Btn.InputBegan:Connect(function(input2)
+                if input2.UserInputType == Enum.UserInputType.Touch then
+                    TweenService:Create(Btn, TweenInfo.new(0.10, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 0.38 }):Play()
+                end
+            end))
+
+            track(Btn.InputEnded:Connect(function(input2)
+                if input2.UserInputType == Enum.UserInputType.Touch then
+                    TweenService:Create(Btn, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 0 }):Play()
+                end
+            end))
+
+            track(Btn.InputBegan:Connect(function(input)
+                if input.UserInputType == Enum.UserInputType.MouseButton1
+                or input.UserInputType == Enum.UserInputType.Touch then
+                    spawnRipple(input.Position)
+                end
+            end))
+
+            Btn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.6)
+                pcall(callback)
+            end)
+
+            if Window._RegisterGlobalOption then
+                Window._RegisterGlobalOption(self, {
+                    Id = textSpanish,
+                    NameSpanish = textSpanish,
+                    NameEnglish = textEnglish,
+                    Holder = BtnWrapper,
+                    Kind = "Button",
+                })
+            end
+
+            return BtnWrapper
+        end
+
+        function Tab:CreateScriptToggle(textSpanish, textEnglish, url, scriptKey)
+            local displayText = GetText(textSpanish, textEnglish)
+            local active       = false
+            local loading      = false
+
+            local Holder = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 68),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.78,
+                ClipsDescendants = true,
+                ZIndex = 9
+            }, TabPage)
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            corner(Holder, 12)
+            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
+            resetScrollTop(TabPage)
+
+            local AccentBar = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 3, 0, 40),
+                Position = UDim2.new(0, 10, 0.5, -20),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            AccentBar:SetAttribute("ThemeRole", "AccentOff")
+            corner(AccentBar, 999)
+
+            local IconRing = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.fromOffset(38, 38),
+                Position = UDim2.new(0, 24, 0.5, -19),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.2,
+                ZIndex = 10
+            })
+            corner(IconRing, 999)
+            local IconRingStroke = stroke(IconRing, Theme.AccentOff, 1.5, 0.3)
+
+            local IconGlyph = mk("TextLabel", {
+                Parent = IconRing,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = string.upper(string.sub((tostring(textSpanish or ""):gsub("^%s+", "")), 1, 1)),
+                Font = Enum.Font.GothamBlack,
+                TextSize = 16,
+                TextColor3 = Theme.TextDim,
+                ZIndex = 11
+            })
+            IconGlyph:SetAttribute("ThemeTextRole", "TextDim")
+            IconGlyph:SetAttribute("IgnoreTextEffect", true)
+            if IconGlyph.Text == "" then IconGlyph.Text = "</>" end
+
+            local LabelTxt = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -160, 0, 20),
+                Position = UDim2.new(0, 74, 0, 14),
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 15,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish", textSpanish)
+            LabelTxt:SetAttribute("TextEnglish", textEnglish)
+
+            local StatusBadge = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.fromOffset(78, 20),
+                Position = UDim2.new(0, 74, 0, 38),
+                BackgroundColor3 = Theme.AccentOff,
+                BackgroundTransparency = 0.15,
+                ZIndex = 10
+            })
+            corner(StatusBadge, 999)
+
+            local StatusDot = mk("Frame", {
+                Parent = StatusBadge,
+                Size = UDim2.fromOffset(6, 6),
+                Position = UDim2.new(0, 8, 0.5, -3),
+                BackgroundColor3 = Theme.TextDim,
+                ZIndex = 11
+            })
+            corner(StatusDot, 999)
+
+            local StatusLabel = mk("TextLabel", {
+                Parent = StatusBadge,
+                Size = UDim2.new(1, -20, 1, 0),
+                Position = UDim2.new(0, 18, 0, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Inactivo", "Idle"),
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                TextColor3 = Theme.TextDim,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 11
+            })
+
+            local Switch = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 52, 0, 28),
+                Position = UDim2.new(1, -66, 0.5, -14),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            Switch:SetAttribute("ThemeRole", "AccentOff")
+            corner(Switch, 999)
+
+            local Knob = mk("Frame", {
+                Parent = Switch,
+                Size = UDim2.fromOffset(24, 24),
+                Position = UDim2.new(0, 2, 0.5, -12),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                ZIndex = 12
+            })
+            corner(Knob, 999)
+
+            local Spinner = mk("Frame", {
+                Parent = Knob,
+                Size = UDim2.new(1, -4, 1, -4),
+                Position = UDim2.new(0, 2, 0, 2),
+                BackgroundTransparency = 1,
+                Visible = false,
+                ZIndex = 13
+            })
+            local SpinnerArc = stroke(Spinner, Theme.Accent, 2.5, 0)
+            SpinnerArc.LineJoinMode = Enum.LineJoinMode.Round
+            local SpinnerGradient = Instance.new("UIGradient", Spinner)
+            SpinnerGradient.Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0),
+                NumberSequenceKeypoint.new(0.85, 0.85),
+                NumberSequenceKeypoint.new(1, 1),
+            })
+            corner(Spinner, 999)
+            local spinnerSpin
+            local function startSpinner()
+                Spinner.Visible = true
+                spinnerSpin = RunService.Heartbeat:Connect(function(dt)
+                    SpinnerGradient.Rotation = (SpinnerGradient.Rotation + dt * 360) % 360
+                end)
+            end
+            local function stopSpinner()
+                if spinnerSpin then spinnerSpin:Disconnect(); spinnerSpin = nil end
+                Spinner.Visible = false
+            end
+
+            buildAnimatedBorder(Holder, Theme.ToggleOn, UDim.new(0, 12), true)
+
+            local Click = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 14
+            })
+
+            local function spawnRipple(inputPosition)
+                local btnPos  = Holder.AbsolutePosition
+                local btnSize = Holder.AbsoluteSize
+                local relX    = inputPosition.X - btnPos.X
+                local relY    = inputPosition.Y - btnPos.Y
+                local dX      = math.max(relX, btnSize.X - relX)
+                local dY      = math.max(relY, btnSize.Y - relY)
+                local maxR    = math.sqrt(dX*dX + dY*dY) * 2.1
+                local Ripple  = Instance.new("Frame")
+                Ripple.Name                 = "LiquidRipple"
+                Ripple.AnchorPoint          = Vector2.new(0.5, 0.5)
+                Ripple.BackgroundColor3     = Theme.Accent
+                Ripple.BackgroundTransparency = 0.6
+                Ripple.BorderSizePixel      = 0
+                Ripple.Size                 = UDim2.fromOffset(1, 1)
+                Ripple.Position             = UDim2.fromOffset(relX, relY)
+                Ripple.ZIndex               = 13
+                Ripple.Parent               = Holder
+                local rc = Instance.new("UICorner")
+                rc.CornerRadius = UDim.new(1, 0)
+                rc.Parent       = Ripple
+                local ex = TweenService:Create(Ripple,
+                    TweenInfo.new(0.55, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
+                    { Size = UDim2.fromOffset(maxR, maxR), BackgroundTransparency = 0.78 })
+                ex:Play()
+                ex.Completed:Connect(function()
+                    local fd = TweenService:Create(Ripple,
+                        TweenInfo.new(0.25, Enum.EasingStyle.Sine, Enum.EasingDirection.Out),
+                        { BackgroundTransparency = 1 })
+                    fd:Play()
+                    fd.Completed:Connect(function() pcall(function() Ripple:Destroy() end) end)
+                end)
+            end
+            track(Click.InputBegan:Connect(function(inp)
+                if inp.UserInputType == Enum.UserInputType.MouseButton1
+                or inp.UserInputType == Enum.UserInputType.Touch then
+                    spawnRipple(inp.Position)
+                end
             end))
 
             track(Click.MouseEnter:Connect(function()
@@ -682,208 +972,4 @@
                         end
                         cur[1] = (cur[1] or 0) + (v[1] or 0) * w
                         cur[2] = (cur[2] or 0) + (v[2] or 0) * w
-                        cur[3] = (cur[3] or 0) + (v[3] or 0) * w
-                        cur[4] = (cur[4] or 0) + (v[4] or 0) * w
-                    end
-                end
-                local function ease(x) return x * x * (3 - 2 * x) end
-                local sin = math.sin
-
-                -- ---------- acciones del avatar del jugador (u = 0..1 dentro de la acción) ----------
-                HomeAnim.Actions = {
-                    -- saludar: brazo derecho arriba y la mano va y viene
-                    wave = { dur = 2.6, pose = function(u, t)
-                        local w = sin(t * 9) * 22
-                        return { RShoulder = { 0, 0, 150 + w * 0.3 }, RElbow = { 0, 0, 25 + w }, Neck = { 0, -8, 4 }, Waist = { 0, -6, 2 }, LShoulder = { 0, 0, -6 } }
-                    end },
-                    -- mirar a los lados: cabeza y torso siguen una curva izquierda-derecha
-                    look = { dur = 3.4, pose = function(u)
-                        local side = sin(u * math.pi * 2) * 1
-                        return { Neck = { -4, side * 48, 0 }, Waist = { 0, side * 14, 0 }, RShoulder = { 0, 0, 4 }, LShoulder = { 0, 0, -4 } }
-                    end },
-                    -- estirarse: brazos arriba, se inclina para atrás y vuelve
-                    stretch = { dur = 2.8, pose = function(u)
-                        local k = sin(u * math.pi)
-                        return { RShoulder = { 0, 0, 165 * k }, LShoulder = { 0, 0, -165 * k }, RElbow = { 0, 0, -10 * k }, LElbow = { 0, 0, 10 * k }, Waist = { 10 * k, 0, 0 }, Neck = { 12 * k, 0, 0 }, Root = { 0, 0, 0, 0.12 * k } }
-                    end },
-                    -- pasito: rebote con la cadera de lado a lado y brazos al ritmo
-                    dance = { dur = 3.4, pose = function(u, t)
-                        local b = sin(t * 8)
-                        local bounce = math.abs(sin(t * 8)) * 0.18
-                        return {
-                            Root = { 0, b * 10, b * 6, bounce - 0.1 },
-                            Waist = { 0, -b * 8, -b * 5 },
-                            Neck = { 0, b * 10, -b * 6 },
-                            RShoulder = { 60 + b * 30, 0, 20 }, LShoulder = { 60 - b * 30, 0, -20 },
-                            RElbow = { 70, 0, 0 }, LElbow = { 70, 0, 0 },
-                            RHip = { b * 12, 0, 4 }, LHip = { -b * 12, 0, -4 },
-                            RKnee = { -math.max(0, b) * 25, 0, 0 }, LKnee = { -math.max(0, -b) * 25, 0, 0 },
-                        }
-                    end },
-                    -- manos en la cintura con un leve balanceo
-                    hips = { dur = 2.8, pose = function(u, t)
-                        local s = sin(t * 2.4) * 4
-                        return { RShoulder = { -10, 0, 38 }, LShoulder = { -10, 0, -38 }, RElbow = { 0, 0, -95 }, LElbow = { 0, 0, 95 }, Waist = { 0, s, s * 0.5 }, Neck = { -4, -s * 2, 0 } }
-                    end },
-                }
-                HomeAnim.Order = { "look", "wave", "stretch", "hips", "dance" }
-
-                -- respiración y peso (siempre)
-                function HomeAnim.Idle(t)
-                    local br = sin(t * 2.1)
-                    local sway = sin(t * 0.9)
-                    return {
-                        Root = { 0, 0, sway * 2.2, br * 0.035 },
-                        Waist = { br * 1.6, 0, -sway * 1.4 },
-                        Neck = { -br * 1.5, sin(t * 0.55) * 7, sway * 1.2 },
-                        RShoulder = { br * 2, 0, 4 + br * 2 },
-                        LShoulder = { br * 2, 0, -4 - br * 2 },
-                        RElbow = { 0, 0, 6 }, LElbow = { 0, 0, -6 },
-                        RHip = { 0, 0, sway * 1.5 }, LHip = { 0, 0, sway * 1.5 },
-                    }
-                end
-
-                -- controlador del avatar del jugador
-                function HomeAnim.Player(rig)
-                    local ctl = { t = 0, action = nil, actionT = 0, nextAt = 3, idx = 0 }
-                    function ctl.Trigger(name)
-                        if HomeAnim.Actions[name] then
-                            ctl.action, ctl.actionT = name, 0
-                        end
-                    end
-                    function ctl.Step(dt)
-                        ctl.t += dt
-                        local pose = HomeAnim.Idle(ctl.t)
-                        if not ctl.action and ctl.t >= ctl.nextAt then
-                            ctl.idx = ctl.idx % #HomeAnim.Order + 1
-                            ctl.Trigger(HomeAnim.Order[ctl.idx])
-                        end
-                        if ctl.action then
-                            local a = HomeAnim.Actions[ctl.action]
-                            ctl.actionT += dt
-                            local u = math.clamp(ctl.actionT / a.dur, 0, 1)
-                            -- entra y sale suave (0.35 s de cada lado)
-                            local w = math.min(1, ctl.actionT / 0.35, (a.dur - ctl.actionT) / 0.35)
-                            addPose(pose, a.pose(u, ctl.t), ease(math.clamp(w, 0, 1)))
-                            if ctl.actionT >= a.dur then
-                                ctl.action = nil
-                                ctl.nextAt = ctl.t + 3.5 + math.random() * 2.5
-                            end
-                        end
-                        HomeAnim.Apply(rig, pose)
-                    end
-                    return ctl
-                end
-
-                -- controlador del Owner: sentado en el piso mirando de un lado a otro. Se puede agarrar con el dedo:
-                -- cuelga como muñeco de trapo, al soltarlo cae, aterriza, camina a su lugar y se vuelve a sentar.
-                -- Todo es matemática (resortes + gravedad), sin el motor de física: no agrega lag.
-                -- env (opcional): { model, shadow, home = CFrame, floorY, H, standY }
-                local function lerpPose(a, b, u)
-                    local out = {}
-                    for key, va in pairs(a) do
-                        local vb = b[key] or { 0, 0, 0, 0 }
-                        out[key] = { (va[1] or 0) + ((vb[1] or 0) - (va[1] or 0)) * u, (va[2] or 0) + ((vb[2] or 0) - (va[2] or 0)) * u,
-                            (va[3] or 0) + ((vb[3] or 0) - (va[3] or 0)) * u, (va[4] or 0) + ((vb[4] or 0) - (va[4] or 0)) * u }
-                    end
-                    for key, vb in pairs(b) do
-                        if not a[key] then
-                            out[key] = { (vb[1] or 0) * u, (vb[2] or 0) * u, (vb[3] or 0) * u, (vb[4] or 0) * u }
-                        end
-                    end
-                    return out
-                end
-                -- resorte amortiguado: devuelve valor y velocidad nuevos
-                local function spring(x, v, target, k, damp, dt)
-                    local a = (target - x) * k - v * damp
-                    v = v + a * dt
-                    return x + v * dt, v
-                end
-
-                function HomeAnim.Owner(rig, env)
-                    local drop = rig.legLen - rig.legThick * 0.5
-                    local ctl = {
-                        t = 0, look = 0, lookTarget = 0, lookNext = 1.5, torso = 0,
-                        state = "sit", stateT = 0,
-                        roll = 0, rollV = 0, pitch = 0, pitchV = 0,
-                        holdVel = Vector3.new(), vel = Vector3.new(),
-                    }
-                    local function sitPose(t)
-                        local br = sin(t * 1.8)
-                        return {
-                            Root = { 0, 0, 0, -drop + br * 0.02 },
-                            Waist = { 6 + br * 1.2, ctl.torso, 0 },
-                            Neck = { -3 + br * 1, ctl.look, sin(t * 0.7) * 2 },
-                            -- brazos para atrás, apoyados en el piso
-                            RShoulder = { -28, 0, 14 }, LShoulder = { -28, 0, -14 },
-                            RElbow = { 0, 0, 0 }, LElbow = { 0, 0, 0 },
-                            -- piernas adelante, una un poco más doblada
-                            RHip = { 90, 0, 6 }, LHip = { 84, 0, -8 },
-                            RKnee = { -12, 0, 0 }, LKnee = { -28, 0, 0 },
-                        }
-                    end
-                    -- colgando: los miembros siguen al balanceo con retraso y tiemblan según la velocidad
-                    local function heldPose(t, wob)
-                        local r = ctl.roll
-                        local f1, f2 = sin(t * 11) * wob, sin(t * 13 + 1.3) * wob
-                        return {
-                            Root = { ctl.pitch * 0.4, 0, 0, 0 },
-                            Waist = { -ctl.pitch * 0.3, f1 * 6, r * 0.25 },
-                            Neck = { -22 + f2 * 10, r * 0.5, -r * 0.7 + f1 * 8 },
-                            RShoulder = { f1 * 35, 0, 18 - r * 0.9 + f2 * 22 }, LShoulder = { -f2 * 35, 0, -18 - r * 0.9 - f1 * 22 },
-                            RElbow = { 0, 0, 18 + f2 * 20 }, LElbow = { 0, 0, -18 - f1 * 20 },
-                            RHip = { f2 * 38, 0, 5 - r * 0.6 }, LHip = { -f1 * 38, 0, -5 - r * 0.6 },
-                            RKnee = { -12 - math.abs(f1) * 35, 0, 0 }, LKnee = { -12 - math.abs(f2) * 35, 0, 0 },
-                        }
-                    end
-                    -- cayendo: agita brazos y piernas
-                    local function fallPose(t)
-                        local a, b = sin(t * 17), sin(t * 15 + 1)
-                        return {
-                            Neck = { 14, 0, a * 6 },
-                            Waist = { 6, 0, b * 4 },
-                            RShoulder = { 0, 0, 135 + a * 25 }, LShoulder = { 0, 0, -135 + b * 25 },
-                            RElbow = { 0, 0, 25 + b * 20 }, LElbow = { 0, 0, -25 - a * 20 },
-                            RHip = { 25 + a * 30, 0, 8 }, LHip = { 25 - a * 30, 0, -8 },
-                            RKnee = { -40 - b * 20, 0, 0 }, LKnee = { -40 + b * 20, 0, 0 },
-                        }
-                    end
-                    -- aterrizaje: se agacha por el golpe y rebota
-                    local function landPose(u)
-                        local k = sin(math.min(u, 1) * math.pi) -- 0 -> 1 -> 0
-                        return {
-                            Root = { 12 * k, 0, 0, -0.45 * k },
-                            Neck = { -14 * k, 0, 0 },
-                            RShoulder = { 25 * k, 0, 40 * k }, LShoulder = { 25 * k, 0, -40 * k },
-                            RHip = { 45 * k, 0, 4 }, LHip = { 45 * k, 0, -4 },
-                            RKnee = { -70 * k, 0, 0 }, LKnee = { -70 * k, 0, 0 },
-                        }
-                    end
-                    -- caminar de vuelta
-                    local function walkPose(ph)
-                        local s = sin(ph)
-                        return {
-                            Root = { 0, s * 5, 0, math.abs(sin(ph)) * 0.08 },
-                            Waist = { 3, -s * 6, 0 },
-                            Neck = { -2, s * 4, 0 },
-                            RShoulder = { -s * 28, 0, 6 }, LShoulder = { s * 28, 0, -6 },
-                            RElbow = { 15, 0, 0 }, LElbow = { 15, 0, 0 },
-                            RHip = { s * 30, 0, 0 }, LHip = { -s * 30, 0, 0 },
-                            RKnee = { -math.max(0, -s) * 45, 0, 0 }, LKnee = { -math.max(0, s) * 45, 0, 0 },
-                        }
-                    end
-
-                    local function facing()
-                        return env.home - env.home.Position
-                    end
-                    local function moveShadow(p, height)
-                        if not env.shadow then return end
-                        local ahead = ctl.state == "sit" and (env.home.LookVector * (env.H * 0.18)) or Vector3.new()
-                        local s = math.clamp(1 - height / (env.H * 2.2), 0.35, 1)
-                        env.shadow.Size = Vector3.new(0.05, env.H * 0.85 * s, env.H * 0.85 * s)
-                        env.shadow.Transparency = 0.62 + (1 - s) * 0.25
-                        env.shadow.CFrame = CFrame.new(p.X + ahead.X, env.floorY + 0.03, p.Z + ahead.Z) * CFrame.Angles(0, 0, math.rad(90))
-                    end
-                    function ctl.SetHome(cf)
-                        env.home = cf
-               
+                        cur[3] = (cur[3] or 0) + (

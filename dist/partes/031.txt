@@ -1,4 +1,269 @@
- 119344776018521, Clouds = 112291901900440, ColorCorrection = 118538685614420,
+endants = true,
+            ZIndex = 9,
+        })
+        holder:SetAttribute("ThemeRole", "Secondary")
+        holder:SetAttribute("IsShaderModeCard", true)
+        corner(holder, 14)
+        local holderStroke = stroke(holder, Theme.Stroke, 1.2, 0.48)
+        local holderScale = mk("UIScale", {Parent = holder, Scale = 1})
+
+        local presetData = ShaderManager and ShaderManager.Presets and ShaderManager.Presets[spec.key]
+        local lighting = type(presetData) == "table" and type(presetData.Lighting) == "table" and presetData.Lighting or {}
+        local atmosphere = type(presetData) == "table" and type(presetData.Atmosphere) == "table" and presetData.Atmosphere or {}
+        local function col(v, fallback) return typeof(v) == "Color3" and v or fallback end
+
+        local skyTop, skyMid, skyLow
+        if spec.key == "Custom" then
+            skyTop, skyMid, skyLow = Theme.Background, Theme.Secondary, Theme.Accent
+        elseif spec.key == "Original" then
+            skyTop, skyMid, skyLow = Color3.fromRGB(40, 44, 52), Color3.fromRGB(96, 104, 118), Color3.fromRGB(170, 176, 186)
+        else
+            skyTop = col(atmosphere.Decay, Color3.fromRGB(40, 50, 90))
+            skyMid = col(atmosphere.Color, Color3.fromRGB(120, 140, 200))
+            skyLow = col(lighting.ColorShift_Top, Color3.fromRGB(255, 220, 180))
+        end
+
+        local banner = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -10, 0, 78),
+            Position = UDim2.new(0, 5, 0, 5),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 10,
+        })
+        corner(banner, 11)
+        mk("UIGradient", {
+            Parent = banner,
+            Rotation = 90,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, skyTop),
+                ColorSequenceKeypoint.new(0.6, skyMid),
+                ColorSequenceKeypoint.new(1, skyLow),
+            }),
+        })
+
+        local clock = tonumber(lighting.ClockTime)
+        if clock then
+            local isNight = clock < 5.5 or clock > 19
+            local dayPos = math.clamp((clock - 6) / 12, 0, 1)
+            local sunX = isNight and 0.78 or (0.12 + dayPos * 0.76)
+            local sunY = isNight and 0.28 or (0.78 - math.sin(math.pi * dayPos) * 0.55)
+            local sunSize = isNight and 14 or 20
+            local sun = mk("Frame", {
+                Parent = banner,
+                Size = UDim2.fromOffset(sunSize, sunSize),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                Position = UDim2.new(sunX, 0, sunY, 0),
+                BackgroundColor3 = isNight and Color3.fromRGB(235, 238, 255) or col(lighting.ColorShift_Top, Color3.fromRGB(255, 230, 170)),
+                BorderSizePixel = 0,
+                ZIndex = 11,
+            })
+            corner(sun, 999)
+            mk("UIStroke", {Parent = sun, Color = Color3.new(1, 1, 1), Thickness = isNight and 2 or 4, Transparency = 0.7})
+            if isNight then
+                local seeds = {{0.15, 0.2}, {0.3, 0.45}, {0.46, 0.18}, {0.6, 0.38}, {0.9, 0.55}, {0.22, 0.6}}
+                for _, p in ipairs(seeds) do
+                    local star = mk("Frame", {
+                        Parent = banner, Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
+                        BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.2, BorderSizePixel = 0, ZIndex = 11,
+                    })
+                    corner(star, 999)
+                end
+            end
+            local chip = mk("TextLabel", {
+                Parent = banner,
+                Size = UDim2.new(0, 0, 0, 18),
+                AutomaticSize = Enum.AutomaticSize.X,
+                Position = UDim2.new(0, 6, 0, 6),
+                BackgroundColor3 = Color3.new(0, 0, 0),
+                BackgroundTransparency = 0.45,
+                Text = string.format("%02d:%02d", math.floor(clock) % 24, math.floor((clock % 1) * 60 + 0.5) % 60),
+                TextColor3 = Color3.new(1, 1, 1),
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                ZIndex = 14,
+            })
+            chip:SetAttribute("IgnoreTextEffect", true)
+            corner(chip, 999)
+            mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)})
+        end
+        if spec.key == "Level0" then
+            for i = 1, 12 do
+                mk("Frame", {
+                    Parent = banner, Size = UDim2.new(1, 0, 0, 1), Position = UDim2.new(0, 0, (i - 1) / 12, 0),
+                    BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.82, BorderSizePixel = 0, ZIndex = 12,
+                })
+            end
+        end
+        if spec.key == "Rain" or spec.key == "Stormfront" or spec.key == "OilWet" or spec.key == "Monsoon" then
+            for i = 1, 9 do
+                mk("Frame", {
+                    Parent = banner, Size = UDim2.fromOffset(1, 12), Rotation = 18,
+                    Position = UDim2.new((i - 1) / 9 + 0.04, 0, (i % 3) * 0.22 + 0.05, 0),
+                    BackgroundColor3 = Color3.fromRGB(220, 230, 255), BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 12,
+                })
+            end
+        end
+        local hills = mk("Frame", {
+            Parent = banner,
+            Size = UDim2.new(1.3, 0, 0, 34),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.45, 0, 1, -16),
+            BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.35,
+            BorderSizePixel = 0,
+            ZIndex = 12,
+        })
+        corner(hills, 999)
+        local hills2 = mk("Frame", {
+            Parent = banner,
+            Size = UDim2.new(0.9, 0, 0, 30),
+            AnchorPoint = Vector2.new(0.5, 0),
+            Position = UDim2.new(0.85, 0, 1, -11),
+            BackgroundColor3 = Color3.new(0, 0, 0),
+            BackgroundTransparency = 0.15,
+            BorderSizePixel = 0,
+            ZIndex = 13,
+        })
+        corner(hills2, 999)
+
+        local glow = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -10, 0, 3),
+            Position = UDim2.new(0, 5, 0, 84),
+            BackgroundColor3 = Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 10,
+        })
+        glow:SetAttribute("ThemeRole", "AccentOff")
+        corner(glow, 99)
+
+        local title = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -20, 0, 20),
+            Position = UDim2.new(0, 10, 0, 92),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.labelES, spec.labelEN),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        title:SetAttribute("ThemeTextRole", "Text")
+        title:SetAttribute("TextSpanish", spec.labelES)
+        title:SetAttribute("TextEnglish", spec.labelEN)
+
+        local subtitle = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -20, 0, 30),
+            Position = UDim2.new(0, 10, 0, 114),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.descES, spec.descEN),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 10,
+            TextWrapped = true,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextYAlignment = Enum.TextYAlignment.Top,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        subtitle:SetAttribute("ThemeTextRole", "TextDim")
+        subtitle:SetAttribute("TextSpanish", spec.descES)
+        subtitle:SetAttribute("TextEnglish", spec.descEN)
+
+        local badge = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 0, 0, 20),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -11, 0, 11),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.1,
+            Text = GetText("APLICAR", "APPLY"),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 15,
+        })
+        badge:SetAttribute("ThemeRole", "AccentOff")
+        badge:SetAttribute("TextSpanish", "APLICAR")
+        badge:SetAttribute("TextEnglish", "APPLY")
+        corner(badge, 999)
+        mk("UIPadding", {Parent = badge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+
+        local click = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 16,
+        })
+
+        local selected = false
+        local function setSelected(value)
+            selected = value == true
+            local backgroundTransparency = selected and 0.04 or 0.2
+            local accentColor = selected and Theme.Accent or Theme.AccentOff
+            local textColor = selected and Theme.AccentText or Theme.Text
+            TweenService:Create(holder, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundTransparency = backgroundTransparency,
+            }):Play()
+            TweenService:Create(glow, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = accentColor,
+            }):Play()
+            TweenService:Create(badge, TweenInfo.new(0.16, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {
+                BackgroundColor3 = accentColor,
+                TextColor3 = textColor,
+            }):Play()
+            holderStroke.Transparency = selected and 0.05 or 0.48
+            holderStroke.Thickness = selected and 2 or 1.2
+            holderStroke:SetAttribute("ThemeRole", selected and "Accent" or "Stroke")
+            holderStroke.Color = selected and Theme.Accent or Theme.Stroke
+            holder:SetAttribute("ThemeRole", "Secondary")
+            glow:SetAttribute("ThemeRole", selected and "Accent" or "AccentOff")
+            badge:SetAttribute("ThemeRole", selected and "Accent" or "AccentOff")
+            badge:SetAttribute("TextSpanish", selected and "✓ ACTIVO" or "APLICAR")
+            badge:SetAttribute("TextEnglish", selected and "✓ ACTIVE" or "APPLY")
+            badge.Text = GetText(selected and "✓ ACTIVO" or "APLICAR", selected and "✓ ACTIVE" or "APPLY")
+        end
+
+        click.MouseEnter:Connect(function()
+            TweenService:Create(holderScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
+            if not selected then
+                TweenService:Create(holderStroke, TweenInfo.new(0.12), {Transparency = 0.25}):Play()
+            end
+        end)
+        click.MouseLeave:Connect(function()
+            TweenService:Create(holderScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            if not selected then
+                TweenService:Create(holderStroke, TweenInfo.new(0.18), {Transparency = 0.48}):Play()
+            end
+        end)
+        click.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.55)
+            holderScale.Scale = 0.96
+            TweenService:Create(holderScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            if spec.callback then spec.callback() end
+        end)
+
+        ShaderModeCards[spec.key] = {
+            labelES = spec.labelES,
+            labelEN = spec.labelEN,
+            setSelected = setSelected,
+        }
+        setSelected(false)
+        return holder
+    end
+
+    local function shaderCreateSection(parent, titleES, titleEN, descriptionES, descriptionEN)
+        local SECTION_ICONS = {
+            Lighting = 100212473103391, Atmosphere = 119344776018521, Clouds = 112291901900440, ColorCorrection = 118538685614420,
             ["Bloom y Blur"] = 81463911885004, DepthOfField = 93221074040832, SunRays = 82603845614781, ["Overdrive local"] = 98854559186277, Acciones = 100875301344852,
         }
         local section = mk("Frame", {
@@ -569,306 +834,4 @@
             {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
             {id = "RainAudioVolume", es = "Volumen de lluvia", en = "Rain volume", min = 0, max = 1, default = 0.34, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.SoundVolume end, onChange = function(value) ShaderRain:SetSoundVolume(value) end},
             {id = "RainShelter", es = "Respetar techos", en = "Respect roofs", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.RespectShelter end, onChange = function(value) ShaderRain:SetRespectShelter(value) end},
-            {id = "StormMode", es = "Relámpagos dinámicos", en = "Dynamic lightning", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.StormEnabled end, onChange = function(value) ShaderRain:SetStormEnabled(value) end},
-        }
-    end
-
-    local function shaderOpenCustomWindow()
-        if ShaderCustomWindow and ShaderCustomWindow.Parent then
-            ShaderCustomWindow.Visible = true
-            if ShaderCustomBackdrop then ShaderCustomBackdrop.Visible = true end
-            ShaderCustomRefresh()
-            return
-        end
-
-        ShaderCustomControls = {}
-        ShaderUISections = {}
-        shaderDisconnectAll()
-
-        ShaderCustomBackdrop = mk("Frame", {
-            Parent = Window.ScreenGui,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            Active = false,
-            ZIndex = 300,
-        })
-
-        ShaderCustomWindow = mk("Frame", {
-            Parent = Window.ScreenGui,
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.52, 0),
-            Size = UDim2.fromOffset(460, 380),
-            Active = true,
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.04,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
-            ZIndex = 301,
-        })
-        ShaderCustomWindow:SetAttribute("ThemeRole", "Background")
-        corner(ShaderCustomWindow, 16)
-        stroke(ShaderCustomWindow, Theme.Stroke, 1.5, 0.18)
-        buildAnimatedBorder(ShaderCustomWindow, Theme.Accent, UDim.new(0, 16), true)
-        mk("UISizeConstraint", {
-            Parent = ShaderCustomWindow,
-            MinSize = Vector2.new(360, 300),
-            MaxSize = Vector2.new(520, 430),
-        })
-
-        local header = mk("Frame", {
-            Parent = ShaderCustomWindow,
-            Size = UDim2.new(1, -8, 0, 72),
-            Position = UDim2.new(0, 4, 0, 4),
-            BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0.22,
-            BorderSizePixel = 0,
-            ZIndex = 302,
-        })
-        header:SetAttribute("ThemeRole", "Secondary")
-        corner(header, 13)
-        stroke(header, Theme.Stroke, 1.1, 0.58)
-
-        local headerAccent = mk("Frame", {
-            Parent = header,
-            Size = UDim2.new(0, 4, 0, 38),
-            Position = UDim2.new(0, 16, 0.5, -19),
-            BackgroundColor3 = Theme.Accent,
-            BorderSizePixel = 0,
-            ZIndex = 303,
-        })
-        headerAccent:SetAttribute("ThemeRole", "Accent")
-        corner(headerAccent, 99)
-
-        local title = mk("TextLabel", {
-            Parent = header,
-            Size = UDim2.new(1, -150, 0, 24),
-            Position = UDim2.new(0, 30, 0, 10),
-            BackgroundTransparency = 1,
-            Text = GetText("Personalizado", "Custom"),
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 18,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 303,
-        })
-        title:SetAttribute("ThemeTextRole", "Text")
-        title:SetAttribute("TextSpanish", "Personalizado")
-        title:SetAttribute("TextEnglish", "Custom")
-
-        local subtitle = mk("TextLabel", {
-            Parent = header,
-            Size = UDim2.new(1, -150, 0, 16),
-            Position = UDim2.new(0, 30, 0, 35),
-            BackgroundTransparency = 1,
-            Text = GetText("Ajustes propios de Shaders · aplicación en tiempo real", "Shader-only controls · live application"),
-            TextColor3 = Theme.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 303,
-        })
-        subtitle:SetAttribute("ThemeTextRole", "TextDim")
-        subtitle:SetAttribute("TextSpanish", "Ajustes propios de Shaders · aplicación en tiempo real")
-        subtitle:SetAttribute("TextEnglish", "Shader-only controls · live application")
-
-        local closeButton = mk("TextButton", {
-            Parent = header,
-            Size = UDim2.new(0, 38, 0, 38),
-            Position = UDim2.new(1, -52, 0.5, -19),
-            BackgroundColor3 = Theme.AccentOff,
-            BackgroundTransparency = 0.12,
-            Text = "×",
-            TextColor3 = Theme.Text,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 24,
-            AutoButtonColor = false,
-            ZIndex = 304,
-        })
-        closeButton:SetAttribute("ThemeRole", "AccentOff")
-        corner(closeButton, 11)
-
-        local dragStrip = mk("Frame", {
-            Parent = header,
-            Size = UDim2.new(1, -92, 1, 0),
-            Position = UDim2.new(0, 0, 0, 0),
-            BackgroundTransparency = 1,
-            Active = true,
-            ZIndex = 305,
-        })
-
-        local chipBar = mk("ScrollingFrame", {
-            Parent = ShaderCustomWindow,
-            Size = UDim2.new(1, -28, 0, 30),
-            Position = UDim2.new(0, 14, 0, 82),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ScrollBarThickness = 0,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.X,
-            ScrollingDirection = Enum.ScrollingDirection.X,
-            ZIndex = 303,
-        })
-        mk("UIListLayout", {
-            Parent = chipBar,
-            FillDirection = Enum.FillDirection.Horizontal,
-            Padding = UDim.new(0, 6),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-            VerticalAlignment = Enum.VerticalAlignment.Center,
-        })
-
-        local scroll = mk("ScrollingFrame", {
-            Parent = ShaderCustomWindow,
-            Size = UDim2.new(1, -28, 1, -124),
-            Position = UDim2.new(0, 14, 0, 118),
-            BackgroundTransparency = 1,
-            BorderSizePixel = 0,
-            ScrollBarThickness = 3,
-            ScrollBarImageColor3 = Theme.Accent,
-            CanvasSize = UDim2.new(0, 0, 0, 0),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y,
-            ScrollingDirection = Enum.ScrollingDirection.Y,
-            Active = true,
-            ScrollingEnabled = true,
-            ZIndex = 302,
-        })
-        scroll:SetAttribute("ThemeRole", "Background")
-
-        local scrollPadding = mk("UIPadding", {
-            Parent = scroll,
-            PaddingLeft = UDim.new(0, 2),
-            PaddingRight = UDim.new(0, 4),
-            PaddingTop = UDim.new(0, 4),
-            PaddingBottom = UDim.new(0, 18),
-        })
-        local scrollLayout = mk("UIListLayout", {
-            Parent = scroll,
-            Padding = UDim.new(0, 10),
-            SortOrder = Enum.SortOrder.LayoutOrder,
-        })
-
-        local closeWindow
-        closeWindow = function()
-            shaderDisconnectAll()
-            ShaderCustomControls = {}
-            if ShaderCustomWindow then ShaderCustomWindow:Destroy() end
-            if ShaderCustomBackdrop then ShaderCustomBackdrop:Destroy() end
-            ShaderCustomWindow = nil
-            ShaderCustomBackdrop = nil
-            ShaderCustomRefresh = function() end
-        end
-
-        closeButton.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.45)
-            closeWindow()
-        end)
-
-        local dragging = false
-        local dragStart = nil
-        local windowStart = nil
-        dragStrip.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = true
-                dragStart = input.Position
-                windowStart = ShaderCustomWindow.Position
-            end
-        end)
-        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
-            if dragging and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                local delta = input.Position - dragStart
-                ShaderCustomWindow.Position = UDim2.new(
-                    windowStart.X.Scale, windowStart.X.Offset + delta.X,
-                    windowStart.Y.Scale, windowStart.Y.Offset + delta.Y
-                )
-            end
-        end))
-        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragging = false
-            end
-        end))
-
-        local specs = shaderCustomSpecs()
-        local currentSection = nil
-        for _, spec in ipairs(specs) do
-            if spec.section then
-                currentSection = shaderCreateSection(scroll, spec.section[1], spec.section[2], spec.section[3], spec.section[4])
-            elseif currentSection then
-                if spec.toggle then
-                    shaderCreateToggle(currentSection, spec)
-                else
-                    shaderCreateSlider(currentSection, spec)
-                end
-            end
-        end
-
-        local footer = shaderCreateSection(scroll, "Acciones", "Actions", "Los controles se aplican en tiempo real.", "Controls apply in real time.")
-        local restore = mk("TextButton", {
-            Parent = footer,
-            Size = UDim2.new(1, 0, 0, 38),
-            BackgroundColor3 = Theme.Accent,
-            BackgroundTransparency = 0.05,
-            Text = GetText("Restaurar valores originales", "Restore original values"),
-            TextColor3 = Theme.AccentText,
-            Font = Enum.Font.GothamBlack,
-            TextSize = 12,
-            AutoButtonColor = false,
-            ZIndex = 314,
-        })
-        restore:SetAttribute("ThemeRole", "Accent")
-        restore:SetAttribute("TextSpanish", "Restaurar valores originales")
-        restore:SetAttribute("TextEnglish", "Restore original values")
-        corner(restore, 10)
-        restore.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.45)
-            ShaderDemoEnabled = false
-            local report = shaderRestoreAll()
-            shaderWarn(report, "Restauración personalizada")
-            shaderSetModeLabel("Original")
-            ShaderCustomRefresh()
-        end)
-
-        for order, entry in ipairs(ShaderUISections) do
-            entry.updateCount()
-            local chip = mk("TextButton", {
-                Parent = chipBar,
-                Size = UDim2.new(0, 0, 0, 26),
-                AutomaticSize = Enum.AutomaticSize.X,
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.15,
-                Text = GetText(entry.es, entry.en),
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold,
-                TextSize = 11,
-                AutoButtonColor = false,
-                LayoutOrder = order,
-                ZIndex = 304,
-            })
-            chip:SetAttribute("ThemeRole", "Secondary")
-            chip:SetAttribute("ThemeTextRole", "Text")
-            chip:SetAttribute("IgnoreTextEffect", true)
-            corner(chip, 999)
-            stroke(chip, Theme.Stroke, 1, 0.6)
-            mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 30), PaddingRight = UDim.new(0, 10)})
-            RowKit.IconAt(chip, entry.icon, 14, UDim2.new(0, -21, 0.5, -7), 305, "Accent")
-            chip.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.4)
-                entry.setOpen(true)
-                task.defer(function()
-                    if not scroll.Parent then return end
-                    local y = entry.frame.AbsolutePosition.Y - scroll.AbsolutePosition.Y + scroll.CanvasPosition.Y - 4
-                    TweenService:Create(scroll, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {CanvasPosition = Vector2.new(0, math.max(0, y))}):Play()
-                end)
-            end)
-        end
-
-        ShaderCustomRefresh = function()
-            for _, control in pairs(ShaderCustomControls) do
-                if control.refresh then pcall(control.refresh) end
-            end
-        end
-        ShaderCustomRefresh()
-        shaderAddConnection(ShaderCustomWindow:GetPropertyChangedSignal("AbsoluteSize"):Connect(function()
-            task.defer(ShaderCustomRefresh)
-        e
+            {id = "StormMode", es = "Relámpagos dinámicos", en = "Dynamic lightning", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.StormEnabled end, onChange = function(value) Sha

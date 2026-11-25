@@ -124,8 +124,35 @@
                     ZIndex = 6
                 })
 
+                -- mantener 1 s: abre la rueda de la sección (el clic de ese toque no cambia el toggle)
+                local holdToken, radialFired = 0, false
+                local holdScale = mk("UIScale", { Scale = 1 }, FloatingWindow)
+                FloatClick.InputBegan:Connect(function(input)
+                    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                    holdToken = holdToken + 1
+                    local token, t0, from = holdToken, os.clock(), input.Position
+                    radialFired = false
+                    task.spawn(function()
+                        while holdToken == token and os.clock() - t0 < 1 do
+                            local held = math.clamp((os.clock() - t0) / 1, 0, 1)
+                            holdScale.Scale = 1 - 0.08 * held
+                            RunService.RenderStepped:Wait()
+                        end
+                        holdScale.Scale = 1
+                        if holdToken == token and not dragMoved and Window._OpenRadial then
+                            radialFired = true
+                            pcall(Window._OpenRadial, FloatingWindow, Holder)
+                        end
+                    end)
+                end)
+                FloatClick.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        holdToken = holdToken + 1
+                    end
+                end)
                 FloatClick.MouseButton1Click:Connect(function()
                     if dragging then return end
+                    if radialFired then radialFired = false return end
                     state = not state
                     playSound(Sounds.Click, 0.5)
                     updateFloatVisual()

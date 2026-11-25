@@ -1,4 +1,282 @@
-apThemeColor(fw, Theme)
+ shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
+
+            local copyButton = mk("TextButton", {
+                Parent = idCard,
+                Size = UDim2.fromScale(1, 1),
+                Position = UDim2.fromScale(0, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 12,
+            })
+            copyButton.MouseButton1Click:Connect(function()
+                local snippet = string.format(
+                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
+                    game.PlaceId, game.JobId
+                )
+                local ok = pcall(function() setclipboard(snippet) end)
+                if ok then
+                    idVal.Text = GetText("¡Copiado!", "Copied!")
+                end
+                task.delay(1.8, function()
+                    if idVal and idVal.Parent then
+                        idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
+                    end
+                end)
+            end)
+
+            local startClock = os.clock()
+            local StatsService = game:GetService("Stats")
+            local localizationService = game:GetService("LocalizationService")
+            local cachedRegion = "ES-ES"
+            task.spawn(function()
+                pcall(function()
+                    local region = localizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
+                    if type(region) == "string" and region ~= "" then
+                        cachedRegion = region
+                    end
+                end)
+            end)
+
+            local GOOD = Color3.fromRGB(46, 213, 115)
+            local WARN = Color3.fromRGB(255, 196, 0)
+            local BAD = Color3.fromRGB(255, 82, 82)
+            local frames = 0
+            local frameConn = track(RunService.Heartbeat:Connect(function()
+                frames = frames + 1
+            end))
+
+            local function refreshHome(fps)
+                playersVal.Text = tostring(#Players:GetPlayers()) .. " / " .. tostring(Players.MaxPlayers)
+                playersSub.Text = GetText("Conectados en el servidor", "Connected in this server")
+                local okPing, ping = pcall(function()
+                    return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+                end)
+                ping = (okPing and tonumber(ping)) and math.floor(ping) or nil
+                local level = not ping and 0 or (ping < 90 and 4 or (ping < 160 and 3 or (ping < 260 and 2 or 1)))
+                local color = level >= 4 and GOOD or (level >= 3 and WARN or (level >= 1 and BAD or Theme.TextDim))
+                pingVal.Text = ping and (ping .. " ms") or "N/A"
+                pingVal.TextColor3 = ping and color or Theme.Text
+                pingSub.Text = not ping and GetText("Sin datos", "No data")
+                    or (level >= 4 and GetText("Conexión excelente", "Excellent connection")
+                    or (level >= 3 and GetText("Conexión buena", "Good connection")
+                    or GetText("Conexión inestable", "Unstable connection")))
+                for b, bar in ipairs(pingBars) do
+                    bar.BackgroundColor3 = b <= level and color or Theme.TextDim
+                    bar.BackgroundTransparency = b <= level and 0 or 0.7
+                end
+                timeVal.Text = formatDuration(os.clock() - startClock)
+                regionVal.Text = cachedRegion
+                local healthy = fps >= 40 and (not ping or ping < 200)
+                local okay = fps >= 25 and (not ping or ping < 350)
+                statusVal.Text = healthy and GetText("Excelente", "Excellent") or (okay and GetText("Estable", "Stable") or GetText("Con lag", "Laggy"))
+                statusDot.BackgroundColor3 = healthy and GOOD or (okay and WARN or BAD)
+                statusHalo.Color = statusDot.BackgroundColor3
+                statusSub.Text = tostring(fps) .. " FPS"
+            end
+
+            task.spawn(function()
+                local last = os.clock()
+                refreshHome(60)
+                while HomeRoot.Parent do
+                    task.wait(1)
+                    local now = os.clock()
+                    local fps = math.floor(frames / math.max(now - last, 0.001) + 0.5)
+                    frames = 0
+                    last = now
+                    if TabPage.Visible then
+                        pcall(refreshHome, fps)
+                    end
+                end
+                pcall(function() frameConn:Disconnect() end)
+            end)
+
+            resetScrollTop(TabPage)
+            return HomeRoot
+        end
+
+        function Tab:CreateServerInfoCard()
+            if self._homeBuilt then
+                return nil
+            end
+            local Card = mk("Frame", {
+                Parent = TabPage,
+                Size = UDim2.new(1, 0, 0, 0),
+                AutomaticSize = Enum.AutomaticSize.Y,
+                BackgroundTransparency = 1,
+                ZIndex = 9
+            })
+            mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, Card)
+
+            local ServerLabel = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, 0, 0, 18),
+                BackgroundTransparency = 1,
+                Text = GetText("Servidor", "Server"),
+                Font = Enum.Font.GothamBold,
+                TextSize = 15,
+                TextColor3 = Theme.Text,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex = 9
+            })
+            ServerLabel:SetAttribute("ThemeRole", "Text")
+            ServerLabel:SetAttribute("TextSpanish", "Servidor")
+            ServerLabel:SetAttribute("TextEnglish", "Server")
+
+            local Grid = createStatGrid(Card)
+            local _, playersVal = createStatTile(Grid, "Jugadores", "Players")
+            local _, maxVal = createStatTile(Grid, "Máximo de jugadores", "Max players")
+            local _, pingVal = createStatTile(Grid, "Latencia", "Latency")
+            local _, idVal = createStatTile(Grid, "ID del servidor", "Server ID")
+            local joinTile, joinVal = createStatTile(Grid, "Script de unión", "Join script")
+            local _, timeVal = createStatTile(Grid, "Tiempo en el servidor", "Server time")
+
+            idVal.Text = (game.JobId ~= "" and game.JobId) or "N/A (Studio)"
+            joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
+
+            local JoinClick = mk("TextButton", {
+                Parent = joinTile,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 11
+            })
+            JoinClick.MouseButton1Click:Connect(function()
+                local snippet = string.format(
+                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
+                    game.PlaceId, game.JobId
+                )
+                local ok = pcall(function() setclipboard(snippet) end)
+                joinVal.Text = ok and GetText("¡Copiado!", "Copied!") or GetText("No disponible", "Not available")
+                task.delay(2, function()
+                    if joinVal and joinVal.Parent then
+                        joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
+                    end
+                end)
+            end)
+
+            local startClock = os.clock()
+            local StatsService = game:GetService("Stats")
+
+            task.spawn(function()
+                while Card.Parent do
+                    playersVal.Text = tostring(#Players:GetPlayers())
+                    maxVal.Text = tostring(Players.MaxPlayers)
+
+                    local ok, ping = pcall(function()
+                        return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
+                    end)
+                    pingVal.Text = (ok and ping) and (math.floor(ping) .. " ms") or "N/A"
+
+                    timeVal.Text = formatDuration(os.clock() - startClock)
+                    task.wait(1)
+                end
+            end)
+
+            resetScrollTop(TabPage)
+            return Card
+        end
+
+        return Tab
+    end
+
+    local textEffectConnection = nil
+    Window.CurrentTextEffect = "Off"
+
+    -- v15: la lista de textos se guarda y solo se rehace cuando aparece/desaparece un texto (antes se recorría todo
+    -- Main en cada frame con los efectos de texto). El chat global queda afuera: tiene sus propios colores.
+    local TextObjs = { dirty = true, list = nil }
+    function TextObjs.isText(o)
+        return o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox")
+    end
+    function TextObjs.mark(o)
+        if TextObjs.dirty or not TextObjs.isText(o) then return end
+        local iso = Window and Window._ThemeIsolatedRoot
+        if iso and o:IsDescendantOf(iso) then return end
+        TextObjs.dirty = true
+    end
+    track(Main.DescendantAdded:Connect(TextObjs.mark))
+    track(Main.DescendantRemoving:Connect(TextObjs.mark))
+    Window._InvalidateTextObjects = function() TextObjs.dirty = true end
+    -- v16: lista de Main sin el chat global. GetDescendants devuelve cada rama seguida, así que al encontrar el chat
+    -- se saltean sus objetos con un solo chequeo cada uno (si el orden fuera otro, solo se revisaría de más: no rompe)
+    function TextObjs.mainList()
+        local iso = Window and Window._ThemeIsolatedRoot
+        local all = Main:GetDescendants()
+        if not iso then return all end
+        local out, skipping = {}, false
+        for _, obj in ipairs(all) do
+            if obj == iso then
+                skipping = true
+            elseif not (skipping and obj:IsDescendantOf(iso)) then
+                skipping = false
+                out[#out + 1] = obj
+            end
+        end
+        return out
+    end
+    local function getAllTextObjects()
+        if TextObjs.dirty or not TextObjs.list then
+            local list = {}
+            local iso = Window and Window._ThemeIsolatedRoot
+            for _, obj in ipairs(TextObjs.mainList()) do
+                if TextObjs.isText(obj) and not (iso and obj:IsDescendantOf(iso)) then -- chequeo estricto: el chat nunca recibe colores
+                    list[#list + 1] = obj
+                end
+            end
+            TextObjs.list, TextObjs.dirty = list, false
+        end
+        return TextObjs.list
+    end
+
+    local function applyTextColorToAll(color)
+        for _, obj in ipairs(getAllTextObjects()) do
+            if not obj:GetAttribute("IgnoreTextEffect") then
+                pcall(function()
+                    obj.TextColor3 = color
+                end)
+            end
+        end
+    end
+
+    local function stopTextEffect()
+        if textEffectConnection then
+            textEffectConnection:Disconnect()
+            textEffectConnection = nil
+        end
+    end
+
+
+    function Window:SetTheme(themeName)
+        if themeName == "Dark" then
+            warn("Tema bloqueado: Dark (Halloween)")
+            return
+        end
+        local BackgroundVideo = self.BackgroundVideo
+        if not setActiveTheme(themeName) then
+            warn("Tema no encontrado: " .. tostring(themeName))
+            return
+        end
+        
+        self.CurrentTheme = themeName
+        CurrentTheme = themeName
+
+        -- Se aplica al inicio y protegido: un error en pasos posteriores no lo puede cortar.
+        local spriteOk, spriteErr = pcall(applyThemeSprite, self, BackgroundArt, ThemeSprites[themeName])
+        if not spriteOk then
+            warn("[YinYang Sprite] Error al aplicar el sprite del tema: " .. tostring(spriteErr))
+        end
+
+        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
+            swapThemeColor(obj, Theme)
+        end
+
+        for _, floatData in ipairs(self.FloatingToggles or {}) do
+            local fw = floatData.Window
+            if fw and fw.Parent then
+                for _, obj in ipairs(fw:GetDescendants()) do
+                    swapThemeColor(obj, Theme)
+                end
+                swapThemeColor(fw, Theme)
                 if floatData.RefreshVisual then
                     pcall(floatData.RefreshVisual)
                 end
@@ -788,253 +1066,4 @@ apThemeColor(fw, Theme)
 
             local Btn = mk("TextButton", {
                 Parent = Panel,
-                Size = UDim2.fromOffset(btnW, 38),
-                AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -16, 1, -54),
-                BackgroundColor3 = Theme.Accent,
-                Text = GetText(btnES, btnEN),
-                TextColor3 = Theme.AccentText,
-                Font = Enum.Font.GothamBlack,
-                TextSize = 13,
-                AutoButtonColor = false,
-                ZIndex = 503,
-            })
-            Btn:SetAttribute("ThemeRole", "Accent")
-            Btn:SetAttribute("ThemeTextRole", "AccentText")
-            setBilingual(Btn, btnES, btnEN)
-            corner(Btn, 12)
-            mk("UIGradient", {Parent = Btn, Rotation = 90, Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(215, 215, 215))})
-            local BtnScale = mk("UIScale", {Parent = Btn, Scale = 1})
-            Btn.MouseButton1Down:Connect(function()
-                TweenService:Create(BtnScale, TweenInfo.new(0.08), {Scale = 0.95}):Play()
-            end)
-            Btn.MouseButton1Up:Connect(function()
-                TweenService:Create(BtnScale, TweenInfo.new(0.25, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            end)
-            Btn.MouseLeave:Connect(function()
-                TweenService:Create(BtnScale, TweenInfo.new(0.2), {Scale = 1}):Play()
-            end)
-
-            -- kind: "ok" | "warn" | "err" | nil (neutro)
-            local function setStatus(kind, es, en)
-                local color = STATS_COLORS[kind] or Theme.TextDim
-                Status.Text = GetText(es, en)
-                Status.TextColor3 = color
-                dot.Visible = true
-                dot.BackgroundColor3 = color
-                StatusPill.BackgroundColor3 = color
-                StatusPill.BackgroundTransparency = kind and 0.85 or 1
-            end
-            return Status, Btn, setStatus
-        end
-
-        local function openPlaceStats()
-            local Panel = openPanel("Place Stats", "Place Stats", 400, 360, "rbxassetid://98421914514000",
-                "Aplicá los ajustes de otro usuario", "Apply another user's settings")
-
-            local Steps = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.new(1, -32, 0, 24),
-                Position = UDim2.new(0, 16, 0, 84),
-                BackgroundTransparency = 1,
-                ZIndex = 502,
-            })
-            mk("UIListLayout", {Parent = Steps, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder, VerticalAlignment = Enum.VerticalAlignment.Center})
-            local stepChips = {}
-            for i, st in ipairs({{"Copiá el código", "Copy the code"}, {"Pegalo acá", "Paste it here"}, {"Aplicá", "Apply"}}) do
-                local chip = mk("Frame", {
-                    Parent = Steps, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X,
-                    BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.35, BorderSizePixel = 0, LayoutOrder = i, ZIndex = 503,
-                })
-                chip:SetAttribute("ThemeRole", "Secondary")
-                corner(chip, 999)
-                mk("UIPadding", {Parent = chip, PaddingLeft = UDim.new(0, 3), PaddingRight = UDim.new(0, 10)})
-                mk("UIListLayout", {Parent = chip, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), VerticalAlignment = Enum.VerticalAlignment.Center, SortOrder = Enum.SortOrder.LayoutOrder})
-                local num = mk("TextLabel", {
-                    Parent = chip, Size = UDim2.fromOffset(18, 18), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.7,
-                    Text = tostring(i), TextColor3 = Theme.Text, Font = Enum.Font.GothamBlack, TextSize = 10, LayoutOrder = 0, ZIndex = 504,
-                })
-                num:SetAttribute("ThemeRole", "Accent")
-                num:SetAttribute("ThemeTextRole", "Text")
-                num:SetAttribute("IgnoreTextEffect", true)
-                corner(num, 999)
-                local lbl = mk("TextLabel", {
-                    Parent = chip, Size = UDim2.new(0, 0, 1, 0), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
-                    Text = GetText(st[1], st[2]), TextColor3 = Theme.TextDim, Font = Enum.Font.GothamBold, TextSize = 10, LayoutOrder = 1, ZIndex = 504,
-                })
-                lbl:SetAttribute("ThemeTextRole", "TextDim")
-                setBilingual(lbl, st[1], st[2])
-                stepChips[i] = {chip = chip, num = num}
-            end
-            local function markStep(n)
-                for i, c in ipairs(stepChips) do
-                    local done = i <= n
-                    c.num.BackgroundTransparency = done and 0 or 0.7
-                    c.num.TextColor3 = done and Theme.AccentText or Theme.Text
-                    c.num:SetAttribute("ThemeTextRole", done and "AccentText" or "Text")
-                end
-            end
-            markStep(1)
-
-            local Field = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.new(1, -32, 1, -214),
-                Position = UDim2.new(0, 16, 0, 118),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.3,
-                BorderSizePixel = 0,
-                ZIndex = 502,
-            })
-            Field:SetAttribute("ThemeRole", "Secondary")
-            corner(Field, 12)
-            local fieldStroke = stroke(Field, Theme.Stroke, 1.2, 0.5)
-
-            local Input = mk("TextBox", {
-                Parent = Field,
-                Size = UDim2.new(1, -44, 1, -12),
-                Position = UDim2.new(0, 12, 0, 8),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                Text = "",
-                PlaceholderText = GetText("Código copiado del Export Stats...", "Code copied from Export Stats..."),
-                TextColor3 = Theme.Text,
-                PlaceholderColor3 = Theme.TextDim,
-                Font = Enum.Font.Code,
-                TextSize = 12,
-                TextWrapped = true,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextYAlignment = Enum.TextYAlignment.Top,
-                ClearTextOnFocus = false,
-                MultiLine = true,
-                ZIndex = 503,
-            })
-            Input:SetAttribute("ThemeTextRole", "Text")
-            Input:SetAttribute("PlaceholderSpanish", "Código copiado del Export Stats...")
-            Input:SetAttribute("PlaceholderEnglish", "Code copied from Export Stats...")
-            Input:SetAttribute("IgnoreTextEffect", true)
-
-            local ClearBtn = mk("TextButton", {
-                Parent = Field,
-                Size = UDim2.fromOffset(24, 24),
-                AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -8, 0, 8),
-                BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.3,
-                Text = "×",
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamBold,
-                TextSize = 15,
-                AutoButtonColor = false,
-                Visible = false,
-                ZIndex = 504,
-            })
-            ClearBtn:SetAttribute("ThemeRole", "Background")
-            ClearBtn:SetAttribute("ThemeTextRole", "TextDim")
-            corner(ClearBtn, 999)
-            ClearBtn.MouseButton1Click:Connect(function()
-                playSound(Sounds.Click, 0.4)
-                Input.Text = ""
-            end)
-
-            Input.Focused:Connect(function()
-                fieldStroke.Color = Theme.Accent
-                fieldStroke.Transparency = 0.05
-                fieldStroke.Thickness = 1.6
-            end)
-            Input.FocusLost:Connect(function()
-                fieldStroke.Color = Theme.Stroke
-                fieldStroke.Transparency = 0.5
-                fieldStroke.Thickness = 1.2
-            end)
-
-            -- Validacion en vivo
-            local Check = mk("TextLabel", {
-                Parent = Panel,
-                Size = UDim2.new(1, -32, 0, 16),
-                Position = UDim2.new(0, 16, 1, -88),
-                BackgroundTransparency = 1,
-                Text = "",
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamBold,
-                TextSize = 10,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 502,
-            })
-            Check:SetAttribute("IgnoreTextEffect", true)
-
-            local _, StartBtn, setStatus = addFooter(Panel, -48, "Aplicar ajustes", "Apply settings", 160)
-
-            local function parseCode(code)
-                if not code or code:match("^%s*$") then return nil, "empty" end
-                local ok, data = pcall(function()
-                    return HttpService:JSONDecode(code)
-                end)
-                if not ok or type(data) ~= "table" then return nil, "invalid" end
-                if data.version ~= 1 then return nil, "version" end
-                if type(data.sliders) ~= "table" then return nil, "nosliders" end
-                return data
-            end
-
-            local function refreshCheck()
-                local text = Input.Text
-                ClearBtn.Visible = text ~= ""
-                local data, why = parseCode(text)
-                if not data then
-                    markStep(text == "" and 1 or 2)
-                    if why == "empty" then
-                        Check.Text = GetText("● Esperando un código", "● Waiting for a code")
-                        Check.TextColor3 = Theme.TextDim
-                    else
-                        Check.Text = GetText("● El código no es válido", "● The code is not valid")
-                        Check.TextColor3 = STATS_COLORS.err
-                    end
-                    return
-                end
-                local byId = {}
-                for _, item in ipairs(buildIdMap()) do byId[item.id] = true end
-                local total, match = 0, 0
-                for id in pairs(data.sliders) do
-                    total = total + 1
-                    if byId[id] then match = match + 1 end
-                end
-                markStep(3)
-                Check.Text = GetText(
-                    "● Código válido · " .. total .. " ajustes · " .. match .. " coinciden con tus sliders",
-                    "● Valid code · " .. total .. " settings · " .. match .. " match your sliders")
-                Check.TextColor3 = match > 0 and STATS_COLORS.ok or STATS_COLORS.warn
-            end
-            Input:GetPropertyChangedSignal("Text"):Connect(refreshCheck)
-            refreshCheck()
-
-            StartBtn.MouseButton1Click:Connect(function()
-                local data, why = parseCode(Input.Text)
-                if not data then
-                    if why == "empty" then
-                        setStatus("err", "El campo está vacío", "The field is empty")
-                    elseif why == "version" then
-                        setStatus("err", "Versión de código no compatible", "Unsupported code version")
-                    elseif why == "nosliders" then
-                        setStatus("err", "El código no trae ajustes", "The code has no settings")
-                    else
-                        setStatus("err", "Código inválido", "Invalid code")
-                    end
-                    return
-                end
-
-                local byId = {}
-                for _, item in ipairs(buildIdMap()) do
-                    byId[item.id] = item.entry
-                end
-
-                local applied, skipped = 0, 0
-                for id, raw in pairs(data.sliders) do
-                    local entry = byId[id]
-                    local v = tonumber(raw)
-                    if entry and v and v == v and v ~= math.huge and v ~= -math.huge then
-                        local lo, hi = tonumber(entry.Min), tonumber(entry.Max)
-                        if lo and hi then v = math.clamp(v, lo, hi) end
-                        if pcall(entry.SetValue, v) then
-                            applied = applied + 1
-                        else
-  
+                

@@ -1,4 +1,208 @@
-         if ctl.state == "sit" then
+v[3] or 0) * w
+                        cur[4] = (cur[4] or 0) + (v[4] or 0) * w
+                    end
+                end
+                local function ease(x) return x * x * (3 - 2 * x) end
+                local sin = math.sin
+
+                -- ---------- acciones del avatar del jugador (u = 0..1 dentro de la acción) ----------
+                HomeAnim.Actions = {
+                    -- saludar: brazo derecho arriba y la mano va y viene
+                    wave = { dur = 2.6, pose = function(u, t)
+                        local w = sin(t * 9) * 22
+                        return { RShoulder = { 0, 0, 150 + w * 0.3 }, RElbow = { 0, 0, 25 + w }, Neck = { 0, -8, 4 }, Waist = { 0, -6, 2 }, LShoulder = { 0, 0, -6 } }
+                    end },
+                    -- mirar a los lados: cabeza y torso siguen una curva izquierda-derecha
+                    look = { dur = 3.4, pose = function(u)
+                        local side = sin(u * math.pi * 2) * 1
+                        return { Neck = { -4, side * 48, 0 }, Waist = { 0, side * 14, 0 }, RShoulder = { 0, 0, 4 }, LShoulder = { 0, 0, -4 } }
+                    end },
+                    -- estirarse: brazos arriba, se inclina para atrás y vuelve
+                    stretch = { dur = 2.8, pose = function(u)
+                        local k = sin(u * math.pi)
+                        return { RShoulder = { 0, 0, 165 * k }, LShoulder = { 0, 0, -165 * k }, RElbow = { 0, 0, -10 * k }, LElbow = { 0, 0, 10 * k }, Waist = { 10 * k, 0, 0 }, Neck = { 12 * k, 0, 0 }, Root = { 0, 0, 0, 0.12 * k } }
+                    end },
+                    -- pasito: rebote con la cadera de lado a lado y brazos al ritmo
+                    dance = { dur = 3.4, pose = function(u, t)
+                        local b = sin(t * 8)
+                        local bounce = math.abs(sin(t * 8)) * 0.18
+                        return {
+                            Root = { 0, b * 10, b * 6, bounce - 0.1 },
+                            Waist = { 0, -b * 8, -b * 5 },
+                            Neck = { 0, b * 10, -b * 6 },
+                            RShoulder = { 60 + b * 30, 0, 20 }, LShoulder = { 60 - b * 30, 0, -20 },
+                            RElbow = { 70, 0, 0 }, LElbow = { 70, 0, 0 },
+                            RHip = { b * 12, 0, 4 }, LHip = { -b * 12, 0, -4 },
+                            RKnee = { -math.max(0, b) * 25, 0, 0 }, LKnee = { -math.max(0, -b) * 25, 0, 0 },
+                        }
+                    end },
+                    -- manos en la cintura con un leve balanceo
+                    hips = { dur = 2.8, pose = function(u, t)
+                        local s = sin(t * 2.4) * 4
+                        return { RShoulder = { -10, 0, 38 }, LShoulder = { -10, 0, -38 }, RElbow = { 0, 0, -95 }, LElbow = { 0, 0, 95 }, Waist = { 0, s, s * 0.5 }, Neck = { -4, -s * 2, 0 } }
+                    end },
+                }
+                HomeAnim.Order = { "look", "wave", "stretch", "hips", "dance" }
+
+                -- respiración y peso (siempre)
+                function HomeAnim.Idle(t)
+                    local br = sin(t * 2.1)
+                    local sway = sin(t * 0.9)
+                    return {
+                        Root = { 0, 0, sway * 2.2, br * 0.035 },
+                        Waist = { br * 1.6, 0, -sway * 1.4 },
+                        Neck = { -br * 1.5, sin(t * 0.55) * 7, sway * 1.2 },
+                        RShoulder = { br * 2, 0, 4 + br * 2 },
+                        LShoulder = { br * 2, 0, -4 - br * 2 },
+                        RElbow = { 0, 0, 6 }, LElbow = { 0, 0, -6 },
+                        RHip = { 0, 0, sway * 1.5 }, LHip = { 0, 0, sway * 1.5 },
+                    }
+                end
+
+                -- controlador del avatar del jugador
+                function HomeAnim.Player(rig)
+                    local ctl = { t = 0, action = nil, actionT = 0, nextAt = 3, idx = 0 }
+                    function ctl.Trigger(name)
+                        if HomeAnim.Actions[name] then
+                            ctl.action, ctl.actionT = name, 0
+                        end
+                    end
+                    function ctl.Step(dt)
+                        ctl.t += dt
+                        local pose = HomeAnim.Idle(ctl.t)
+                        if not ctl.action and ctl.t >= ctl.nextAt then
+                            ctl.idx = ctl.idx % #HomeAnim.Order + 1
+                            ctl.Trigger(HomeAnim.Order[ctl.idx])
+                        end
+                        if ctl.action then
+                            local a = HomeAnim.Actions[ctl.action]
+                            ctl.actionT += dt
+                            local u = math.clamp(ctl.actionT / a.dur, 0, 1)
+                            -- entra y sale suave (0.35 s de cada lado)
+                            local w = math.min(1, ctl.actionT / 0.35, (a.dur - ctl.actionT) / 0.35)
+                            addPose(pose, a.pose(u, ctl.t), ease(math.clamp(w, 0, 1)))
+                            if ctl.actionT >= a.dur then
+                                ctl.action = nil
+                                ctl.nextAt = ctl.t + 3.5 + math.random() * 2.5
+                            end
+                        end
+                        HomeAnim.Apply(rig, pose)
+                    end
+                    return ctl
+                end
+
+                -- controlador del Owner: sentado en el piso mirando de un lado a otro. Se puede agarrar con el dedo:
+                -- cuelga como muñeco de trapo, al soltarlo cae, aterriza, camina a su lugar y se vuelve a sentar.
+                -- Todo es matemática (resortes + gravedad), sin el motor de física: no agrega lag.
+                -- env (opcional): { model, shadow, home = CFrame, floorY, H, standY }
+                local function lerpPose(a, b, u)
+                    local out = {}
+                    for key, va in pairs(a) do
+                        local vb = b[key] or { 0, 0, 0, 0 }
+                        out[key] = { (va[1] or 0) + ((vb[1] or 0) - (va[1] or 0)) * u, (va[2] or 0) + ((vb[2] or 0) - (va[2] or 0)) * u,
+                            (va[3] or 0) + ((vb[3] or 0) - (va[3] or 0)) * u, (va[4] or 0) + ((vb[4] or 0) - (va[4] or 0)) * u }
+                    end
+                    for key, vb in pairs(b) do
+                        if not a[key] then
+                            out[key] = { (vb[1] or 0) * u, (vb[2] or 0) * u, (vb[3] or 0) * u, (vb[4] or 0) * u }
+                        end
+                    end
+                    return out
+                end
+                -- resorte amortiguado: devuelve valor y velocidad nuevos
+                local function spring(x, v, target, k, damp, dt)
+                    local a = (target - x) * k - v * damp
+                    v = v + a * dt
+                    return x + v * dt, v
+                end
+
+                function HomeAnim.Owner(rig, env)
+                    local drop = rig.legLen - rig.legThick * 0.5
+                    local ctl = {
+                        t = 0, look = 0, lookTarget = 0, lookNext = 1.5, torso = 0,
+                        state = "sit", stateT = 0,
+                        roll = 0, rollV = 0, pitch = 0, pitchV = 0,
+                        holdVel = Vector3.new(), vel = Vector3.new(),
+                    }
+                    local function sitPose(t)
+                        local br = sin(t * 1.8)
+                        return {
+                            Root = { 0, 0, 0, -drop + br * 0.02 },
+                            Waist = { 6 + br * 1.2, ctl.torso, 0 },
+                            Neck = { -3 + br * 1, ctl.look, sin(t * 0.7) * 2 },
+                            -- brazos para atrás, apoyados en el piso
+                            RShoulder = { -28, 0, 14 }, LShoulder = { -28, 0, -14 },
+                            RElbow = { 0, 0, 0 }, LElbow = { 0, 0, 0 },
+                            -- piernas adelante, una un poco más doblada
+                            RHip = { 90, 0, 6 }, LHip = { 84, 0, -8 },
+                            RKnee = { -12, 0, 0 }, LKnee = { -28, 0, 0 },
+                        }
+                    end
+                    -- colgando: los miembros siguen al balanceo con retraso y tiemblan según la velocidad
+                    local function heldPose(t, wob)
+                        local r = ctl.roll
+                        local f1, f2 = sin(t * 11) * wob, sin(t * 13 + 1.3) * wob
+                        return {
+                            Root = { ctl.pitch * 0.4, 0, 0, 0 },
+                            Waist = { -ctl.pitch * 0.3, f1 * 6, r * 0.25 },
+                            Neck = { -22 + f2 * 10, r * 0.5, -r * 0.7 + f1 * 8 },
+                            RShoulder = { f1 * 35, 0, 18 - r * 0.9 + f2 * 22 }, LShoulder = { -f2 * 35, 0, -18 - r * 0.9 - f1 * 22 },
+                            RElbow = { 0, 0, 18 + f2 * 20 }, LElbow = { 0, 0, -18 - f1 * 20 },
+                            RHip = { f2 * 38, 0, 5 - r * 0.6 }, LHip = { -f1 * 38, 0, -5 - r * 0.6 },
+                            RKnee = { -12 - math.abs(f1) * 35, 0, 0 }, LKnee = { -12 - math.abs(f2) * 35, 0, 0 },
+                        }
+                    end
+                    -- cayendo: agita brazos y piernas
+                    local function fallPose(t)
+                        local a, b = sin(t * 17), sin(t * 15 + 1)
+                        return {
+                            Neck = { 14, 0, a * 6 },
+                            Waist = { 6, 0, b * 4 },
+                            RShoulder = { 0, 0, 135 + a * 25 }, LShoulder = { 0, 0, -135 + b * 25 },
+                            RElbow = { 0, 0, 25 + b * 20 }, LElbow = { 0, 0, -25 - a * 20 },
+                            RHip = { 25 + a * 30, 0, 8 }, LHip = { 25 - a * 30, 0, -8 },
+                            RKnee = { -40 - b * 20, 0, 0 }, LKnee = { -40 + b * 20, 0, 0 },
+                        }
+                    end
+                    -- aterrizaje: se agacha por el golpe y rebota
+                    local function landPose(u)
+                        local k = sin(math.min(u, 1) * math.pi) -- 0 -> 1 -> 0
+                        return {
+                            Root = { 12 * k, 0, 0, -0.45 * k },
+                            Neck = { -14 * k, 0, 0 },
+                            RShoulder = { 25 * k, 0, 40 * k }, LShoulder = { 25 * k, 0, -40 * k },
+                            RHip = { 45 * k, 0, 4 }, LHip = { 45 * k, 0, -4 },
+                            RKnee = { -70 * k, 0, 0 }, LKnee = { -70 * k, 0, 0 },
+                        }
+                    end
+                    -- caminar de vuelta
+                    local function walkPose(ph)
+                        local s = sin(ph)
+                        return {
+                            Root = { 0, s * 5, 0, math.abs(sin(ph)) * 0.08 },
+                            Waist = { 3, -s * 6, 0 },
+                            Neck = { -2, s * 4, 0 },
+                            RShoulder = { -s * 28, 0, 6 }, LShoulder = { s * 28, 0, -6 },
+                            RElbow = { 15, 0, 0 }, LElbow = { 15, 0, 0 },
+                            RHip = { s * 30, 0, 0 }, LHip = { -s * 30, 0, 0 },
+                            RKnee = { -math.max(0, -s) * 45, 0, 0 }, LKnee = { -math.max(0, s) * 45, 0, 0 },
+                        }
+                    end
+
+                    local function facing()
+                        return env.home - env.home.Position
+                    end
+                    local function moveShadow(p, height)
+                        if not env.shadow then return end
+                        local ahead = ctl.state == "sit" and (env.home.LookVector * (env.H * 0.18)) or Vector3.new()
+                        local s = math.clamp(1 - height / (env.H * 2.2), 0.35, 1)
+                        env.shadow.Size = Vector3.new(0.05, env.H * 0.85 * s, env.H * 0.85 * s)
+                        env.shadow.Transparency = 0.62 + (1 - s) * 0.25
+                        env.shadow.CFrame = CFrame.new(p.X + ahead.X, env.floorY + 0.03, p.Z + ahead.Z) * CFrame.Angles(0, 0, math.rad(90))
+                    end
+                    function ctl.SetHome(cf)
+                        env.home = cf
+                        if ctl.state == "sit" then
                             env.model:PivotTo(cf)
                             moveShadow(cf.Position, 0)
                         end
@@ -560,282 +764,4 @@
                 pingBars[b] = bar
             end
 
-            idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
-
-            local copyButton = mk("TextButton", {
-                Parent = idCard,
-                Size = UDim2.fromScale(1, 1),
-                Position = UDim2.fromScale(0, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                ZIndex = 12,
-            })
-            copyButton.MouseButton1Click:Connect(function()
-                local snippet = string.format(
-                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
-                    game.PlaceId, game.JobId
-                )
-                local ok = pcall(function() setclipboard(snippet) end)
-                if ok then
-                    idVal.Text = GetText("¡Copiado!", "Copied!")
-                end
-                task.delay(1.8, function()
-                    if idVal and idVal.Parent then
-                        idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
-                    end
-                end)
-            end)
-
-            local startClock = os.clock()
-            local StatsService = game:GetService("Stats")
-            local localizationService = game:GetService("LocalizationService")
-            local cachedRegion = "ES-ES"
-            task.spawn(function()
-                pcall(function()
-                    local region = localizationService:GetCountryRegionForPlayerAsync(LocalPlayer)
-                    if type(region) == "string" and region ~= "" then
-                        cachedRegion = region
-                    end
-                end)
-            end)
-
-            local GOOD = Color3.fromRGB(46, 213, 115)
-            local WARN = Color3.fromRGB(255, 196, 0)
-            local BAD = Color3.fromRGB(255, 82, 82)
-            local frames = 0
-            local frameConn = track(RunService.Heartbeat:Connect(function()
-                frames = frames + 1
-            end))
-
-            local function refreshHome(fps)
-                playersVal.Text = tostring(#Players:GetPlayers()) .. " / " .. tostring(Players.MaxPlayers)
-                playersSub.Text = GetText("Conectados en el servidor", "Connected in this server")
-                local okPing, ping = pcall(function()
-                    return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
-                end)
-                ping = (okPing and tonumber(ping)) and math.floor(ping) or nil
-                local level = not ping and 0 or (ping < 90 and 4 or (ping < 160 and 3 or (ping < 260 and 2 or 1)))
-                local color = level >= 4 and GOOD or (level >= 3 and WARN or (level >= 1 and BAD or Theme.TextDim))
-                pingVal.Text = ping and (ping .. " ms") or "N/A"
-                pingVal.TextColor3 = ping and color or Theme.Text
-                pingSub.Text = not ping and GetText("Sin datos", "No data")
-                    or (level >= 4 and GetText("Conexión excelente", "Excellent connection")
-                    or (level >= 3 and GetText("Conexión buena", "Good connection")
-                    or GetText("Conexión inestable", "Unstable connection")))
-                for b, bar in ipairs(pingBars) do
-                    bar.BackgroundColor3 = b <= level and color or Theme.TextDim
-                    bar.BackgroundTransparency = b <= level and 0 or 0.7
-                end
-                timeVal.Text = formatDuration(os.clock() - startClock)
-                regionVal.Text = cachedRegion
-                local healthy = fps >= 40 and (not ping or ping < 200)
-                local okay = fps >= 25 and (not ping or ping < 350)
-                statusVal.Text = healthy and GetText("Excelente", "Excellent") or (okay and GetText("Estable", "Stable") or GetText("Con lag", "Laggy"))
-                statusDot.BackgroundColor3 = healthy and GOOD or (okay and WARN or BAD)
-                statusHalo.Color = statusDot.BackgroundColor3
-                statusSub.Text = tostring(fps) .. " FPS"
-            end
-
-            task.spawn(function()
-                local last = os.clock()
-                refreshHome(60)
-                while HomeRoot.Parent do
-                    task.wait(1)
-                    local now = os.clock()
-                    local fps = math.floor(frames / math.max(now - last, 0.001) + 0.5)
-                    frames = 0
-                    last = now
-                    if TabPage.Visible then
-                        pcall(refreshHome, fps)
-                    end
-                end
-                pcall(function() frameConn:Disconnect() end)
-            end)
-
-            resetScrollTop(TabPage)
-            return HomeRoot
-        end
-
-        function Tab:CreateServerInfoCard()
-            if self._homeBuilt then
-                return nil
-            end
-            local Card = mk("Frame", {
-                Parent = TabPage,
-                Size = UDim2.new(1, 0, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundTransparency = 1,
-                ZIndex = 9
-            })
-            mk("UIListLayout", {Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder}, Card)
-
-            local ServerLabel = mk("TextLabel", {
-                Parent = Card,
-                Size = UDim2.new(1, 0, 0, 18),
-                BackgroundTransparency = 1,
-                Text = GetText("Servidor", "Server"),
-                Font = Enum.Font.GothamBold,
-                TextSize = 15,
-                TextColor3 = Theme.Text,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex = 9
-            })
-            ServerLabel:SetAttribute("ThemeRole", "Text")
-            ServerLabel:SetAttribute("TextSpanish", "Servidor")
-            ServerLabel:SetAttribute("TextEnglish", "Server")
-
-            local Grid = createStatGrid(Card)
-            local _, playersVal = createStatTile(Grid, "Jugadores", "Players")
-            local _, maxVal = createStatTile(Grid, "Máximo de jugadores", "Max players")
-            local _, pingVal = createStatTile(Grid, "Latencia", "Latency")
-            local _, idVal = createStatTile(Grid, "ID del servidor", "Server ID")
-            local joinTile, joinVal = createStatTile(Grid, "Script de unión", "Join script")
-            local _, timeVal = createStatTile(Grid, "Tiempo en el servidor", "Server time")
-
-            idVal.Text = (game.JobId ~= "" and game.JobId) or "N/A (Studio)"
-            joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
-
-            local JoinClick = mk("TextButton", {
-                Parent = joinTile,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                ZIndex = 11
-            })
-            JoinClick.MouseButton1Click:Connect(function()
-                local snippet = string.format(
-                    'game:GetService("TeleportService"):TeleportToPlaceInstance(%d, "%s", game:GetService("Players").LocalPlayer)',
-                    game.PlaceId, game.JobId
-                )
-                local ok = pcall(function() setclipboard(snippet) end)
-                joinVal.Text = ok and GetText("¡Copiado!", "Copied!") or GetText("No disponible", "Not available")
-                task.delay(2, function()
-                    if joinVal and joinVal.Parent then
-                        joinVal.Text = GetText("Tocar para copiar", "Tap to copy")
-                    end
-                end)
-            end)
-
-            local startClock = os.clock()
-            local StatsService = game:GetService("Stats")
-
-            task.spawn(function()
-                while Card.Parent do
-                    playersVal.Text = tostring(#Players:GetPlayers())
-                    maxVal.Text = tostring(Players.MaxPlayers)
-
-                    local ok, ping = pcall(function()
-                        return StatsService.Network.ServerStatsItem["Data Ping"]:GetValue()
-                    end)
-                    pingVal.Text = (ok and ping) and (math.floor(ping) .. " ms") or "N/A"
-
-                    timeVal.Text = formatDuration(os.clock() - startClock)
-                    task.wait(1)
-                end
-            end)
-
-            resetScrollTop(TabPage)
-            return Card
-        end
-
-        return Tab
-    end
-
-    local textEffectConnection = nil
-    Window.CurrentTextEffect = "Off"
-
-    -- v15: la lista de textos se guarda y solo se rehace cuando aparece/desaparece un texto (antes se recorría todo
-    -- Main en cada frame con los efectos de texto). El chat global queda afuera: tiene sus propios colores.
-    local TextObjs = { dirty = true, list = nil }
-    function TextObjs.isText(o)
-        return o:IsA("TextLabel") or o:IsA("TextButton") or o:IsA("TextBox")
-    end
-    function TextObjs.mark(o)
-        if TextObjs.dirty or not TextObjs.isText(o) then return end
-        local iso = Window and Window._ThemeIsolatedRoot
-        if iso and o:IsDescendantOf(iso) then return end
-        TextObjs.dirty = true
-    end
-    track(Main.DescendantAdded:Connect(TextObjs.mark))
-    track(Main.DescendantRemoving:Connect(TextObjs.mark))
-    Window._InvalidateTextObjects = function() TextObjs.dirty = true end
-    -- v16: lista de Main sin el chat global. GetDescendants devuelve cada rama seguida, así que al encontrar el chat
-    -- se saltean sus objetos con un solo chequeo cada uno (si el orden fuera otro, solo se revisaría de más: no rompe)
-    function TextObjs.mainList()
-        local iso = Window and Window._ThemeIsolatedRoot
-        local all = Main:GetDescendants()
-        if not iso then return all end
-        local out, skipping = {}, false
-        for _, obj in ipairs(all) do
-            if obj == iso then
-                skipping = true
-            elseif not (skipping and obj:IsDescendantOf(iso)) then
-                skipping = false
-                out[#out + 1] = obj
-            end
-        end
-        return out
-    end
-    local function getAllTextObjects()
-        if TextObjs.dirty or not TextObjs.list then
-            local list = {}
-            local iso = Window and Window._ThemeIsolatedRoot
-            for _, obj in ipairs(TextObjs.mainList()) do
-                if TextObjs.isText(obj) and not (iso and obj:IsDescendantOf(iso)) then -- chequeo estricto: el chat nunca recibe colores
-                    list[#list + 1] = obj
-                end
-            end
-            TextObjs.list, TextObjs.dirty = list, false
-        end
-        return TextObjs.list
-    end
-
-    local function applyTextColorToAll(color)
-        for _, obj in ipairs(getAllTextObjects()) do
-            if not obj:GetAttribute("IgnoreTextEffect") then
-                pcall(function()
-                    obj.TextColor3 = color
-                end)
-            end
-        end
-    end
-
-    local function stopTextEffect()
-        if textEffectConnection then
-            textEffectConnection:Disconnect()
-            textEffectConnection = nil
-        end
-    end
-
-
-    function Window:SetTheme(themeName)
-        if themeName == "Dark" then
-            warn("Tema bloqueado: Dark (Halloween)")
-            return
-        end
-        local BackgroundVideo = self.BackgroundVideo
-        if not setActiveTheme(themeName) then
-            warn("Tema no encontrado: " .. tostring(themeName))
-            return
-        end
-        
-        self.CurrentTheme = themeName
-        CurrentTheme = themeName
-
-        -- Se aplica al inicio y protegido: un error en pasos posteriores no lo puede cortar.
-        local spriteOk, spriteErr = pcall(applyThemeSprite, self, BackgroundArt, ThemeSprites[themeName])
-        if not spriteOk then
-            warn("[YinYang Sprite] Error al aplicar el sprite del tema: " .. tostring(spriteErr))
-        end
-
-        for _, obj in ipairs(TextObjs.mainList()) do -- v16: sin recorrer el chat global
-            swapThemeColor(obj, Theme)
-        end
-
-        for _, floatData in ipairs(self.FloatingToggles or {}) do
-            local fw = floatData.Window
-            if fw and fw.Parent then
-                for _, obj in ipairs(fw:GetDescendants()) do
-                    swapThemeColor(obj, Theme)
-                end
-                sw
+            idVal.Text =

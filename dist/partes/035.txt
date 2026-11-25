@@ -1,4 +1,175 @@
+Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 6 })
+            plus.TextTruncate = Enum.TextTruncate.None
+        end
+        label(t, es, en, 9, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -6, 0, 14), Position = UDim2.new(0, 3, 1, -18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 5 })
+        RowKit.Control(t)
+        t.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.4)
+            onPick()
+        end)
+    end
+    templateTile(0, "En blanco", "Blank", nil, function()
+        loadRecIntoEditor(blankRec(), true)
+        setStatus("Empezaste de cero: pegá el ID de tu imagen en la capa 1", "Fresh start: paste your image ID in layer 1", Theme.Accent)
+    end)
+    do
+        local n = 0
+        for _, key in ipairs(IconCatalog.Order or {}) do
+            local icon = IconCatalog.Icons[key]
+            -- solo íconos de capas (los dibujados por código o cápsula no se pueden copiar)
+            if icon and type(icon.Layers) == "table" and #icon.Layers > 0 and type(icon.Build) ~= "function" and icon.Type ~= "Capsule" and not icon.Custom then
+                n += 1
+                local es, en = icon.LabelES or key, icon.LabelEN or icon.LabelES or key
+                templateTile(n, es, en, recFromIcon(icon), function()
+                    loadRecIntoEditor(recFromIcon(icon, ED.rec and ED.rec.Name or ""), true)
+                    setStatus("Copiaste \"" .. es .. "\": ahora cambiá lo que quieras", "Copied \"" .. en .. "\": now change anything", Theme.Accent)
+                end)
+            end
+        end
+    end
 
+    -- =====================================================================
+    -- SELECTOR DE COLOR (mismo sistema que el creador de temas)
+    -- =====================================================================
+    local PK = { H = 0, S = 0, V = 1, onApply = nil, drag = nil }
+    local PickOverlay = mk("Frame", { Parent = Panel, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.35, Visible = false, Active = true, ZIndex = Z + 60 })
+    corner(PickOverlay, 16)
+    local PickPanel = mk("Frame", { Parent = PickOverlay, Size = UDim2.new(0.9, 0, 0, 236), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 61 })
+    PickPanel:SetAttribute("ThemeRole", "Background")
+    corner(PickPanel, 14)
+    stroke(PickPanel, Theme.Stroke, 1.4, 0.2)
+    local PickTitle = label(PickPanel, "Color", "Color", 14, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -28, 0, 20), Position = UDim2.fromOffset(14, 10), ZIndex = Z + 62 })
+    local PickArea = mk("Frame", { Parent = PickPanel, Size = UDim2.new(0.5, -20, 0, 140), Position = UDim2.fromOffset(14, 38), BackgroundColor3 = Color3.fromHSV(0, 1, 1), BorderSizePixel = 0, Active = true, ZIndex = Z + 62 })
+    corner(PickArea, 8)
+    local PickWhite = mk("Frame", { Parent = PickArea, Size = UDim2.fromScale(1, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 63 })
+    corner(PickWhite, 8)
+    mk("UIGradient", { Parent = PickWhite, Color = ColorSequence.new(WHITE), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1) }) })
+    local PickBlack = mk("Frame", { Parent = PickWhite, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BorderSizePixel = 0, ZIndex = Z + 64 })
+    corner(PickBlack, 8)
+    mk("UIGradient", { Parent = PickBlack, Rotation = 90, Color = ColorSequence.new(Color3.new(0, 0, 0)), Transparency = NumberSequence.new({ NumberSequenceKeypoint.new(0, 1), NumberSequenceKeypoint.new(1, 0) }) })
+    local PickHandle = mk("Frame", { Parent = PickArea, Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), BackgroundColor3 = Color3.fromRGB(8, 8, 8), BorderSizePixel = 0, ZIndex = Z + 65 })
+    corner(PickHandle, 999)
+    mk("UIStroke", { Parent = PickHandle, Color = WHITE, Thickness = 2 })
+    local PickHue = mk("Frame", { Parent = PickPanel, Size = UDim2.fromOffset(16, 140), Position = UDim2.new(0.5, -2, 0, 38), BackgroundColor3 = WHITE, BorderSizePixel = 0, Active = true, ZIndex = Z + 62 })
+    corner(PickHue, 8)
+    mk("UIGradient", {
+        Parent = PickHue,
+        Rotation = 90,
+        Color = ColorSequence.new({
+            ColorSequenceKeypoint.new(0, Color3.fromRGB(255, 0, 0)), ColorSequenceKeypoint.new(0.17, Color3.fromRGB(255, 255, 0)),
+            ColorSequenceKeypoint.new(0.33, Color3.fromRGB(0, 255, 0)), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(0, 255, 255)),
+            ColorSequenceKeypoint.new(0.67, Color3.fromRGB(0, 0, 255)), ColorSequenceKeypoint.new(0.83, Color3.fromRGB(255, 0, 255)),
+            ColorSequenceKeypoint.new(1, Color3.fromRGB(255, 0, 0)),
+        }),
+    })
+    local PickHueHandle = mk("Frame", { Parent = PickHue, Size = UDim2.new(1, 8, 0, 5), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 65 })
+    corner(PickHueHandle, 3)
+    local PickSwatch = mk("Frame", { Parent = PickPanel, Size = UDim2.new(0.5, -40, 0, 46), Position = UDim2.new(0.5, 26, 0, 38), BorderSizePixel = 0, ZIndex = Z + 62 })
+    corner(PickSwatch, 10)
+    stroke(PickSwatch, Theme.Stroke, 1, 0.3)
+    local PickHex = mk("TextBox", { Parent = PickPanel, Size = UDim2.new(0.5, -40, 0, 30), Position = UDim2.new(0.5, 26, 0, 92), BackgroundColor3 = Theme.Secondary, BorderSizePixel = 0, Text = "", TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.Code, ClearTextOnFocus = false, ZIndex = Z + 62 })
+    PickHex:SetAttribute("ThemeRole", "Secondary")
+    PickHex:SetAttribute("ThemeTextRole", "Text")
+    corner(PickHex, 8)
+    local PickQuick = mk("Frame", { Parent = PickPanel, Size = UDim2.new(0.5, -40, 0, 48), Position = UDim2.new(0.5, 26, 0, 130), BackgroundTransparency = 1, ZIndex = Z + 62 })
+    mk("UIGridLayout", { Parent = PickQuick, CellSize = UDim2.fromOffset(18, 18), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder })
+    local PickCancel = button(PickPanel, "Cancelar", "Cancel", "Secondary", { Size = UDim2.new(0.5, -20, 0, 32), Position = UDim2.new(0, 14, 1, -44), ZIndex = Z + 63 })
+    local PickApply = button(PickPanel, "Aplicar", "Apply", "Accent", { Size = UDim2.new(0.5, -20, 0, 32), Position = UDim2.new(0.5, 6, 1, -44), ZIndex = Z + 63, TextSize = 12 })
+    local function pickColor() return Color3.fromHSV(PK.H, PK.S, PK.V) end
+    local function pickRefresh()
+        local c = pickColor()
+        PickArea.BackgroundColor3 = Color3.fromHSV(PK.H, 1, 1)
+        PickHandle.Position = UDim2.fromScale(PK.S, 1 - PK.V)
+        PickHueHandle.Position = UDim2.fromScale(0.5, PK.H)
+        PickSwatch.BackgroundColor3 = c
+        if not PickHex:IsFocused() then PickHex.Text = toHex(c) end
+        if PK.onLive then PK.onLive(c) end
+    end
+    local function pickSet(c)
+        local h, s, v = c:ToHSV()
+        if s > 0.001 then PK.H = h end
+        PK.S, PK.V = s, v
+        pickRefresh()
+    end
+    for i, c in ipairs({
+        Color3.fromRGB(255, 255, 255), Color3.fromRGB(255, 82, 82), Color3.fromRGB(255, 160, 60), Color3.fromRGB(255, 214, 70),
+        Color3.fromRGB(110, 255, 120), Color3.fromRGB(60, 220, 255), Color3.fromRGB(90, 120, 255), Color3.fromRGB(180, 100, 255),
+        Color3.fromRGB(255, 105, 200), Color3.fromRGB(120, 120, 130), Color3.fromRGB(30, 30, 34), Color3.fromRGB(0, 0, 0),
+    }) do
+        local q = mk("TextButton", { Parent = PickQuick, BackgroundColor3 = c, Text = "", LayoutOrder = i, ZIndex = Z + 63 })
+        corner(q, 999)
+        mk("UIStroke", { Parent = q, Color = WHITE, Thickness = 1, Transparency = 0.5 })
+        q.MouseButton1Click:Connect(function() pickSet(c) end)
+    end
+    local function pickAt(pos)
+        if PK.drag == "SV" then
+            local a, s = PickArea.AbsolutePosition, PickArea.AbsoluteSize
+            if s.X <= 0 or s.Y <= 0 then return end
+            PK.S = math.clamp((pos.X - a.X) / s.X, 0, 1)
+            PK.V = math.clamp(1 - (pos.Y - a.Y) / s.Y, 0, 1)
+        elseif PK.drag == "H" then
+            local a, s = PickHue.AbsolutePosition, PickHue.AbsoluteSize
+            if s.Y <= 0 then return end
+            PK.H = math.clamp((pos.Y - a.Y) / s.Y, 0, 0.999)
+        end
+        pickRefresh()
+    end
+    local function isPress(input)
+        return input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch
+    end
+    PickArea.InputBegan:Connect(function(input) if isPress(input) then PK.drag = "SV" pickAt(input.Position) end end)
+    PickHue.InputBegan:Connect(function(input) if isPress(input) then PK.drag = "H" pickAt(input.Position) end end)
+    PickHex.FocusLost:Connect(function()
+        local c = fromHex(PickHex.Text)
+        if c then pickSet(c) else pickRefresh() end
+    end)
+    local function closePicker(apply)
+        PickOverlay.Visible = false
+        PK.drag = nil
+        if apply and PK.onApply then PK.onApply(pickColor()) elseif PK.onCancel then PK.onCancel() end
+        PK.onApply, PK.onCancel, PK.onLive = nil, nil, nil
+    end
+    PickCancel.MouseButton1Click:Connect(function() closePicker(false) end)
+    PickApply.MouseButton1Click:Connect(function() closePicker(true) end)
+    -- onLive pinta en vivo; Cancelar vuelve al color de antes
+    local function openPicker(es, en, current, onLive, onApply, onCancel)
+        L(PickTitle, es, en)
+        PK.onLive, PK.onApply, PK.onCancel = nil, onApply, onCancel
+        PickOverlay.Visible = true
+        pickSet(current or WHITE)
+        PK.onLive = onLive
+    end
+
+    -- =====================================================================
+    -- DESLIZADORES (uno solo escucha el arrastre para todos)
+    -- =====================================================================
+    local activeSlider = nil
+    local function slider(parent, order, es, en, cfg, value, onChange)
+        local s = { cfg = cfg, value = value }
+        local holder = mk("Frame", { Parent = parent, Size = UDim2.new(1, 0, 0, 40), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 4 })
+        s.Holder = holder
+        s.Label = label(holder, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -70, 0, 16), ZIndex = Z + 5 })
+        s.Value = label(holder, "", "", 11, Enum.Font.Code, "Accent", { Size = UDim2.fromOffset(66, 16), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), TextXAlignment = Enum.TextXAlignment.Right, ZIndex = Z + 5 })
+        local track = mk("Frame", { Parent = holder, Size = UDim2.new(1, -8, 0, 6), Position = UDim2.new(0, 4, 0, 26), BackgroundColor3 = Theme.SliderTrack or Theme.AccentOff, BorderSizePixel = 0, ZIndex = Z + 5 })
+        track:SetAttribute("ThemeRole", "SliderTrack")
+        corner(track, 999)
+        local fill = mk("Frame", { Parent = track, Size = UDim2.fromScale(0, 1), BackgroundColor3 = Theme.SliderFill or Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 6 })
+        fill:SetAttribute("ThemeRole", "SliderFill")
+        corner(fill, 999)
+        local knob = mk("Frame", { Parent = track, Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0, 0.5), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 7 })
+        corner(knob, 999)
+        mk("UIStroke", { Parent = knob, Color = Theme.SliderThumb or Theme.Accent, Thickness = 2 }):SetAttribute("ThemeRole", "SliderThumb")
+        local hit = mk("TextButton", { Parent = holder, Size = UDim2.new(1, 0, 0, 24), Position = UDim2.fromOffset(0, 17), BackgroundTransparency = 1, Text = "", ZIndex = Z + 8 })
+        function s.Set(v, fire)
+            local c = s.cfg
+            v = math.clamp(v, c[1], c[2])
+            v = math.floor((v - c[1]) / c[3] + 0.5) * c[3] + c[1]
+            v = math.clamp(v, c[1], c[2])
+            s.value = v
+            local a = (c[2] > c[1]) and (v - c[1]) / (c[2] - c[1]) or 0
+            fill.Size = UDim2.fromScale(a, 1)
+            knob.Position = UDim2.fromScale(a, 0.5)
+            s.Value.Text = fmtNum(v, c[3]) .. (c[5] or "")
             if fire then onChange(v) end
         end
         function s.Configure(cfgNew, es2, en2, v)
@@ -609,190 +780,4 @@
     corner(PChip, 999)
     pad(PChip, 0, 9, 9, 0)
     goldGradient(PChip, 0)
-    label(PHead, "Yin Yang Studio Logos", "Yin Yang Studio Logos", 17, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72, 22), ZIndex = Z + 3 })
-    label(PHead, "Creá tus propios botones flotantes", "Create your own floating buttons", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -110, 0, 14), Position = UDim2.fromOffset(72, 45), ZIndex = Z + 3 })
-    local PClose = mk("TextButton", { Parent = PHead, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 19, Font = Enum.Font.GothamBold, ZIndex = Z + 4 })
-    PClose:SetAttribute("ThemeRole", "Secondary")
-    PClose:SetAttribute("ThemeTextRole", "Text")
-    corner(PClose, 999)
-    RowKit.Control(PClose)
-
-    -- cuerpo en dos columnas: demostración (cuadrado) + información y compra
-    local PBody = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 1, -74), Position = UDim2.fromOffset(0, 74), BackgroundTransparency = 1, ZIndex = Z + 2 })
-    local RightCol = mk("ScrollingFrame", {
-        Parent = PBody,
-        Size = UDim2.new(0.5, -6, 1, 0),
-        Position = UDim2.new(0.5, 6, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollBarThickness = 2,
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        CanvasSize = UDim2.new(),
-        ZIndex = Z + 2,
-    })
-    list(RightCol, 8)
-
-    -- =================== DEMOSTRACIÓN ANIMADA ===================
-    -- Un mini estudio que se arma solo: ID -> imagen, movimiento, colores, guardar.
-    -- Corre solo mientras la ventana premium está abierta (tweens nativos + una corrutina).
-    -- Va en su propia función: BuildLogoStudio está cerca del límite de 200 locales de Luau.
-    local startDemo, stopDemo = (function()
-    local Demo = mk("Frame", { Parent = PBody, Size = UDim2.new(0.5, -6, 1, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0.25, -3, 0.5, 0), BackgroundColor3 = WHITE, BorderSizePixel = 0, ClipsDescendants = true, ZIndex = Z + 2 })
-    mk("UIAspectRatioConstraint", { Parent = Demo, AspectRatio = 1 })
-    corner(Demo, 14)
-    vgrad(Demo, Color3.fromRGB(78, 150, 232), Color3.fromRGB(176, 220, 252))
-    local DemoStroke = mk("UIStroke", { Parent = Demo, Color = WHITE, Thickness = 1.5, Transparency = 0.2 })
-    goldGradient(DemoStroke, 45)
-    local DZ = Z + 3
-    local function dframe(props)
-        props.Parent = props.Parent or Demo
-        props.BorderSizePixel = 0
-        props.ZIndex = props.ZIndex or DZ
-        return mk("Frame", props)
-    end
-    local function dtext(parent, txt, size, color, props)
-        local t = mk("TextLabel", { Parent = parent, BackgroundTransparency = 1, Text = txt, TextColor3 = color or WHITE, TextSize = size, Font = Enum.Font.GothamBold, TextScaled = false, ZIndex = DZ + 2 })
-        t:SetAttribute("IgnoreTextEffect", true)
-        for k, v in pairs(props or {}) do t[k] = v end
-        return t
-    end
-    -- paisaje
-    for _, m in ipairs({ { 0.2, 0.7 }, { 0.62, 0.9 }, { 0.95, 0.6 } }) do
-        dframe({ Size = UDim2.fromScale(m[2] * 0.6, m[2] * 0.6), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(m[1], 0.74), Rotation = 45, BackgroundColor3 = Color3.fromRGB(96, 128, 170), ZIndex = DZ })
-    end
-    local dGround = dframe({ Size = UDim2.fromScale(1, 0.3), Position = UDim2.fromScale(0, 0.72), BackgroundColor3 = WHITE, ZIndex = DZ + 1 })
-    vgrad(dGround, Color3.fromRGB(112, 186, 104), Color3.fromRGB(58, 118, 62))
-
-    -- mini panel del estudio (arriba): campo de ID + chips + colores + guardar
-    local dPanel = dframe({ Size = UDim2.new(0.92, 0, 0.3, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.04), BackgroundColor3 = Color3.fromRGB(18, 18, 24), BackgroundTransparency = 0.15, ZIndex = DZ + 2 })
-    corner(dPanel, 10)
-    local dId = dframe({ Parent = dPanel, Size = UDim2.new(0.94, 0, 0.36, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.08), BackgroundColor3 = Color3.fromRGB(40, 40, 48), ZIndex = DZ + 3 })
-    corner(dId, 6)
-    local dIdText = dtext(dId, "ID: ", 9, Color3.fromRGB(230, 230, 240), { Size = UDim2.new(1, -10, 1, 0), Position = UDim2.fromOffset(6, 0), Font = Enum.Font.Code, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = DZ + 4 })
-    local function dchip(txt, x)
-        local c = dframe({ Parent = dPanel, Size = UDim2.new(0.24, 0, 0.34, 0), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(x, 0.56), BackgroundColor3 = Color3.fromRGB(50, 50, 60), ZIndex = DZ + 3 })
-        corner(c, 999)
-        dtext(c, txt, 8, WHITE, { Size = UDim2.fromScale(1, 1), ZIndex = DZ + 4 })
-        return c
-    end
-    local chipSpin = dchip("Girar", 0.15)
-    local swPink = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.38, 0, 0.56, 0), BackgroundColor3 = Color3.fromRGB(255, 90, 170), ZIndex = DZ + 3 })
-    corner(swPink, 999)
-    local swGold = dframe({ Parent = dPanel, Size = UDim2.new(0, 14, 0, 14), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0.56, 0), BackgroundColor3 = GOLD_A, ZIndex = DZ + 3 })
-    corner(swGold, 999)
-    local chipSave = dchip("Guardar", 0.8)
-    chipSave.BackgroundColor3 = GOLD_B
-
-    -- el botón que se va armando (misma composición que el real: círculo + capas a 1.6x)
-    local dBtn = dframe({ Size = UDim2.fromScale(0.26, 0.26), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.58), BackgroundColor3 = Color3.fromRGB(60, 60, 70), ZIndex = DZ + 5 })
-    mk("UIAspectRatioConstraint", { Parent = dBtn, AspectRatio = 1 })
-    corner(dBtn, 999)
-    mk("UIStroke", { Parent = dBtn, Color = WHITE, Thickness = 1.5, Transparency = 0.3 })
-    local dBtnScale = mk("UIScale", { Parent = dBtn, Scale = 1 })
-    local function dlayer(img, z)
-        return mk("ImageLabel", { Parent = dBtn, Size = UDim2.fromScale(1.6, 1.6), Position = UDim2.fromScale(-0.3, -0.3), BackgroundTransparency = 1, Image = img, ImageTransparency = 1, ZIndex = z })
-    end
-    -- imágenes del Yin Yang Clásico (catálogo oficial)
-    local dBase = dlayer("rbxassetid://106130066496682", DZ + 6)
-    local dRing = dlayer("rbxassetid://70721341917757", DZ + 7)
-
-    -- texto del paso + cartel de guardado
-    local dCaption = dtext(Demo, "", 10, WHITE, { Size = UDim2.new(0.9, 0, 0, 20), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, -8), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.4, Font = Enum.Font.GothamBlack, ZIndex = DZ + 8 })
-    corner(dCaption, 999)
-    local dToast = dtext(Demo, "", 11, Color3.fromRGB(50, 28, 6), { Size = UDim2.new(0.5, 0, 0, 22), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.42), BackgroundColor3 = WHITE, BackgroundTransparency = 0, Font = Enum.Font.GothamBlack, Visible = false, ZIndex = DZ + 9 })
-    corner(dToast, 999)
-    goldGradient(dToast, 0)
-    local dToastScale = mk("UIScale", { Parent = dToast, Scale = 1 })
-
-    -- dedo que toca (círculo blanco con onda)
-    local dFinger = dframe({ Size = UDim2.fromOffset(18, 18), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.85, 0.9), BackgroundColor3 = WHITE, BackgroundTransparency = 0.15, ZIndex = DZ + 10 })
-    corner(dFinger, 999)
-    mk("UIStroke", { Parent = dFinger, Color = Color3.new(0, 0, 0), Thickness = 1.5, Transparency = 0.5 })
-    local dFingerScale = mk("UIScale", { Parent = dFinger, Scale = 1 })
-
-    local demoGen = 0
-    local ringTween = nil
-    -- posición (en el cuadrado) del centro de un elemento del mini panel
-    local function centerOf(el)
-        if el.Parent == dPanel then
-            local p = el.Position
-            -- dPanel: x 0.04..0.96, y 0.04..0.34 del cuadrado
-            return UDim2.new(0.04 + p.X.Scale * 0.92, 0, 0.04 + (p.Y.Scale + 0.17) * 0.3, 0)
-        end
-        return el.Position
-    end
-    local function demoReset()
-        if ringTween then ringTween:Cancel() ringTween = nil end
-        dIdText.Text = "ID: "
-        dBase.ImageTransparency, dRing.ImageTransparency, dRing.Rotation = 1, 1, 0
-        dRing.ImageColor3 = WHITE
-        dBtn.BackgroundColor3 = Color3.fromRGB(60, 60, 70)
-        dBtn.Position = UDim2.fromScale(0.5, 0.58)
-        dBtnScale.Scale = 1
-        chipSpin.BackgroundColor3 = Color3.fromRGB(50, 50, 60)
-        dToast.Visible = false
-        dCaption.Text = ""
-    end
-    local function runDemo(gen)
-        local function alive() return demoGen == gen and PSheet.Visible end
-        local function pause(t)
-            task.wait(t)
-            return alive()
-        end
-        local function tap(el)
-            TweenService:Create(dFinger, TweenInfo.new(0.45, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = centerOf(el) }):Play()
-            if not pause(0.5) then return false end
-            TweenService:Create(dFingerScale, TweenInfo.new(0.08), { Scale = 0.65 }):Play()
-            -- onda del toque
-            local ring = dframe({ Size = UDim2.fromOffset(16, 16), AnchorPoint = Vector2.new(0.5, 0.5), Position = dFinger.Position, BackgroundTransparency = 1, ZIndex = DZ + 9 })
-            corner(ring, 999)
-            local rs = mk("UIStroke", { Parent = ring, Color = WHITE, Thickness = 2 })
-            TweenService:Create(ring, TweenInfo.new(0.4, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), { Size = UDim2.fromOffset(40, 40) }):Play()
-            TweenService:Create(rs, TweenInfo.new(0.4), { Transparency = 1 }):Play()
-            task.delay(0.45, function() ring:Destroy() end)
-            if not pause(0.1) then return false end
-            TweenService:Create(dFingerScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            return pause(0.25)
-        end
-        local function caption(es, en)
-            dCaption.Text = GetText(es, en)
-        end
-        while alive() do
-            demoReset()
-            if not pause(0.4) then break end
-            -- 1) pegar el ID: aparece la imagen base
-            caption("1 · Pegá el ID de tu imagen", "1 · Paste your image ID")
-            if not tap(dId) then break end
-            local id = "106130066496682"
-            for i = 1, #id do
-                dIdText.Text = "ID: " .. id:sub(1, i)
-                if not pause(0.035) then break end
-            end
-            if not alive() then break end
-            dBtnScale.Scale = 0.75
-            TweenService:Create(dBase, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
-            TweenService:Create(dBtnScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            if not pause(0.7) then break end
-            -- 2) movimiento: el anillo aparece y gira
-            caption("2 · Elegí un movimiento", "2 · Pick a movement")
-            if not tap(chipSpin) then break end
-            chipSpin.BackgroundColor3 = GOLD_B
-            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageTransparency = 0 }):Play()
-            ringTween = TweenService:Create(dRing, TweenInfo.new(2.4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 })
-            ringTween:Play()
-            if not pause(1) then break end
-            -- 3) colores: círculo rosa, anillo dorado
-            caption("3 · Cambiá los colores", "3 · Change the colors")
-            if not tap(swPink) then break end
-            TweenService:Create(dBtn, TweenInfo.new(0.35), { BackgroundColor3 = Color3.fromRGB(255, 90, 170) }):Play()
-            if not pause(0.3) then break end
-            if not tap(swGold) then break end
-            TweenService:Create(dRing, TweenInfo.new(0.35), { ImageColor3 = GOLD_A }):Play()
-            if not pause(0.7) then break end
-            -- 4) guardar: cartel + el logo vuela a la esquina como botón flotante
-            caption("4 · Guardalo y ¡listo!", "4 · Save it and done!")
-            if not tap(chipSave) then break end
-            dToast.Text = GetText("Guardado", "Saved")
-            dToast.Visible = true
-            dToastScale.Scale = 0.6
-            TweenService:Create(dToastScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out
+    label(PHead, "Yin Yang Studio Logos", "Yin Yang Studio Logos", 17, Enum.Font.GothamB

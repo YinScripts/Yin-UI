@@ -6,6 +6,19 @@ nect(function()
                 pcall(cb, state)
             end)
 
+            -- registro para la rueda de los toggles flotantes: nombre, estado y "tocar" (igual que el clic)
+            Window._ToggleFns = Window._ToggleFns or setmetatable({}, { __mode = "k" })
+            Window._ToggleFns[Holder] = {
+                Name = function() return GetText(textSpanish, textEnglish) end,
+                Get = function() return state end,
+                Flip = function()
+                    state = not state
+                    playSound(Sounds.Click, 0.5)
+                    applyVisual(state, true)
+                    pcall(cb, state)
+                end,
+            }
+
             resetScrollTop(TabPage)
 
             if not isMirror then

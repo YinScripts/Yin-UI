@@ -1,4 +1,189 @@
-der.Thickness = 1.4
+local _dialList = nil -- sliders del tambor (LinkDial)
+            local favRow = nil
+            local toggleFloating
+            local toggleLock
+            local favoriteControlRefreshers = {}
+
+            local function syncFavoriteRow()
+                favoriteControlRefreshers = {}
+                if favRow then
+                    pcall(function() favRow.Holder:Destroy() end)
+                    favRow = nil
+                end
+                if _linkedSliderFavRow then
+                    pcall(function() _linkedSliderFavRow.Holder:Destroy() end)
+                    _linkedSliderFavRow = nil
+                end
+
+                if isFavorite and AutoTabFavoritosRef then
+                    favRow = AutoTabFavoritosRef:CreateToggle(textSpanish, textEnglish, state, function(newState)
+                        state = newState
+                        tog.SetValue(newState)
+                        pcall(cb, newState)
+                    end, true)
+                    Window._AddFavoriteFloatControls(
+                        favRow.Holder, toggleFloating, toggleLock,
+                        function() return isFloating end,
+                        function() return isLocked end,
+                        function(refresh) table.insert(favoriteControlRefreshers, refresh) end
+                    )
+
+                    if _linkedSliderRef then
+                        local liveValue = _linkedSliderRef._value or 50
+                        if type(_linkedSliderRef.Get) == "function" then
+                            local okGet, gotValue = pcall(_linkedSliderRef.Get)
+                            if okGet and type(gotValue) == "number" then liveValue = gotValue end
+                        end
+                        _linkedSliderFavRow = AutoTabFavoritosRef:CreateSlider(
+                            _linkedSliderRef._labelES or "Slider",
+                            _linkedSliderRef._min     or 0,
+                            _linkedSliderRef._max     or 100,
+                            liveValue,
+                            function(newVal)
+                                _linkedSliderRef._value = newVal
+                                if _linkedSliderRef._callback then
+                                    pcall(_linkedSliderRef._callback, newVal)
+                                end
+                            end,
+                            true
+                        )
+                    end
+                end
+            end
+
+            FavBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                isFavorite = not isFavorite
+                FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                SavedFavoriteIds[favId] = isFavorite or nil
+                syncFavoriteRow()
+                SyncFavoritesToConfig()
+            end)
+
+            local comboMember = {
+                Initial = displayText:sub(1, 1):upper(),
+                DisplayName = displayText,
+                GetState = function() return state end,
+                SetState = function(newState)
+                    state = newState
+                    tog.SetValue(newState)
+                    pcall(cb, newState)
+                end,
+            }
+
+            ComboBtn.MouseButton1Click:Connect(function()
+                playSound(Sounds.Click, 0.5)
+                isInCombo = not isInCombo
+                ComboBtn.ImageColor3 = isInCombo and Theme.Accent or Theme.TextDim
+                ComboBtn:SetAttribute("ThemeImageRole", isInCombo and "Accent" or "TextDim")
+                if isInCombo then
+                    Window.AddComboMember(comboMember)
+                else
+                    Window.RemoveComboMember(comboMember)
+                end
+            end)
+
+            Window.RegisterKeybind(favId, KeybindBtn, function()
+                state = not state
+                tog.SetValue(state)
+                if favRow and favRow.SetValue then
+                    favRow.SetValue(state)
+                end
+                pcall(cb, state)
+            end)
+            KeybindBtn.MouseButton1Click:Connect(function()
+                Window.BeginKeybindCapture(Window.Keybinds[favId])
+            end)
+
+            tog.LinkSlider = function(self, sliderObj)
+                _linkedSliderRef = sliderObj
+                if isFavorite then
+                    syncFavoriteRow()
+                end
+            end
+
+            HolderClick.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH) or UDim2.new(1, -206, 1, 0)
+
+            -- Tarjeta de dos zonas: nombre a la izquierda y controles a la derecha.
+            if not hasCredit then
+                Holder.ClipsDescendants = true
+                Holder:SetAttribute("OptionCardV5", true)
+                Holder.BackgroundTransparency = 0.08
+                local label, status
+                for _, child in ipairs(Holder:GetChildren()) do
+                    if child:IsA("TextLabel") and child:GetAttribute("TextSpanish") == textSpanish then
+                        label = child
+                    elseif child:IsA("TextLabel") and child.Text:sub(1, 3) == "●" then
+                        status = child
+                    elseif child:IsA("Frame") and child.Size.X.Offset == 3 and child.Size.Y.Offset == 36 then
+                        child.Visible = false
+                    end
+                end
+                -- El borde del panel y la línea comparten el mismo eje geométrico.
+                local panel = mk("Frame", {
+                    Name = "OptionControlsPanel", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
+                    BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.34,
+                    BorderSizePixel = 0, ZIndex = 9,
+                })
+                panel:SetAttribute("ThemeRole", "Background")
+                local separator = mk("Frame", {
+                    Name = "OptionDivider", Parent = Holder, AnchorPoint = Vector2.new(0.5, 0.5),
+                    Position = UDim2.new(0.40, 0, 0.5, 0), Size = UDim2.fromOffset(2, 96),
+                    Rotation = 16, BackgroundColor3 = Color3.new(1, 1, 1),
+                    BackgroundTransparency = 0.08, BorderSizePixel = 0, ZIndex = 10,
+                })
+                corner(separator, 2)
+                local dividerGradient = mk("UIGradient", {Parent = separator, Rotation = 90})
+                FavBtn.BackgroundColor3 = Theme.Secondary
+                FavBtn.BackgroundTransparency = 0.2
+                FavBtn:SetAttribute("ThemeRole", "Secondary")
+                corner(FavBtn, 9)
+                local favoriteBorder = stroke(FavBtn, Theme.Stroke, 1, 0.5)
+                favoriteBorder:SetAttribute("ThemeRole", "Stroke")
+                -- Borde suave de la tarjeta y cápsula inferior de tecla, como en la referencia.
+                local rim = mk("Frame", {
+                    Name = "OptionRim", Parent = Holder, Position = UDim2.new(0.40, 0, 0, 1),
+                    Size = UDim2.new(0.60, -1, 1, -2), BackgroundTransparency = 1,
+                    BorderSizePixel = 0, Active = false, ZIndex = 12,
+                })
+                corner(rim, 14)
+                local rimStroke = stroke(rim, Color3.new(1, 1, 1), 1.5, 0.12)
+                local rimGradient = mk("UIGradient", {Parent = rimStroke, Rotation = 0,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
+                KeybindBtn.BackgroundTransparency = 1
+                KeybindBtn:SetAttribute("ThemeRole", nil)
+                local keyPlate = mk("Frame", {Parent = KeybindBtn, Name = "KeyPlate",
+                    Size = UDim2.fromScale(1, 1), BackgroundColor3 = Theme.Secondary,
+                    BackgroundTransparency = 0.15, BorderSizePixel = 0, ZIndex = 14, Active = false})
+                keyPlate:SetAttribute("ThemeRole", "Secondary")
+                corner(keyPlate, 999)
+                mk("UIGradient", {Parent = keyPlate, Rotation = 25,
+                    Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
+                        NumberSequenceKeypoint.new(0.025, 1), NumberSequenceKeypoint.new(0.06, 0),
+                        NumberSequenceKeypoint.new(1, 0)})})
+                local keySlash = mk("Frame", {Parent = KeybindBtn, Name = "KeySlash",
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
+                    Size = UDim2.fromOffset(2, 20), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
+                    BackgroundTransparency = 0.05, BorderSizePixel = 0, Active = false, ZIndex = 16})
+                keySlash:SetAttribute("ThemeRole", "ToggleOn")
+                corner(keySlash, 2)
+                local keyGlow = mk("Frame", {Parent = KeybindBtn, Name = "KeySlashGlow",
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.new(0, 5, 0.5, 0),
+                    Size = UDim2.fromOffset(5, 21), Rotation = 27, BackgroundColor3 = Theme.ToggleOn,
+                    BackgroundTransparency = 0.75, BorderSizePixel = 0, Active = false, ZIndex = 15})
+                keyGlow:SetAttribute("ThemeRole", "ToggleOn")
+                corner(keyGlow, 3)
+                local keyCorner = KeybindBtn:FindFirstChildOfClass("UICorner")
+                if keyCorner then keyCorner.CornerRadius = UDim.new(1, 0) end
+                local keyBorder = KeybindBtn:FindFirstChildOfClass("UIStroke")
+                if keyBorder then
+                    keyBorder.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
+                    keyBorder.Color = Color3.new(1, 1, 1)
+                    keyBorder.Transparency = 0.12
+                    keyBorder:SetAttribute("ThemeRole", nil)
+                    keyBorder.Thickness = 1.4
                 end
                 local keyGradient = keyBorder and mk("UIGradient", {Parent = keyBorder,
                     Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 1),
@@ -326,8 +511,35 @@ der.Thickness = 1.4
                     ZIndex = 6
                 })
 
+                -- mantener 1 s: abre la rueda de la sección (el clic de ese toque no cambia el toggle)
+                local holdToken, radialFired = 0, false
+                local holdScale = mk("UIScale", { Scale = 1 }, FloatingWindow)
+                FloatClick.InputBegan:Connect(function(input)
+                    if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+                    holdToken = holdToken + 1
+                    local token, t0, from = holdToken, os.clock(), input.Position
+                    radialFired = false
+                    task.spawn(function()
+                        while holdToken == token and os.clock() - t0 < 1 do
+                            local held = math.clamp((os.clock() - t0) / 1, 0, 1)
+                            holdScale.Scale = 1 - 0.08 * held
+                            RunService.RenderStepped:Wait()
+                        end
+                        holdScale.Scale = 1
+                        if holdToken == token and not dragMoved and Window._OpenRadial then
+                            radialFired = true
+                            pcall(Window._OpenRadial, FloatingWindow, Holder)
+                        end
+                    end)
+                end)
+                FloatClick.InputEnded:Connect(function(input)
+                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                        holdToken = holdToken + 1
+                    end
+                end)
                 FloatClick.MouseButton1Click:Connect(function()
                     if dragging then return end
+                    if radialFired then radialFired = false return end
                     state = not state
                     playSound(Sounds.Click, 0.5)
                     updateFloatVisual()
@@ -701,248 +913,4 @@ der.Thickness = 1.4
 
                 if not isCircleStyle then
                     mk("UIGradient", {
-                        Color = ColorSequence.new({
-                            ColorSequenceKeypoint.new(0,   Color3.fromRGB(180, 185, 200)),
-                            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
-                            ColorSequenceKeypoint.new(1,   Color3.fromRGB(180, 185, 200)),
-                        }),
-                        Transparency = NumberSequence.new({
-                            NumberSequenceKeypoint.new(0,   0.45),
-                            NumberSequenceKeypoint.new(0.5, 0.15),
-                            NumberSequenceKeypoint.new(1,   0.45),
-                        }),
-                        Rotation = 90,
-                    }, FloatingWindow)
-                end
-
-                stroke(FloatingWindow, Theme.Accent, isCircleStyle and 3 or 2.5, 0.20)
-                buildAnimatedBorder(FloatingWindow, Theme.Border, UDim.new(1, 0), true)
-
-                local FloatLabel = mk("TextLabel", {
-                    Parent = FloatingWindow,
-                    Size = isCircleStyle and UDim2.new(1, -24, 1, -24) or UDim2.new(1, -24, 1, 0),
-                    Position = isCircleStyle and UDim2.new(0, 12, 0, 12) or UDim2.new(0, 12, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = ComboLabel.Text,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBlack,
-                    TextSize = isCircleStyle and 11 or 21,
-                    TextWrapped = isCircleStyle,
-                    TextXAlignment = Enum.TextXAlignment.Center,
-                    TextYAlignment = Enum.TextYAlignment.Center,
-                    TextTruncate = isCircleStyle and Enum.TextTruncate.None or Enum.TextTruncate.AtEnd,
-                    ZIndex = 5,
-                })
-                FloatLabel:SetAttribute("ThemeTextRole", "Text")
-                if Window.ComboSlot then
-                    Window.ComboSlot.FloatLabel = FloatLabel
-                end
-
-                local function updateFloatVisual()
-                    if state then
-                        TweenService:Create(FloatingWindow, TweenInfo.new(0.15),
-                            {BackgroundColor3 = Theme.ToggleOn}):Play()
-                    else
-                        TweenService:Create(FloatingWindow, TweenInfo.new(0.15),
-                            {BackgroundColor3 = Theme.Secondary}):Play()
-                    end
-                    FloatingPillV5.Studio.Paint(FloatingWindow, state, false)
-                end
-                updateFloatVisual()
-
-                local dragging = false
-                local dragStart, startPos
-                local dragMoved = false
-
-                local FloatClick = mk("TextButton", {
-                    Parent = FloatingWindow,
-                    Size = UDim2.new(1, 0, 1, 0),
-                    BackgroundTransparency = 1,
-                    Text = "",
-                    AutoButtonColor = false,
-                    Active = true,
-                    Selectable = false,
-                    ZIndex = 6
-                })
-
-                FloatClick.MouseButton1Click:Connect(function()
-                    if dragging then return end
-                    state = not state
-                    playSound(Sounds.Click, 0.5)
-                    updateFloatVisual()
-                    applyVisual(state, true)
-                    fireComboMembers(state)
-                end)
-
-                local function syncGlow()
-                    if FloatingGlow and FloatingGlow.Parent then
-                        FloatingGlow.Size = UDim2.fromOffset(FloatingWindow.Size.X.Offset + 16, FloatingWindow.Size.Y.Offset + 12)
-                        FloatingGlow.Position = UDim2.new(FloatingWindow.Position.X.Scale, FloatingWindow.Position.X.Offset - 8, FloatingWindow.Position.Y.Scale, FloatingWindow.Position.Y.Offset - 6)
-                    end
-                end
-                syncGlow()
-                track(FloatingWindow:GetPropertyChangedSignal("Position"):Connect(syncGlow))
-
-                local function clampFloatingWindow()
-                    if not FloatingWindow or not FloatingWindow.Parent then return end
-
-                    local viewport = Window.ScreenGui.AbsoluteSize
-                    local windowSize = FloatingWindow.AbsoluteSize
-                    if viewport.X <= 0 or viewport.Y <= 0 or windowSize.X <= 0 or windowSize.Y <= 0 then
-                        return
-                    end
-
-                    local margin = 8
-                    local pos = FloatingWindow.Position
-                    local minX = margin - pos.X.Scale * viewport.X
-                    local maxX = viewport.X - windowSize.X - margin - pos.X.Scale * viewport.X
-                    local minY = margin - pos.Y.Scale * viewport.Y
-                    local maxY = viewport.Y - windowSize.Y - margin - pos.Y.Scale * viewport.Y
-
-                    local clampedX = maxX < minX and ((viewport.X - windowSize.X) / 2) - pos.X.Scale * viewport.X
-                        or math.clamp(pos.X.Offset, minX, maxX)
-                    local clampedY = maxY < minY and ((viewport.Y - windowSize.Y) / 2) - pos.Y.Scale * viewport.Y
-                        or math.clamp(pos.Y.Offset, minY, maxY)
-
-                    if clampedX ~= pos.X.Offset or clampedY ~= pos.Y.Offset then
-                        FloatingWindow.Position = UDim2.new(pos.X.Scale, clampedX, pos.Y.Scale, clampedY)
-                    end
-                end
-
-                clampFloatingWindow()
-                track(Window.ScreenGui:GetPropertyChangedSignal("AbsoluteSize"):Connect(clampFloatingWindow))
-
-                FloatClick.InputBegan:Connect(function(input)
-                    if (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) and not isLocked then
-                        dragging = false
-                        dragMoved = false
-                        dragStart = input.Position
-                        startPos = FloatingWindow.Position
-                    end
-                end)
-
-                track(UserInputService.InputChanged:Connect(function(input)
-                    if dragStart and not isLocked and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                        local delta = input.Position - dragStart
-                        if delta.Magnitude > 4 then
-                            dragging = true
-                            dragMoved = true
-                            FloatingWindow.Position = UDim2.new(startPos.X.Scale, startPos.X.Offset + delta.X, startPos.Y.Scale, startPos.Y.Offset + delta.Y)
-                            clampFloatingWindow()
-                        end
-                    end
-                end))
-
-                track(UserInputService.InputEnded:Connect(function(input)
-                    if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                        task.defer(function() dragging = false end)
-                        dragStart = nil
-                    end
-                end))
-
-                table.insert(Window.FloatingToggles, {
-                    Window = FloatingWindow,
-                    Name = displayText,
-                    RefreshVisual = updateFloatVisual,
-                    ClampPosition = clampFloatingWindow,
-                })
-                FloatingPillV5.Studio.Attach(FloatingWindow, FloatingGlow, FloatLabel, "combo::" .. nameSpanish .. "::" .. textSpanish, function() return state end, {
-                    Refresh = updateFloatVisual,
-                })
-            end
-
-            local toggleFloating = function()
-                playSound(Sounds.Click, 0.6)
-                if not isFloating then
-                    isFloating = true
-                    createFloatingWindow()
-                    DetachBtn.Text = "←"
-                else
-                    isFloating = false
-                    if FloatingWindow then
-                        FloatingWindow:Destroy()
-                        FloatingWindow = nil
-                    end
-                    if FloatingGlow then
-                        FloatingGlow:Destroy()
-                        FloatingGlow = nil
-                    end
-                    if Window.ComboSlot then
-                        Window.ComboSlot.FloatLabel = nil
-                    end
-                    DetachBtn.Text = "↗"
-                    isLocked = false
-                    PinBtn.Image = "rbxassetid://83537941312438"
-                end
-            end
-
-            local toggleLock = function()
-                if not isFloating then return end
-                playSound(Sounds.Click, 0.5)
-                isLocked = not isLocked
-                if isLocked then FloatPos.Save("combo::" .. nameSpanish .. "::" .. textSpanish, FloatingWindow, Window.ScreenGui) else FloatPos.SetLocked("combo::" .. nameSpanish .. "::" .. textSpanish, false) end
-                PinBtn.Image = isLocked
-                    and "rbxassetid://91959170037380"
-                    or  "rbxassetid://83537941312438"
-            end
-            DetachBtn.MouseButton1Click:Connect(toggleFloating)
-            PinBtn.MouseButton1Click:Connect(toggleLock)
-
-            Window.ComboSlot = {
-                Holder = Holder,
-                Label = ComboLabel,
-            }
-            Window.RefreshComboLabel()
-
-            resetScrollTop(TabPage)
-
-            return {
-                Holder = Holder,
-                Switch = Switch,
-            }
-        end
-
-        function Tab:CreateToggle(textSpanish, textEnglishOrDefault, defaultOrCallback, callback, isMirror, creditInfo)
-            local textEnglish = textSpanish
-            local default, cb
-
-            if type(textEnglishOrDefault) == "string" then
-                textEnglish = textEnglishOrDefault
-                default = defaultOrCallback
-                cb = callback
-            else
-                default = textEnglishOrDefault
-                cb = defaultOrCallback
-            end
-
-            local displayText = GetText(textSpanish, textEnglish)
-            local state = default or false
-
-            local credit   = type(creditInfo) == "table" and creditInfo or nil
-            local hasBadge = credit and (credit.imageId or credit.name)
-            local hasDesc  = credit and type(credit.description) == "string" and #credit.description > 0
-            local holderH  = (hasDesc and hasBadge) and 110 or (hasDesc or hasBadge) and 90 or 64
-            local textOffW = hasBadge and -164 or -90
-
-            local Holder = mk("Frame", {
-                Parent = TabPage,
-                Size = UDim2.new(1, 0, 0, holderH),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.78,
-                ZIndex = 9
-            })
-            Holder:SetAttribute("ThemeRole", "Secondary")
-            corner(Holder, 10)
-            local HolderStroke = stroke(Holder, state and Theme.ToggleOn or Theme.Stroke, 1, state and 0.35 or 0.55)
-            HolderStroke:SetAttribute("ThemeRole", state and "ToggleOn" or "Stroke")
-            RowKit.Card(Holder)
-
-            local AccentBar = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.new(0, 3, 0, 36),
-                Position = UDim2.new(0, 10, 0.5, -18),
-                BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
-                BackgroundTransparency = 0,
-                ZIndex = 10
-            })
-            AccentBar:SetAttribute("Theme
+                        Color = ColorSequen

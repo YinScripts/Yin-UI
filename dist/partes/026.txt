@@ -1,4 +1,327 @@
-ext"},
+e = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(0, 0, 0, 20),
+            AutomaticSize = Enum.AutomaticSize.X,
+            Position = UDim2.new(0, 12, 0, 12),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0,
+            Text = GetText("✓  EN USO", "✓  ACTIVE"),
+            Font = Enum.Font.GothamBlack,
+            TextSize = 10,
+            TextColor3 = Theme.AccentText or Color3.new(0, 0, 0),
+            Visible = false,
+            ZIndex = 18,
+        })
+        CheckBadge:SetAttribute("TextSpanish", "✓  EN USO")
+        CheckBadge:SetAttribute("TextEnglish", "✓  ACTIVE")
+        CheckBadge:SetAttribute("IgnoreTextEffect", true)
+        corner(CheckBadge, 999)
+        mk("UIPadding", {Parent = CheckBadge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+
+        if tema == "Dark" then -- Halloween: se muestra pero no se puede usar
+            local LockShade = mk("Frame", {
+                Parent = Preview,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 0.45,
+                BorderSizePixel = 0,
+                ZIndex = 14,
+            })
+            corner(LockShade, 10)
+            local LockBadge = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(0, 0, 0, 20),
+                AutomaticSize = Enum.AutomaticSize.X,
+                Position = UDim2.new(0, 12, 0, 12),
+                BackgroundColor3 = Color3.fromRGB(45, 45, 50),
+                BackgroundTransparency = 0,
+                Text = GetText("BLOQUEADO", "LOCKED"),
+                Font = Enum.Font.GothamBlack,
+                TextSize = 10,
+                TextColor3 = Color3.fromRGB(220, 220, 225),
+                ZIndex = 18,
+            })
+            LockBadge:SetAttribute("TextSpanish", "BLOQUEADO")
+            LockBadge:SetAttribute("TextEnglish", "LOCKED")
+            LockBadge:SetAttribute("IgnoreTextEffect", true)
+            corner(LockBadge, 999)
+            mk("UIPadding", {Parent = LockBadge, PaddingLeft = UDim.new(0, 8), PaddingRight = UDim.new(0, 8)})
+        end
+
+        if isCustom then
+            local MenuButton = mk("TextButton", {
+                Parent = Card,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -36, 0, 116),
+                BackgroundTransparency = 1,
+                Text = "⋮",
+                TextColor3 = Theme.TextDim,
+                Font = Enum.Font.GothamBold,
+                TextSize = 18,
+                ZIndex = 13,
+            })
+            MenuButton:SetAttribute("ThemeTextRole", "TextDim")
+
+            local Menu = mk("Frame", {
+                Parent = Card,
+                Size = UDim2.new(0, 96, 0, 60),
+                Position = UDim2.new(1, -102, 1, -66),
+                BackgroundColor3 = Theme.Background,
+                BorderSizePixel = 0,
+                Visible = false,
+                ZIndex = 20,
+            })
+            Menu:SetAttribute("ThemeRole", "Background")
+            corner(Menu, 10)
+            stroke(Menu, Theme.Stroke, 1, 0.35)
+
+            local EditButton = mk("TextButton", {
+                Parent = Menu,
+                Size = UDim2.new(1, 0, 0.5, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Editar", "Edit"),
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamMedium,
+                TextSize = 12,
+                ZIndex = 21,
+            })
+            EditButton:SetAttribute("ThemeTextRole", "Text")
+            EditButton:SetAttribute("TextSpanish", "Editar")
+            EditButton:SetAttribute("TextEnglish", "Edit")
+
+            local DeleteButton = mk("TextButton", {
+                Parent = Menu,
+                Size = UDim2.new(1, 0, 0.5, 0),
+                Position = UDim2.new(0, 0, 0.5, 0),
+                BackgroundTransparency = 1,
+                Text = GetText("Eliminar", "Delete"),
+                TextColor3 = Color3.fromRGB(235, 85, 85),
+                Font = Enum.Font.GothamMedium,
+                TextSize = 12,
+                ZIndex = 21,
+            })
+            DeleteButton:SetAttribute("TextSpanish", "Eliminar")
+            DeleteButton:SetAttribute("TextEnglish", "Delete")
+
+            MenuButton.MouseButton1Click:Connect(function()
+                Menu.Visible = not Menu.Visible
+            end)
+            EditButton.MouseButton1Click:Connect(function()
+                Menu.Visible = false
+                openThemeEditor(tema)
+            end)
+            DeleteButton.MouseButton1Click:Connect(function()
+                Menu.Visible = false
+                confirmDeleteTheme(tema)
+            end)
+        end
+
+        Card.MouseButton1Click:Connect(function()
+            if tema == "Dark" then return end -- Halloween bloqueado
+            playSound(Sounds.Click, 0.6)
+            Window:SetTheme(tema)
+            highlightThemeCards()
+        end)
+
+        table.insert(ThemeButtons, {Card = Card, Name = tema, CheckBadge = CheckBadge, CardStroke = CardStroke})
+    end
+
+    local function rebuildThemeCards()
+        for _, entry in ipairs(ThemeButtons) do
+            if entry.Card then entry.Card:Destroy() end
+        end
+        ThemeButtons = {}
+
+        local order = 0
+        for _, tema in ipairs(temas) do
+            if ThemePalettes[tema] then
+                order = order + 1
+                createThemeCard(tema, order, false)
+            end
+        end
+        for _, tema in ipairs(CustomThemeOrder) do
+            if CustomThemes[tema] and ThemePalettes[tema] then
+                order = order + 1
+                createThemeCard(tema, order, true)
+            end
+        end
+
+        highlightThemeCards()
+        applyThemeSearch()
+    end
+
+    local function colorToHex(color)
+        return string.format("#%02X%02X%02X",
+            math.floor(color.R * 255 + 0.5),
+            math.floor(color.G * 255 + 0.5),
+            math.floor(color.B * 255 + 0.5)
+        )
+    end
+
+    local function hexToColor(text)
+        local hex = tostring(text or ""):gsub("#", ""):gsub("%s", "")
+        if #hex ~= 6 or not hex:match("^[%x]+$") then return nil end
+        return Color3.fromRGB(
+            tonumber(hex:sub(1, 2), 16),
+            tonumber(hex:sub(3, 4), 16),
+            tonumber(hex:sub(5, 6), 16)
+        )
+    end
+
+    local EditorOverlay = mk("Frame", {
+        Parent = Main,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 200,
+    })
+
+    local EditorPanel = mk("Frame", {
+        Parent = EditorOverlay,
+        Size = UDim2.new(0.9, 0, 0.9, 0),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        BackgroundColor3 = Theme.Background,
+        BorderSizePixel = 0,
+        ZIndex = 201,
+    })
+    EditorPanel:SetAttribute("ThemeRole", "Background")
+    corner(EditorPanel, 16)
+    stroke(EditorPanel, Theme.Stroke, 1.5, 0.2)
+    local EditorBadge = mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(0, 14, 0, 10),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    })
+    EditorBadge:SetAttribute("ThemeRole", "Accent")
+    corner(EditorBadge, 9)
+    mk("UIGradient", {
+        Parent = EditorBadge,
+        Rotation = 45,
+        Color = ColorSequence.new(Color3.new(1, 1, 1), Color3.fromRGB(150, 150, 150)),
+    })
+    local EditorSub = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -120, 0, 14),
+        Position = UDim2.new(0, 54, 0, 30),
+        BackgroundTransparency = 1,
+        Text = GetText("Tocá un color para cambiarlo · vista previa en vivo", "Tap a color to change it · live preview"),
+        TextColor3 = Theme.TextDim,
+        TextSize = 10,
+        Font = Enum.Font.GothamMedium,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 202,
+    })
+    EditorSub:SetAttribute("ThemeTextRole", "TextDim")
+    EditorSub:SetAttribute("TextSpanish", "Tocá un color para cambiarlo · vista previa en vivo")
+    EditorSub:SetAttribute("TextEnglish", "Tap a color to change it · live preview")
+
+    local EditorTitle = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -120, 0, 22),
+        Position = UDim2.new(0, 54, 0, 8),
+        BackgroundTransparency = 1,
+        Text = GetText("Crear Tema Personalizado", "Create Custom Theme"),
+        TextColor3 = Theme.Text,
+        TextSize = 17,
+        Font = Enum.Font.GothamBlack,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 202,
+    })
+    EditorTitle:SetAttribute("ThemeTextRole", "Text")
+    EditorTitle:SetAttribute("TextSpanish", "Crear Tema Personalizado")
+    EditorTitle:SetAttribute("TextEnglish", "Create Custom Theme")
+
+    local CloseEditor = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 30, 0, 30),
+        Position = UDim2.new(1, -42, 0, 10),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0,
+        Text = "×",
+        TextColor3 = Theme.Text,
+        TextSize = 20,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    CloseEditor:SetAttribute("ThemeTextRole", "Text")
+    CloseEditor:SetAttribute("ThemeRole", "Secondary")
+    corner(CloseEditor, 999)
+    RowKit.Control(CloseEditor)
+    mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -28, 0, 1),
+        Position = UDim2.new(0, 14, 0, 50),
+        BackgroundColor3 = Theme.Stroke,
+        BackgroundTransparency = 0.5,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    }):SetAttribute("ThemeRole", "Stroke")
+
+    local EditorContent = mk("ScrollingFrame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -24, 1, -112),
+        Position = UDim2.new(0, 12, 0, 58),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ScrollBarThickness = 3,
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        CanvasSize = UDim2.new(),
+        ZIndex = 202,
+    })
+    mk("UIListLayout", {Parent = EditorContent, Padding = UDim.new(0, 9), SortOrder = Enum.SortOrder.LayoutOrder})
+
+    local EditorPreviewBox = mk("Frame", {
+        Parent = EditorContent,
+        Size = UDim2.new(1, -4, 0, 236),
+        BackgroundColor3 = Theme.Secondary,
+        BackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        LayoutOrder = 0,
+        ZIndex = 202,
+    })
+    EditorPreviewBox:SetAttribute("ThemeRole", "Secondary")
+    corner(EditorPreviewBox, 12)
+    local EditorPreviewLabel = mk("TextLabel", {
+        Parent = EditorPreviewBox,
+        Size = UDim2.new(0, 0, 0, 18),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 10, 0, 8),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.2,
+        Text = GetText("VISTA PREVIA", "PREVIEW"),
+        TextColor3 = Theme.TextDim,
+        TextSize = 9,
+        Font = Enum.Font.GothamBlack,
+        ZIndex = 210,
+    })
+    EditorPreviewLabel:SetAttribute("ThemeRole", "Background")
+    EditorPreviewLabel:SetAttribute("ThemeTextRole", "TextDim")
+    EditorPreviewLabel:SetAttribute("TextSpanish", "VISTA PREVIA")
+    EditorPreviewLabel:SetAttribute("TextEnglish", "PREVIEW")
+    corner(EditorPreviewLabel, 999)
+    mk("UIPadding", {Parent = EditorPreviewLabel, PaddingLeft = UDim.new(0, 7), PaddingRight = UDim.new(0, 7)})
+    local EditorMockHolder = mk("Frame", {
+        Parent = EditorPreviewBox,
+        Size = UDim2.new(1, -20, 1, -42),
+        Position = UDim2.new(0, 10, 0, 32),
+        BackgroundTransparency = 1,
+        ZIndex = 203,
+    })
+    local EditorMock = RowKit.ThemeStudio(EditorMockHolder, 203)
+
+    local colorFields = {}
+    local colorRoles = {
+        {"Background", "Fondo", "Background"},
+        {"Secondary", "Secundario", "Secondary"},
+        {"AccentOff", "Acento apagado", "Inactive accent"},
+        {"Text", "Texto", "Text"},
         {"TextDim", "Texto tenue", "Dim text"},
         {"Stroke", "Bordes", "Borders"},
         {"Accent", "Acento", "Accent"},
@@ -825,296 +1148,4 @@ ext"},
 
     mk("UIPadding", {
         Parent = EffectsRoot,
-        PaddingTop = UDim.new(0, 8),
-        PaddingLeft = UDim.new(0, 8),
-        PaddingRight = UDim.new(0, 8),
-        PaddingBottom = UDim.new(0, 10),
-    })
-
-    mk("UIListLayout", {
-        Parent = EffectsRoot,
-        Padding = UDim.new(0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-
-    -- Cabecera con el efecto actual en vivo + grilla de 2 columnas
-    local EffectsUI = {}
-    EffectsUI.Hero = mk("Frame", {
-        Parent = EffectsRoot,
-        Size = UDim2.new(1, 0, 0, 96),
-        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
-        BorderSizePixel = 0,
-        ClipsDescendants = true,
-        LayoutOrder = 0,
-        ZIndex = 10,
-    })
-    corner(EffectsUI.Hero, 16)
-    EffectsUI.HeroStroke = mk("UIStroke", {Parent = EffectsUI.Hero, Thickness = 1.5, Transparency = 0.35, Color = Theme.Accent})
-    EffectsUI.HeroGlow = mk("Frame", {
-        Parent = EffectsUI.Hero,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.new(1, 1, 1),
-        BackgroundTransparency = 0.82,
-        BorderSizePixel = 0,
-        ZIndex = 10,
-    })
-    EffectsUI.HeroGrad = mk("UIGradient", {
-        Parent = EffectsUI.HeroGlow,
-        Rotation = 20,
-        Transparency = NumberSequence.new({
-            NumberSequenceKeypoint.new(0, 0),
-            NumberSequenceKeypoint.new(0.55, 0.6),
-            NumberSequenceKeypoint.new(1, 1),
-        }),
-    })
-    EffectsUI.HeroCaption = mk("TextLabel", {
-        Parent = EffectsUI.Hero,
-        Size = UDim2.new(0.6, 0, 0, 12),
-        Position = UDim2.new(0, 16, 0, 12),
-        BackgroundTransparency = 1,
-        Text = GetText("EFECTO DE TEXTO ACTUAL", "CURRENT TEXT EFFECT"),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 9,
-        TextColor3 = Color3.fromRGB(170, 170, 180),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 12,
-    })
-    EffectsUI.HeroCaption:SetAttribute("TextSpanish", "EFECTO DE TEXTO ACTUAL")
-    EffectsUI.HeroCaption:SetAttribute("TextEnglish", "CURRENT TEXT EFFECT")
-    EffectsUI.HeroCaption:SetAttribute("IgnoreTextEffect", true)
-    EffectsUI.HeroText = mk("TextLabel", {
-        Parent = EffectsUI.Hero,
-        Size = UDim2.new(1, -32, 0, 36),
-        Position = UDim2.new(0, 16, 0, 26),
-        BackgroundTransparency = 1,
-        Text = "Yin Yang",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 32,
-        TextColor3 = Color3.new(1, 1, 1),
-        TextStrokeColor3 = Color3.new(0, 0, 0),
-        TextStrokeTransparency = 0.6,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 12,
-    })
-    EffectsUI.HeroText:SetAttribute("IgnoreTextEffect", true)
-    EffectsUI.HeroSub = mk("TextLabel", {
-        Parent = EffectsUI.Hero,
-        Size = UDim2.new(1, -140, 0, 14),
-        Position = UDim2.new(0, 16, 0, 68),
-        BackgroundTransparency = 1,
-        Text = GetText("Tocá una tarjeta para cambiar cómo brillan los textos", "Tap a card to change how texts glow"),
-        Font = Enum.Font.GothamMedium,
-        TextSize = 10,
-        TextColor3 = Color3.fromRGB(170, 170, 180),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 12,
-    })
-    EffectsUI.HeroSub:SetAttribute("TextSpanish", "Tocá una tarjeta para cambiar cómo brillan los textos")
-    EffectsUI.HeroSub:SetAttribute("TextEnglish", "Tap a card to change how texts glow")
-    EffectsUI.HeroSub:SetAttribute("IgnoreTextEffect", true)
-    EffectsUI.HeroChip = mk("TextLabel", {
-        Parent = EffectsUI.Hero,
-        Size = UDim2.new(0, 0, 0, 22),
-        AutomaticSize = Enum.AutomaticSize.X,
-        AnchorPoint = Vector2.new(1, 1),
-        Position = UDim2.new(1, -14, 1, -12),
-        BackgroundColor3 = Theme.Accent,
-        Text = "",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 10,
-        TextColor3 = Theme.AccentText,
-        ZIndex = 13,
-    })
-    EffectsUI.HeroChip:SetAttribute("ThemeRole", "Accent")
-    EffectsUI.HeroChip:SetAttribute("ThemeTextRole", "AccentText")
-    EffectsUI.HeroChip:SetAttribute("IgnoreTextEffect", true)
-    corner(EffectsUI.HeroChip, 999)
-    mk("UIPadding", {Parent = EffectsUI.HeroChip, PaddingLeft = UDim.new(0, 26), PaddingRight = UDim.new(0, 10)})
-    RowKit.IconAt(EffectsUI.HeroChip, 103456899356871, 12, UDim2.new(0, -18, 0.5, -6), 14, "AccentText")
-
-    EffectsUI.Grid = mk("Frame", {
-        Parent = EffectsRoot,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        LayoutOrder = 1,
-        ZIndex = 9,
-    })
-    mk("UIGridLayout", {
-        Parent = EffectsUI.Grid,
-        CellSize = UDim2.new(0.5, -5, 0, 136),
-        CellPadding = UDim2.new(0, 10, 0, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-
-    local effectRows = {}
-
-    local function isEffectActive(mode)
-        return Window.CurrentTextEffect == mode or (mode == "Off" and Window.CurrentTextEffect == "Off")
-    end
-
-    local function refreshEffectRows()
-        for _, row in ipairs(effectRows) do
-            local active = isEffectActive(row.mode)
-            if row.badge then
-                row.badge.Visible = active
-                row.badge.BackgroundColor3 = Theme.Accent
-            end
-            if row.card then
-                row.card.BackgroundTransparency = active and 0.06 or 0.20
-            end
-            if row.stroke then
-                row.stroke.Transparency = active and 0.05 or 0.75
-                row.stroke.Thickness = active and 2 or 1.5
-                row.stroke:SetAttribute("ThemeRole", active and "Accent" or "Stroke")
-                row.stroke.Color = active and Theme.Accent or Theme.Stroke
-            end
-            if row.title then
-                row.title.TextColor3 = active and Theme.Accent or Theme.Text
-            end
-            if row.desc then
-                row.desc.TextColor3 = active and Theme.Text or Theme.TextDim
-            end
-            if active then
-                EffectsUI.HeroChip.Text = GetText(row.titleES or row.mode, row.titleEN or row.mode)
-            end
-        end
-        EffectsUI.HeroChip.BackgroundColor3 = Theme.Accent
-        EffectsUI.HeroChip.TextColor3 = Theme.AccentText
-        EffectsUI.HeroStroke.Color = Theme.Accent
-    end
-
-    Window._refreshEffectRows = refreshEffectRows
-
-    -- Aplica los 3 colores de una muestra: texto, brillo de fondo y barra inferior
-    local function setPreviewStripColors(entry, c1, c2, c3)
-        if not entry then return end
-        if entry.text then entry.text.TextColor3 = c1 end
-        local seq = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, c1),
-            ColorSequenceKeypoint.new(0.5, c2),
-            ColorSequenceKeypoint.new(1, c3),
-        })
-        if entry.glowGrad then entry.glowGrad.Color = seq end
-        if entry.barGrad then entry.barGrad.Color = seq end
-    end
-
-    local effectPreviews = {}
-    local effectPreviewElapsed = 0
-
-    local function getEffectPreviewColor(mode, elapsed)
-        if mode == "WhiteCyan" then
-            local alpha = (math.sin(elapsed * 1.6) + 1) / 2
-            return Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(120, 225, 255), alpha)
-        elseif mode == "WhitePink" then
-            local alpha = (math.sin(elapsed * 0.6) + 1) / 2
-            return Color3.fromRGB(255, 255, 255):Lerp(Color3.fromRGB(255, 130, 205), alpha)
-        elseif mode == "Rainbow" then
-            return Color3.fromHSV((elapsed * 0.12) % 1, 0.85, 1)
-        elseif mode == "RainbowFast" then
-            return Color3.fromHSV((elapsed * 0.45) % 1, 1, 1)
-        elseif mode == "RainbowDarkWhite" then
-            local value = (elapsed * 0.25) % 1
-            return Color3.new(value, value, value)
-        elseif mode == "ErisRainbow" then
-            local cycle = (elapsed * 0.167) % 1
-            if cycle < 0.333 then
-                return Color3.fromRGB(math.floor(255 * (1 - (cycle / 0.333))), 0, 0)
-            elseif cycle < 0.667 then
-                local value = math.floor(255 * ((cycle - 0.333) / 0.334))
-                return Color3.fromRGB(value, value, value)
-            end
-            local t = (cycle - 0.667) / 0.333
-            return Color3.fromRGB(255, math.floor(255 * (1 - t)), math.floor(255 * (1 - t)))
-        elseif mode == "FireEffect" then
-            local cycle = (elapsed * 2.2) % 1
-            if cycle < 0.33 then
-                return Color3.fromRGB(255, math.floor(60 * (cycle / 0.33)), 0)
-            elseif cycle < 0.66 then
-                return Color3.fromRGB(255, math.floor(60 + 120 * ((cycle - 0.33) / 0.33)), 0)
-            end
-            local t = (cycle - 0.66) / 0.34
-            return Color3.fromRGB(255, math.floor(180 + 75 * t), math.floor(100 * t))
-        elseif mode == "NeonPulse" then
-            local pulse = (math.sin(elapsed * 3.5) + 1) / 2
-            return Color3.fromRGB(math.floor(100 * (1 - pulse)), math.floor(200 + 55 * pulse), math.floor(180 + 75 * pulse))
-        elseif mode == "GoldenShine" then
-            local shine = (math.sin(elapsed * 1.2) + 1) / 2
-            return Color3.fromRGB(255, math.floor(180 + 75 * shine), math.floor(120 * shine))
-        elseif mode == "IceBlue" then
-            local pulse = (math.sin(elapsed * 0.9) + 1) / 2
-            return Color3.fromRGB(math.floor(140 + 115 * pulse), math.floor(200 + 55 * pulse), 255)
-        elseif mode == "PurpleGlow" then
-            local pulse = (math.sin(elapsed * 0.7) + 1) / 2
-            return Color3.fromRGB(math.floor(140 + 80 * pulse), math.floor(40 + 40 * pulse), math.floor(220 + 35 * pulse))
-        elseif mode == "MatrixGreen" then
-            local flicker = (math.sin(elapsed * 6.0) + 1) / 2
-            local bright = (math.sin(elapsed * 1.4) + 1) / 2
-            return Color3.fromRGB(math.floor(30 * flicker), math.floor(180 + 75 * bright), math.floor(30 + 50 * flicker))
-        elseif mode == "Sunset" then
-            local cycle = (elapsed * 0.28) % 1
-            if cycle < 0.5 then
-                local t = cycle * 2
-                return Color3.fromRGB(255, math.floor(80 + 80 * t), math.floor(50 * (1 - t)))
-            end
-            local t = (cycle - 0.5) * 2
-            return Color3.fromRGB(255, math.floor(160 - 80 * t), math.floor(50 * t))
-        end
-        return nil
-    end
-
-    local function createPreview(parent, mode, accentColor)
-        local preview = mk("Frame", {
-            Parent = parent,
-            Size = UDim2.new(1, -12, 0, 64),
-            Position = UDim2.new(0, 6, 0, 6),
-            BackgroundColor3 = Color3.fromRGB(12, 12, 16),
-            BackgroundTransparency = 0,
-            BorderSizePixel = 0,
-            ClipsDescendants = true,
-            ZIndex = 11,
-        })
-        corner(preview, 11)
-
-        local glow = mk("Frame", {
-            Parent = preview,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.new(1, 1, 1),
-            BackgroundTransparency = 0.78,
-            BorderSizePixel = 0,
-            ZIndex = 11,
-        })
-        corner(glow, 11)
-        local glowGrad = mk("UIGradient", {
-            Parent = glow,
-            Rotation = 0,
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.1),
-                NumberSequenceKeypoint.new(0.5, 0.55),
-                NumberSequenceKeypoint.new(1, 0.1),
-            }),
-        })
-
-        local PreviewLabel = mk("TextLabel", {
-            Parent = preview,
-            Size = UDim2.new(1, -12, 1, -8),
-            Position = UDim2.new(0, 6, 0, 0),
-            BackgroundTransparency = 1,
-            Text = "Yin Yang",
-            Font = Enum.Font.GothamBlack,
-            TextSize = 22,
-            TextScaled = false,
-            TextColor3 = accentColor,
-            TextStrokeColor3 = Color3.fromRGB(0, 0, 0),
-            TextStrokeTransparency = 0.55,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 13,
-        })
-        PreviewLabel:SetAttribute("IgnoreTextEffect", true)
-
-        local bar = mk("Frame", {
-            Parent = preview,
-            Size = UDim2.new(1, 0, 0, 3),
-            Position = UDim2.new(0, 0, 1, -3),
-            BackgroundColor3 = Color3.new(1, 1, 1),
+        PaddingTop = UDim.new(0, 8)

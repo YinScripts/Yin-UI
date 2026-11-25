@@ -1,4 +1,335 @@
- rowArtistSize = compact and 10 or 11,
+aHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
+            TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
+            local compact = Window.CompactNavigation == true
+            TabListArt.Visible = not compact
+            CatImage.Visible = (not compact) and Theme.ThemeName == "Dark"
+            local rail = Body:FindFirstChild("CompactTabRail")
+            if rail then rail.BackgroundTransparency = 1 end
+            local side = compact and 58 or 110
+            ContentArea.Position = UDim2.new(0, side, 0, 0)
+            ContentArea.Size = UDim2.new(1, -side, 1, 0)
+            for _, tab in ipairs(Window.Tabs or {}) do
+                if tab.Button then
+                    tab.Button.BackgroundTransparency = tab.Page and tab.Page.Visible and 0 or (Theme.TransparentTabs and 1 or 0)
+                end
+            end
+            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
+        end
+        track(SPage:GetPropertyChangedSignal("Visible"):Connect(function()
+            task.defer(function()
+                if SPage.Parent then if SPage.Visible then A.enter() else A.leave() end end
+            end)
+        end))
+        if SPage.Visible then A.enter() end
+    end
+
+    local SPOTIFY_CATALOG_URL = "https://raw.githubusercontent.com/YinScripts/Yin-music/refs/heads/main/YinYang_Spotify"
+
+    local function asset(id)
+        return "rbxassetid://" .. tostring(id)
+    end
+
+    local function trim(s)
+        return (tostring(s or ""):gsub("^%s+", ""):gsub("%s+$", ""))
+    end
+
+    local function clamp(v, minV, maxV)
+        if v < minV then return minV end
+        if v > maxV then return maxV end
+        return v
+    end
+
+    local function durationToSeconds(duration)
+        if type(duration) == "number" then
+            return math.max(0, math.floor(duration))
+        end
+
+        local text = trim(duration)
+        if text == "" then
+            return 0
+        end
+
+        local mm, ss = text:match("^(%d+):(%d+)$")
+        if mm and ss then
+            return tonumber(mm) * 60 + tonumber(ss)
+        end
+
+        local numeric = tonumber(text)
+        return numeric and math.max(0, math.floor(numeric)) or 0
+    end
+
+    local function secondsToClock(seconds)
+        seconds = math.max(0, math.floor(tonumber(seconds) or 0))
+        local mm = math.floor(seconds / 60)
+        local ss = seconds % 60
+        return string.format("%d:%02d", mm, ss)
+    end
+
+    local function safeDestroy(instance)
+        if instance then
+            pcall(function()
+                instance:Destroy()
+            end)
+        end
+    end
+
+    local function destroyAllSpotifySounds()
+        local function clean(parent)
+            if not parent then
+                return
+            end
+            for _, inst in ipairs(parent:GetDescendants()) do
+                if inst:IsA("Sound") and inst.Name == "YY_Spotify_CurrentSound" then
+                    pcall(function()
+                        inst:Stop()
+                    end)
+                    safeDestroy(inst)
+                end
+            end
+        end
+
+        clean(workspace)
+        if game:GetService("SoundService") then
+            clean(game:GetService("SoundService"))
+        end
+    end
+
+    local function normalizeTrack(track, index)
+        if type(track) ~= "table" then
+            return nil
+        end
+
+        local name = track.Name or track.name or track.Title or track.title or ("Track " .. tostring(index))
+        local artist = track.Artist or track.artist or ""
+        local duration = track.Duration or track.duration or "0:00"
+        if type(duration) == "number" then
+            duration = secondsToClock(duration)
+        else
+            duration = trim(duration)
+            if duration == "" then
+                duration = "0:00"
+            end
+        end
+
+        local cover = track.Cover or track.cover or track.CoverId or track.coverId or track.coverUrl or ""
+        local coverDownloadUrl = track.CoverURL or track.coverURL or track.CoverUrl or ""
+        local audioUrl = track.AudioURL or track.audioUrl or track.AudioUrl or track.audioURL or ""
+
+        local safeName = tostring(name):lower():gsub("[^%w]+", "_"):gsub("_+", "_"):gsub("^_", ""):gsub("_$", "")
+        if safeName == "" then
+            safeName = "track_" .. tostring(index)
+        end
+
+        local cacheName = track.CacheName or track.cacheName or track.audioFile or track.AudioFile
+        if not cacheName or trim(cacheName) == "" then
+            cacheName = safeName .. ".mp3"
+        end
+
+        local coverCacheName = track.CoverCacheName or track.coverCacheName or ""
+        if trim(coverDownloadUrl) ~= "" and trim(coverCacheName) == "" then
+            local urlWithoutQuery = tostring(coverDownloadUrl):match("^[^%?#]+") or tostring(coverDownloadUrl)
+            local urlExt = urlWithoutQuery:match("%.([%w]+)$")
+            urlExt = (urlExt and urlExt ~= "" and #urlExt <= 5) and urlExt:lower() or "png"
+            coverCacheName = safeName .. "_cover." .. urlExt
+        end
+
+        local id = track.Id or track.id or track.ID or tostring(index)
+
+        return {
+            Id = id,
+            Name = tostring(name),
+            Artist = tostring(artist),
+            Duration = duration,
+            Cover = tostring(cover),
+            CoverURL = tostring(coverDownloadUrl),
+            CoverCacheName = tostring(coverCacheName),
+            AudioURL = tostring(audioUrl),
+            CacheName = tostring(cacheName),
+            IsUserSong = track.IsUserSong == true,
+            Raw = track,
+        }
+    end
+
+    local SpotifyState = {
+        Catalog = {},
+        SelectedIndex = 1,
+        IsPlaying = false,
+        IsRepeat = false,
+        CurrentLiked = {},
+        RowButtons = {},
+        HiddenRows = {},
+        CurrentSound = nil,
+        SoundProgressConnection = nil,
+        SoundEndedConnection = nil,
+        CurrentTrack = nil,
+        CurrentTrackSeconds = 0,
+        CurrentPausedPosition = 0,
+        CatalogLoaded = false,
+        SearchQuery = "",
+        PlaybackVolume = 0.75,
+        PlaybackSpeed = 1,
+        SettingsMenuVisible = false,
+        FloatingPlayerVisible = false,
+        FavoritesView = false,
+        MySongsView = false,
+        UserSongs = {},
+    }
+
+    local refreshSpotifyFloatingPlayer = function() end
+    local refreshSpotifyPlaybackMenu = function() end
+
+    local function getRenderOrder()
+        local order = {}
+        for i = 1, #SpotifyState.Catalog do
+            order[#order + 1] = i
+        end
+
+        table.sort(order, function(a, b)
+            local likedA = SpotifyState.CurrentLiked[a] == true
+            local likedB = SpotifyState.CurrentLiked[b] == true
+            if likedA ~= likedB then
+                return likedA and not likedB
+            end
+            return a < b
+        end)
+
+        return order
+    end
+
+
+    local function normalizeSearchText(value)
+        local s = tostring(value or "")
+        local replacements = {
+            ["á"] = "a", ["à"] = "a", ["ä"] = "a", ["â"] = "a", ["ã"] = "a", ["å"] = "a",
+            ["Á"] = "a", ["À"] = "a", ["Ä"] = "a", ["Â"] = "a", ["Ã"] = "a", ["Å"] = "a",
+            ["é"] = "e", ["è"] = "e", ["ë"] = "e", ["ê"] = "e",
+            ["É"] = "e", ["È"] = "e", ["Ë"] = "e", ["Ê"] = "e",
+            ["í"] = "i", ["ì"] = "i", ["ï"] = "i", ["î"] = "i",
+            ["Í"] = "i", ["Ì"] = "i", ["Ï"] = "i", ["Î"] = "i",
+            ["ó"] = "o", ["ò"] = "o", ["ö"] = "o", ["ô"] = "o", ["õ"] = "o",
+            ["Ó"] = "o", ["Ò"] = "o", ["Ö"] = "o", ["Ô"] = "o", ["Õ"] = "o",
+            ["ú"] = "u", ["ù"] = "u", ["ü"] = "u", ["û"] = "u",
+            ["Ú"] = "u", ["Ù"] = "u", ["Ü"] = "u", ["Û"] = "u",
+            ["ñ"] = "n", ["Ñ"] = "n",
+            ["ç"] = "c", ["Ç"] = "c",
+        }
+        for from, to in pairs(replacements) do
+            s = s:gsub(from, to)
+        end
+        s = s:lower()
+        s = trim(s)
+        return s
+    end
+
+    local function getVisibleRenderOrder()
+        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
+        local order = getRenderOrder()
+        local filtered = {}
+
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            local matchesView = true
+            if SpotifyState.MySongsView then
+                matchesView = track ~= nil and track.IsUserSong == true
+            elseif SpotifyState.FavoritesView then
+                matchesView = SpotifyState.CurrentLiked[index] == true
+            end
+            if matchesView then
+                filtered[#filtered + 1] = index
+            end
+        end
+
+        if query == "" then
+            return filtered
+        end
+
+        local tokens = {}
+        for token in query:gmatch("%S+") do
+            tokens[#tokens + 1] = token
+        end
+
+        table.clear(filtered)
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            if SpotifyState.MySongsView and (not track or track.IsUserSong ~= true) then
+                continue
+            end
+            if not SpotifyState.MySongsView and SpotifyState.FavoritesView and SpotifyState.CurrentLiked[index] ~= true then
+                continue
+            end
+            if track then
+                local haystack = normalizeSearchText((track.Name or "") .. " " .. (track.Artist or "") .. " " .. (track.Duration or ""))
+                local matched = true
+
+                for _, token in ipairs(tokens) do
+                    if not haystack:find(token, 1, true) then
+                        matched = false
+                        break
+                    end
+                end
+
+                if matched then
+                    filtered[#filtered + 1] = index
+                end
+            end
+        end
+        return filtered
+    end
+
+    local spotifyGreen = Color3.fromRGB(29, 185, 84)
+    local spotifyText = Color3.fromRGB(245, 245, 245)
+    local spotifyDim = Color3.fromRGB(170, 170, 170)
+
+    local spotifyPanel = Color3.fromRGB(0, 0, 0)
+
+    local function spotifyLogicalSize(gui)
+        local scale, node = 1, gui
+        while node and not node:IsA("LayerCollector") do
+            local uiScale = node:FindFirstChildOfClass("UIScale")
+            if uiScale then scale = scale * uiScale.Scale end
+            node = node.Parent
+        end
+        return gui.AbsoluteSize / math.max(scale, 0.01)
+    end
+
+    local function getSpotifyMetrics()
+        local width, height = 0, 0
+        pcall(function()
+            local logical = spotifyLogicalSize(SPage)
+            width, height = logical.X, logical.Y
+        end)
+
+        local compact = width > 0 and width < 640
+        local gridColumns = 3
+        local gridGapX = width > 0 and (width < 420 and 8 or 12) or 10
+        local gridGapY = width > 0 and (width < 420 and 12 or 16) or 12
+        -- Dos filas visibles, con límites para mantener controles legibles en móviles.
+        local cardHeight = SpotifyState._CatalogCardHeight or (height > 0 and math.clamp(math.floor((height - 166) / 2), 84, 164) or 140)
+        local coverMax = math.max(32, cardHeight - 46)
+
+        return {
+            compact = compact,
+            playerHeight = compact and 200 or 220,
+            albumSize = compact and 130 or 150,
+            albumTop = compact and 32 or 36,
+            infoLeft = compact and 154 or 174,
+            infoWidth = compact and -172 or -192,
+            titleSize = compact and 20 or 22,
+            artistSize = compact and 13 or 14,
+            metaSize = compact and 10 or 11,
+            progressBottom = compact and -30 or -34,
+            controlsBottom = compact and -46 or -52,
+            controlsHeight = compact and 40 or 44,
+            repeatX = compact and 0.06 or 0.05,
+            likeX = compact and 0.15 or 0.14,
+            playX = compact and 0.59 or 0.58,
+            nextX = compact and 0.85 or 0.87,
+            moreX = compact and 0.95 or 0.96,
+            playSize = compact and 30 or 34,
+            rowHeight = compact and 64 or 70,
+            rowCover = compact and 44 or 50,
+            rowTitleSize = compact and 14 or 15,
+            rowArtistSize = compact and 10 or 11,
             rowDurationSize = compact and 10 or 11,
             rowTitleRight = compact and -154 or -184,
             rowDurationX = compact and -128 or -150,
@@ -944,272 +1275,4 @@
     end
 
     local function normalizeDownloadUrl(value)
-        local url = trim(value)
-        if url == "" then return "" end
-        if url:match("^http://github%.com/") or url:match("^http://raw%.githubusercontent%.com/") then
-            url = url:gsub("^http://", "https://")
-        end
-        -- GitHub's normal file-view URL is not the file itself; convert it to raw content.
-        local owner, repo, branch, path = url:match("^https://github%.com/([^/]+)/([^/]+)/blob/([^/]+)/(.+)$")
-        if owner and repo and branch and path then
-            path = path:gsub("%?.*$", ""):gsub("#.*$", "")
-            url = "https://raw.githubusercontent.com/" .. owner .. "/" .. repo .. "/" .. branch .. "/" .. path
-        else
-            local rawOwner, rawRepo, rawBranch, rawPath = url:match("^https://github%.com/([^/]+)/([^/]+)/raw/([^/]+)/(.+)$")
-            if rawOwner and rawRepo and rawBranch and rawPath then
-                url = "https://raw.githubusercontent.com/" .. rawOwner .. "/" .. rawRepo .. "/" .. rawBranch .. "/" .. rawPath
-            end
-        end
-        return url
-    end
-
-    local function isDirectMp3Url(value)
-        local url = normalizeDownloadUrl(value)
-        if not url:match("^https://") then
-            return false
-        end
-        local path = (url:match("^https://[^/]+([^?#]*)") or ""):lower()
-        return path:match("%.mp3$") ~= nil
-    end
-
-    UserSongURL.FocusLost:Connect(function()
-        local originalUrl = trim(UserSongURL.Text)
-        local normalizedUrl = normalizeDownloadUrl(originalUrl)
-        if normalizedUrl ~= originalUrl then
-            UserSongURL.Text = normalizedUrl
-            UserSongStatus.Text = GetText("Enlace de GitHub convertido a descarga directa.", "GitHub link converted to a direct download.")
-            UserSongStatus.TextColor3 = spotifyGreen
-        end
-    end)
-
-    UserSongCover.FocusLost:Connect(function()
-        local originalUrl = trim(UserSongCover.Text)
-        local normalizedUrl = normalizeDownloadUrl(originalUrl)
-        if normalizedUrl ~= originalUrl then UserSongCover.Text = normalizedUrl end
-    end)
-
-    local function addUserSong()
-        local name = trim(UserSongName.Text)
-        local artist = trim(UserSongArtist.Text)
-        local audioUrl = normalizeDownloadUrl(UserSongURL.Text)
-        local coverUrl = normalizeDownloadUrl(UserSongCover.Text)
-
-        if name == "" or artist == "" or audioUrl == "" then
-            UserSongStatus.TextColor3 = Color3.fromRGB(255, 125, 125)
-            UserSongStatus.Text = GetText("Completá nombre, artista y enlace MP3.", "Enter the song title, artist, and MP3 link.")
-            return
-        end
-        if #name > 100 or #artist > 100 then
-            UserSongStatus.TextColor3 = Color3.fromRGB(255, 125, 125)
-            UserSongStatus.Text = GetText("El nombre y el artista deben tener 100 caracteres o menos.", "Song title and artist must be 100 characters or fewer.")
-            return
-        end
-        if not isDirectMp3Url(audioUrl) then
-            UserSongStatus.TextColor3 = Color3.fromRGB(255, 125, 125)
-            UserSongStatus.Text = GetText("El enlace debe ser HTTPS y terminar en .mp3. Los enlaces de GitHub se convierten automáticamente.", "The link must be HTTPS and end in .mp3. GitHub links are converted automatically.")
-            return
-        end
-        if coverUrl ~= "" and not coverUrl:match("^https://") then
-            UserSongStatus.TextColor3 = Color3.fromRGB(255, 125, 125)
-            UserSongStatus.Text = GetText("La portada debe usar un enlace HTTPS directo.", "The cover must use a direct HTTPS link.")
-            return
-        end
-
-        local slug = (name .. "_" .. artist):lower():gsub("[^%w]+", "_"):gsub("^_+", ""):gsub("_+$", "")
-        if slug == "" then slug = "user_song" end
-        local id = "user_" .. tostring(os.time()) .. "_" .. tostring(math.random(1000, 9999))
-        local track = {
-            Id = id,
-            Name = name,
-            Artist = artist,
-            Duration = "0:00",
-            Cover = "",
-            CoverURL = coverUrl,
-            CoverCacheName = coverUrl ~= "" and (slug .. "_" .. id .. "_cover.jpg") or "",
-            AudioURL = audioUrl,
-            CacheName = "YinYang_UserSong_" .. slug .. "_" .. id .. ".mp3",
-            IsUserSong = true,
-        }
-
-        table.insert(SpotifyState.UserSongs, track)
-        local ok, err = saveUserSongs()
-        if not ok then
-            table.remove(SpotifyState.UserSongs, #SpotifyState.UserSongs)
-            UserSongStatus.Text = tostring(err or GetText("No se pudo guardar la canción.", "Could not save the song."))
-            return
-        end
-
-        local normalized = normalizeTrack(track, #SpotifyState.Catalog + 1)
-        if normalized then
-            normalized.IsUserSong = true
-            table.insert(SpotifyState.Catalog, normalized)
-        end
-        SpotifyState.MySongsView = true
-        SpotifyState.FavoritesView = false
-        SpotifyState.CatalogLoaded = true
-        closeUserSongForm()
-        SongSearchBox.Text = ""
-        SongList.CanvasPosition = Vector2.new(0, 0)
-        refreshSpotifyCatalogMode()
-        UserSongStatus.Text = ""
-    end
-    UserSongSave.Activated:Connect(addUserSong)
-
-    local renderSongRows
-    local clearSongRows
-    local createSongRow
-    local resolveTrackCoverImage
-    local createFavoritesTile
-    local createMySongsTile
-    local FavPage = {}
-
-    local function refreshSpotifyCatalogMode()
-        local favorites = SpotifyState.FavoritesView == true
-        local mySongs = SpotifyState.MySongsView == true
-        local subview = favorites or mySongs
-        FavoritesHeader.Visible = subview
-        FavoritesHeaderTitle.Text = mySongs and GetText("Mis canciones", "My songs") or GetText("Favoritos", "Favorites")
-        FavoritesHeaderTitle:SetAttribute("TextSpanish", mySongs and "Mis canciones" or "Favoritos")
-        FavoritesHeaderTitle:SetAttribute("TextEnglish", mySongs and "My songs" or "Favorites")
-        AddUserSongButton.Visible = mySongs
-        local compactInset = Window.CompactNavigation and 60 or 0
-        SongSearchHolder.Position = UDim2.new(0, 12 + compactInset, 0, subview and 50 or 8)
-        SongSearchHolder.Size = UDim2.new(1, -24 - compactInset, 0, 30)
-        FavoritesHeader.Position = UDim2.new(0, 12 + compactInset, 0, 8)
-        FavoritesHeader.Size = UDim2.new(1, -24 - compactInset, 0, 34)
-        SongList.Position = UDim2.new(0, 12, 0, subview and 86 or 50)
-        -- Reservar espacio para la barra de reproducción y la navegación inferior.
-        SongList.Size = UDim2.new(1, -24, 1, subview and -182 or -146)
-        if SpotifyState.RefreshCatalogNavigation then SpotifyState.RefreshCatalogNavigation() end
-        if SpotifyState.CatalogLoaded then
-            renderSongRows()
-        end
-    end
-
-    FavoritesBackButton.Activated:Connect(function()
-        SpotifyState.FavoritesView = false
-        SpotifyState.MySongsView = false
-        SongList.CanvasPosition = Vector2.new(0, 0)
-        refreshSpotifyCatalogMode()
-    end)
-
-    SongSearchBox:GetPropertyChangedSignal("Text"):Connect(function()
-        SpotifyState.SearchQuery = SongSearchBox.Text or ""
-        if renderSongRows then
-            renderSongRows()
-        end
-        updateSongListCanvas()
-    end)
-
-    SpotifyRootLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        updateSpotifyCanvas()
-    end)
-
-    if Window._SpotifyAmbient then
-        Window._SpotifyAmbient.LayoutCatalog = function()
-            local inset = Window.CompactNavigation and 60 or 0
-            local subview = SpotifyState.FavoritesView == true or SpotifyState.MySongsView == true
-            SongSearchHolder.Position = UDim2.new(0, 12 + inset, 0, subview and 50 or 8)
-            SongSearchHolder.Size = UDim2.new(1, -24 - inset, 0, 30)
-            FavoritesHeader.Position = UDim2.new(0, 12 + inset, 0, 8)
-            FavoritesHeader.Size = UDim2.new(1, -24 - inset, 0, 34)
-        end
-    end
-
-    local function applySpotifyNowPlayingLayout()
-        local m = getSpotifyMetrics()
-        local cardW, cardH = 0, 0
-        pcall(function()
-            local size = spotifyLogicalSize(NowPlayingCard)
-            cardW, cardH = size.X, size.Y
-        end)
-        local compactCard = cardW > 0 and cardW < 640
-        -- La portada aprovecha el espacio sin alcanzar el progreso ni los controles.
-        local albumSz = 118
-        if cardW > 0 and cardH > 0 then
-            albumSz = math.clamp(math.floor(math.min(cardW * 0.46, cardH - 214, 152)), 48, 152)
-        end
-
-        NowPlayingCard.Size = UDim2.new(1, 0, 1, 0)
-
-        AlbumArt.Size = UDim2.new(0, albumSz, 0, albumSz)
-        AlbumArt.Position = UDim2.new(0.5, -(albumSz / 2), 0, 38)
-
-        InfoFrame.Size = UDim2.new(1, -28, 0, 62)
-        InfoFrame.Position = UDim2.new(0, 14, 0, albumSz + 42)
-
-        PlayerSongTitle.TextSize = compactCard and 19 or 21
-        PlayerSongArtist.Position = UDim2.new(0, 0, 0, 27)
-        PlayerSongArtist.TextSize = compactCard and 12 or 13
-        PlayerMeta.Position = UDim2.new(0, 0, 0, 46)
-        PlayerMeta.TextSize = 10
-
-        local progressTop = albumSz + 108
-        ProgressTrack.Size = UDim2.new(1, -28, 0, 5)
-        SeekHitbox.Size = UDim2.new(1, -28, 0, 28)
-        ProgressTrack.Position = UDim2.new(0, 14, 0, progressTop)
-        SeekHitbox.Position = UDim2.new(0, 14, 0, progressTop - 14)
-        ProgressTimeLeft.Position = UDim2.new(0, 14, 0, progressTop + 8)
-        ProgressTimeRight.Position = UDim2.new(1, -86, 0, progressTop + 8)
-        ProgressTimeLeft.TextSize = 11
-        ProgressTimeRight.TextSize = 11
-
-        Controls.Size = UDim2.new(1, -28, 0, 44)
-        Controls.Position = UDim2.new(0, 14, 1, -82)
-
-        RepeatBtn.Size = UDim2.new(0, 20, 0, 20)
-        RepeatBtn.Position = UDim2.new(0.06, 0, 0.5, 0)
-        LikeBtn.Size = UDim2.new(0, 22, 0, 22)
-        LikeBtn.Position = UDim2.new(0.22, 0, 0.5, 0)
-
-        PrevBtn.Size = UDim2.new(0, 22, 0, 22)
-        PrevBtn.Position = UDim2.new(0.37, 0, 0.5, 0)
-
-        PlayPauseBtnOuter.Size = UDim2.new(0, 40, 0, 40)
-        PlayPauseBtnOuter.Position = UDim2.new(0.50, 0, 0.5, 0)
-        PlayPauseBtn.Size = UDim2.new(0, 18, 0, 18)
-        PlayPauseBtn.Position = UDim2.new(0.5, -9, 0.5, -9)
-
-        NextBtn.Size = UDim2.new(0, 22, 0, 22)
-        NextBtn.Position = UDim2.new(0.63, 0, 0.5, 0)
-        MoreBtn.Size = UDim2.new(0, 20, 0, 20)
-        MoreBtn.Position = UDim2.new(0.94, 0, 0.5, 0)
-
-        if SavedConfig.TabIconLayout == "Carousel" then
-            local cardH = 0
-            pcall(function() cardH = NowPlayingCard.AbsoluteSize.Y / tabCarouselScale() end)
-            if cardH < 120 then cardH = 270 end
-
-            local sideAlbum = math.floor(math.clamp(cardH - 28, 96, 170))
-            local leftX = 14 + sideAlbum + 18
-            local rightW = leftX + 14
-            local top = math.max(8, math.floor((cardH - 148) / 2))
-            local progressTopC = top + 70
-
-            AlbumArt.Size = UDim2.new(0, sideAlbum, 0, sideAlbum)
-            AlbumArt.Position = UDim2.new(0, 14, 0, math.max(8, math.floor((cardH - sideAlbum) / 2)))
-
-            InfoFrame.Size = UDim2.new(1, -rightW, 0, 62)
-            InfoFrame.Position = UDim2.new(0, leftX, 0, top)
-
-            ProgressTrack.Size = UDim2.new(1, -rightW, 0, 5)
-            ProgressTrack.Position = UDim2.new(0, leftX, 0, progressTopC)
-            SeekHitbox.Size = UDim2.new(1, -rightW, 0, 28)
-            SeekHitbox.Position = UDim2.new(0, leftX, 0, progressTopC - 14)
-            ProgressTimeLeft.Position = UDim2.new(0, leftX, 0, progressTopC + 11)
-            ProgressTimeRight.Position = UDim2.new(1, -86, 0, progressTopC + 11)
-
-            Controls.Size = UDim2.new(1, -rightW, 0, 44)
-            Controls.Position = UDim2.new(0, leftX, 0, progressTopC + 34)
-        end
-    end
-
-    local function applySpotifyRowLayout(rowData)
-        if not rowData or not rowData.Row then
-            return
-        end
-
-        local m = getSpotifyMetrics()
-        local cardH = m.cardHeight
-        local coverPad = m.compact and 6 or 8
-        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGap
+        loc
