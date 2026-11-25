@@ -1,4 +1,24 @@
-   })
+insert(CustomThemeOrder, finalName)
+        end
+
+        applyCustomThemeToRuntime(finalName, CustomThemes[finalName])
+        SaveCustomThemes()
+        if Window.CurrentTheme == finalName then
+            Window:SetTheme(finalName)
+        end
+        rebuildThemeCards()
+        closeThemeEditor()
+    end)
+
+    local DeleteOverlay = mk("Frame", {
+        Parent = Main,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+        BackgroundTransparency = 0.35,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 220,
+    })
     local DeletePanel = mk("Frame", {
         Parent = DeleteOverlay,
         Size = UDim2.new(0.72, 0, 0.46, 0),
@@ -886,12 +906,4 @@
             ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
         },
         GoldenSpecular = {
-            Lighting = {
-                ClockTime = 17.38, GeographicLatitude = 28, Brightness = 2.50,
-                Ambient = Color3.fromRGB(70, 60, 67), OutdoorAmbient = Color3.fromRGB(150, 112, 90),
-                ColorShift_Top = Color3.fromRGB(255, 176, 100), ColorShift_Bottom = Color3.fromRGB(70, 83, 126),
-                EnvironmentDiffuseScale = 0.75, EnvironmentSpecularScale = 1.0,
-                ExposureCompensation = 0.15, GlobalShadows = true, ShadowSoftness = 0.40,
-            },
-            Atmosphere = {
-                Density = 0.24, Offset = 0.06, Color = Color3.fromRGB(240
+            Lighting = 

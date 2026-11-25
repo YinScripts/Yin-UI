@@ -439,6 +439,16 @@ reen.Y > 0 then
         })
         TabNameLabel:SetAttribute("TextSpanish", nameSpanish)
         TabNameLabel:SetAttribute("TextEnglish", nameEnglish)
+        -- mismo efecto que la rueda: el texto se oscurece desde la mitad. El degradé multiplica el color del texto
+        -- (blanco = sin cambio), así sigue funcionando con cualquier tema, pestaña activa o efecto de texto.
+        mk("UIGradient", {
+            Name = "YYHalfShade",
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.new(0.45, 0.45, 0.45)),
+            }),
+        }, TabNameLabel)
 
         resetScrollTop(TabList)
 
@@ -934,21 +944,3 @@ reen.Y > 0 then
         if #Window.Tabs == 1 then Select() end
         if SavedConfig.TabIconLayout == "Carousel" then
             Window._RefreshTabIconLayout()
-        end
-
-
-        function Tab:CreateFloatingToggle(textSpanish, textEnglishOrDefault, defaultOrCallback, callback, creditInfo)
-            local textEnglish = textSpanish
-            local default, cb
-
-            if type(textEnglishOrDefault) == "string" then
-                textEnglish = textEnglishOrDefault
-                default = defaultOrCallback
-                cb = callback
-            else
-                default = textEnglishOrDefault
-                cb = defaultOrCallback
-            end
-
-            local displayText = GetText(textSpanish, textEnglish)
-  

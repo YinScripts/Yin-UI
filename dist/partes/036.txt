@@ -1,4 +1,20 @@
- = pcall(function()
+nd
+    end
+    local function isOwnerName()
+        local me = string.lower(LocalPlayer.Name)
+        for _, n in ipairs(PremiumConfig.Owners or {}) do
+            if string.lower(tostring(n)) == me then return true end
+        end
+        return false
+    end
+    function PR.check()
+        PR.checking = true
+        for _, fn in ipairs(PR.listeners) do pcall(fn, PR.owned) end
+        task.spawn(function()
+            if isOwnerName() then PR.set(true, false) return end
+            local okOwn, owns = false, nil
+            for attempt = 1, 3 do
+                okOwn, owns = pcall(function()
                     return MPS:UserOwnsGamePassAsync(LocalPlayer.UserId, PASS_ID)
                 end)
                 if okOwn then break end
@@ -785,22 +801,4 @@
             )
             if holder then
                 table.insert(CL.holders, {holder = holder, es = string.lower(tostring(entry.es)), en = string.lower(tostring(entry.en))})
-                holder:GetAttributeChangedSignal("ScriptState"):Connect(CL.refresh)
-            end
-        else
-            warn("[YinYang Classic] Entrada de manifest inválida; se omite")
-        end
-    end
-    CL.refresh()
-    CL.filter()
-    end
-    Window:CreateClassicTab()
-
-    function Window:CreateSpotifyTab()
-    local STab = Window:CreateTab("Spotify", "Spotify", "rbxassetid://97213700655604")
-    local SPage = STab.Page
-
-    SPage.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
-    SPage.BackgroundTransparency = 1
-    SPage.AutomaticCanvasSize = Enum.AutomaticSize.None
-   
+      

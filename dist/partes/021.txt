@@ -1,4 +1,21 @@
-local isFloating  = false
+hen
+                    cooldown = cooldownOrCallback
+                    cb = callback
+                else
+                    cooldown = 0
+                    cb = cooldownOrCallback
+                end
+            elseif type(textEnglishOrCooldown) == "number" then
+                cooldown = textEnglishOrCooldown
+                cb = cooldownOrCallback
+            else
+                cooldown = 0
+                cb = textEnglishOrCooldown
+            end
+            cooldown = cooldown or 0
+
+            local displayText = GetText(textSpanish, textEnglish)
+            local isFloating  = false
             local isLocked    = false
             local onCooldown  = false
 
@@ -999,19 +1016,4 @@ local isFloating  = false
                     FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
                     SavedFavoriteIds[favId] = isFavorite or nil
                     syncFavoriteRow()
-                    SyncFavoritesToConfig()
-                end)
-            end
-
-            Carousel.Reflow()
-
-            if not isMirror then
-                Window._RegisterGlobalOption(self, {
-                    Id = nameSpanish .. "::" .. text,
-                    NameSpanish = text,
-                    NameEnglish = text,
-                    Holder = Holder,
-                    Kind = "Slider",
-                    GetValue = function() return value end,
-                    SetValue = function(v)
-                        local pct = math.clamp((v - min) / math.max(max - min, 0.00
+             

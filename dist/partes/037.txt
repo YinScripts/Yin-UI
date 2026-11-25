@@ -1,4 +1,22 @@
- SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+          holder:GetAttributeChangedSignal("ScriptState"):Connect(CL.refresh)
+            end
+        else
+            warn("[YinYang Classic] Entrada de manifest inválida; se omite")
+        end
+    end
+    CL.refresh()
+    CL.filter()
+    end
+    Window:CreateClassicTab()
+
+    function Window:CreateSpotifyTab()
+    local STab = Window:CreateTab("Spotify", "Spotify", "rbxassetid://97213700655604")
+    local SPage = STab.Page
+
+    SPage.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
+    SPage.BackgroundTransparency = 1
+    SPage.AutomaticCanvasSize = Enum.AutomaticSize.None
+    SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
     SPage.ScrollBarThickness = 0
     SPage.ScrollingEnabled = false
 
@@ -1222,19 +1240,4 @@
             Position = UDim2.new(0, 18, 0, y),
             BackgroundColor3 = Color3.fromRGB(34, 34, 38),
             BorderSizePixel = 0,
-            ZIndex = 82,
-        })
-        corner(holder, 9)
-        local box = mk("TextBox", {
-            Parent = holder,
-            Size = UDim2.new(1, -22, 1, 0),
-            Position = UDim2.new(0, 11, 0, 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            PlaceholderText = placeholder,
-            PlaceholderColor3 = Color3.fromRGB(135, 135, 142),
-            TextColor3 = spotifyText,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ClearTextOnFocus = false
+      

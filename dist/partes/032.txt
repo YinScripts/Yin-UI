@@ -1,4 +1,7 @@
-bled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
+max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Strength end, onChange = function(value) ShaderSolarTone:SetStrength(value) end},
+            {id = "SunRaysIntensity", es = "Intensidad", en = "Intensity", min = 0, max = 1, default = 0.08, step = 0.01, target = "SunRaysEffect", property = "Intensity"},
+            {id = "SunRaysSpread", es = "Extensión", en = "Spread", min = 0, max = 1, default = 0.65, step = 0.01, target = "SunRaysEffect", property = "Spread"},
+            {id = "SunRaysEnabled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
 
             {section = {"Overdrive local", "Local overdrive", "Efectos visuales locales con límites de distancia, partes y tasa de partículas.", "Local visual effects with distance, part and particle-rate limits."}},
             {id = "WetReflections", es = "Reflejos húmedos", en = "Wet reflections", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.Enabled end, onChange = function(value) ShaderReflections:SetEnabled(value) end},
@@ -759,18 +762,4 @@ bled", es = "SunRays activo", en = "SunRays enabled", default = false, target = 
         Catalog = ShaderPropertyCatalog,
         Apply = function(patch, options)
             local report = ShaderManager:Apply(patch, options or {})
-            shaderWarn(report, "Aplicación manual")
-            ShaderCustomRefresh()
-            if report and report.ok then shaderQueuePersistence() end
-            return report
-        end,
-        ApplyPreset = function(name, options)
-            local report = ShaderManager:ApplyPreset(name, options or {})
-            if report.ok then
-                shaderSyncImmersivePreset(name)
-                pcall(PerfOpt.AfterShaders)
-            end
-            shaderWarn(report, "Preset " .. tostring(name))
-            shaderSetModeLabel(name)
-            ShaderCustomRefresh()
-            if report and report.ok the
+            shaderWarn(report, "Aplicación 

@@ -1,4 +1,17 @@
-mage then
+   local IconTile = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.fromOffset(44, 44),
+                Position = UDim2.new(0, 16, 0, 16),
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.78,
+                BorderSizePixel = 0,
+                ZIndex = 502,
+            })
+            IconTile:SetAttribute("ThemeRole", "Accent")
+            corner(IconTile, 13)
+            local tileRing = stroke(IconTile, Theme.Accent, 1, 0.5)
+            tileRing:SetAttribute("ThemeRole", "Accent")
+            if iconImage then
                 RowKit.Icon(IconTile, iconImage, 24, 503, "Accent")
             end
 
@@ -1020,21 +1033,4 @@ mage then
             entry.CardStroke.Thickness = isActive and 2 or 1
             entry.CardStroke.Transparency = isActive and 0 or 0.7
             entry.CardStroke.Color = isActive and Theme.Accent or Theme.Stroke
-            entry.CardStroke:SetAttribute("ThemeRole", isActive and "Accent" or "Stroke")
-            entry.CheckBadge.BackgroundColor3 = Theme.Accent
-            entry.CheckBadge.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
-        end
-    end
-
-    local function applyThemeSearch()
-        local query = ThemeSearchBox.Text:lower()
-        for _, entry in ipairs(ThemeButtons) do
-            entry.Card.Visible = (query == "" or entry.Name:lower():find(query, 1, true) ~= nil)
-        end
-        resetScrollTop(AutoTabTemas.Page)
-    end
-
-    local openThemeEditor
-    local confirmDeleteTheme
-
-    local function createThemeCard(tema, 
+            entry.CardStroke:SetAttribute("ThemeRole", isActive and

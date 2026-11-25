@@ -1,4 +1,19 @@
-urce = LocalPlayer.Character
+t
+
+                local Camera = Instance.new("Camera")
+                Camera.Parent = Viewport
+                Viewport.CurrentCamera = Camera
+
+                local function cleanModel(model)
+                    for _, obj in ipairs(model:GetDescendants()) do
+                        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
+                            pcall(function() obj:Destroy() end)
+                        end
+                    end
+                end
+
+                local function getSourceModel()
+                    local source = LocalPlayer.Character
                     if source and source.Parent then
                         local ok, clone = pcall(function()
                             return source:Clone()
@@ -749,15 +764,4 @@ urce = LocalPlayer.Character
 
             local hourNow = tonumber(os.date("%H")) or 12
             local greetES = (hourNow >= 5 and hourNow < 12) and "Buenos días," or ((hourNow >= 12 and hourNow < 20) and "Buenas tardes," or "Buenas noches,")
-            local greetEN = (hourNow >= 5 and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
-            local NameLabel = mk("TextLabel", {
-                Parent = HomeRoot,
-                Size = UDim2.new(0.44, 0, 0, 20),
-                Position = UDim2.new(0.28, 0, 0, 207),
-                BackgroundTransparency = 1,
-                Text = GetText(greetES, greetEN),
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                TextColor3 = Theme.Text,
-                TextXAlignment = Enum.TextXAlignment.Center,
-   
+            local greetEN = (hourNow >= 5 

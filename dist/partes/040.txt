@@ -1,4 +1,14 @@
-= nil))
+Value.Text = string.format("%.2fx", SpotifyState.PlaybackSpeed)
+        for _, chip in ipairs(PM.chips) do
+            PM.paintChip(chip.Button, math.abs(chip.Value - SpotifyState.PlaybackSpeed) < 0.001)
+        end
+        for _, entry in ipairs(PM.switches) do
+            PM.paintSwitch(entry)
+        end
+        local left = PM.timerLeft()
+        PM.TimerValue.Text = left and secondsToClock(left) or "Apagado"
+        for _, chip in ipairs(PM.timerChips) do
+            PM.paintChip(chip.Button, (SpotifyState.SleepMinutes or 0) == chip.Value and (chip.Value == 0 or left ~= nil))
         end
     end
 
@@ -1163,22 +1173,4 @@
         TweenService:Create(FavPage.Root, TweenInfo.new(0.32, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {Position = UDim2.new(0, 0, 0, 0)}):Play()
         task.defer(FavPage.layout)
         FavPage.animate()
-    end
-
-    FavPage.hide = function()
-        if not FavPage.open then
-            return
-        end
-        FavPage.open = false
-        SongsCard.Visible = true
-        pcall(function() FavPage.SearchInput:ReleaseFocus() end)
-        local tw = TweenService:Create(FavPage.Root, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)})
-        tw.Completed:Connect(function()
-            if not FavPage.open then
-                FavPage.Root.Visible = false
-            end
-        end)
-        tw:Play()
-    end
-
-    FavPage.pla
+  

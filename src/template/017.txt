@@ -540,6 +540,16 @@
         })
         TabNameLabel:SetAttribute("TextSpanish", nameSpanish)
         TabNameLabel:SetAttribute("TextEnglish", nameEnglish)
+        -- mismo efecto que la rueda: el texto se oscurece desde la mitad. El degradé multiplica el color del texto
+        -- (blanco = sin cambio), así sigue funcionando con cualquier tema, pestaña activa o efecto de texto.
+        mk("UIGradient", {
+            Name = "YYHalfShade",
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(0.5, Color3.new(1, 1, 1)),
+                ColorSequenceKeypoint.new(1, Color3.new(0.45, 0.45, 0.45)),
+            }),
+        }, TabNameLabel)
 
         resetScrollTop(TabList)
 

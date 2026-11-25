@@ -1,4 +1,18 @@
-n shaderQueuePersistence() end
+manual")
+            ShaderCustomRefresh()
+            if report and report.ok then shaderQueuePersistence() end
+            return report
+        end,
+        ApplyPreset = function(name, options)
+            local report = ShaderManager:ApplyPreset(name, options or {})
+            if report.ok then
+                shaderSyncImmersivePreset(name)
+                pcall(PerfOpt.AfterShaders)
+            end
+            shaderWarn(report, "Preset " .. tostring(name))
+            shaderSetModeLabel(name)
+            ShaderCustomRefresh()
+            if report and report.ok then shaderQueuePersistence() end
             return report
         end,
         RegisterPreset = function(name, preset)
@@ -988,16 +1002,4 @@ n shaderQueuePersistence() end
             Parent               = card,
             Size                 = UDim2.new(1, 0, 1, 0),
             BackgroundTransparency = 1,
-            Text                 = "",
-            ZIndex               = 16,
-        })
-
-        local entry = {card = card, stroke = cardStroke, ring = ring, badge = badge, name = nameLbl, key = iconName}
-        LP.cards[#LP.cards + 1] = entry
-        LP.paint(entry, SavedConfig.SelectedLogoIcon == iconName, false)
-
-        btn.MouseEnter:Connect(function()
-            TweenService:Create(cardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.04}):Play()
-        end)
-        btn.MouseLeave:Connect(function()
-            TweenService:Create(cardScale, Twe
+            Text    

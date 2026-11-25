@@ -1,4 +1,19 @@
-01), 0, 1)
+       SyncFavoritesToConfig()
+                end)
+            end
+
+            Carousel.Reflow()
+
+            if not isMirror then
+                Window._RegisterGlobalOption(self, {
+                    Id = nameSpanish .. "::" .. text,
+                    NameSpanish = text,
+                    NameEnglish = text,
+                    Holder = Holder,
+                    Kind = "Slider",
+                    GetValue = function() return value end,
+                    SetValue = function(v)
+                        local pct = math.clamp((v - min) / math.max(max - min, 0.0001), 0, 1)
                         UpdateSlider(pct, true, false)
                     end,
                     Min = min,
@@ -995,19 +1010,4 @@
                 pcall(function() Viewport.LightDirection = Vector3.new(-0.3, -1, -0.2) end)
 
                 local World = Instance.new("WorldModel")
-                World.Parent = Viewport
-
-                local Camera = Instance.new("Camera")
-                Camera.Parent = Viewport
-                Viewport.CurrentCamera = Camera
-
-                local function cleanModel(model)
-                    for _, obj in ipairs(model:GetDescendants()) do
-                        if obj:IsA("Script") or obj:IsA("LocalScript") or obj:IsA("ModuleScript") then
-                            pcall(function() obj:Destroy() end)
-                        end
-                    end
-                end
-
-                local function getSourceModel()
-                    local so
+                World.Parent = Viewpor

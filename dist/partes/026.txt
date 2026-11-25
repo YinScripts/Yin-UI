@@ -1,4 +1,21 @@
-layoutOrder, isCustom)
+ "Accent" or "Stroke")
+            entry.CheckBadge.BackgroundColor3 = Theme.Accent
+            entry.CheckBadge.TextColor3 = Theme.AccentText or Color3.new(0, 0, 0)
+        end
+    end
+
+    local function applyThemeSearch()
+        local query = ThemeSearchBox.Text:lower()
+        for _, entry in ipairs(ThemeButtons) do
+            entry.Card.Visible = (query == "" or entry.Name:lower():find(query, 1, true) ~= nil)
+        end
+        resetScrollTop(AutoTabTemas.Page)
+    end
+
+    local openThemeEditor
+    local confirmDeleteTheme
+
+    local function createThemeCard(tema, layoutOrder, isCustom)
         local palette = ThemePalettes[tema] or Theme
 
         local Card = mk("TextButton", {
@@ -1106,24 +1123,4 @@ layoutOrder, isCustom)
             Sound = sound or "",
         }
         if not editingThemeName then
-            table.insert(CustomThemeOrder, finalName)
-        end
-
-        applyCustomThemeToRuntime(finalName, CustomThemes[finalName])
-        SaveCustomThemes()
-        if Window.CurrentTheme == finalName then
-            Window:SetTheme(finalName)
-        end
-        rebuildThemeCards()
-        closeThemeEditor()
-    end)
-
-    local DeleteOverlay = mk("Frame", {
-        Parent = Main,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.35,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 220,
- 
+            table.

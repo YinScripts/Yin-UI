@@ -1,4 +1,15 @@
-             ZIndex = 11,
+and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
+            local NameLabel = mk("TextLabel", {
+                Parent = HomeRoot,
+                Size = UDim2.new(0.44, 0, 0, 20),
+                Position = UDim2.new(0.28, 0, 0, 207),
+                BackgroundTransparency = 1,
+                Text = GetText(greetES, greetEN),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                TextColor3 = Theme.Text,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                ZIndex = 11,
             })
             NameLabel:SetAttribute("ThemeTextRole", "Text")
             NameLabel:SetAttribute("TextSpanish", greetES)
@@ -1030,17 +1041,4 @@
                 Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)}),
             })
 
-            local IconTile = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.fromOffset(44, 44),
-                Position = UDim2.new(0, 16, 0, 16),
-                BackgroundColor3 = Theme.Accent,
-                BackgroundTransparency = 0.78,
-                BorderSizePixel = 0,
-                ZIndex = 502,
-            })
-            IconTile:SetAttribute("ThemeRole", "Accent")
-            corner(IconTile, 13)
-            local tileRing = stroke(IconTile, Theme.Accent, 1, 0.5)
-            tileRing:SetAttribute("ThemeRole", "Accent")
-            if iconI
+         

@@ -1,4 +1,16 @@
-enInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+             = "",
+            ZIndex               = 16,
+        })
+
+        local entry = {card = card, stroke = cardStroke, ring = ring, badge = badge, name = nameLbl, key = iconName}
+        LP.cards[#LP.cards + 1] = entry
+        LP.paint(entry, SavedConfig.SelectedLogoIcon == iconName, false)
+
+        btn.MouseEnter:Connect(function()
+            TweenService:Create(cardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.04}):Play()
+        end)
+        btn.MouseLeave:Connect(function()
+            TweenService:Create(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
         end)
         btn.MouseButton1Click:Connect(function()
             playSound(Sounds.Click, 0.5)
@@ -802,9 +814,4 @@ enInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):
     zoomChips.Row.Position = UDim2.new(1, -108, 0, 0)
 
     -- interruptor: verlo también en el botón flotante REAL mientras editás
-    local RealRow = mk("TextButton", { Parent = PreviewCard, Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.3, Text = "", LayoutOrder = 3, ZIndex = Z + 3 })
-    RealRow:SetAttribute("ThemeRole", "Background")
-    corner(RealRow, 10)
-    label(RealRow, "Ver en mi botón real", "Show on my real button", 12, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(12, 5), ZIndex = Z + 4 })
-    label(RealRow, "El botón flotante de verdad cambia mientras editás", "The actual floating button changes while you edit", 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -70, 0, 12), Position = UDim2.fromOffset(12, 22), ZIndex = Z + 4 })
- 
+    local RealRow = mk("TextButton", { Parent = PreviewCard, Size = UDim2.new(1, 0, 0, 40), BackgroundColor3 = Theme.Background, BackgroundTranspare

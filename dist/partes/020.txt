@@ -1,3 +1,17 @@
+      })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+
+            local ComboLabel = mk("TextLabel", {
+                Parent = Holder,
+                Size = UDim2.new(1, -90, 0, 22),
+                Position = UDim2.new(0, 24, 0, 30),
+                BackgroundTransparency = 1,
+                Text = GetText("Vacío", "Empty"),
+                TextColor3 = Theme.Accent,
+                Font = Enum.Font.GothamBold,
+                TextSize = 16,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
                 ZIndex = 10
             })
             ComboLabel:SetAttribute("ThemeTextRole", "Accent")
@@ -994,21 +1008,4 @@
 
             if type(textEnglishOrCooldown) == "string" then
                 textEnglish = textEnglishOrCooldown
-                if type(cooldownOrCallback) == "number" then
-                    cooldown = cooldownOrCallback
-                    cb = callback
-                else
-                    cooldown = 0
-                    cb = cooldownOrCallback
-                end
-            elseif type(textEnglishOrCooldown) == "number" then
-                cooldown = textEnglishOrCooldown
-                cb = cooldownOrCallback
-            else
-                cooldown = 0
-                cb = textEnglishOrCooldown
-            end
-            cooldown = cooldown or 0
-
-            local displayText = GetText(textSpanish, textEnglish)
-            
+                if type(cooldownOrCallback) == "number" t

@@ -1,4 +1,12 @@
-, 175, 129),
+{
+                ClockTime = 17.38, GeographicLatitude = 28, Brightness = 2.50,
+                Ambient = Color3.fromRGB(70, 60, 67), OutdoorAmbient = Color3.fromRGB(150, 112, 90),
+                ColorShift_Top = Color3.fromRGB(255, 176, 100), ColorShift_Bottom = Color3.fromRGB(70, 83, 126),
+                EnvironmentDiffuseScale = 0.75, EnvironmentSpecularScale = 1.0,
+                ExposureCompensation = 0.15, GlobalShadows = true, ShadowSoftness = 0.40,
+            },
+            Atmosphere = {
+                Density = 0.24, Offset = 0.06, Color = Color3.fromRGB(240, 175, 129),
                 Decay = Color3.fromRGB(97, 52, 69), Glare = 0.90, Haze = 1.10,
             },
             Clouds = {Cover = 0.22, Density = 0.18, Color = Color3.fromRGB(255, 204, 165)},
@@ -851,12 +859,4 @@
         for _, sourcePart in ipairs(character:GetDescendants()) do
             if sourcePart:IsA("BasePart") and sourcePart.Transparency < 0.95 and sourcePart.Name ~= "HumanoidRootPart" then
                 if index >= 18 then break end
-                local sourceHit = workspace:Raycast(sourcePart.Position + normal * 0.14, -normal * 9, params)
-                if sourceHit and sourceHit.Instance and math.abs(sourceHit.Normal.Y) >= 0.28 then
-                    index = index + 1
-                    local proxy = self.ContactParts[sourcePart]
-                    if not proxy or not proxy.Parent then
-                        proxy = Instance.new("Part")
-                        proxy.Name = "ContactReflection"
-                        proxy.Anchored, proxy.CanCollide, proxy.CanQuery, proxy.CanTouch, proxy.CastShadow = true, false, false, false, false
-                        proxy.Mater
+                local sourceHit = workspace:Raycast(sourcePart.Position + n

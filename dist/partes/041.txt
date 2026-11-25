@@ -1,4 +1,22 @@
-yAll = function()
+  end
+
+    FavPage.hide = function()
+        if not FavPage.open then
+            return
+        end
+        FavPage.open = false
+        SongsCard.Visible = true
+        pcall(function() FavPage.SearchInput:ReleaseFocus() end)
+        local tw = TweenService:Create(FavPage.Root, TweenInfo.new(0.26, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Position = UDim2.new(1, 0, 0, 0)})
+        tw.Completed:Connect(function()
+            if not FavPage.open then
+                FavPage.Root.Visible = false
+            end
+        end)
+        tw:Play()
+    end
+
+    FavPage.playAll = function()
         local list = FavPage.likedList()
         if #list == 0 then
             return

@@ -1,4 +1,22 @@
-          local state = default or false
+
+        end
+
+
+        function Tab:CreateFloatingToggle(textSpanish, textEnglishOrDefault, defaultOrCallback, callback, creditInfo)
+            local textEnglish = textSpanish
+            local default, cb
+
+            if type(textEnglishOrDefault) == "string" then
+                textEnglish = textEnglishOrDefault
+                default = defaultOrCallback
+                cb = callback
+            else
+                default = textEnglishOrDefault
+                cb = defaultOrCallback
+            end
+
+            local displayText = GetText(textSpanish, textEnglish)
+            local state = default or false
             local isFloating = false
             local isLocked = false
 
@@ -892,17 +910,4 @@
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextTruncate = Enum.TextTruncate.AtEnd,
                 ZIndex = 10
-            })
-            LabelTxt:SetAttribute("ThemeTextRole", "Text")
-
-            local ComboLabel = mk("TextLabel", {
-                Parent = Holder,
-                Size = UDim2.new(1, -90, 0, 22),
-                Position = UDim2.new(0, 24, 0, 30),
-                BackgroundTransparency = 1,
-                Text = GetText("Vacío", "Empty"),
-                TextColor3 = Theme.Accent,
-                Font = Enum.Font.GothamBold,
-                TextSize = 16,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
+      

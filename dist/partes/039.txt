@@ -1,4 +1,24 @@
-49),
+30),
+        Font = Enum.Font.GothamBold,
+        TextSize = 18,
+        AutoButtonColor = false,
+        ZIndex = 42,
+    })
+    corner(SettingsClose, 999)
+    mk("Frame", {
+        Parent = PM.Panel,
+        Size = UDim2.new(1, 0, 0, 1),
+        Position = UDim2.new(0, 0, 0, 48),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.92,
+        BorderSizePixel = 0,
+        ZIndex = 41,
+    })
+
+    PM.Body = mk("ScrollingFrame", {
+        Parent = PM.Panel,
+        Size = UDim2.new(1, 0, 1, -49),
+        Position = UDim2.new(0, 0, 0, 49),
         BackgroundTransparency = 1,
         BorderSizePixel = 0,
         CanvasSize = UDim2.new(0, 0, 0, 0),
@@ -972,14 +992,4 @@
         PM.VolumeValue.Text = string.format("%d%%", math.floor(volume * 100 + 0.5))
         PM.VolumeFill.Size = UDim2.new(volume, 0, 1, 0)
         PM.VolumeKnob.Position = UDim2.new(volume, 0, 0.5, 0)
-        PM.SpeedValue.Text = string.format("%.2fx", SpotifyState.PlaybackSpeed)
-        for _, chip in ipairs(PM.chips) do
-            PM.paintChip(chip.Button, math.abs(chip.Value - SpotifyState.PlaybackSpeed) < 0.001)
-        end
-        for _, entry in ipairs(PM.switches) do
-            PM.paintSwitch(entry)
-        end
-        local left = PM.timerLeft()
-        PM.TimerValue.Text = left and secondsToClock(left) or "Apagado"
-        for _, chip in ipairs(PM.timerChips) do
-            PM.paintChip(chip.Button, (SpotifyState.SleepMinutes or 0) == chip.Value and (chip.Value == 0 or left ~
+        PM.Speed
