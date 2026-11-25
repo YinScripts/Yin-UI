@@ -1,4 +1,39 @@
- shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
+Thickness = 0, Transparency = 0.2})
+            pcall(function()
+                TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
+            end)
+
+            local pingBars = {}
+            local BarsHolder = mk("Frame", {
+                Parent = pingCard,
+                Size = UDim2.fromOffset(18, 13),
+                AnchorPoint = Vector2.new(1, 0),
+                Position = UDim2.new(1, -18, 0, 23),
+                BackgroundTransparency = 1,
+                ZIndex = 11,
+            })
+            local function layoutPing()
+                local showBars = pingCard.AbsoluteSize.X >= 130
+                BarsHolder.Visible = showBars
+                pingVal.Size = UDim2.new(1, showBars and -66 or -46, 0, 19)
+            end
+            track(pingCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutPing))
+            layoutPing()
+            for b = 1, 4 do
+                local bar = mk("Frame", {
+                    Parent = BarsHolder,
+                    Size = UDim2.new(0, 3, b / 4, 0),
+                    AnchorPoint = Vector2.new(0, 1),
+                    Position = UDim2.new(0, (b - 1) * 5, 1, 0),
+                    BackgroundColor3 = Theme.TextDim,
+                    BorderSizePixel = 0,
+                    ZIndex = 11,
+                })
+                corner(bar, 2)
+                pingBars[b] = bar
+            end
+
+            idVal.Text = shorten((game.JobId ~= "" and game.JobId) or "N/A (Studio)")
 
             local copyButton = mk("TextButton", {
                 Parent = idCard,
@@ -1027,43 +1062,4 @@
             return Panel, close
         end
 
-        -- Pie: mensaje de estado en una pastilla de color + boton principal
-        local function addFooter(Panel, statusY, btnES, btnEN, btnW)
-            btnW = btnW or 150
-            local StatusPill = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.new(1, -(btnW + 44), 0, 30),
-                Position = UDim2.new(0, 16, 1, -50),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ZIndex = 502,
-            })
-            corner(StatusPill, 999)
-            local dot = mk("Frame", {
-                Parent = StatusPill,
-                Size = UDim2.fromOffset(8, 8),
-                Position = UDim2.new(0, 10, 0.5, -4),
-                BackgroundColor3 = Theme.Accent,
-                BorderSizePixel = 0,
-                Visible = false,
-                ZIndex = 503,
-            })
-            corner(dot, 999)
-            local Status = mk("TextLabel", {
-                Parent = StatusPill,
-                Size = UDim2.new(1, -28, 1, 0),
-                Position = UDim2.new(0, 24, 0, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                TextColor3 = Theme.TextDim,
-                Font = Enum.Font.GothamBold,
-                TextSize = 11,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 503,
-            })
-
-            local Btn = mk("TextButton", {
-                Parent = Panel,
-                
+        -- Pie: mensaje de estado en una pastilla de color + boton princ

@@ -1,4 +1,38 @@
-stance.new("Frame")
+     Image = iconAsset,
+                    ZIndex = 10
+                })
+                local BtnLabel = mk("TextLabel", {
+                    Parent = Btn,
+                    Size = UDim2.new(1, -40, 1, 0),
+                    Position = UDim2.new(0, 32, 0, 0),
+                    BackgroundTransparency = 1,
+                    Text = displayText,
+                    TextColor3 = Theme.Text,
+                    Font = Enum.Font.GothamBold,
+                    TextSize = 14,
+                    TextXAlignment = Enum.TextXAlignment.Left,
+                    TextTruncate = Enum.TextTruncate.AtEnd,
+                    ZIndex = 10
+                })
+                BtnLabel:SetAttribute("ThemeTextRole", "Text")
+                BtnLabel:SetAttribute("TextSpanish", textSpanish)
+                BtnLabel:SetAttribute("TextEnglish", textEnglish)
+            else
+                Btn:SetAttribute("TextSpanish", textSpanish)
+                Btn:SetAttribute("TextEnglish", textEnglish)
+            end
+
+            local function spawnRipple(inputPosition)
+                local btnPos = Btn.AbsolutePosition
+                local btnSize = Btn.AbsoluteSize
+                local relX = inputPosition.X - btnPos.X
+                local relY = inputPosition.Y - btnPos.Y
+
+                local dX = math.max(relX, btnSize.X - relX)
+                local dY = math.max(relY, btnSize.Y - relY)
+                local maxRadius = math.sqrt(dX * dX + dY * dY) * 2.1
+
+                local Ripple = Instance.new("Frame")
                 Ripple.Name = "LiquidRipple"
                 Ripple.AnchorPoint = Vector2.new(0.5, 0.5)
                 Ripple.BackgroundColor3 = Theme.Accent
@@ -941,35 +975,4 @@ stance.new("Frame")
                     local p = base.Position
                     local rot = CFrame.Angles(math.rad(a[1] or 0), math.rad(a[2] or 0), math.rad(a[3] or 0))
                     local lift = Vector3.new(0, a[4] or 0, 0)
-                    return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
-                end
-                function HomeAnim.Apply(rig, pose)
-                    local waist = pose.Waist
-                    for key, j in pairs(rig.joints) do
-                        local a = pose[key]
-                        if key == "Root" and rig.waistIsRoot and waist then
-                            a = { (a and a[1] or 0) + waist[1], (a and a[2] or 0) + waist[2], (a and a[3] or 0) + waist[3], a and a[4] or 0 }
-                        end
-                        if a then
-                            j.motor.C0 = rotC0(j, a)
-                        else
-                            j.motor.C0 = j.base
-                        end
-                    end
-                end
-                function HomeAnim.Reset(rig)
-                    for _, j in pairs(rig.joints) do
-                        pcall(function() j.motor.C0 = j.base end)
-                    end
-                end
-                -- suma pose b * peso sobre a
-                local function addPose(a, b, w)
-                    for key, v in pairs(b) do
-                        local cur = a[key]
-                        if not cur then
-                            cur = { 0, 0, 0, 0 }
-                            a[key] = cur
-                        end
-                        cur[1] = (cur[1] or 0) + (v[1] or 0) * w
-                        cur[2] = (cur[2] or 0) + (v[2] or 0) * w
-                        cur[3] = (cur[3] or 0) + (
+    

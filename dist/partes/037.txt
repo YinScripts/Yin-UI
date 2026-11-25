@@ -1,4 +1,32 @@
-aHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
+TabList.BackgroundTransparency = 1
+            TitleLabel.Size = UDim2.fromOffset(106, 26)
+            TitleLabel.ZIndex = 60
+            DaraHubLabel.Parent.ZIndex = 60
+            DaraHubLabel.ZIndex = 61
+            TitleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+            TitleLabel.TextStrokeTransparency = 0.15
+            DaraHubLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
+            DaraHubLabel.TextStrokeTransparency = 0.15
+            for _, tab in ipairs(Window.Tabs or {}) do
+                if tab.Button then tab.Button.BackgroundTransparency = tab.Page and tab.Page.Visible and 0.35 or 1 end
+            end
+            A.Layout()
+            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
+        end
+        function A.leave()
+            if not A.Active then return end
+            A.Active = false
+            A.Frame.Visible = false
+            for obj, visible in pairs(A.Saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
+            TopBar.BackgroundTransparency = A.Saved.topTransparency
+            TitleLabel.Size = A.Saved.titleSize
+            TitleLabel.ZIndex = A.Saved.titleZ
+            DaraHubLabel.Parent.ZIndex = A.Saved.badgeFrameZ
+            DaraHubLabel.ZIndex = A.Saved.badgeZ
+            TitleLabel.TextStrokeTransparency = A.Saved.titleStroke
+            DaraHubLabel.TextStrokeTransparency = A.Saved.badgeStroke
+            TitleLabel.TextStrokeColor3 = A.Saved.titleStrokeColor
+            DaraHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
             TabList.BackgroundTransparency = Theme.TransparentTabs and 1 or 0
             local compact = Window.CompactNavigation == true
             TabListArt.Visible = not compact
@@ -1237,42 +1265,4 @@ aHubLabel.TextStrokeColor3 = A.Saved.badgeStrokeColor
             if type(raw) ~= "string" or raw == "" then
                 return {}
             end
-            local decoded = HttpService:JSONDecode(raw)
-            if type(decoded) == "table" and type(decoded.Songs) == "table" then
-                return decoded.Songs
-            end
-            return {}
-        end)
-        if ok and type(songs) == "table" then
-            return songs
-        end
-        warn("[YinYang Spotify] No se pudo leer el JSON de Mis canciones.")
-        return {}
-    end
-
-    local function saveUserSongs()
-        if type(writefile) ~= "function" then
-            return false, GetText("Este ejecutor no permite guardar archivos.", "This executor does not support file saving.")
-        end
-        local serializable = {}
-        for _, track in ipairs(SpotifyState.UserSongs) do
-            serializable[#serializable + 1] = {
-                Id = track.Id,
-                Name = track.Name,
-                Artist = track.Artist,
-                Duration = track.Duration,
-                Cover = track.Cover,
-                CoverURL = track.CoverURL,
-                AudioURL = track.AudioURL,
-                CacheName = track.CacheName,
-                CoverCacheName = track.CoverCacheName,
-            }
-        end
-        local ok = pcall(function()
-            writefile(USER_SONGS_FILE, HttpService:JSONEncode({Version = 1, Songs = serializable}))
-        end)
-        return ok, (not ok) and GetText("No se pudo escribir el archivo JSON.", "Could not write the JSON file.") or nil
-    end
-
-    local function normalizeDownloadUrl(value)
-        loc
+  

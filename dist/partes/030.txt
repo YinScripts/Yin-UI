@@ -1,4 +1,26 @@
-eKeypoint.new(0.85, 0.46), NumberSequenceKeypoint.new(1, 1)})
+      if existing then pcall(function() existing:Destroy() end) end
+        local rig = Instance.new("Part")
+        rig.Name = "YinYangShader_RainRig"
+        rig.Anchored, rig.CanCollide, rig.CanQuery, rig.CanTouch, rig.CastShadow = true, false, false, false, false
+        rig.Transparency, rig.Size = 1, Vector3.new(68, 1, 68)
+        rig.Parent = workspace
+
+        local emitter = Instance.new("ParticleEmitter")
+        emitter.Name = "YinYangShader_Rain"
+        emitter.Enabled = false
+        emitter.EmissionDirection = Enum.NormalId.Bottom
+        emitter.Shape = Enum.ParticleEmitterShape.Box
+        emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
+        emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
+        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
+        emitter.Color = ColorSequence.new(Color3.fromRGB(188, 211, 255), Color3.fromRGB(225, 238, 255))
+        emitter.LightInfluence, emitter.LightEmission = 0.78, 0
+        emitter.Lifetime, emitter.Speed = NumberRange.new(1.05, 1.45), NumberRange.new(62, 76)
+        emitter.Acceleration, emitter.Drag, emitter.VelocityInheritance = Vector3.new(2, -44, 0), 0.8, 0.18
+        emitter.SpreadAngle = Vector2.new(8, 8)
+        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.16), NumberSequenceKeypoint.new(1, 0.08)})
+        emitter.Squash = NumberSequence.new(1.7)
+        emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.34), NumberSequenceKeypoint.new(0.85, 0.46), NumberSequenceKeypoint.new(1, 1)})
         emitter.Parent = rig
         self.Rig, self.Emitter = rig, emitter
 
@@ -901,47 +923,4 @@ eKeypoint.new(0.85, 0.46), NumberSequenceKeypoint.new(1, 1)})
     end
 
     local function shaderAddConnection(connection)
-        table.insert(ShaderCustomConnections, connection)
-        return connection
-    end
-
-    local function shaderDisconnectAll()
-        ShaderCustomActiveSlider = nil
-        for index = #ShaderCustomConnections, 1, -1 do
-            pcall(function() ShaderCustomConnections[index]:Disconnect() end)
-            ShaderCustomConnections[index] = nil
-        end
-    end
-
-    local function shaderSetModeLabel(name)
-        local modeKey = name
-        local labelES = tostring(name)
-        local labelEN = tostring(name)
-        for key, card in pairs(ShaderModeCards) do
-            if key == name or card.labelES == name or card.labelEN == name then
-                modeKey = key
-                labelES = card.labelES
-                labelEN = card.labelEN
-                break
-            end
-        end
-        if ShaderModeLabel then
-            local activeES = "Modo activo: " .. labelES
-            local activeEN = "Active mode: " .. labelEN
-            ShaderModeLabel.Text = GetText(activeES, activeEN)
-        end
-        for key, card in pairs(ShaderModeCards) do
-            if card.setSelected then
-                pcall(function() card.setSelected(key == modeKey) end)
-            end
-        end
-    end
-
-    local function shaderCreateModeCard(parent, spec)
-        local holder = mk("Frame", {
-            Parent = parent,
-            Size = UDim2.new(1, -8, 0, 156),
-            BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0.2,
-            BorderSizePixel = 0,
-            ClipsDesc
+        table.insert(ShaderCustomConnect

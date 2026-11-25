@@ -1,4 +1,43 @@
-e = mk("TextLabel", {
+on = UDim2.new(0, 10, 0, 118),
+            BackgroundTransparency = 1,
+            Text = tema,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 14,
+            TextColor3 = Theme.Text,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 10,
+        })
+        NameLabel:SetAttribute("ThemeTextRole", "Text")
+
+        local Dots = mk("Frame", {
+            Parent = Card,
+            Size = UDim2.new(1, -20, 0, 14),
+            Position = UDim2.new(0, 10, 0, 144),
+            BackgroundTransparency = 1,
+            ZIndex = 10,
+        })
+        mk("UIListLayout", {
+            Parent = Dots,
+            FillDirection = Enum.FillDirection.Horizontal,
+            Padding = UDim.new(0, 5),
+            SortOrder = Enum.SortOrder.LayoutOrder,
+            VerticalAlignment = Enum.VerticalAlignment.Center,
+        })
+        for i, role in ipairs({"Background", "Secondary", "Accent", "ToggleOn", "Text"}) do
+            local dot = mk("Frame", {
+                Parent = Dots,
+                Size = UDim2.fromOffset(13, 13),
+                BackgroundColor3 = palette[role] or palette.Accent or Color3.new(1, 1, 1),
+                BorderSizePixel = 0,
+                LayoutOrder = i,
+                ZIndex = 11,
+            })
+            corner(dot, 999)
+            mk("UIStroke", {Parent = dot, Color = Color3.new(1, 1, 1), Thickness = 1, Transparency = 0.7})
+        end
+
+        local CheckBadge = mk("TextLabel", {
             Parent = Card,
             Size = UDim2.new(0, 0, 0, 20),
             AutomaticSize = Enum.AutomaticSize.X,
@@ -1108,44 +1147,4 @@ e = mk("TextLabel", {
         lastThemeEditorLanguage = currentLanguage
 
         for _, root in ipairs({AutoTabTemas.Page, EditorOverlay, DeleteOverlay}) do
-            for _, element in ipairs(root:GetDescendants()) do
-                if element:IsA("TextLabel") or element:IsA("TextButton") then
-                    local spanish = element:GetAttribute("TextSpanish")
-                    local english = element:GetAttribute("TextEnglish")
-                    if spanish and english then
-                        element.Text = GetText(spanish, english)
-                    end
-                elseif element:IsA("TextBox") then
-                    local spanish = element:GetAttribute("PlaceholderSpanish")
-                    local english = element:GetAttribute("PlaceholderEnglish")
-                    if spanish and english then
-                        element.PlaceholderText = GetText(spanish, english)
-                    end
-                end
-            end
-        end
-    end)
-
-    ThemeSearchBox:GetPropertyChangedSignal("Text"):Connect(applyThemeSearch)
-    rebuildThemeCards()
-    end
-    BuildTemasTab()
-
-    local AutoTabEfectos = Window:CreateTab("Efectos", "Effects", "rbxassetid://72741468127071")
-
-    local EffectsPage = AutoTabEfectos.Page
-    EffectsPage.ScrollBarThickness = 2
-
-    local EffectsRoot = mk("Frame", {
-        Parent = EffectsPage,
-        Size = UDim2.new(1, 0, 0, 0),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        AutomaticSize = Enum.AutomaticSize.Y,
-        ZIndex = 9,
-        LayoutOrder = 1,
-    })
-
-    mk("UIPadding", {
-        Parent = EffectsRoot,
-        PaddingTop = UDim.new(0, 8)
+       

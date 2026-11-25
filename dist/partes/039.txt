@@ -1,4 +1,45 @@
-nColor = false,
+     SpotifyState.PlaybackSpeed = clamp(value, 0.50, 2)
+        if SpotifyState.CurrentSound then pcall(function() SpotifyState.CurrentSound.PlaybackSpeed = SpotifyState.PlaybackSpeed end) end
+        refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
+    end
+
+    PM.VolumeBox = PM.section(1, 52)
+    PM.label(PM.VolumeBox, "Volumen", 0)
+    PM.VolumeValue = PM.valueLabel(PM.VolumeBox, 0)
+    PM.VolumeTrack = mk("Frame", {
+        Parent = PM.VolumeBox,
+        Size = UDim2.new(1, -14, 0, 4),
+        Position = UDim2.new(0, 7, 0, 34),
+        BackgroundColor3 = Color3.fromRGB(77, 77, 77),
+        BorderSizePixel = 0,
+        ZIndex = 43,
+    })
+    corner(PM.VolumeTrack, 999)
+    PM.VolumeFill = mk("Frame", {
+        Parent = PM.VolumeTrack,
+        Size = UDim2.new(0.75, 0, 1, 0),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        ZIndex = 44,
+    })
+    corner(PM.VolumeFill, 999)
+    PM.VolumeKnob = mk("Frame", {
+        Parent = PM.VolumeTrack,
+        Size = UDim2.fromOffset(14, 14),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.75, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 45,
+    })
+    corner(PM.VolumeKnob, 999)
+    PM.VolumeHit = mk("TextButton", {
+        Parent = PM.VolumeBox,
+        Size = UDim2.new(1, 0, 0, 30),
+        Position = UDim2.new(0, 0, 0, 21),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
         ZIndex = 46,
     })
     PM.volumeFromX = function(x)
@@ -910,29 +951,4 @@ nColor = false,
 
         local Glow = mk("Frame", {
             Parent = Card, Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(160, 90, 235), BackgroundTransparency = 0.72,
-            BorderSizePixel = 0, ZIndex = 12,
-        })
-        corner(Glow, 12)
-
-        local Heart = mk("ImageLabel", {
-            Parent = Card, Size = UDim2.fromOffset(math.floor(coverSize * 0.42), math.floor(coverSize * 0.42)),
-            Position = UDim2.new(0.5, -math.floor(coverSize * 0.21), 0, coverPad + math.floor(coverSize * 0.20)),
-            BackgroundTransparency = 1, Image = asset(116559368303288),
-            ImageColor3 = Color3.new(1, 1, 1), ScaleType = Enum.ScaleType.Fit, ZIndex = 14,
-        })
-
-        local Title = mk("TextLabel", {
-            Parent = Card, Size = UDim2.new(1, -22, 0, 22),
-            Position = UDim2.new(0, 11, 1, -48), BackgroundTransparency = 1,
-            Text = GetText("Favoritos", "Favorites"), Font = Enum.Font.GothamBold, TextSize = m.compact and 13 or 15,
-            TextColor3 = Color3.new(1, 1, 1), TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 14,
-        })
-        Title:SetAttribute("TextSpanish", "Favoritos")
-        Title:SetAttribute("TextEnglish", "Favorites")
-
-        local Subtitle = mk("TextLabel", {
-            Parent = Card, Size = UDim2.new(1, -22, 0, 16),
-            Position = UDim2.new(0, 11, 1, -27), BackgroundTransparency = 1,
-            Text = GetText("Tus canciones favoritas", "Your favorite songs"), Font = Enum.Font.GothamMedium, TextSize = 9,
-            TextColor3 = Color3.fromRGB(225, 210, 245), TextXAlignment
+          

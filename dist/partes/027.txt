@@ -1,4 +1,44 @@
-,
+     for _, element in ipairs(root:GetDescendants()) do
+                if element:IsA("TextLabel") or element:IsA("TextButton") then
+                    local spanish = element:GetAttribute("TextSpanish")
+                    local english = element:GetAttribute("TextEnglish")
+                    if spanish and english then
+                        element.Text = GetText(spanish, english)
+                    end
+                elseif element:IsA("TextBox") then
+                    local spanish = element:GetAttribute("PlaceholderSpanish")
+                    local english = element:GetAttribute("PlaceholderEnglish")
+                    if spanish and english then
+                        element.PlaceholderText = GetText(spanish, english)
+                    end
+                end
+            end
+        end
+    end)
+
+    ThemeSearchBox:GetPropertyChangedSignal("Text"):Connect(applyThemeSearch)
+    rebuildThemeCards()
+    end
+    BuildTemasTab()
+
+    local AutoTabEfectos = Window:CreateTab("Efectos", "Effects", "rbxassetid://72741468127071")
+
+    local EffectsPage = AutoTabEfectos.Page
+    EffectsPage.ScrollBarThickness = 2
+
+    local EffectsRoot = mk("Frame", {
+        Parent = EffectsPage,
+        Size = UDim2.new(1, 0, 0, 0),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        AutomaticSize = Enum.AutomaticSize.Y,
+        ZIndex = 9,
+        LayoutOrder = 1,
+    })
+
+    mk("UIPadding", {
+        Parent = EffectsRoot,
+        PaddingTop = UDim.new(0, 8),
         PaddingLeft = UDim.new(0, 8),
         PaddingRight = UDim.new(0, 8),
         PaddingBottom = UDim.new(0, 10),
@@ -804,26 +844,4 @@
         depthstyle = {
             Lighting = {
                 Brightness = 1.55, Ambient = Color3.fromRGB(0, 0, 0), OutdoorAmbient = Color3.fromRGB(0, 0, 0),
-                ColorShift_Top = Color3.fromRGB(0, 0, 0), ColorShift_Bottom = Color3.fromRGB(0, 0, 0),
-                EnvironmentDiffuseScale = 0, EnvironmentSpecularScale = 0,
-                ExposureCompensation = 0.10, GlobalShadows = true, ShadowSoftness = 0.35,
-                FogColor = Color3.fromRGB(255, 255, 255), FogStart = 0, FogEnd = 180,
-            },
-            Atmosphere = {
-                Density = 0.78, Offset = 0.12, Color = Color3.fromRGB(255, 255, 255),
-                Decay = Color3.fromRGB(255, 255, 255), Glare = 0.05, Haze = 4.20,
-            },
-            Clouds = {Cover = 0.55, Density = 0.50, Color = Color3.fromRGB(255, 255, 255)},
-            ColorCorrectionEffect = {
-                Enabled = true, Brightness = 0.10, Contrast = 0.42, Saturation = -1,
-                TintColor = Color3.fromRGB(255, 255, 255),
-            },
-            BloomEffect = {Enabled = true, Intensity = 0.28, Size = 22, Threshold = 1.35},
-            BlurEffect = {Enabled = false, Size = 0},
-            DepthOfFieldEffect = {Enabled = false},
-            SunRaysEffect = {Enabled = false, Intensity = 0, Spread = 0.50},
-            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
-        },
-        Retro = {
-            ColorCorrectionEffect = {Enabled = true, Brightness = 0.0, Contrast = 0.05, Saturation = -0.10, TintColor = Color3.fromRGB(255, 245, 224)},
-            ColorGradingEffect = {Enabled = true, TonemapperPreset = Enum.TonemapperPreset.Retro},
+                ColorShi

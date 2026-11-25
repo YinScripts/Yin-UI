@@ -1,4 +1,35 @@
-urn block
+  if hit.Instance.Transparency >= 0.9 and not self.MirrorFloors[hit.Instance] then
+                table.insert(excluded, hit.Instance)
+            else
+                if hit.Normal.Y < 0.9 then return nil end
+                return hit.Position, hit.Normal, hit.Instance
+            end
+        end
+        return nil
+    end
+
+    -- Copia reflejada: mantiene material, malla, texturas y calcos del original (antes era Neon y se veía fantasma)
+    function ShaderReflections:_createMirrorProxy(source)
+        local ok, proxy = pcall(function()
+            local copy = source:Clone()
+            if not copy then return nil end
+            copy:ClearAllChildren()
+            for _, child in ipairs(source:GetChildren()) do
+                if child:IsA("SpecialMesh") or child:IsA("BlockMesh") or child:IsA("CylinderMesh")
+                    or child:IsA("Decal") or child:IsA("Texture") or child:IsA("SurfaceAppearance") then
+                    local okChild, childCopy = pcall(function() return child:Clone() end)
+                    if okChild and childCopy then childCopy.Parent = copy end
+                end
+            end
+            return copy
+        end)
+        if not ok or not proxy then
+            local okFallback, fallback = pcall(function()
+                local block = Instance.new("Part")
+                if source:IsA("Part") then block.Shape = source.Shape end
+                block.Size = source.Size
+                block.Material = source.Material
+                return block
             end)
             if not okFallback or not fallback then return nil end
             proxy = fallback
@@ -996,26 +1027,4 @@ urn block
     function ShaderRain:_createRig()
         if self.Rig and self.Rig.Parent and self.Emitter then return end
         local existing = workspace:FindFirstChild("YinYangShader_RainRig")
-        if existing then pcall(function() existing:Destroy() end) end
-        local rig = Instance.new("Part")
-        rig.Name = "YinYangShader_RainRig"
-        rig.Anchored, rig.CanCollide, rig.CanQuery, rig.CanTouch, rig.CastShadow = true, false, false, false, false
-        rig.Transparency, rig.Size = 1, Vector3.new(68, 1, 68)
-        rig.Parent = workspace
-
-        local emitter = Instance.new("ParticleEmitter")
-        emitter.Name = "YinYangShader_Rain"
-        emitter.Enabled = false
-        emitter.EmissionDirection = Enum.NormalId.Bottom
-        emitter.Shape = Enum.ParticleEmitterShape.Box
-        emitter.ShapeStyle = Enum.ParticleEmitterShapeStyle.Volume
-        emitter.ShapeInOut = Enum.ParticleEmitterShapeInOut.Outward
-        emitter.Orientation = Enum.ParticleOrientation.VelocityParallel
-        emitter.Color = ColorSequence.new(Color3.fromRGB(188, 211, 255), Color3.fromRGB(225, 238, 255))
-        emitter.LightInfluence, emitter.LightEmission = 0.78, 0
-        emitter.Lifetime, emitter.Speed = NumberRange.new(1.05, 1.45), NumberRange.new(62, 76)
-        emitter.Acceleration, emitter.Drag, emitter.VelocityInheritance = Vector3.new(2, -44, 0), 0.8, 0.18
-        emitter.SpreadAngle = Vector2.new(8, 8)
-        emitter.Size = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.16), NumberSequenceKeypoint.new(1, 0.08)})
-        emitter.Squash = NumberSequence.new(1.7)
-        emitter.Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.34), NumberSequenc
+  

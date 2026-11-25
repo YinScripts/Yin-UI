@@ -1,4 +1,41 @@
-l PinBtn = mk("ImageButton", {
+TextTruncate   = Enum.TextTruncate.AtEnd,
+                ZIndex   = 10
+            })
+            LabelTxt:SetAttribute("ThemeTextRole", "Text")
+            LabelTxt:SetAttribute("TextSpanish",  textSpanish)
+            LabelTxt:SetAttribute("TextEnglish",  textEnglish)
+
+            StateLabel = mk("TextLabel", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, -90, 0, 16),
+                Position = UDim2.new(0, 22, 0, 36),
+                BackgroundTransparency = 1,
+                Text     = GetText("Botón", "Button"),
+                TextColor3 = Theme.TextDim,
+                Font     = Enum.Font.GothamMedium,
+                TextSize = 11,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                ZIndex   = 10
+            })
+            StateLabel:SetAttribute("ThemeTextRole", "TextDim")
+            RowKit.Chip(StateLabel, "Accent")
+            StateLabel.Position = UDim2.new(0, 22, 0, 38)
+
+            local DetachBtn = mk("TextButton", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -70, 0.5, -14),
+                BackgroundColor3 = Theme.Accent,
+                Text     = "↗",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                Font     = Enum.Font.GothamBold,
+                TextSize = 13,
+                ZIndex   = 15
+            })
+            corner(DetachBtn, 6)
+            RowKit.Control(DetachBtn, true)
+
+            local PinBtn = mk("ImageButton", {
                 Parent   = Holder,
                 Size     = UDim2.new(0, 28, 0, 28),
                 Position = UDim2.new(1, -38, 0.5, -14),
@@ -996,38 +1033,4 @@ l PinBtn = mk("ImageButton", {
                     Size = UDim2.new(0, 20, 0, 20),
                     Position = UDim2.new(0, 8, 0.5, -10),
                     BackgroundTransparency = 1,
-                    Image = iconAsset,
-                    ZIndex = 10
-                })
-                local BtnLabel = mk("TextLabel", {
-                    Parent = Btn,
-                    Size = UDim2.new(1, -40, 1, 0),
-                    Position = UDim2.new(0, 32, 0, 0),
-                    BackgroundTransparency = 1,
-                    Text = displayText,
-                    TextColor3 = Theme.Text,
-                    Font = Enum.Font.GothamBold,
-                    TextSize = 14,
-                    TextXAlignment = Enum.TextXAlignment.Left,
-                    TextTruncate = Enum.TextTruncate.AtEnd,
-                    ZIndex = 10
-                })
-                BtnLabel:SetAttribute("ThemeTextRole", "Text")
-                BtnLabel:SetAttribute("TextSpanish", textSpanish)
-                BtnLabel:SetAttribute("TextEnglish", textEnglish)
-            else
-                Btn:SetAttribute("TextSpanish", textSpanish)
-                Btn:SetAttribute("TextEnglish", textEnglish)
-            end
-
-            local function spawnRipple(inputPosition)
-                local btnPos = Btn.AbsolutePosition
-                local btnSize = Btn.AbsoluteSize
-                local relX = inputPosition.X - btnPos.X
-                local relY = inputPosition.Y - btnPos.Y
-
-                local dX = math.max(relX, btnSize.X - relX)
-                local dY = math.max(relY, btnSize.Y - relY)
-                local maxRadius = math.sqrt(dX * dX + dY * dY) * 2.1
-
-                local Ripple = In
+               

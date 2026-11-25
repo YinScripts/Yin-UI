@@ -1,4 +1,28 @@
- -14, 0, 12), Position = UDim2.fromOffset(12, 20) })
+b:SetAttribute("ThemeRole", role or "Secondary")
+        b:SetAttribute("ThemeTextRole", role == "Accent" and "AccentText" or "Text")
+        if role == "Accent" then b:SetAttribute("IgnoreTextEffect", true) end
+        L(b, es, en)
+        corner(b, 10)
+        for k, v in pairs(props or {}) do b[k] = v end
+        RowKit.Control(b, role == "Accent")
+        if role == "Accent" then
+            b.TextSize = (props and props.TextSize) or 13
+        elseif role and role ~= "Secondary" then
+            -- RowKit.Control deja todo en Secondary: se vuelve al rol pedido
+            b.BackgroundColor3 = Theme[role] or Theme.Secondary
+            b.BackgroundTransparency = 0.1
+            b:SetAttribute("ThemeRole", role)
+        end
+        return b
+    end
+    local function sectionTitle(parent, es, en, order, subEs, subEn)
+        local h = mk("Frame", { Parent = parent, Size = UDim2.new(1, -4, 0, subEs and 34 or 20), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 2 })
+        local bar = mk("Frame", { Parent = h, Size = UDim2.fromOffset(3, 14), Position = UDim2.fromOffset(2, 3), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 3 })
+        bar:SetAttribute("ThemeRole", "Accent")
+        corner(bar, 2)
+        label(h, es, en, 11, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -14, 0, 20), Position = UDim2.fromOffset(12, 0) })
+        if subEs then
+            label(h, subEs, subEn, 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -14, 0, 12), Position = UDim2.fromOffset(12, 20) })
         end
         return h
     end
@@ -785,38 +809,4 @@
     local TemplateRow = mk("ScrollingFrame", {
         Parent = NameCard,
         Size = UDim2.new(1, 0, 0, 74),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ScrollingDirection = Enum.ScrollingDirection.X,
-        AutomaticCanvasSize = Enum.AutomaticSize.X,
-        CanvasSize = UDim2.new(),
-        ScrollBarThickness = 0,
-        LayoutOrder = 2,
-        ZIndex = Z + 3,
-    })
-    list(TemplateRow, 8, true)
-
-    local openEditor -- se define abajo
-    local rebuildLayerCards, refreshBaseCard, refreshSoundCard -- idem
-
-    local function loadRecIntoEditor(r, keepName)
-        local name = keepName and ED.rec and ED.rec.Name or r.Name
-        ED.rec = r
-        ED.rec.Name = name or ""
-        NameBox.Text = ED.rec.Name
-        rebuildLayerCards()
-        refreshBaseCard()
-        refreshSoundCard()
-        changed()
-    end
-
-    local function templateTile(order, es, en, iconForThumb, onPick)
-        local t = mk("TextButton", { Parent = TemplateRow, Size = UDim2.fromOffset(70, 72), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, Text = "", LayoutOrder = order, ZIndex = Z + 4 })
-        t:SetAttribute("ThemeRole", "Background")
-        corner(t, 12)
-        stroke(t, Theme.Stroke, 1, 0.7)
-        local stage = mk("Frame", { Parent = t, Size = UDim2.fromOffset(44, 44), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), BackgroundTransparency = 1, ZIndex = Z + 5 })
-        if iconForThumb then
-            composite(stage, iconForThumb, 44, Z + 5)
-        else
-            local plus = label(stage, "+", "+", 26, Enum.Font.GothamBold, "Accent", { 
+        BackgroundTran

@@ -1,4 +1,38 @@
-Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 6 })
+sparency = 1,
+        BorderSizePixel = 0,
+        ScrollingDirection = Enum.ScrollingDirection.X,
+        AutomaticCanvasSize = Enum.AutomaticSize.X,
+        CanvasSize = UDim2.new(),
+        ScrollBarThickness = 0,
+        LayoutOrder = 2,
+        ZIndex = Z + 3,
+    })
+    list(TemplateRow, 8, true)
+
+    local openEditor -- se define abajo
+    local rebuildLayerCards, refreshBaseCard, refreshSoundCard -- idem
+
+    local function loadRecIntoEditor(r, keepName)
+        local name = keepName and ED.rec and ED.rec.Name or r.Name
+        ED.rec = r
+        ED.rec.Name = name or ""
+        NameBox.Text = ED.rec.Name
+        rebuildLayerCards()
+        refreshBaseCard()
+        refreshSoundCard()
+        changed()
+    end
+
+    local function templateTile(order, es, en, iconForThumb, onPick)
+        local t = mk("TextButton", { Parent = TemplateRow, Size = UDim2.fromOffset(70, 72), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, Text = "", LayoutOrder = order, ZIndex = Z + 4 })
+        t:SetAttribute("ThemeRole", "Background")
+        corner(t, 12)
+        stroke(t, Theme.Stroke, 1, 0.7)
+        local stage = mk("Frame", { Parent = t, Size = UDim2.fromOffset(44, 44), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 6), BackgroundTransparency = 1, ZIndex = Z + 5 })
+        if iconForThumb then
+            composite(stage, iconForThumb, 44, Z + 5)
+        else
+            local plus = label(stage, "+", "+", 26, Enum.Font.GothamBold, "Accent", { Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 6 })
             plus.TextTruncate = Enum.TextTruncate.None
         end
         label(t, es, en, 9, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -6, 0, 14), Position = UDim2.new(0, 3, 1, -18), TextXAlignment = Enum.TextXAlignment.Center, ZIndex = Z + 5 })
@@ -762,22 +796,4 @@ Size = UDim2.fromScale(1, 1), TextXAlignment = Enum.TextXAlignment.Center, ZInde
     corner(PCard, 18)
     local PCardStroke = mk("UIStroke", { Parent = PCard, Color = WHITE, Thickness = 2 })
     local PCardGrad = goldGradient(PCardStroke, 0)
-    PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKeypoint.new(1, GOLD_B) })
-    TweenService:Create(PCardGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
-    local PScale = mk("UIScale", { Parent = PCard, Scale = 1 })
-    pad(PCard, 14, 16, 16, 14)
-
-    -- encabezado: candado que flota + título + chip PREMIUM
-    local PHead = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = Z + 2 })
-    local PIcon = mk("Frame", { Parent = PHead, Size = UDim2.fromOffset(60, 60), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = Z + 2 })
-    corner(PIcon, 16)
-    local PIconStroke = mk("UIStroke", { Parent = PIcon, Color = WHITE, Thickness = 1.5 })
-    goldGradient(PIconStroke, 45)
-    local PLock = drawLock(PIcon, 32, Z + 3)
-    TweenService:Create(PLock, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 0, 0.5, -3) }):Play()
-    local PChip = mk("TextLabel", { Parent = PHead, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(72, 2), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 10, Font = Enum.Font.GothamBlack, ZIndex = Z + 3 })
-    PChip:SetAttribute("IgnoreTextEffect", true)
-    corner(PChip, 999)
-    pad(PChip, 0, 9, 9, 0)
-    goldGradient(PChip, 0)
-    label(PHead, "Yin Yang Studio Logos", "Yin Yang Studio Logos", 17, Enum.Font.GothamB
+    PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKe

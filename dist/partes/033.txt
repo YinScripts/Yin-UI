@@ -1,4 +1,53 @@
-d
+    SetRespectShelter = function(value) ShaderRain:SetRespectShelter(value) end,
+                SetStormEnabled = function(value) ShaderRain:SetStormEnabled(value) end,
+                IsEnabled = function() return ShaderRain.Enabled end,
+            },
+            Restore = shaderRestoreImmersive,
+        },
+    }
+
+    end
+
+    Window:InitializeShaderSystem()
+
+    local ChatApi = nil -- chat global v14 (se crea más abajo, en la pestaña Chat)
+
+    local AutoTabAjustes = Window:CreateTab("Ajustes", "Settings", "rbxassetid://98148562257039")
+    BuildAjustesExtras(
+        Window,
+        AutoTabAjustes,
+        function()
+            return SlidersHidden
+        end,
+        function(value)
+            SlidersHidden = value
+        end,
+        function()
+            if ChatApi then return ChatApi.GetSideNotifs() end
+            return SavedConfig.ChatCornerMessages ~= false
+        end,
+        function(value)
+            -- "Mensajes del Chat en esquina" = avisos al costado del chat v14
+            if ChatApi then ChatApi.SetSideNotifs(value) end
+        end
+    )
+
+    
+    
+
+
+    local function noop() end
+    Window.ChatMessages = {}
+    Window.RenderedChatFrames = {}
+    Window.TrackChatFrame = noop
+    Window.AddChatMessage = noop
+    Window.RenderChatMessage = noop
+    Window.SendMessage = noop
+    Window.SetReplyTarget = noop
+    Window.ClearReplyTarget = noop
+    Window.SendServerInvite = noop
+    Window.RenderInviteCard = noop
+    function Window:SendChatMessage() end
     function Window:GetChatHistory() return Window.ChatMessages end
     function Window:ReceiveMessage() end
     function Window:SetUserBubbleAsset() end
@@ -959,28 +1008,4 @@ d
             Font = Enum.Font.GothamBold,
             ZIndex = Z + 4,
         })
-        b:SetAttribute("ThemeRole", role or "Secondary")
-        b:SetAttribute("ThemeTextRole", role == "Accent" and "AccentText" or "Text")
-        if role == "Accent" then b:SetAttribute("IgnoreTextEffect", true) end
-        L(b, es, en)
-        corner(b, 10)
-        for k, v in pairs(props or {}) do b[k] = v end
-        RowKit.Control(b, role == "Accent")
-        if role == "Accent" then
-            b.TextSize = (props and props.TextSize) or 13
-        elseif role and role ~= "Secondary" then
-            -- RowKit.Control deja todo en Secondary: se vuelve al rol pedido
-            b.BackgroundColor3 = Theme[role] or Theme.Secondary
-            b.BackgroundTransparency = 0.1
-            b:SetAttribute("ThemeRole", role)
-        end
-        return b
-    end
-    local function sectionTitle(parent, es, en, order, subEs, subEn)
-        local h = mk("Frame", { Parent = parent, Size = UDim2.new(1, -4, 0, subEs and 34 or 20), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 2 })
-        local bar = mk("Frame", { Parent = h, Size = UDim2.fromOffset(3, 14), Position = UDim2.fromOffset(2, 3), BackgroundColor3 = Theme.Accent, BorderSizePixel = 0, ZIndex = Z + 3 })
-        bar:SetAttribute("ThemeRole", "Accent")
-        corner(bar, 2)
-        label(h, es, en, 11, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -14, 0, 20), Position = UDim2.fromOffset(12, 0) })
-        if subEs then
-            label(h, subEs, subEn, 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1,
+        

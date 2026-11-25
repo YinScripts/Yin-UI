@@ -1,4 +1,35 @@
-v[3] or 0) * w
+                return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
+                end
+                function HomeAnim.Apply(rig, pose)
+                    local waist = pose.Waist
+                    for key, j in pairs(rig.joints) do
+                        local a = pose[key]
+                        if key == "Root" and rig.waistIsRoot and waist then
+                            a = { (a and a[1] or 0) + waist[1], (a and a[2] or 0) + waist[2], (a and a[3] or 0) + waist[3], a and a[4] or 0 }
+                        end
+                        if a then
+                            j.motor.C0 = rotC0(j, a)
+                        else
+                            j.motor.C0 = j.base
+                        end
+                    end
+                end
+                function HomeAnim.Reset(rig)
+                    for _, j in pairs(rig.joints) do
+                        pcall(function() j.motor.C0 = j.base end)
+                    end
+                end
+                -- suma pose b * peso sobre a
+                local function addPose(a, b, w)
+                    for key, v in pairs(b) do
+                        local cur = a[key]
+                        if not cur then
+                            cur = { 0, 0, 0, 0 }
+                            a[key] = cur
+                        end
+                        cur[1] = (cur[1] or 0) + (v[1] or 0) * w
+                        cur[2] = (cur[2] or 0) + (v[2] or 0) * w
+                        cur[3] = (cur[3] or 0) + (v[3] or 0) * w
                         cur[4] = (cur[4] or 0) + (v[4] or 0) * w
                     end
                 end
@@ -729,39 +760,4 @@ v[3] or 0) * w
             statusSub.TextSize = 9
             statusSub.Position = UDim2.new(0, 48, 1, -15)
             statusSub.Size = UDim2.new(1, -55, 0, 12)
-            local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
-            pcall(function()
-                TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
-            end)
-
-            local pingBars = {}
-            local BarsHolder = mk("Frame", {
-                Parent = pingCard,
-                Size = UDim2.fromOffset(18, 13),
-                AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -18, 0, 23),
-                BackgroundTransparency = 1,
-                ZIndex = 11,
-            })
-            local function layoutPing()
-                local showBars = pingCard.AbsoluteSize.X >= 130
-                BarsHolder.Visible = showBars
-                pingVal.Size = UDim2.new(1, showBars and -66 or -46, 0, 19)
-            end
-            track(pingCard:GetPropertyChangedSignal("AbsoluteSize"):Connect(layoutPing))
-            layoutPing()
-            for b = 1, 4 do
-                local bar = mk("Frame", {
-                    Parent = BarsHolder,
-                    Size = UDim2.new(0, 3, b / 4, 0),
-                    AnchorPoint = Vector2.new(0, 1),
-                    Position = UDim2.new(0, (b - 1) * 5, 1, 0),
-                    BackgroundColor3 = Theme.TextDim,
-                    BorderSizePixel = 0,
-                    ZIndex = 11,
-                })
-                corner(bar, 2)
-                pingBars[b] = bar
-            end
-
-            idVal.Text =
+            local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, 

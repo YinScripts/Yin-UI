@@ -1,4 +1,35 @@
-ce.new({
+, 48),
+                    Position = UDim2.new(0.5, -108, 0.5, -24),
+                    BackgroundColor3 = Theme.Accent,
+                    BackgroundTransparency = 1,
+                    BorderSizePixel = 0,
+                    ZIndex = 3
+                })
+                corner(FloatingGlow, 999)
+
+                FloatingWindow = mk("Frame", {
+                    Parent = Window.ScreenGui,
+                    Size = UDim2.fromOffset(floatW, floatH),
+                    Position = UDim2.new(0.5, -floatW/2, 0.5, -floatH/2),
+                    BackgroundColor3 = isCircleStyle and Color3.fromRGB(20, 20, 26) or Theme.Secondary,
+                    BackgroundTransparency = isCircleStyle and 0.55 or 0.30,
+                    BorderSizePixel = 0,
+                    Active = true,
+                    Selectable = false,
+                    ZIndex = 4
+                })
+                FloatPos.Apply("combo::" .. nameSpanish .. "::" .. textSpanish, FloatingWindow)
+                if FloatPos.IsLocked("combo::" .. nameSpanish .. "::" .. textSpanish) then
+                    isLocked = true
+                    PinBtn.Image = "rbxassetid://91959170037380"
+                end
+                FloatingWindow:SetAttribute("ThemeRole", "Secondary")
+                FloatingWindow:SetAttribute("SupportsFloatStyle", true)
+                corner(FloatingWindow, 999)
+
+                if not isCircleStyle then
+                    mk("UIGradient", {
+                        Color = ColorSequence.new({
                             ColorSequenceKeypoint.new(0,   Color3.fromRGB(180, 185, 200)),
                             ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
                             ColorSequenceKeypoint.new(1,   Color3.fromRGB(180, 185, 200)),
@@ -972,41 +1003,4 @@ ce.new({
                 Font     = Enum.Font.GothamBlack,
                 TextSize = 15,
                 TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate   = Enum.TextTruncate.AtEnd,
-                ZIndex   = 10
-            })
-            LabelTxt:SetAttribute("ThemeTextRole", "Text")
-            LabelTxt:SetAttribute("TextSpanish",  textSpanish)
-            LabelTxt:SetAttribute("TextEnglish",  textEnglish)
-
-            StateLabel = mk("TextLabel", {
-                Parent   = Holder,
-                Size     = UDim2.new(1, -90, 0, 16),
-                Position = UDim2.new(0, 22, 0, 36),
-                BackgroundTransparency = 1,
-                Text     = GetText("Botón", "Button"),
-                TextColor3 = Theme.TextDim,
-                Font     = Enum.Font.GothamMedium,
-                TextSize = 11,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                ZIndex   = 10
-            })
-            StateLabel:SetAttribute("ThemeTextRole", "TextDim")
-            RowKit.Chip(StateLabel, "Accent")
-            StateLabel.Position = UDim2.new(0, 22, 0, 38)
-
-            local DetachBtn = mk("TextButton", {
-                Parent   = Holder,
-                Size     = UDim2.new(0, 28, 0, 28),
-                Position = UDim2.new(1, -70, 0.5, -14),
-                BackgroundColor3 = Theme.Accent,
-                Text     = "↗",
-                TextColor3 = Color3.fromRGB(0, 0, 0),
-                Font     = Enum.Font.GothamBold,
-                TextSize = 13,
-                ZIndex   = 15
-            })
-            corner(DetachBtn, 6)
-            RowKit.Control(DetachBtn, true)
-
-            loca
+                

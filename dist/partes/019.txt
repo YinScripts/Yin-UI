@@ -1,4 +1,37 @@
-local _dialList = nil -- sliders del tambor (LinkDial)
+,
+                Font = Enum.Font.GothamBold,
+                TextSize = 10,
+                TextXAlignment = Enum.TextXAlignment.Center,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                AutoButtonColor = false,
+                Active = true,
+                Selectable = false,
+                ZIndex = 15,
+            })
+            KeybindBtn:SetAttribute("ThemeRole", "Secondary")
+            KeybindBtn:SetAttribute("ThemeTextRole", "TextDim")
+            corner(KeybindBtn, 6)
+            stroke(KeybindBtn, Theme.Stroke, 1, 0.45)
+            RowKit.Control(KeybindBtn)
+            KeybindBtn.BackgroundTransparency = 0.35
+
+            if hasCredit then
+                ComboBtn.Position   = UDim2.new(0, 22,   0, credRowY + 2)
+                FavBtn.Position     = UDim2.new(0, 50,   0, credRowY - 3)
+                DetachBtn.Position  = UDim2.new(0, 88,   0, credRowY)
+                PinBtn.Position     = UDim2.new(0, 120,  0, credRowY)
+                KeybindBtn.Position = UDim2.new(1, -132, 0, credRowY + 3)
+                for _, child in ipairs(Holder:GetChildren()) do
+                    if child:IsA("Frame") and child.Size.X.Offset == 3 and child.Size.Y.Offset == 36 then
+                        child.Position = UDim2.new(0, 10, 0, math.floor(credZoneH / 2) - 18)
+                        break
+                    end
+                end
+            end
+
+            local _linkedSliderRef    = nil
+            local _linkedSliderFavRow = nil
+            local _dialList = nil -- sliders del tambor (LinkDial)
             local favRow = nil
             local toggleFloating
             local toggleLock
@@ -882,35 +915,4 @@ local _dialList = nil -- sliders del tambor (LinkDial)
 
                 FloatingGlow = mk("Frame", {
                     Parent = Window.ScreenGui,
-                    Size = UDim2.fromOffset(216, 48),
-                    Position = UDim2.new(0.5, -108, 0.5, -24),
-                    BackgroundColor3 = Theme.Accent,
-                    BackgroundTransparency = 1,
-                    BorderSizePixel = 0,
-                    ZIndex = 3
-                })
-                corner(FloatingGlow, 999)
-
-                FloatingWindow = mk("Frame", {
-                    Parent = Window.ScreenGui,
-                    Size = UDim2.fromOffset(floatW, floatH),
-                    Position = UDim2.new(0.5, -floatW/2, 0.5, -floatH/2),
-                    BackgroundColor3 = isCircleStyle and Color3.fromRGB(20, 20, 26) or Theme.Secondary,
-                    BackgroundTransparency = isCircleStyle and 0.55 or 0.30,
-                    BorderSizePixel = 0,
-                    Active = true,
-                    Selectable = false,
-                    ZIndex = 4
-                })
-                FloatPos.Apply("combo::" .. nameSpanish .. "::" .. textSpanish, FloatingWindow)
-                if FloatPos.IsLocked("combo::" .. nameSpanish .. "::" .. textSpanish) then
-                    isLocked = true
-                    PinBtn.Image = "rbxassetid://91959170037380"
-                end
-                FloatingWindow:SetAttribute("ThemeRole", "Secondary")
-                FloatingWindow:SetAttribute("SupportsFloatStyle", true)
-                corner(FloatingWindow, 999)
-
-                if not isCircleStyle then
-                    mk("UIGradient", {
-                        Color = ColorSequen
+                    Size = UDim2.fromOffset(216

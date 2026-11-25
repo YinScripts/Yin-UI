@@ -1,4 +1,9 @@
-derRain:SetStormEnabled(value) end},
+Rain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
+            {id = "RainIntensity", es = "Densidad de lluvia", en = "Rain density", min = 0.20, max = 1, default = 0.72, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.Intensity end, onChange = function(value) ShaderRain:SetIntensity(value) end},
+            {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
+            {id = "RainAudioVolume", es = "Volumen de lluvia", en = "Rain volume", min = 0, max = 1, default = 0.34, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.SoundVolume end, onChange = function(value) ShaderRain:SetSoundVolume(value) end},
+            {id = "RainShelter", es = "Respetar techos", en = "Respect roofs", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.RespectShelter end, onChange = function(value) ShaderRain:SetRespectShelter(value) end},
+            {id = "StormMode", es = "Relámpagos dinámicos", en = "Dynamic lightning", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.StormEnabled end, onChange = function(value) ShaderRain:SetStormEnabled(value) end},
         }
     end
 
@@ -829,53 +834,4 @@ derRain:SetStormEnabled(value) end},
                 SetIntensity = function(value) ShaderRain:SetIntensity(value) end,
                 SetSoundEnabled = function(value) ShaderRain:SetSoundEnabled(value) end,
                 SetSoundVolume = function(value) ShaderRain:SetSoundVolume(value) end,
-                SetRespectShelter = function(value) ShaderRain:SetRespectShelter(value) end,
-                SetStormEnabled = function(value) ShaderRain:SetStormEnabled(value) end,
-                IsEnabled = function() return ShaderRain.Enabled end,
-            },
-            Restore = shaderRestoreImmersive,
-        },
-    }
-
-    end
-
-    Window:InitializeShaderSystem()
-
-    local ChatApi = nil -- chat global v14 (se crea más abajo, en la pestaña Chat)
-
-    local AutoTabAjustes = Window:CreateTab("Ajustes", "Settings", "rbxassetid://98148562257039")
-    BuildAjustesExtras(
-        Window,
-        AutoTabAjustes,
-        function()
-            return SlidersHidden
-        end,
-        function(value)
-            SlidersHidden = value
-        end,
-        function()
-            if ChatApi then return ChatApi.GetSideNotifs() end
-            return SavedConfig.ChatCornerMessages ~= false
-        end,
-        function(value)
-            -- "Mensajes del Chat en esquina" = avisos al costado del chat v14
-            if ChatApi then ChatApi.SetSideNotifs(value) end
-        end
-    )
-
-    
-    
-
-
-    local function noop() end
-    Window.ChatMessages = {}
-    Window.RenderedChatFrames = {}
-    Window.TrackChatFrame = noop
-    Window.AddChatMessage = noop
-    Window.RenderChatMessage = noop
-    Window.SendMessage = noop
-    Window.SetReplyTarget = noop
-    Window.ClearReplyTarget = noop
-    Window.SendServerInvite = noop
-    Window.RenderInviteCard = noop
-    function Window:SendChatMessage() en
+            

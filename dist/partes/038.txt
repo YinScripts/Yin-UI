@@ -1,4 +1,42 @@
-al url = trim(value)
+          local decoded = HttpService:JSONDecode(raw)
+            if type(decoded) == "table" and type(decoded.Songs) == "table" then
+                return decoded.Songs
+            end
+            return {}
+        end)
+        if ok and type(songs) == "table" then
+            return songs
+        end
+        warn("[YinYang Spotify] No se pudo leer el JSON de Mis canciones.")
+        return {}
+    end
+
+    local function saveUserSongs()
+        if type(writefile) ~= "function" then
+            return false, GetText("Este ejecutor no permite guardar archivos.", "This executor does not support file saving.")
+        end
+        local serializable = {}
+        for _, track in ipairs(SpotifyState.UserSongs) do
+            serializable[#serializable + 1] = {
+                Id = track.Id,
+                Name = track.Name,
+                Artist = track.Artist,
+                Duration = track.Duration,
+                Cover = track.Cover,
+                CoverURL = track.CoverURL,
+                AudioURL = track.AudioURL,
+                CacheName = track.CacheName,
+                CoverCacheName = track.CoverCacheName,
+            }
+        end
+        local ok = pcall(function()
+            writefile(USER_SONGS_FILE, HttpService:JSONEncode({Version = 1, Songs = serializable}))
+        end)
+        return ok, (not ok) and GetText("No se pudo escribir el archivo JSON.", "Could not write the JSON file.") or nil
+    end
+
+    local function normalizeDownloadUrl(value)
+        local url = trim(value)
         if url == "" then return "" end
         if url:match("^http://github%.com/") or url:match("^http://raw%.githubusercontent%.com/") then
             url = url:gsub("^http://", "https://")
@@ -1127,45 +1165,4 @@ al url = trim(value)
         refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
     end
     local function applyPlaybackSpeed(value)
-        SpotifyState.PlaybackSpeed = clamp(value, 0.50, 2)
-        if SpotifyState.CurrentSound then pcall(function() SpotifyState.CurrentSound.PlaybackSpeed = SpotifyState.PlaybackSpeed end) end
-        refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
-    end
-
-    PM.VolumeBox = PM.section(1, 52)
-    PM.label(PM.VolumeBox, "Volumen", 0)
-    PM.VolumeValue = PM.valueLabel(PM.VolumeBox, 0)
-    PM.VolumeTrack = mk("Frame", {
-        Parent = PM.VolumeBox,
-        Size = UDim2.new(1, -14, 0, 4),
-        Position = UDim2.new(0, 7, 0, 34),
-        BackgroundColor3 = Color3.fromRGB(77, 77, 77),
-        BorderSizePixel = 0,
-        ZIndex = 43,
-    })
-    corner(PM.VolumeTrack, 999)
-    PM.VolumeFill = mk("Frame", {
-        Parent = PM.VolumeTrack,
-        Size = UDim2.new(0.75, 0, 1, 0),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        ZIndex = 44,
-    })
-    corner(PM.VolumeFill, 999)
-    PM.VolumeKnob = mk("Frame", {
-        Parent = PM.VolumeTrack,
-        Size = UDim2.fromOffset(14, 14),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.75, 0, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BorderSizePixel = 0,
-        ZIndex = 45,
-    })
-    corner(PM.VolumeKnob, 999)
-    PM.VolumeHit = mk("TextButton", {
-        Parent = PM.VolumeBox,
-        Size = UDim2.new(1, 0, 0, 30),
-        Position = UDim2.new(0, 0, 0, 21),
-        BackgroundTransparency = 1,
-        Text = "",
-        AutoButto
+   

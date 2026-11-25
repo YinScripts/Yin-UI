@@ -1,4 +1,32 @@
-Area, function() SpotifyState.FavQueue = false playTrack(index) end)
+ctedIndex and Color3.fromRGB(100, 220, 120) or spotifyDim,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,
+        })
+        Artist.Name = "SongArtist"
+
+        local Duration = mk("TextLabel", {
+            Parent = Row, Size = UDim2.fromOffset(44, 16), Position = UDim2.new(1, -50, 1, -22),
+            BackgroundTransparency = 1, Text = track.Duration, Font = Enum.Font.GothamMedium, TextSize = 9,
+            TextColor3 = spotifyDim, TextXAlignment = Enum.TextXAlignment.Right, ZIndex = 12,
+        })
+        Duration.Name = "SongDuration"
+
+        local Plus = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -7, 1, -5), BackgroundTransparency = 1, Image = "",
+            ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 16, Active = true, Visible = false,
+        })
+        Plus.Name = "SongPlus"
+
+        local Play = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(30, 30), AnchorPoint = Vector2.new(1, 1),
+            Position = UDim2.new(1, -8, 0, coverPad + coverSize - 4), BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0, Image = asset(135609604299893), ImageColor3 = Color3.fromRGB(0, 0, 0),
+            AutoButtonColor = false, ZIndex = 17, Active = true,
+        })
+        Play.Name = "SongPlay"
+        corner(Play, 999)
+
+        bindRowTap(TapArea, function() SpotifyState.FavQueue = false playTrack(index) end)
         Cover.Activated:Connect(function()
             SpotifyState.FavQueue = false
             playTrack(index)

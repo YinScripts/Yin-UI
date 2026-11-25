@@ -1,4 +1,47 @@
-endants = true,
+ions, connection)
+        return connection
+    end
+
+    local function shaderDisconnectAll()
+        ShaderCustomActiveSlider = nil
+        for index = #ShaderCustomConnections, 1, -1 do
+            pcall(function() ShaderCustomConnections[index]:Disconnect() end)
+            ShaderCustomConnections[index] = nil
+        end
+    end
+
+    local function shaderSetModeLabel(name)
+        local modeKey = name
+        local labelES = tostring(name)
+        local labelEN = tostring(name)
+        for key, card in pairs(ShaderModeCards) do
+            if key == name or card.labelES == name or card.labelEN == name then
+                modeKey = key
+                labelES = card.labelES
+                labelEN = card.labelEN
+                break
+            end
+        end
+        if ShaderModeLabel then
+            local activeES = "Modo activo: " .. labelES
+            local activeEN = "Active mode: " .. labelEN
+            ShaderModeLabel.Text = GetText(activeES, activeEN)
+        end
+        for key, card in pairs(ShaderModeCards) do
+            if card.setSelected then
+                pcall(function() card.setSelected(key == modeKey) end)
+            end
+        end
+    end
+
+    local function shaderCreateModeCard(parent, spec)
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, -8, 0, 156),
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
             ZIndex = 9,
         })
         holder:SetAttribute("ThemeRole", "Secondary")
@@ -829,9 +872,4 @@ endants = true,
             {id = "ModelSurfaceDetail", es = "Detalle en modelos", en = "Model surface detail", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ModelDetailEnabled end, onChange = function(value) ShaderReflections:SetModelDetailEnabled(value) end},
             {id = "ModelShadows", es = "Sombras de modelos", en = "Model contact shadows", default = false, target = "Lighting", property = "ShadowSoftness", toggle = true, getValue = function() return ShaderReflections.ShadowEnabled end, onChange = function(value) ShaderReflections:SetShadowEnabled(value) end},
             {id = "ModelShadowStrength", es = "Intensidad de sombras", en = "Shadow intensity", min = 0.05, max = 0.70, default = 0.30, step = 0.01, target = "Lighting", property = "ShadowSoftness", getValue = function() return ShaderReflections.ShadowStrength end, onChange = function(value) ShaderReflections:SetShadowStrength(value) end},
-            {id = "PhysicalRain", es = "Lluvia física", en = "Physical rain", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
-            {id = "RainIntensity", es = "Densidad de lluvia", en = "Rain density", min = 0.20, max = 1, default = 0.72, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.Intensity end, onChange = function(value) ShaderRain:SetIntensity(value) end},
-            {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
-            {id = "RainAudioVolume", es = "Volumen de lluvia", en = "Rain volume", min = 0, max = 1, default = 0.34, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.SoundVolume end, onChange = function(value) ShaderRain:SetSoundVolume(value) end},
-            {id = "RainShelter", es = "Respetar techos", en = "Respect roofs", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.RespectShelter end, onChange = function(value) ShaderRain:SetRespectShelter(value) end},
-            {id = "StormMode", es = "Relámpagos dinámicos", en = "Dynamic lightning", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.StormEnabled end, onChange = function(value) Sha
+            {id = "PhysicalRain", es = "Lluvia física", en = "Physical rain", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return Shader

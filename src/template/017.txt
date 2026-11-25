@@ -617,15 +617,18 @@
                 Window._RadialOpen = true
                 local gui = Window.ScreenGui
                 local view = gui.AbsoluteSize
-                local R = math.clamp(math.min(view.X, view.Y) * 0.32, 95, 150)
-                local ap, as = anchor.AbsolutePosition, anchor.AbsoluteSize
-                local cx = math.clamp(ap.X + as.X / 2, R + 60, math.max(R + 60, view.X - R - 60))
-                local cy = math.clamp(ap.Y + as.Y / 2, R + 30, math.max(R + 30, view.Y - R - 30))
-
                 local overlay = mk("TextButton", {
                     Name = "YYRadial", Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "",
                     AutoButtonColor = false, ZIndex = 2000,
                 }, gui)
+                -- v2: el centro es el del toggle (posición relativa a la capa: corrige el margen de la barra de Roblox)
+                -- y el tamaño crece con la cantidad de opciones para que no se pisen
+                local count = #options
+                local Ry = math.clamp(70 + count * 9, 100, math.max(100, view.Y / 2 - 24))
+                local Rx = math.clamp(Ry * 1.45, 140, math.max(140, view.X / 2 - 70))
+                local ap, as, op = anchor.AbsolutePosition, anchor.AbsoluteSize, overlay.AbsolutePosition
+                local cx = math.clamp(ap.X + as.X / 2 - op.X, Rx * 0.55, math.max(Rx * 0.55, view.X - Rx * 0.55))
+                local cy = math.clamp(ap.Y + as.Y / 2 - op.Y, Ry * 0.55, math.max(Ry * 0.55, view.Y - Ry * 0.55))
                 local orbit = mk("Frame", {
                     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(0, 0),
                     BackgroundTransparency = 1, ZIndex = 2001,
@@ -633,16 +636,27 @@
                 corner(orbit, 999)
                 local orbitStroke = stroke(orbit, Theme.Stroke, 1, 1)
                 local dot = mk("TextButton", {
-                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(34, 34),
-                    BackgroundColor3 = Theme.Text, Text = "", AutoButtonColor = false, ZIndex = 2003,
+                    AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(26, 26),
+                    BackgroundColor3 = Theme.Background, Text = "", AutoButtonColor = false, ZIndex = 2003,
                 }, overlay)
                 corner(dot, 999)
+                stroke(dot, Theme.Accent, 2, 0.1)
                 local pills = {}
+                local function shade(c, f) return c:Lerp(Color3.new(0, 0, 0), f) end
                 local function paint(p)
                     local on = p.fn.Get()
-                    p.btn.BackgroundColor3 = on and Theme.Accent or Theme.Secondary
-                    p.btn.TextColor3 = on and (Theme.AccentText or getContrastColor(Theme.Accent)) or Theme.Text
+                    local bg = on and Theme.Accent or Theme.Background
+                    local tc = on and (Theme.AccentText or getContrastColor(Theme.Accent)) or Theme.Text
+                    p.btn.BackgroundColor3 = bg
+                    p.label.TextColor3 = Color3.new(1, 1, 1)
+                    -- el texto se oscurece desde la mitad hacia la derecha
+                    p.grad.Color = ColorSequence.new({
+                        ColorSequenceKeypoint.new(0, tc),
+                        ColorSequenceKeypoint.new(0.5, tc),
+                        ColorSequenceKeypoint.new(1, shade(tc, 0.55)),
+                    })
                     p.stroke.Color = on and Theme.Accent or Theme.Stroke
+                    p.baseStroke = on and 0.1 or 0.45
                 end
                 local toast
                 local function showToast(text)
@@ -660,15 +674,21 @@
                 for i, o in ipairs(options) do
                     local btn = mk("TextButton", {
                         AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(10, 28),
-                        AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Secondary, Text = o.fn.Name(),
-                        TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 12, AutoButtonColor = false,
-                        TextTransparency = 1, BackgroundTransparency = 1, ZIndex = 2004,
+                        AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Background, Text = "",
+                        AutoButtonColor = false, BackgroundTransparency = 1, ZIndex = 2004,
                     }, overlay)
-                    mk("UIPadding", { PaddingLeft = UDim.new(0, 11), PaddingRight = UDim.new(0, 11) }, btn)
+                    mk("UIPadding", { PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12) }, btn)
                     corner(btn, 999)
+                    -- el texto va en su propia etiqueta para que el degradé oscurezca solo las letras
+                    local label = mk("TextLabel", {
+                        Size = UDim2.fromScale(0, 1), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                        Text = o.fn.Name(), TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 12,
+                        TextTransparency = 1, ZIndex = 2005,
+                    }, btn)
+                    local grad = mk("UIGradient", {}, label)
                     local st = stroke(btn, Theme.Stroke, 1, 1)
                     local scale = mk("UIScale", { Scale = 0.3 }, btn)
-                    local p = { fn = o.fn, btn = btn, stroke = st, scale = scale, i = i }
+                    local p = { fn = o.fn, btn = btn, label = label, grad = grad, stroke = st, scale = scale, i = i }
                     pills[#pills + 1] = p
                     paint(p)
                     btn.MouseButton1Click:Connect(function()
@@ -724,18 +744,18 @@
                     k = k + (target - k) * math.min(dt * 7, 1)
                     if not drag then rot = rot + dt * 0.18 end
                     local e = 1 - (1 - math.clamp(k, 0, 1)) ^ 3
-                    orbit.Size = UDim2.fromOffset(2 * R * e, 2 * R * 0.82 * e)
+                    orbit.Size = UDim2.fromOffset(2 * Rx * e, 2 * Ry * e)
                     orbitStroke.Transparency = 1 - 0.55 * e
-                    dot.Size = UDim2.fromOffset(34 * e, 34 * e)
+                    dot.Size = UDim2.fromOffset(26 * e, 26 * e)
                     for _, p in ipairs(pills) do
                         local s = math.clamp(k * 1.25 - (p.i - 1) * 0.025, 0, 1)
                         local ee = 1 - (1 - s) ^ 3
                         local a = (p.i - 1) / n * math.pi * 2 + rot - math.pi / 2
-                        p.btn.Position = UDim2.fromOffset(cx + math.cos(a) * R * ee, cy + math.sin(a) * R * 0.82 * ee)
+                        p.btn.Position = UDim2.fromOffset(cx + math.cos(a) * Rx * ee, cy + math.sin(a) * Ry * ee)
                         p.scale.Scale = 0.3 + 0.7 * ee
-                        p.btn.TextTransparency = 1 - ee
-                        p.btn.BackgroundTransparency = 1 - ee * 0.95
-                        p.stroke.Transparency = 1 - ee * 0.6
+                        p.label.TextTransparency = 1 - ee
+                        p.btn.BackgroundTransparency = 1 - ee * 0.92
+                        p.stroke.Transparency = 1 - ee * (1 - (p.baseStroke or 0.45))
                     end
                     if closing and k < 0.03 then
                         conn:Disconnect()

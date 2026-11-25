@@ -1,4 +1,22 @@
-lack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72, 22), ZIndex = Z + 3 })
+ypoint.new(1, GOLD_B) })
+    TweenService:Create(PCardGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
+    local PScale = mk("UIScale", { Parent = PCard, Scale = 1 })
+    pad(PCard, 14, 16, 16, 14)
+
+    -- encabezado: candado que flota + título + chip PREMIUM
+    local PHead = mk("Frame", { Parent = PCard, Size = UDim2.new(1, 0, 0, 64), BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = Z + 2 })
+    local PIcon = mk("Frame", { Parent = PHead, Size = UDim2.fromOffset(60, 60), BackgroundColor3 = Color3.fromRGB(40, 26, 8), BorderSizePixel = 0, ZIndex = Z + 2 })
+    corner(PIcon, 16)
+    local PIconStroke = mk("UIStroke", { Parent = PIcon, Color = WHITE, Thickness = 1.5 })
+    goldGradient(PIconStroke, 45)
+    local PLock = drawLock(PIcon, 32, Z + 3)
+    TweenService:Create(PLock, TweenInfo.new(1.6, Enum.EasingStyle.Sine, Enum.EasingDirection.InOut, -1, true), { Position = UDim2.new(0.5, 0, 0.5, -3) }):Play()
+    local PChip = mk("TextLabel", { Parent = PHead, Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, Position = UDim2.fromOffset(72, 2), BackgroundColor3 = WHITE, Text = "PREMIUM", TextColor3 = Color3.fromRGB(60, 34, 8), TextSize = 10, Font = Enum.Font.GothamBlack, ZIndex = Z + 3 })
+    PChip:SetAttribute("IgnoreTextEffect", true)
+    corner(PChip, 999)
+    pad(PChip, 0, 9, 9, 0)
+    goldGradient(PChip, 0)
+    label(PHead, "Yin Yang Studio Logos", "Yin Yang Studio Logos", 17, Enum.Font.GothamBlack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72, 22), ZIndex = Z + 3 })
     label(PHead, "Creá tus propios botones flotantes", "Create your own floating buttons", 10, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -110, 0, 14), Position = UDim2.fromOffset(72, 45), ZIndex = Z + 3 })
     local PClose = mk("TextButton", { Parent = PHead, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 0), BackgroundColor3 = Theme.Secondary, Text = "×", TextColor3 = Theme.Text, TextSize = 19, Font = Enum.Font.GothamBold, ZIndex = Z + 4 })
     PClose:SetAttribute("ThemeRole", "Secondary")
@@ -794,32 +812,4 @@ lack, "Text", { Size = UDim2.new(1, -110, 0, 22), Position = UDim2.fromOffset(72
             A.Frame.Visible = true
             A.SetCover(A.Cover)
             TopBar.BackgroundTransparency = 1
-            TabList.BackgroundTransparency = 1
-            TitleLabel.Size = UDim2.fromOffset(106, 26)
-            TitleLabel.ZIndex = 60
-            DaraHubLabel.Parent.ZIndex = 60
-            DaraHubLabel.ZIndex = 61
-            TitleLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-            TitleLabel.TextStrokeTransparency = 0.15
-            DaraHubLabel.TextStrokeColor3 = Color3.new(0, 0, 0)
-            DaraHubLabel.TextStrokeTransparency = 0.15
-            for _, tab in ipairs(Window.Tabs or {}) do
-                if tab.Button then tab.Button.BackgroundTransparency = tab.Page and tab.Page.Visible and 0.35 or 1 end
-            end
-            A.Layout()
-            if Window._RefreshCompactNavigation then Window._RefreshCompactNavigation() end
-        end
-        function A.leave()
-            if not A.Active then return end
-            A.Active = false
-            A.Frame.Visible = false
-            for obj, visible in pairs(A.Saved.visible or {}) do if obj.Parent then obj.Visible = visible end end
-            TopBar.BackgroundTransparency = A.Saved.topTransparency
-            TitleLabel.Size = A.Saved.titleSize
-            TitleLabel.ZIndex = A.Saved.titleZ
-            DaraHubLabel.Parent.ZIndex = A.Saved.badgeFrameZ
-            DaraHubLabel.ZIndex = A.Saved.badgeZ
-            TitleLabel.TextStrokeTransparency = A.Saved.titleStroke
-            DaraHubLabel.TextStrokeTransparency = A.Saved.badgeStroke
-            TitleLabel.TextStrokeColor3 = A.Saved.titleStrokeColor
-            Dar
+            
