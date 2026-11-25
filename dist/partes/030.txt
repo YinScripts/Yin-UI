@@ -1,4 +1,10 @@
-      if existing then pcall(function() existing:Destroy() end) end
+ateSplashes(delta)
+    end
+
+    function ShaderRain:_createRig()
+        if self.Rig and self.Rig.Parent and self.Emitter then return end
+        local existing = workspace:FindFirstChild("YinYangShader_RainRig")
+        if existing then pcall(function() existing:Destroy() end) end
         local rig = Instance.new("Part")
         rig.Name = "YinYangShader_RainRig"
         rig.Anchored, rig.CanCollide, rig.CanQuery, rig.CanTouch, rig.CastShadow = true, false, false, false, false
@@ -917,10 +923,4 @@
         if math.abs(value) >= 100 then
             return string.format("%.0f", value)
         elseif math.abs(value) >= 10 then
-            return string.format("%.1f", value):gsub("%.0$", "")
-        end
-        return string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", "")
-    end
-
-    local function shaderAddConnection(connection)
-        table.insert(ShaderCustomConnect
+            return string.format("%.1f

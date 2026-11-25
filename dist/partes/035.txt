@@ -1,4 +1,11 @@
-sparency = 1,
+roke.Transparency = 0.6
+        ED.rec.Name = NameBox.Text:sub(1, 24)
+    end)
+
+    local TemplateRow = mk("ScrollingFrame", {
+        Parent = NameCard,
+        Size = UDim2.new(1, 0, 0, 74),
+        BackgroundTransparency = 1,
         BorderSizePixel = 0,
         ScrollingDirection = Enum.ScrollingDirection.X,
         AutomaticCanvasSize = Enum.AutomaticSize.X,
@@ -794,6 +801,4 @@ sparency = 1,
     local PCard = mk("Frame", { Parent = PSheet, Size = UDim2.new(0.94, 0, 0.92, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 1 })
     PCard:SetAttribute("ThemeRole", "Background")
     corner(PCard, 18)
-    local PCardStroke = mk("UIStroke", { Parent = PCard, Color = WHITE, Thickness = 2 })
-    local PCardGrad = goldGradient(PCardStroke, 0)
-    PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKe
+    local PCardStroke = mk("UIStroke", { Parent = PCard, Color = WHITE, Thickness =

@@ -1,4 +1,7 @@
-  if hit.Instance.Transparency >= 0.9 and not self.MirrorFloors[hit.Instance] then
+eflejo se borraba al saltar)
+            local hit = workspace:Raycast(origin, Vector3.new(0, -40, 0), params)
+            if not hit or not hit.Instance or hit.Instance:IsA("Terrain") then return nil end
+            if hit.Instance.Transparency >= 0.9 and not self.MirrorFloors[hit.Instance] then
                 table.insert(excluded, hit.Instance)
             else
                 if hit.Normal.Y < 0.9 then return nil end
@@ -1021,10 +1024,4 @@
                 end
             end
         end
-        self:_updateSplashes(delta)
-    end
-
-    function ShaderRain:_createRig()
-        if self.Rig and self.Rig.Parent and self.Emitter then return end
-        local existing = workspace:FindFirstChild("YinYangShader_RainRig")
-  
+        self:_upd

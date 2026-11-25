@@ -1,4 +1,7 @@
-                return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
+                local p = base.Position
+                    local rot = CFrame.Angles(math.rad(a[1] or 0), math.rad(a[2] or 0), math.rad(a[3] or 0))
+                    local lift = Vector3.new(0, a[4] or 0, 0)
+                    return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
                 end
                 function HomeAnim.Apply(rig, pose)
                     local waist = pose.Waist
@@ -758,6 +761,3 @@
             statusVal.Size = UDim2.new(1, -46, 0, 15)
             statusSub.Visible = true
             statusSub.TextSize = 9
-            statusSub.Position = UDim2.new(0, 48, 1, -15)
-            statusSub.Size = UDim2.new(1, -55, 0, 12)
-            local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, 

@@ -1,4 +1,6 @@
-Thickness = 0, Transparency = 0.2})
+            statusSub.Position = UDim2.new(0, 48, 1, -15)
+            statusSub.Size = UDim2.new(1, -55, 0, 12)
+            local statusHalo = mk("UIStroke", {Parent = statusDot, Color = statusDot.BackgroundColor3, Thickness = 0, Transparency = 0.2})
             pcall(function()
                 TweenService:Create(statusHalo, TweenInfo.new(1.2, Enum.EasingStyle.Sine, Enum.EasingDirection.Out, -1, false, 0.4), {Thickness = 4, Transparency = 1}):Play()
             end)
@@ -1056,10 +1058,4 @@ Thickness = 0, Transparency = 0.2})
                 end)
                 shrink:Play()
             end
-            CloseBtn.MouseButton1Click:Connect(close)
-            Backdrop.MouseButton1Click:Connect(close)
-
-            return Panel, close
-        end
-
-        -- Pie: mensaje de estado en una pastilla de color + boton princ
+           

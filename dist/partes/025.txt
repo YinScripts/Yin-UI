@@ -1,4 +1,10 @@
-ipal
+ CloseBtn.MouseButton1Click:Connect(close)
+            Backdrop.MouseButton1Click:Connect(close)
+
+            return Panel, close
+        end
+
+        -- Pie: mensaje de estado en una pastilla de color + boton principal
         local function addFooter(Panel, statusY, btnES, btnEN, btnW)
             btnW = btnW or 150
             local StatusPill = mk("Frame", {
@@ -1025,11 +1031,4 @@ ipal
             for _, row in ipairs(mock.Rows) do row.Row.BackgroundTransparency = 0.55 end
             if full then
                 mock.Side.BackgroundTransparency = 0.62
-                mock.Top.BackgroundTransparency = 0.62
-            end
-        end
-
-        local NameLabel = mk("TextLabel", {
-            Parent = Card,
-            Size = UDim2.new(1, isCustom and -46 or -20, 0, 20),
-            Positi
+                mock.To

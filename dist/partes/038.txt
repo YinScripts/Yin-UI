@@ -1,4 +1,11 @@
-          local decoded = HttpService:JSONDecode(raw)
+ return {}
+        end
+        local ok, songs = pcall(function()
+            local raw = readfile(USER_SONGS_FILE)
+            if type(raw) ~= "string" or raw == "" then
+                return {}
+            end
+            local decoded = HttpService:JSONDecode(raw)
             if type(decoded) == "table" and type(decoded.Songs) == "table" then
                 return decoded.Songs
             end
@@ -1161,8 +1168,4 @@
 
     local function applyPlaybackVolume(value)
         SpotifyState.PlaybackVolume = clamp(value, 0, 1)
-        if SpotifyState.CurrentSound then pcall(function() SpotifyState.CurrentSound.Volume = SpotifyState.PlaybackVolume end) end
-        refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
-    end
-    local function applyPlaybackSpeed(value)
-   
+        if SpotifyState.CurrentSound then

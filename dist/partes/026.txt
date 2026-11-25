@@ -1,4 +1,11 @@
-on = UDim2.new(0, 10, 0, 118),
+p.BackgroundTransparency = 0.62
+            end
+        end
+
+        local NameLabel = mk("TextLabel", {
+            Parent = Card,
+            Size = UDim2.new(1, isCustom and -46 or -20, 0, 20),
+            Position = UDim2.new(0, 10, 0, 118),
             BackgroundTransparency = 1,
             Text = tema,
             Font = Enum.Font.GothamBlack,
@@ -1142,9 +1149,4 @@ on = UDim2.new(0, 10, 0, 118),
 
     local lastThemeEditorLanguage = LibraryLanguage
     RunService.Heartbeat:Connect(function()
-        local currentLanguage = LibraryLanguage
-        if currentLanguage == lastThemeEditorLanguage then return end
-        lastThemeEditorLanguage = currentLanguage
-
-        for _, root in ipairs({AutoTabTemas.Page, EditorOverlay, DeleteOverlay}) do
-       
+        local currentLanguage = LibraryLangua

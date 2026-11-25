@@ -1,4 +1,6 @@
-ypoint.new(1, GOLD_B) })
+ 2 })
+    local PCardGrad = goldGradient(PCardStroke, 0)
+    PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKeypoint.new(1, GOLD_B) })
     TweenService:Create(PCardGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
     local PScale = mk("UIScale", { Parent = PCard, Scale = 1 })
     pad(PCard, 14, 16, 16, 14)
@@ -807,9 +809,4 @@ ypoint.new(1, GOLD_B) })
                 titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex, badgeFrameZ = DaraHubLabel.Parent.ZIndex}
             for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
                 TitleDivider, TopBarArt, TabListArt, CatImage, BackgroundArt, Main:FindFirstChild("RotatingSubText")}) do
-                if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
-            end
-            A.Frame.Visible = true
-            A.SetCover(A.Cover)
-            TopBar.BackgroundTransparency = 1
-            
+              

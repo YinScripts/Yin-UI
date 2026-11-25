@@ -1,4 +1,12 @@
-  BackgroundColor3 = Color3.fromRGB(160, 90, 235), BackgroundTransparency = 0.72,
+= true,
+            ZIndex = 12,
+        })
+        Card.Name = "SpotifyFavoritesTile"
+        corner(Card, 12)
+
+        local Glow = mk("Frame", {
+            Parent = Card, Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(160, 90, 235), BackgroundTransparency = 0.72,
             BorderSizePixel = 0, ZIndex = 12,
         })
         corner(Glow, 12)
@@ -1190,6 +1198,4 @@
 
         local Artist = mk("TextLabel", {
             Parent = Row, Size = UDim2.new(1, -22, 0, 16),
-            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 31),
-            BackgroundTransparency = 1, Text = track.Artist, Font = Enum.Font.GothamMedium,
-            TextSize = m.compact and 9 or 10, TextColor3 = index == SpotifyState.Sele
+            Position = UDim2.new(

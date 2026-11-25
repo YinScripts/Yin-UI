@@ -1,4 +1,6 @@
-ctedIndex and Color3.fromRGB(100, 220, 120) or spotifyDim,
+0, 11, 0, coverPad + coverSize + 31),
+            BackgroundTransparency = 1, Text = track.Artist, Font = Enum.Font.GothamMedium,
+            TextSize = m.compact and 9 or 10, TextColor3 = index == SpotifyState.SelectedIndex and Color3.fromRGB(100, 220, 120) or spotifyDim,
             TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,
         })
         Artist.Name = "SongArtist"

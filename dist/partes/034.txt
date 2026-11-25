@@ -1,4 +1,10 @@
-b:SetAttribute("ThemeRole", role or "Secondary")
+ BorderSizePixel = 0,
+            TextColor3 = role == "Accent" and Theme.AccentText or Theme.Text,
+            TextSize = 12,
+            Font = Enum.Font.GothamBold,
+            ZIndex = Z + 4,
+        })
+        b:SetAttribute("ThemeRole", role or "Secondary")
         b:SetAttribute("ThemeTextRole", role == "Accent" and "AccentText" or "Text")
         if role == "Accent" then b:SetAttribute("IgnoreTextEffect", true) end
         L(b, es, en)
@@ -802,11 +808,4 @@ b:SetAttribute("ThemeRole", role or "Secondary")
     NameBox.Focused:Connect(function() nameStroke.Color = Theme.Accent nameStroke.Transparency = 0.1 end)
     NameBox.FocusLost:Connect(function()
         nameStroke.Color = Theme.Stroke
-        nameStroke.Transparency = 0.6
-        ED.rec.Name = NameBox.Text:sub(1, 24)
-    end)
-
-    local TemplateRow = mk("ScrollingFrame", {
-        Parent = NameCard,
-        Size = UDim2.new(1, 0, 0, 74),
-        BackgroundTran
+        nameSt

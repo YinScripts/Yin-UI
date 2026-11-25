@@ -1,4 +1,7 @@
-    SetRespectShelter = function(value) ShaderRain:SetRespectShelter(value) end,
+n:SetIntensity(value) end,
+                SetSoundEnabled = function(value) ShaderRain:SetSoundEnabled(value) end,
+                SetSoundVolume = function(value) ShaderRain:SetSoundVolume(value) end,
+                SetRespectShelter = function(value) ShaderRain:SetRespectShelter(value) end,
                 SetStormEnabled = function(value) ShaderRain:SetStormEnabled(value) end,
                 IsEnabled = function() return ShaderRain.Enabled end,
             },
@@ -1002,10 +1005,4 @@
         local b = mk("TextButton", {
             Parent = parent,
             BackgroundColor3 = Theme[role] or Theme.Secondary,
-            BorderSizePixel = 0,
-            TextColor3 = role == "Accent" and Theme.AccentText or Theme.Text,
-            TextSize = 12,
-            Font = Enum.Font.GothamBold,
-            ZIndex = Z + 4,
-        })
-        
+           

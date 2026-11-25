@@ -1,4 +1,5 @@
-Rain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
+trength(value) end},
+            {id = "PhysicalRain", es = "Lluvia física", en = "Physical rain", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
             {id = "RainIntensity", es = "Densidad de lluvia", en = "Rain density", min = 0.20, max = 1, default = 0.72, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.Intensity end, onChange = function(value) ShaderRain:SetIntensity(value) end},
             {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
             {id = "RainAudioVolume", es = "Volumen de lluvia", en = "Rain volume", min = 0, max = 1, default = 0.34, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.SoundVolume end, onChange = function(value) ShaderRain:SetSoundVolume(value) end},
@@ -831,7 +832,4 @@ Rain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
             },
             Rain = {
                 SetEnabled = function(value) ShaderRain:SetEnabled(value) end,
-                SetIntensity = function(value) ShaderRain:SetIntensity(value) end,
-                SetSoundEnabled = function(value) ShaderRain:SetSoundEnabled(value) end,
-                SetSoundVolume = function(value) ShaderRain:SetSoundVolume(value) end,
-            
+                SetIntensity = function(value) ShaderRai

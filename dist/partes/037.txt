@@ -1,4 +1,9 @@
-TabList.BackgroundTransparency = 1
+  if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
+            end
+            A.Frame.Visible = true
+            A.SetCover(A.Cover)
+            TopBar.BackgroundTransparency = 1
+            TabList.BackgroundTransparency = 1
             TitleLabel.Size = UDim2.fromOffset(106, 26)
             TitleLabel.ZIndex = 60
             DaraHubLabel.Parent.ZIndex = 60
@@ -1258,11 +1263,4 @@ TabList.BackgroundTransparency = 1
 
     local function loadUserSongs()
         if type(readfile) ~= "function" then
-            return {}
-        end
-        local ok, songs = pcall(function()
-            local raw = readfile(USER_SONGS_FILE)
-            if type(raw) ~= "string" or raw == "" then
-                return {}
-            end
-  
+           

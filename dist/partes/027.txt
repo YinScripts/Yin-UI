@@ -1,4 +1,9 @@
-     for _, element in ipairs(root:GetDescendants()) do
+ge
+        if currentLanguage == lastThemeEditorLanguage then return end
+        lastThemeEditorLanguage = currentLanguage
+
+        for _, root in ipairs({AutoTabTemas.Page, EditorOverlay, DeleteOverlay}) do
+            for _, element in ipairs(root:GetDescendants()) do
                 if element:IsA("TextLabel") or element:IsA("TextButton") then
                     local spanish = element:GetAttribute("TextSpanish")
                     local english = element:GetAttribute("TextEnglish")
@@ -839,9 +844,4 @@
             BlurEffect = {Enabled = false, Size = 0},
             DepthOfFieldEffect = {Enabled = true, FarIntensity = 0.22, FocusDistance = 22, InFocusRadius = 30, NearIntensity = 0.04},
             SunRaysEffect = {Enabled = true, Intensity = 0.10, Spread = 0.60},
-            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.TonemapperPreset.Default},
-        },
-        depthstyle = {
-            Lighting = {
-                Brightness = 1.55, Ambient = Color3.fromRGB(0, 0, 0), OutdoorAmbient = Color3.fromRGB(0, 0, 0),
-                ColorShi
+            ColorGradingEffect = {Enabled = false, TonemapperPreset = Enum.Tonemap
