@@ -1,4 +1,16 @@
-trength(value) end},
+bled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
+
+            {section = {"Overdrive local", "Local overdrive", "Efectos visuales locales con límites de distancia, partes y tasa de partículas.", "Local visual effects with distance, part and particle-rate limits."}},
+            {id = "WetReflections", es = "Reflejos húmedos", en = "Wet reflections", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.Enabled end, onChange = function(value) ShaderReflections:SetEnabled(value) end},
+            {id = "ReflectionIntensity", es = "Intensidad de reflejo", en = "Reflection intensity", min = 0.05, max = 0.60, default = 0.28, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Intensity end, onChange = function(value) ShaderReflections:SetIntensity(value) end},
+            {id = "Wetness", es = "Acabado mojado", en = "Wet finish", min = 0.10, max = 1, default = 0.82, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Wetness end, onChange = function(value) ShaderReflections:SetWetness(value) end},
+            {id = "AllSurfaceCoverage", es = "Cubrir paredes y techos", en = "Cover walls and ceilings", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SurfaceMode == "All" end, onChange = function(value) ShaderReflections:SetSurfaceMode(value and "All" or "Floors") end},
+            {id = "SceneCoverage", es = "Cobertura de escena", en = "Scene coverage", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SceneCoverage end, onChange = function(value) ShaderReflections:SetSceneCoverage(value) end},
+            {id = "ContactReflection", es = "Contacto del personaje", en = "Character contact", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ContactEnabled end, onChange = function(value) ShaderReflections:SetContactEnabled(value) end},
+            {id = "ContactStrength", es = "Detalle de contacto", en = "Contact detail", min = 0.05, max = 0.60, default = 0.24, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.ContactStrength end, onChange = function(value) ShaderReflections:SetContactStrength(value) end},
+            {id = "ModelSurfaceDetail", es = "Detalle en modelos", en = "Model surface detail", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ModelDetailEnabled end, onChange = function(value) ShaderReflections:SetModelDetailEnabled(value) end},
+            {id = "ModelShadows", es = "Sombras de modelos", en = "Model contact shadows", default = false, target = "Lighting", property = "ShadowSoftness", toggle = true, getValue = function() return ShaderReflections.ShadowEnabled end, onChange = function(value) ShaderReflections:SetShadowEnabled(value) end},
+            {id = "ModelShadowStrength", es = "Intensidad de sombras", en = "Shadow intensity", min = 0.05, max = 0.70, default = 0.30, step = 0.01, target = "Lighting", property = "ShadowSoftness", getValue = function() return ShaderReflections.ShadowStrength end, onChange = function(value) ShaderReflections:SetShadowStrength(value) end},
             {id = "PhysicalRain", es = "Lluvia física", en = "Physical rain", default = false, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.Enabled end, onChange = function(value) ShaderRain:SetEnabled(value) end},
             {id = "RainIntensity", es = "Densidad de lluvia", en = "Rain density", min = 0.20, max = 1, default = 0.72, step = 0.01, target = "Lighting", property = "Brightness", getValue = function() return ShaderRain.Intensity end, onChange = function(value) ShaderRain:SetIntensity(value) end},
             {id = "RainAudio", es = "Audio de lluvia", en = "Rain audio", default = true, target = "Lighting", property = "GlobalShadows", toggle = true, getValue = function() return ShaderRain.SoundEnabled end, onChange = function(value) ShaderRain:SetSoundEnabled(value) end},
@@ -761,75 +773,4 @@ trength(value) end},
             shaderWarn(report, "Preset " .. tostring(name))
             shaderSetModeLabel(name)
             ShaderCustomRefresh()
-            if report and report.ok then shaderQueuePersistence() end
-            return report
-        end,
-        RegisterPreset = function(name, preset)
-            ShaderManager:RegisterPreset(name, preset)
-        end,
-        RegisterTarget = function(id, spec)
-            return ShaderManager:RegisterTarget(id, spec)
-        end,
-        ApplyTo = function(instance, properties, options)
-            local report = ShaderManager:ApplyTo(instance, properties, options or {})
-            shaderWarn(report, "Aplicación directa")
-            ShaderCustomRefresh()
-            return report
-        end,
-        Restore = function(options)
-            local report = shaderRestoreAll(options)
-            ShaderCustomRefresh()
-            return report
-        end,
-        GetTarget = function(id, createIfMissing)
-            return ShaderManager:GetTarget(id, createIfMissing)
-        end,
-        Read = function(targetId, properties)
-            return ShaderManager:Read(targetId, properties)
-        end,
-        SetSkyMirrorEnabled = function(enabled)
-            ShaderReflections:SetSkyMirrorEnabled(enabled)
-            shaderQueuePersistence()
-        end,
-        OpenCustom = shaderOpenCustomWindow,
-        CloseCustom = function()
-            if ShaderCustomWindow then
-                shaderDisconnectAll()
-                if ShaderCustomWindow then ShaderCustomWindow:Destroy() end
-                if ShaderCustomBackdrop then ShaderCustomBackdrop:Destroy() end
-                ShaderCustomWindow = nil
-                ShaderCustomBackdrop = nil
-                ShaderCustomControls = {}
-                ShaderCustomRefresh = function() end
-            end
-        end,
-        GetActivePreset = function()
-            return ShaderManager.ActivePreset
-        end,
-        IsDemoEnabled = function()
-            return ShaderDemoEnabled
-        end,
-        Overdrive = {
-            SetQuality = shaderSetQuality,
-            GetQuality = function() return ShaderSceneQuality end,
-            Reflections = {
-                SetEnabled = function(value) ShaderReflections:SetEnabled(value) end,
-                SetIntensity = function(value) ShaderReflections:SetIntensity(value) end,
-                SetWetness = function(value) ShaderReflections:SetWetness(value) end,
-                SetSurfaceMode = function(value) ShaderReflections:SetSurfaceMode(value) end,
-                SetSceneCoverage = function(value) ShaderReflections:SetSceneCoverage(value) end,
-                SetObjectMirrorEnabled = function(value) ShaderReflections:SetObjectMirrorEnabled(value) end,
-                SetContactEnabled = function(value) ShaderReflections:SetContactEnabled(value) end,
-                SetContactStrength = function(value) ShaderReflections:SetContactStrength(value) end,
-                SetModelDetailEnabled = function(value) ShaderReflections:SetModelDetailEnabled(value) end,
-                SetShadowEnabled = function(value) ShaderReflections:SetShadowEnabled(value) end,
-                SetShadowStrength = function(value) ShaderReflections:SetShadowStrength(value) end,
-                SetSunHue = function(value) ShaderSolarTone:SetHue(value) end,
-                SetSunSaturation = function(value) ShaderSolarTone:SetSaturation(value) end,
-                SetSunStrength = function(value) ShaderSolarTone:SetStrength(value) end,
-                Refresh = function() ShaderReflections:Refresh() end,
-                IsEnabled = function() return ShaderReflections.Enabled end,
-            },
-            Rain = {
-                SetEnabled = function(value) ShaderRain:SetEnabled(value) end,
-                SetIntensity = function(value) ShaderRai
+            if report and report.ok the

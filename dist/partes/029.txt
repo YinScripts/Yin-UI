@@ -1,4 +1,72 @@
-eflejo se borraba al saltar)
+ial = Enum.Material.Glass
+                        proxy.Parent = self.ContactRig
+                        self.ContactParts[sourcePart] = proxy
+                    end
+                    local sourceNormal = sourceHit.Normal
+                    local sourceRight = right
+                    if math.abs(sourceRight:Dot(sourceNormal)) > 0.92 then sourceRight = back end
+                    local sourceBack = sourceNormal:Cross(sourceRight).Unit
+                    sourceRight = sourceBack:Cross(sourceNormal).Unit
+                    local size = sourcePart.Size
+                    local partDistance = math.clamp((sourcePart.Position - sourceHit.Position).Magnitude, 0, 9)
+                    local partFade = math.clamp(1 - math.max(0, partDistance - 2) / 7, 0.20, 1)
+                    proxy.Size = Vector3.new(math.max(0.13, size.X * 0.78), 0.024, math.max(0.13, size.Z * 0.78))
+                    proxy.CFrame = CFrame.fromMatrix(sourceHit.Position + sourceNormal * (0.024 + index * 0.00014), sourceRight, sourceNormal, sourceBack)
+                    if self.OilSheen then
+                        proxy.Color = sourcePart.Color:Lerp(Color3.fromHSV((os.clock() * 0.07 + index * 0.09) % 1, 0.62, 1), 0.55)
+                    else
+                        proxy.Color = sourcePart.Color:Lerp(Color3.fromRGB(174, 211, 255), 0.42)
+                    end
+                    proxy.Transparency = math.clamp(0.93 - self.ContactStrength * 0.50 * wetFactor * partFade * distanceFade, 0.58, 0.89)
+                    active[sourcePart] = true
+                end
+            end
+        end
+        for sourcePart, proxy in pairs(self.ContactParts) do
+            if not active[sourcePart] then
+                if proxy and proxy.Parent then proxy:Destroy() end
+                self.ContactParts[sourcePart] = nil
+            end
+        end
+    end
+
+    -- Espejo de objetos: copias reflejadas (hacia abajo) de lo que hay sobre el suelo, vistas a traves del suelo
+    -- semitransparente. Es opt-in y reversible: al apagarlo se restauran Transparency y Color de los suelos y se borran las copias.
+    function ShaderReflections:_mirrorReflectVector(vector, normal)
+        return vector - normal * (2 * vector:Dot(normal))
+    end
+
+    function ShaderReflections:_restoreMirrorFloor(part, record)
+        if part and part.Parent and record then
+            pcall(function()
+                part.Transparency = record.transparency
+                part.Color = record.color
+                if record.castShadow ~= nil then part.CastShadow = record.castShadow end
+            end)
+        end
+    end
+
+    function ShaderReflections:_clearMirror()
+        if self.MirrorRig and self.MirrorRig.Parent then pcall(function() self.MirrorRig:Destroy() end) end
+        self.MirrorRig, self.MirrorProxies, self.MirrorBacking = nil, {}, nil
+        self.MirrorPlanePos, self.MirrorPlaneNormal, self.MirrorLostAt = nil, nil, nil
+        self.MirrorLast = {}
+        for part, record in pairs(self.MirrorFloors) do
+            self:_restoreMirrorFloor(part, record)
+        end
+        self.MirrorFloors = {}
+    end
+
+    function ShaderReflections:_mirrorPlane(character, root)
+        local excluded = {character}
+        if self.MirrorRig then table.insert(excluded, self.MirrorRig) end
+        local origin = root.Position + Vector3.new(0, 2, 0)
+        for _ = 1, 4 do
+            local params = RaycastParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = excluded
+            params.IgnoreWater = true
+            -- 40 studs: un salto normal no "pierde" el suelo (antes 16 y el reflejo se borraba al saltar)
             local hit = workspace:Raycast(origin, Vector3.new(0, -40, 0), params)
             if not hit or not hit.Instance or hit.Instance:IsA("Terrain") then return nil end
             if hit.Instance.Transparency >= 0.9 and not self.MirrorFloors[hit.Instance] then
@@ -957,71 +1025,4 @@ eflejo se borraba al saltar)
         for _, splash in pairs(self.Splashes) do
             if splash.part and splash.part.Parent then
                 if splash.age < splash.life then
-                    splash.age = splash.age + delta
-                    local t = math.clamp(splash.age / splash.life, 0, 1)
-                    local eased = 1 - (1 - t) * (1 - t)
-                    local diameter = 0.1 + splash.size * eased
-                    splash.part.Size = Vector3.new(0.015, diameter, diameter)
-                    splash.part.CFrame = CFrame.new(splash.position) * CFrame.Angles(0, 0, math.pi / 2)
-                    splash.part.Transparency = 0.38 + 0.62 * t
-                    for _, bit in ipairs(splash.bits or {}) do
-                        bit.velocity = bit.velocity + Vector3.new(0, -46 * delta, 0)
-                        bit.position = bit.position + bit.velocity * delta
-                        if bit.position.Y < splash.position.Y then bit.position = Vector3.new(bit.position.X, splash.position.Y, bit.position.Z) end
-                        bit.part.CFrame = CFrame.new(bit.position)
-                        bit.part.Transparency = 0.3 + 0.7 * t
-                    end
-                elseif splash.part.Transparency < 1 then
-                    splash.part.Transparency = 1
-                    for _, bit in ipairs(splash.bits or {}) do bit.part.Transparency = 1 end
-                end
-            end
-        end
-    end
-
-    function ShaderRain:_updateDrops(root, delta, sheltered)
-        local character = LocalPlayer and LocalPlayer.Character
-        local center = self:_center(root)
-        self.Clock = self.Clock + delta
-        self.SplashSpawned = 0
-        self.ResetBudget = 10
-        self.ColorElapsed = (self.ColorElapsed or 1) + delta
-        if self.ColorElapsed >= 1 then
-            self.ColorElapsed = 0
-            self:_refreshDropColor()
-        end
-        self:_ensureDrops(center, character)
-        local radius = shaderQualityProfile().rainRadius
-        local windScale = (0.6 + self.Intensity * 0.8) * (self.StormEnabled and 1.6 or 1)
-        -- ráfagas: el viento sube y baja en olas lentas, más fuerte con tormenta
-        local gust = 1 + math.max(0, math.sin(self.Clock * 0.23) * math.sin(self.Clock * 0.71)) * (self.StormEnabled and 1.4 or 0.6)
-        local windX = (math.sin(self.Clock * 0.31) * 4 + 5) * windScale * gust
-        local windZ = (math.cos(self.Clock * 0.19) * 3) * windScale * gust
-        for _, drop in ipairs(self.Drops) do
-            local part = drop.part
-            if part and part.Parent then
-                if sheltered then
-                    part.Transparency = 1
-                elseif drop.active then
-                    local velocity = Vector3.new(windX, -drop.speed, windZ)
-                    local position = drop.position + velocity * delta
-                    drop.position = position
-                    local dx, dz = position.X - center.X, position.Z - center.Z
-                    if position.Y <= drop.ground then
-                        if drop.landed then self:_spawnSplash(Vector3.new(position.X, drop.ground, position.Z), center) end
-                        drop.active = false
-                        part.Transparency = 1
-                    elseif math.sqrt(dx * dx + dz * dz) > radius * 1.3 then
-                        drop.active = false
-                        part.Transparency = 1
-                    else
-                        part.CFrame = CFrame.lookAt(position, position + velocity)
-                        part.Transparency = drop.alpha
-                    end
-                elseif self.ResetBudget > 0 then
-                    self.ResetBudget = self.ResetBudget - 1
-                    self:_resetDrop(drop, center, character, false)
-                end
-            end
-        end
-        self:_upd
+      

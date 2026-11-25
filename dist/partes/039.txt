@@ -1,4 +1,109 @@
- pcall(function() SpotifyState.CurrentSound.Volume = SpotifyState.PlaybackVolume end) end
+49),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        CanvasSize = UDim2.new(0, 0, 0, 0),
+        AutomaticCanvasSize = Enum.AutomaticSize.Y,
+        ScrollingDirection = Enum.ScrollingDirection.Y,
+        ScrollBarThickness = 2,
+        ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120),
+        ZIndex = 41,
+    })
+    PM.BodyLayout = mk("UIListLayout", {
+        Parent = PM.Body,
+        Padding = UDim.new(0, 4),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+    mk("UIPadding", {
+        Parent = PM.Body,
+        PaddingTop = UDim.new(0, 10),
+        PaddingBottom = UDim.new(0, 14),
+        PaddingLeft = UDim.new(0, 16),
+        PaddingRight = UDim.new(0, 16),
+    })
+
+    PM.section = function(order, height)
+        return mk("Frame", {
+            Parent = PM.Body,
+            Size = UDim2.new(1, 0, 0, height),
+            BackgroundTransparency = 1,
+            LayoutOrder = order,
+            ZIndex = 42,
+        })
+    end
+    PM.label = function(parent, text, y)
+        local english = ({
+            ["Volumen"] = "Volume",
+            ["Velocidad"] = "Speed",
+            ["Temporizador de apagado"] = "Sleep timer",
+        })[text] or text
+        local label = mk("TextLabel", {
+            Parent = parent,
+            Size = UDim2.new(1, -90, 0, 18),
+            Position = UDim2.new(0, 0, 0, y or 0),
+            BackgroundTransparency = 1,
+            Text = GetText(text, english),
+            TextColor3 = Color3.fromRGB(235, 235, 235),
+            Font = Enum.Font.GothamBold,
+            TextSize = 13,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 43,
+        })
+        label:SetAttribute("TextSpanish", text)
+        label:SetAttribute("TextEnglish", english)
+        return label
+    end
+    PM.valueLabel = function(parent, y)
+        return mk("TextLabel", {
+            Parent = parent,
+            Size = UDim2.fromOffset(90, 18),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, 0, 0, y or 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            TextColor3 = spotifyGreen,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 43,
+        })
+    end
+    PM.divider = function(order)
+        local holder = PM.section(order, 13)
+        mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 0, 1),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.92,
+            BorderSizePixel = 0,
+            ZIndex = 43,
+        })
+    end
+    PM.chip = function(parent, text)
+        local chip = mk("TextButton", {
+            Parent = parent,
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+            BackgroundTransparency = 0.92,
+            BorderSizePixel = 0,
+            Text = text,
+            TextColor3 = Color3.fromRGB(235, 235, 235),
+            Font = Enum.Font.GothamBold,
+            TextSize = 11,
+            AutoButtonColor = false,
+            ZIndex = 44,
+        })
+        corner(chip, 999)
+        return chip
+    end
+    PM.paintChip = function(chip, on)
+        chip.BackgroundColor3 = on and spotifyGreen or Color3.fromRGB(255, 255, 255)
+        chip.BackgroundTransparency = on and 0 or 0.92
+        chip.TextColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(235, 235, 235)
+    end
+
+    local function applyPlaybackVolume(value)
+        SpotifyState.PlaybackVolume = clamp(value, 0, 1)
+        if SpotifyState.CurrentSound then pcall(function() SpotifyState.CurrentSound.Volume = SpotifyState.PlaybackVolume end) end
         refreshSpotifyPlaybackMenu(); refreshSpotifyFloatingPlayer()
     end
     local function applyPlaybackSpeed(value)
@@ -877,74 +982,4 @@
         local left = PM.timerLeft()
         PM.TimerValue.Text = left and secondsToClock(left) or "Apagado"
         for _, chip in ipairs(PM.timerChips) do
-            PM.paintChip(chip.Button, (SpotifyState.SleepMinutes or 0) == chip.Value and (chip.Value == 0 or left ~= nil))
-        end
-    end
-
-    PM.switch(4, "Repetir canción", function() return SpotifyState.IsRepeat end, PM.setRepeat)
-    PM.switch(5, "Aleatorio", function() return SpotifyState.Shuffle end, function(v)
-        SpotifyState.Shuffle = v == true
-        if SpotifyState.OnPlaybackChanged then pcall(SpotifyState.OnPlaybackChanged) end
-    end)
-    PM.switch(6, "Reproductor flotante", function() return SpotifyState.FloatingPlayerVisible end, function(v)
-        if v and (not FloatingPlayer or not FloatingPlayer.Parent) then createFloatingPlayer() end
-        setFloatingVisible(v)
-    end)
-
-    refreshSpotifyFloatingPlayer = function()
-        if not FloatingPlayer or not FloatingPlayer.Parent then return end
-        FloatingPlayer.Visible = SpotifyState.FloatingPlayerVisible == true
-        local currentTrack = SpotifyState.CurrentTrack or SpotifyState.Catalog[SpotifyState.SelectedIndex]
-        if not currentTrack then return end
-        local cover = resolveTrackCoverImage(currentTrack) or ""
-        if cover ~= FP.lastCover then
-            FP.lastCover = cover
-            FP.Cover.Image = cover
-            FP.Disc.Image = cover
-            FP.Backdrop.Image = cover
-            FP.Fallback.Visible = trim(cover) == ""
-        end
-        FP.Title.Text = currentTrack.Name or "Selecciona una canción"
-        FP.Artist.Text = currentTrack.Artist or "Spotify"
-        local current = SpotifyState.CurrentSound and math.max(0, tonumber(SpotifyState.CurrentSound.TimePosition) or 0) or 0
-        local total = SpotifyState.CurrentSound and tonumber(SpotifyState.CurrentSound.TimeLength) or durationToSeconds(currentTrack.Duration)
-        total = math.max(total or 0, 1)
-        FP.Bar.Size = UDim2.new(clamp(current / total, 0, 1), 0, 1, 0)
-        FP.Time.Text = secondsToClock(current) .. " / " .. (currentTrack.Duration or secondsToClock(total))
-        FP.PlayIcon.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
-        local liked = isLiked(SpotifyState.SelectedIndex)
-        FP.LikeIcon.Image = asset(116559368303288)
-        FP.LikeIcon.ImageColor3 = liked and spotifyGreen or Color3.fromRGB(255, 255, 255)
-    end
-    local function openPlaybackMenu()
-        SpotifyState.SettingsMenuVisible = true
-        refreshSpotifyPlaybackMenu()
-        PM.Scale.Scale = 0.94
-        TweenService:Create(PM.Scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        task.defer(refreshSpotifyPlaybackMenu)
-    end
-    bindRowTap(SettingsClose, function() SpotifyState.SettingsMenuVisible = false; refreshSpotifyPlaybackMenu() end)
-    MoreTopBtn.Activated:Connect(openPlaybackMenu)
-    MoreBtn.Activated:Connect(openPlaybackMenu)
-    refreshSpotifyPlaybackMenu()
-
-
-    createFavoritesTile = function(layoutOrder)
-        local m = getSpotifyMetrics()
-        local cardH = m.cardHeight
-        local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
-        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(42, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.coverMax))
-
-        local Card = mk("TextButton", {
-            Parent = SongList,
-            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
-            BackgroundColor3 = Color3.fromRGB(96, 38, 160),
-            BackgroundTransparency = 0,
-            BorderSizePixel = 0,
-            LayoutOrder = layoutOrder or 1,
-            Text = "",
-            AutoButtonColor = false,
-            ClipsDescendants 
+            PM.paintChip(chip.Button, (SpotifyState.SleepMinutes or 0) == chip.Value and (chip.Value == 0 or left ~

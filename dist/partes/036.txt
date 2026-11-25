@@ -1,4 +1,62 @@
- 2 })
+ = pcall(function()
+                    return MPS:UserOwnsGamePassAsync(LocalPlayer.UserId, PASS_ID)
+                end)
+                if okOwn then break end
+                task.wait(attempt * 1.5)
+            end
+            -- el creador del pase siempre tiene acceso (aunque no se lo haya "comprado")
+            local okInfo, info = pcall(function()
+                return MPS:GetProductInfo(PASS_ID, Enum.InfoType.GamePass)
+            end)
+            if okInfo and type(info) == "table" then
+                PR.price = tonumber(info.PriceInRobux)
+                local creator = info.Creator
+                if type(creator) == "table" and tonumber(creator.CreatorTargetId) == LocalPlayer.UserId then
+                    owns, okOwn = true, true
+                end
+            end
+            if okOwn then
+                PR.set(owns == true, true)
+            else
+                -- Roblox no respondió: se usa la última verificación buena de esta cuenta
+                PR.set(readCache(), false)
+            end
+        end)
+    end
+    -- compra terminada dentro del juego: se desbloquea al instante
+    pcall(function()
+        MPS.PromptGamePassPurchaseFinished:Connect(function(player, passId, purchased)
+            if player == LocalPlayer and tonumber(passId) == PASS_ID and purchased then
+                PR.set(true, true)
+            end
+        end)
+    end)
+
+    -- ---------- candado dibujado (arco + cuerpo) ----------
+    local GOLD_A, GOLD_B = Color3.fromRGB(255, 214, 90), Color3.fromRGB(255, 140, 40)
+    local function goldGradient(parent, rotation)
+        return mk("UIGradient", { Parent = parent, Rotation = rotation or 45, Color = ColorSequence.new(GOLD_A, GOLD_B) })
+    end
+    local function drawLock(parent, px, z)
+        local holder = mk("Frame", { Parent = parent, Size = UDim2.fromOffset(px, px), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundTransparency = 1, ZIndex = z })
+        local shackle = mk("Frame", { Parent = holder, Size = UDim2.fromScale(0.56, 0.62), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.fromScale(0.5, 0.02), BackgroundTransparency = 1, ZIndex = z })
+        corner(shackle, 999)
+        local ss = mk("UIStroke", { Parent = shackle, Color = WHITE, Thickness = math.max(2, px * 0.1) })
+        goldGradient(ss, 90)
+        local body = mk("Frame", { Parent = holder, Size = UDim2.fromScale(0.82, 0.56), AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.fromScale(0.5, 1), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = z + 1 })
+        corner(body, math.max(3, math.floor(px * 0.14)))
+        goldGradient(body, 90)
+        local hole = mk("Frame", { Parent = body, Size = UDim2.fromScale(0.16, 0.36), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.48), BackgroundColor3 = Color3.fromRGB(60, 34, 8), BorderSizePixel = 0, ZIndex = z + 2 })
+        corner(hole, 999)
+        return holder
+    end
+
+    -- ---------- hoja "Premium" ----------
+    local PSheet = mk("Frame", { Parent = Main, Name = "LogoPremiumOverlay", Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0), BackgroundTransparency = 0.3, BorderSizePixel = 0, Visible = false, Active = true, ZIndex = Z })
+    local PCard = mk("Frame", { Parent = PSheet, Size = UDim2.new(0.94, 0, 0.92, 0), AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromScale(0.5, 0.5), BackgroundColor3 = Theme.Background, BorderSizePixel = 0, Active = true, ZIndex = Z + 1 })
+    PCard:SetAttribute("ThemeRole", "Background")
+    corner(PCard, 18)
+    local PCardStroke = mk("UIStroke", { Parent = PCard, Color = WHITE, Thickness = 2 })
     local PCardGrad = goldGradient(PCardStroke, 0)
     PCardGrad.Color = ColorSequence.new({ ColorSequenceKeypoint.new(0, GOLD_A), ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 250, 220)), ColorSequenceKeypoint.new(1, GOLD_B) })
     TweenService:Create(PCardGrad, TweenInfo.new(4, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1), { Rotation = 360 }):Play()
@@ -745,68 +803,4 @@
     SPage.BackgroundColor3 = Color3.fromRGB(0, 0, 0)
     SPage.BackgroundTransparency = 1
     SPage.AutomaticCanvasSize = Enum.AutomaticSize.None
-    SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-    SPage.ScrollBarThickness = 0
-    SPage.ScrollingEnabled = false
-
-    -- Capa estática de brillo ahumado; si falla la descarga, conserva el panel normal.
-    local function spotifyGlass(parent, z)
-        local overlay = mk("ImageLabel", {Parent = parent, Name = "SpotifyGlass", Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1, Image = "", ImageTransparency = 0.76,
-            ScaleType = Enum.ScaleType.Stretch, Active = false, ZIndex = z})
-        corner(overlay, 10)
-        YinIcons.get("spotify-glass", function(image) if overlay.Parent then overlay.Image = image end end)
-    end
-
-    -- Fondo continuo y geometría temporal mientras Spotify está seleccionado.
-    do
-        local A = {Active = false, Cover = "", Saved = {}}
-        Window._SpotifyAmbient = A
-        A.Frame = mk("Frame", {
-            Name = "SpotifyAmbient", Parent = Main, Size = UDim2.fromScale(1, 1),
-            BackgroundColor3 = Color3.fromRGB(12, 12, 14), BorderSizePixel = 0,
-            Visible = false, ClipsDescendants = true, ZIndex = 5,
-        })
-        corner(A.Frame, 10)
-        A.Image = mk("ImageLabel", {
-            Parent = A.Frame, Size = UDim2.new(1, 0, 1.80, 0), Position = UDim2.new(0, 0, -0.69, 0), BackgroundTransparency = 1,
-            Image = "", ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.12, ZIndex = 5,
-        })
-        local shade = mk("Frame", {
-            Parent = A.Frame, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 8, 10),
-            BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 5,
-        })
-        mk("UIGradient", {Parent = shade, Rotation = 90,
-            Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 0)})})
-
-        function A.SetCover(cover)
-            A.Cover = type(cover) == "string" and cover or ""
-            A.Image.Image = A.Cover
-            A.Image.Visible = A.Cover ~= ""
-        end
-        function A.Layout()
-            if not A.Active then return end
-            local compact = Window.CompactNavigation == true
-            TabListArt.Visible = false
-            CatImage.Visible = false
-            local rail = Body:FindFirstChild("CompactTabRail")
-            if rail then rail.BackgroundTransparency = 1 end
-            local side = compact and 58 or 110
-            ContentArea.Position = UDim2.new(0, side, 0, -56)
-            ContentArea.Size = UDim2.new(1, -side, 1, 56)
-            if A.LayoutCatalog then A.LayoutCatalog(compact) end
-            if A.LayoutPlayer then A.LayoutPlayer(compact) end
-            if A.LayoutFavorites then A.LayoutFavorites(compact) end
-        end
-        function A.enter()
-            if A.Active then return end
-            A.Active = true
-            A.Saved = {visible = {}, tabTransparency = TabList.BackgroundTransparency,
-                topTransparency = TopBar.BackgroundTransparency, titleSize = TitleLabel.Size,
-                contentPosition = ContentArea.Position, contentSize = ContentArea.Size,
-                titleStroke = TitleLabel.TextStrokeTransparency, badgeStroke = DaraHubLabel.TextStrokeTransparency,
-                titleStrokeColor = TitleLabel.TextStrokeColor3, badgeStrokeColor = DaraHubLabel.TextStrokeColor3,
-                titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex, badgeFrameZ = DaraHubLabel.Parent.ZIndex}
-            for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
-                TitleDivider, TopBarArt, TabListArt, CatImage, BackgroundArt, Main:FindFirstChild("RotatingSubText")}) do
-              
+   

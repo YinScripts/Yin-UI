@@ -1,4 +1,91 @@
-0, 11, 0, coverPad + coverSize + 31),
+yAll = function()
+        local list = FavPage.likedList()
+        if #list == 0 then
+            return
+        end
+        if SpotifyState.CurrentSound and isLiked(SpotifyState.SelectedIndex) then
+            SpotifyState.FavQueue = true
+            togglePlayback()
+        elseif SpotifyState.Shuffle then
+            FavPage.play(FavPage.randomFrom(list, nil))
+        else
+            FavPage.play(list[1])
+        end
+    end
+
+    bindRowTap(FavPage.Back, FavPage.hide)
+    bindRowTap(FavPage.PlayAll, FavPage.playAll)
+    bindRowTap(FavPage.MiniPlay, FavPage.playAll)
+    bindRowTap(FavPage.ShuffleBtn, function()
+        SpotifyState.Shuffle = not SpotifyState.Shuffle
+        FavPage.history = {}
+        FavPage.paint()
+    end)
+
+    SpotifyState.OnPlaybackChanged = FavPage.refresh
+    SpotifyState.FavoriteNeighbor = FavPage.neighbor
+
+    createSongRow = function(track, index, layoutOrder)
+        if SpotifyState.HiddenRows[index] then
+            return
+        end
+
+        local m = getSpotifyMetrics()
+        local cardH = m.cardHeight
+        local coverPad = m.compact and 9 or 11
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
+
+        local Row = mk("Frame", {
+            Parent = SongList,
+            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
+            BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+            BackgroundTransparency = 0.22,
+            BorderSizePixel = 0,
+            LayoutOrder = layoutOrder or (index + 1),
+            ClipsDescendants = true,
+            ZIndex = 11,
+        })
+        Row.Name = "SpotifySongCard_" .. index
+        corner(Row, 12)
+        stroke(Row, Color3.fromRGB(95, 95, 100), 1, 0.78)
+
+        local TapArea = mk("TextButton", {
+            Parent = Row, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
+            Text = "", AutoButtonColor = false, ZIndex = 13,
+        })
+        TapArea.Name = "SongTapArea"
+
+        local Accent = mk("Frame", {
+            Parent = Row, Size = UDim2.new(1, 0, 0, 3), Position = UDim2.new(0, 0, 0, 0),
+            BackgroundColor3 = spotifyGreen, BorderSizePixel = 0,
+            Visible = index == SpotifyState.SelectedIndex, ZIndex = 14,
+        })
+        corner(Accent, 999)
+
+        local Cover = mk("ImageButton", {
+            Parent = Row, Size = UDim2.fromOffset(coverSize, coverSize),
+            Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad),
+            BackgroundColor3 = Color3.fromRGB(18, 18, 18), BackgroundTransparency = 0,
+            BorderSizePixel = 0, Image = "",
+            ScaleType = Enum.ScaleType.Crop, AutoButtonColor = false, ZIndex = 15,
+        })
+        corner(Cover, 9)
+
+        local Title = mk("TextLabel", {
+            Parent = Row, Size = UDim2.new(1, -22, 0, 20),
+            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 9),
+            BackgroundTransparency = 1, Text = track.Name, Font = Enum.Font.GothamBold,
+            TextSize = m.compact and 12 or 14, TextColor3 = index == SpotifyState.SelectedIndex and spotifyGreen or spotifyText,
+            TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 16,
+        })
+        Title.Name = "SongTitle"
+
+        local Artist = mk("TextLabel", {
+            Parent = Row, Size = UDim2.new(1, -22, 0, 16),
+            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 31),
             BackgroundTransparency = 1, Text = track.Artist, Font = Enum.Font.GothamMedium,
             TextSize = m.compact and 9 or 10, TextColor3 = index == SpotifyState.SelectedIndex and Color3.fromRGB(100, 220, 120) or spotifyDim,
             TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 12,

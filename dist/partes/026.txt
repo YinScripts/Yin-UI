@@ -1,4 +1,83 @@
-p.BackgroundTransparency = 0.62
+layoutOrder, isCustom)
+        local palette = ThemePalettes[tema] or Theme
+
+        local Card = mk("TextButton", {
+            Parent = ThemeGridHolder,
+            BackgroundColor3 = Theme.Secondary,
+            BackgroundTransparency = 0,
+            Text = "",
+            LayoutOrder = layoutOrder,
+            ZIndex = 9,
+        })
+        Card:SetAttribute("ThemeRole", "Secondary")
+        corner(Card, 14)
+        local CardStroke = stroke(Card, Theme.Stroke, 1, 0.7)
+        local CardScale = mk("UIScale", {Parent = Card, Scale = 1})
+        Card.MouseEnter:Connect(function()
+            TweenService:Create(CardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.025}):Play()
+        end)
+        Card.MouseLeave:Connect(function()
+            TweenService:Create(CardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+
+        local themeData = ThemeStore and ThemeStore.Themes and ThemeStore.Themes[tema]
+        local previewImage = themeData and themeData.Background
+        if type(previewImage) ~= "string" or previewImage == "" then
+            previewImage = ThemeBackgroundImages[tema]
+        end
+        if (type(previewImage) ~= "string" or previewImage == "") and themeData and type(themeData.Images) == "table" then
+            previewImage = themeData.Images[1]
+        end
+        local hasImage = type(previewImage) == "string" and previewImage ~= ""
+
+        local Preview = mk("Frame", {
+            Parent = Card,
+            Size = UDim2.new(1, -12, 0, 106),
+            Position = UDim2.new(0, 6, 0, 6),
+            BackgroundColor3 = palette.Background,
+            BorderSizePixel = 0,
+            ClipsDescendants = true,
+            ZIndex = 10,
+        })
+        corner(Preview, 10)
+        if not hasImage then
+            mk("UIGradient", {
+                Parent = Preview,
+                Rotation = 45,
+                Color = ColorSequence.new(palette.Background, palette.Secondary or palette.Background),
+            })
+        end
+        local MockHolder = mk("Frame", {
+            Parent = Preview,
+            Size = UDim2.new(1, -16, 1, -16),
+            Position = UDim2.new(0, 8, 0, 8),
+            BackgroundTransparency = 1,
+            ZIndex = 12,
+        })
+        local mock = RowKit.ThemeMock(MockHolder, 12)
+        RowKit.PaintMock(mock, palette, false)
+        if hasImage then
+            -- Solo Navidad usa el fondo en toda la ventana; los demás lo limitan al contenido.
+            local full = tema == "Navidad"
+            mock.Root.ClipsDescendants = true
+            local areaPosition = full and UDim2.fromScale(0, 0) or UDim2.new(0.24, 8, 0, 24)
+            local areaSize = full and UDim2.fromScale(1, 1) or UDim2.new(0.76, -12, 1, -28)
+            local art = mk("ImageLabel", {
+                Parent = mock.Root, Position = areaPosition, Size = areaSize,
+                BackgroundTransparency = 1, Image = previewImage,
+                ImageTransparency = 0.08, ScaleType = Enum.ScaleType.Crop, ZIndex = 12,
+            })
+            corner(art, full and 8 or 5)
+            local shade = mk("Frame", {
+                Parent = mock.Root, Position = areaPosition, Size = areaSize,
+                BackgroundColor3 = palette.Background, BackgroundTransparency = 0.7,
+                BorderSizePixel = 0, ZIndex = 12,
+            })
+            corner(shade, full and 8 or 5)
+            for _, row in ipairs(mock.Rows) do row.Row.BackgroundTransparency = 0.55 end
+            if full then
+                mock.Side.BackgroundTransparency = 0.62
+                mock.Top.BackgroundTransparency = 0.62
             end
         end
 
@@ -1047,106 +1126,4 @@ p.BackgroundTransparency = 0.62
         BorderSizePixel = 0,
         Visible = false,
         ZIndex = 220,
-    })
-    local DeletePanel = mk("Frame", {
-        Parent = DeleteOverlay,
-        Size = UDim2.new(0.72, 0, 0.46, 0),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        BackgroundColor3 = Theme.Background,
-        BorderSizePixel = 0,
-        ZIndex = 221,
-    })
-    DeletePanel:SetAttribute("ThemeRole", "Background")
-    corner(DeletePanel, 10)
-    stroke(DeletePanel, Theme.Stroke, 1.5, 0.25)
-
-    local DeleteLabel = mk("TextLabel", {
-        Parent = DeletePanel,
-        Size = UDim2.new(1, -24, 0, 70),
-        Position = UDim2.new(0, 12, 0, 12),
-        BackgroundTransparency = 1,
-        Text = "",
-        TextColor3 = Theme.Text,
-        TextSize = 13,
-        Font = Enum.Font.GothamBold,
-        TextWrapped = true,
-        ZIndex = 222,
-    })
-    DeleteLabel:SetAttribute("ThemeTextRole", "Text")
-
-    local CancelDelete = mk("TextButton", {
-        Parent = DeletePanel,
-        Size = UDim2.new(0.45, 0, 0, 34),
-        Position = UDim2.new(0.04, 0, 1, -46),
-        BackgroundColor3 = Theme.Secondary,
-        BorderSizePixel = 0,
-        Text = GetText("Cancelar", "Cancel"),
-        TextColor3 = Theme.Text,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 222,
-    })
-    CancelDelete:SetAttribute("ThemeRole", "Secondary")
-    CancelDelete:SetAttribute("ThemeTextRole", "Text")
-    CancelDelete:SetAttribute("TextSpanish", "Cancelar")
-    CancelDelete:SetAttribute("TextEnglish", "Cancel")
-    corner(CancelDelete, 6)
-
-    local ConfirmDelete = mk("TextButton", {
-        Parent = DeletePanel,
-        Size = UDim2.new(0.45, 0, 0, 34),
-        Position = UDim2.new(0.51, 0, 1, -46),
-        BackgroundColor3 = Color3.fromRGB(190, 55, 55),
-        BorderSizePixel = 0,
-        Text = GetText("Eliminar", "Delete"),
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 222,
-    })
-    ConfirmDelete:SetAttribute("TextSpanish", "Eliminar")
-    ConfirmDelete:SetAttribute("TextEnglish", "Delete")
-    corner(ConfirmDelete, 6)
-
-    local pendingDeleteTheme = nil
-    confirmDeleteTheme = function(themeName)
-        pendingDeleteTheme = themeName
-        local deleteSpanish = "¿Eliminar el tema personalizado '" .. themeName .. "'?"
-        local deleteEnglish = "Delete the custom theme '" .. themeName .. "'?"
-        DeleteLabel:SetAttribute("TextSpanish", deleteSpanish)
-        DeleteLabel:SetAttribute("TextEnglish", deleteEnglish)
-        DeleteLabel.Text = GetText(deleteSpanish, deleteEnglish)
-        DeleteOverlay.Visible = true
-    end
-    CancelDelete.MouseButton1Click:Connect(function()
-        DeleteOverlay.Visible = false
-        pendingDeleteTheme = nil
-    end)
-    ConfirmDelete.MouseButton1Click:Connect(function()
-        local themeName = pendingDeleteTheme
-        if not themeName or not CustomThemes[themeName] then return end
-
-        if Window.CurrentTheme == themeName then
-            Window:SetTheme("Senju")
-        end
-
-        CustomThemes[themeName] = nil
-        ThemePalettes[themeName] = nil
-        ThemeBackgroundImages[themeName] = nil
-        ThemeClickSounds[themeName] = nil
-        for i = #CustomThemeOrder, 1, -1 do
-            if CustomThemeOrder[i] == themeName then
-                table.remove(CustomThemeOrder, i)
-            end
-        end
-
-        SaveCustomThemes()
-        DeleteOverlay.Visible = false
-        pendingDeleteTheme = nil
-        rebuildThemeCards()
-    end)
-
-    local lastThemeEditorLanguage = LibraryLanguage
-    RunService.Heartbeat:Connect(function()
-        local currentLanguage = LibraryLangua
+ 

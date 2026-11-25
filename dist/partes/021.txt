@@ -1,4 +1,87 @@
-   = displayText,
+local isFloating  = false
+            local isLocked    = false
+            local onCooldown  = false
+
+            local FloatingWindow = nil
+            local FloatingGlow   = nil
+            local FloatLabel     = nil
+            local AccentBar      = nil
+            local StateLabel     = nil
+            local favoriteControlRefreshers = {}
+            local toggleFloating
+            local toggleLock
+
+            local function startCooldown()
+                if cooldown <= 0 then return end
+                onCooldown = true
+                AccentBar.BackgroundColor3 = Theme.TextDim
+                pcall(function()
+                    local bar = Instance.new("Frame")
+                    bar.Name = "CooldownBar"
+                    bar.AnchorPoint = Vector2.new(0, 1)
+                    bar.Position = UDim2.new(0, 14, 1, -4)
+                    bar.Size = UDim2.new(1, -28, 0, 3)
+                    bar.BackgroundColor3 = Theme.Accent
+                    bar.BorderSizePixel = 0
+                    bar.ZIndex = 11
+                    local bc = Instance.new("UICorner")
+                    bc.CornerRadius = UDim.new(1, 0)
+                    bc.Parent = bar
+                    bar.Parent = AccentBar.Parent
+                    local tw = TweenService:Create(bar, TweenInfo.new(cooldown, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)})
+                    tw.Completed:Connect(function() bar:Destroy() end)
+                    tw:Play()
+                end)
+                task.spawn(function()
+                    local remaining = cooldown
+                    while remaining > 0 do
+                        task.wait(0.1)
+                        remaining = math.max(0, remaining - 0.1)
+                        local cdTxt = string.format("%.1fs", remaining)
+                        StateLabel.Text = cdTxt
+                        if FloatLabel and FloatLabel.Parent then
+                            FloatLabel.Text      = cdTxt
+                            FloatLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
+                        end
+                    end
+                    onCooldown = false
+                    AccentBar.BackgroundColor3 = Theme.Accent
+                    StateLabel.Text = GetText("Botón", "Button")
+                    if FloatLabel and FloatLabel.Parent then
+                        FloatLabel.Text = displayText
+                        TweenService:Create(FloatLabel, TweenInfo.new(0.20), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
+                    end
+                end)
+            end
+
+            local Holder = mk("Frame", {
+                Parent = TabPage,
+                Size   = UDim2.new(1, 0, 0, 64),
+                BackgroundColor3 = Theme.Secondary,
+                BackgroundTransparency = 0.78,
+                ZIndex = 9
+            })
+            Holder:SetAttribute("ThemeRole", "Secondary")
+            corner(Holder, 10)
+            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
+            RowKit.Card(Holder)
+
+            AccentBar = mk("Frame", {
+                Parent   = Holder,
+                Size     = UDim2.new(0, 3, 0, 36),
+                Position = UDim2.new(0, 10, 0.5, -18),
+                BackgroundColor3 = Theme.Accent,
+                ZIndex   = 10
+            })
+            AccentBar:SetAttribute("ThemeRole", "Accent")
+            corner(AccentBar, 999)
+
+            local LabelTxt = mk("TextLabel", {
+                Parent   = Holder,
+                Size     = UDim2.new(1, -90, 0, 22),
+                Position = UDim2.new(0, 22, 0, 13),
+                BackgroundTransparency = 1,
+                Text     = displayText,
                 TextColor3 = Theme.Text,
                 Font     = Enum.Font.GothamBlack,
                 TextSize = 15,
@@ -931,106 +1014,4 @@
                     Kind = "Slider",
                     GetValue = function() return value end,
                     SetValue = function(v)
-                        local pct = math.clamp((v - min) / math.max(max - min, 0.0001), 0, 1)
-                        UpdateSlider(pct, true, false)
-                    end,
-                    Min = min,
-                    Max = max,
-                })
-            end
-
-            resetScrollTop(TabPage)
-
-            return {
-                Holder = Holder,
-                Set = function(newValue)
-                    value = math.clamp(newValue, min, max)
-                    UpdateSlider((value - min) / (max - min))
-                end,
-                Get = function()
-                    return value
-                end,
-                Reset = function()
-                    doReset()
-                end,
-                SetMin = function(newMin)
-                    min = newMin
-                    MinLabel.Text = tostring(min)
-                end,
-                SetMax = function(newMax)
-                    max = newMax
-                    MaxLabel.Text = tostring(max)
-                end,
-                _labelES = text,
-                _labelEN = text,
-                _min = min,
-                _max = max,
-                _value = value,
-                _callback = callback,
-            }
-        end
-
-        function Tab:CreateButton(textSpanish, textEnglishOrCallback, callbackOrIcon, iconAsset)
-            local contentParent = self._ContentParent or TabPage
-            local textEnglish = textSpanish
-            local callback, icon
-
-            if type(textEnglishOrCallback) == "string" then
-                textEnglish = textEnglishOrCallback
-                callback = callbackOrIcon
-                icon = iconAsset
-            else
-                callback = textEnglishOrCallback
-                icon = callbackOrIcon
-            end
-
-            local displayText = GetText(textSpanish, textEnglish)
-            local iconAsset = icon
-
-            local BtnWrapper = mk("Frame", {
-                Size = UDim2.new(1, 0, 0, 40),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                ClipsDescendants = true,
-                ZIndex = 9
-            }, contentParent)
-            corner(BtnWrapper, 12)
-
-            local Btn = mk("TextButton", {
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = Theme.Secondary,
-                Text = iconAsset and "" or displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBold,
-                TextSize = 14,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 9
-            }, BtnWrapper)
-            Btn:SetAttribute("ThemeRole", "Secondary")
-            corner(Btn, 12)
-            stroke(BtnWrapper, Theme.Stroke, 1, 0.6)
-            mk("UIGradient", {
-                Rotation = 90,
-                Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 0),
-                    NumberSequenceKeypoint.new(1, 0.2),
-                }),
-            }, Btn)
-            local BtnChevron = mk("TextLabel", {
-                Parent = Btn,
-                Size = UDim2.new(0, 20, 1, 0),
-                AnchorPoint = Vector2.new(1, 0),
-                Position = UDim2.new(1, -10, 0, 0),
-                BackgroundTransparency = 1,
-                Text = "›",
-                TextColor3 = Theme.Accent,
-                Font = Enum.Font.GothamBlack,
-                TextSize = 22,
-                ZIndex = 10,
-            })
-            BtnChevron:SetAttribute("ThemeTextRole", "Accent")
-            BtnChevron:SetAttribute("IgnoreTextEffect", true)
-            if contentParent == TabPage then resetScrollTop(TabPage) end
-
-            if iconAsset then
-                mk("ImageLa
+                        local pct = math.clamp((v - min) / math.max(max - min, 0.00

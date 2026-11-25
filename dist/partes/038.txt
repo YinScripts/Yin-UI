@@ -1,4 +1,94 @@
- return {}
+,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 83,
+        })
+        return box
+    end
+
+    local UserSongName = makeUserSongInput(GetText("Nombre de la canción", "Song title"), 84)
+    local UserSongArtist = makeUserSongInput(GetText("Artista", "Artist"), 130)
+    local UserSongURL = makeUserSongInput(GetText("Pegá la URL del MP3 o de GitHub", "Paste an MP3 or GitHub URL"), 176)
+    local UserSongCover = makeUserSongInput(GetText("URL de portada (opcional)", "Cover URL (optional)"), 222)
+    UserSongName:SetAttribute("PlaceholderSpanish", "Nombre de la canción")
+    UserSongName:SetAttribute("PlaceholderEnglish", "Song title")
+    UserSongArtist:SetAttribute("PlaceholderSpanish", "Artista")
+    UserSongArtist:SetAttribute("PlaceholderEnglish", "Artist")
+    UserSongURL:SetAttribute("PlaceholderSpanish", "Pegá la URL del MP3 o de GitHub")
+    UserSongURL:SetAttribute("PlaceholderEnglish", "Paste an MP3 or GitHub URL")
+    UserSongCover:SetAttribute("PlaceholderSpanish", "URL de portada (opcional)")
+    UserSongCover:SetAttribute("PlaceholderEnglish", "Cover URL (optional)")
+
+    local UserSongStatus = mk("TextLabel", {
+        Parent = UserSongPanel,
+        Size = UDim2.new(1, -36, 0, 26),
+        Position = UDim2.new(0, 18, 0, 264),
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 10,
+        TextColor3 = Color3.fromRGB(255, 125, 125),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextWrapped = true,
+        ZIndex = 83,
+    })
+
+    local UserSongCancel = mk("TextButton", {
+        Parent = UserSongPanel,
+        Size = UDim2.new(0.42, -5, 0, 34),
+        Position = UDim2.new(0, 18, 1, -48),
+        BackgroundColor3 = Color3.fromRGB(45, 45, 49),
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        TextColor3 = spotifyText,
+        AutoButtonColor = false,
+        ZIndex = 83,
+    })
+    corner(UserSongCancel, 10)
+    UserSongCancel:SetAttribute("TextSpanish", "Cancelar")
+    UserSongCancel:SetAttribute("TextEnglish", "Cancel")
+
+    local UserSongSave = mk("TextButton", {
+        Parent = UserSongPanel,
+        Size = UDim2.new(0.58, -5, 0, 34),
+        Position = UDim2.new(0.42, 5, 1, -48),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        Text = GetText("Guardar canción", "Save song"),
+        Font = Enum.Font.GothamBold,
+        TextSize = 12,
+        TextColor3 = Color3.fromRGB(0, 0, 0),
+        AutoButtonColor = false,
+        ZIndex = 83,
+    })
+    corner(UserSongSave, 10)
+    UserSongSave:SetAttribute("TextSpanish", "Guardar canción")
+    UserSongSave:SetAttribute("TextEnglish", "Save song")
+
+    local function closeUserSongForm()
+        UserSongForm.Visible = false
+        UserSongStatus.Text = ""
+        UserSongPanelScale.Scale = 0.96
+    end
+    UserSongClose.Activated:Connect(closeUserSongForm)
+    UserSongCancel.Activated:Connect(closeUserSongForm)
+    AddUserSongButton.Activated:Connect(function()
+        UserSongName.Text = ""
+        UserSongArtist.Text = ""
+        UserSongURL.Text = ""
+        UserSongCover.Text = ""
+        UserSongStatus.Text = ""
+        UserSongStatus.TextColor3 = spotifyDim
+        UserSongForm.Visible = true
+        UserSongPanelScale.Scale = 0.94
+        TweenService:Create(UserSongPanelScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        UserSongName:CaptureFocus()
+    end)
+
+    local function loadUserSongs()
+        if type(readfile) ~= "function" then
+            return {}
         end
         local ok, songs = pcall(function()
             local raw = readfile(USER_SONGS_FILE)
@@ -1063,109 +1153,4 @@
     PM.Body = mk("ScrollingFrame", {
         Parent = PM.Panel,
         Size = UDim2.new(1, 0, 1, -49),
-        Position = UDim2.new(0, 0, 0, 49),
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        CanvasSize = UDim2.new(0, 0, 0, 0),
-        AutomaticCanvasSize = Enum.AutomaticSize.Y,
-        ScrollingDirection = Enum.ScrollingDirection.Y,
-        ScrollBarThickness = 2,
-        ScrollBarImageColor3 = Color3.fromRGB(120, 120, 120),
-        ZIndex = 41,
-    })
-    PM.BodyLayout = mk("UIListLayout", {
-        Parent = PM.Body,
-        Padding = UDim.new(0, 4),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    mk("UIPadding", {
-        Parent = PM.Body,
-        PaddingTop = UDim.new(0, 10),
-        PaddingBottom = UDim.new(0, 14),
-        PaddingLeft = UDim.new(0, 16),
-        PaddingRight = UDim.new(0, 16),
-    })
-
-    PM.section = function(order, height)
-        return mk("Frame", {
-            Parent = PM.Body,
-            Size = UDim2.new(1, 0, 0, height),
-            BackgroundTransparency = 1,
-            LayoutOrder = order,
-            ZIndex = 42,
-        })
-    end
-    PM.label = function(parent, text, y)
-        local english = ({
-            ["Volumen"] = "Volume",
-            ["Velocidad"] = "Speed",
-            ["Temporizador de apagado"] = "Sleep timer",
-        })[text] or text
-        local label = mk("TextLabel", {
-            Parent = parent,
-            Size = UDim2.new(1, -90, 0, 18),
-            Position = UDim2.new(0, 0, 0, y or 0),
-            BackgroundTransparency = 1,
-            Text = GetText(text, english),
-            TextColor3 = Color3.fromRGB(235, 235, 235),
-            Font = Enum.Font.GothamBold,
-            TextSize = 13,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 43,
-        })
-        label:SetAttribute("TextSpanish", text)
-        label:SetAttribute("TextEnglish", english)
-        return label
-    end
-    PM.valueLabel = function(parent, y)
-        return mk("TextLabel", {
-            Parent = parent,
-            Size = UDim2.fromOffset(90, 18),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, 0, 0, y or 0),
-            BackgroundTransparency = 1,
-            Text = "",
-            TextColor3 = spotifyGreen,
-            Font = Enum.Font.GothamBold,
-            TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 43,
-        })
-    end
-    PM.divider = function(order)
-        local holder = PM.section(order, 13)
-        mk("Frame", {
-            Parent = holder,
-            Size = UDim2.new(1, 0, 0, 1),
-            Position = UDim2.new(0, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.92,
-            BorderSizePixel = 0,
-            ZIndex = 43,
-        })
-    end
-    PM.chip = function(parent, text)
-        local chip = mk("TextButton", {
-            Parent = parent,
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.92,
-            BorderSizePixel = 0,
-            Text = text,
-            TextColor3 = Color3.fromRGB(235, 235, 235),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            AutoButtonColor = false,
-            ZIndex = 44,
-        })
-        corner(chip, 999)
-        return chip
-    end
-    PM.paintChip = function(chip, on)
-        chip.BackgroundColor3 = on and spotifyGreen or Color3.fromRGB(255, 255, 255)
-        chip.BackgroundTransparency = on and 0 or 0.92
-        chip.TextColor3 = on and Color3.fromRGB(0, 0, 0) or Color3.fromRGB(235, 235, 235)
-    end
-
-    local function applyPlaybackVolume(value)
-        SpotifyState.PlaybackVolume = clamp(value, 0, 1)
-        if SpotifyState.CurrentSound then
+        Position = UDim2.new(0, 0, 0, 

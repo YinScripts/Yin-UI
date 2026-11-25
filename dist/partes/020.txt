@@ -1,4 +1,95 @@
-le and 64 or 200
+                ZIndex = 10
+            })
+            ComboLabel:SetAttribute("ThemeTextRole", "Accent")
+
+            local DetachBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -130, 0, 18),
+                BackgroundColor3 = Theme.Accent,
+                Text = "↗",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                ZIndex = 15
+            })
+            corner(DetachBtn, 6)
+            RowKit.Control(DetachBtn, true)
+
+            local PinBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -98, 0, 18),
+                BackgroundColor3 = Theme.Secondary,
+                Image = "rbxassetid://83537941312438",
+                ImageColor3 = Theme.Text,
+                ScaleType = Enum.ScaleType.Stretch,
+                ZIndex = 15
+            })
+            corner(PinBtn, 6)
+            stroke(PinBtn, Theme.Stroke, 1, 0.5)
+            RowKit.Control(PinBtn)
+
+            local Switch = mk("Frame", {
+                Parent = Holder,
+                Size = UDim2.new(0, 52, 0, 28),
+                Position = UDim2.new(1, -66, 0, 18),
+                BackgroundColor3 = Theme.AccentOff,
+                ZIndex = 10
+            })
+            Switch:SetAttribute("ThemeRole", "AccentOff")
+            corner(Switch, 999)
+
+            local Knob = mk("Frame", {
+                Parent = Switch,
+                Size = UDim2.new(0, 24, 0, 24),
+                Position = UDim2.new(0, 2, 0.5, -12),
+                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+                ZIndex = 12
+            })
+            corner(Knob, 999)
+
+            local Click = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Text = "",
+                ZIndex = 13
+            })
+
+            local function applyVisual(newState, animate)
+                local knobPos = newState and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
+                local trackColor = newState and Theme.Accent or Theme.AccentOff
+                if animate then
+                    TweenService:Create(Knob, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = knobPos}):Play()
+                    TweenService:Create(Switch, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = trackColor}):Play()
+                else
+                    Knob.Position = knobPos
+                    Switch.BackgroundColor3 = trackColor
+                end
+                Switch:SetAttribute("ThemeRole", newState and "Accent" or "AccentOff")
+            end
+
+            local function fireComboMembers(newState)
+                for _, member in ipairs(Window.ComboMembers) do
+                    pcall(member.SetState, newState)
+                end
+            end
+
+            Click.MouseButton1Click:Connect(function()
+                state = not state
+                playSound(Sounds.Click, 0.5)
+                applyVisual(state, true)
+                fireComboMembers(state)
+            end)
+
+            local FloatingWindow = nil
+            local FloatingGlow = nil
+
+            local function createFloatingWindow()
+                local floatStyle    = SavedConfig.FloatingToggleStyle or "Pill"
+                local isCircleStyle = (floatStyle == "Circle")
+                local floatW = isCircleStyle and 64 or 200
                 local floatH = isCircleStyle and 64 or 36
 
                 FloatingGlow = mk("Frame", {
@@ -920,87 +1011,4 @@ le and 64 or 200
             cooldown = cooldown or 0
 
             local displayText = GetText(textSpanish, textEnglish)
-            local isFloating  = false
-            local isLocked    = false
-            local onCooldown  = false
-
-            local FloatingWindow = nil
-            local FloatingGlow   = nil
-            local FloatLabel     = nil
-            local AccentBar      = nil
-            local StateLabel     = nil
-            local favoriteControlRefreshers = {}
-            local toggleFloating
-            local toggleLock
-
-            local function startCooldown()
-                if cooldown <= 0 then return end
-                onCooldown = true
-                AccentBar.BackgroundColor3 = Theme.TextDim
-                pcall(function()
-                    local bar = Instance.new("Frame")
-                    bar.Name = "CooldownBar"
-                    bar.AnchorPoint = Vector2.new(0, 1)
-                    bar.Position = UDim2.new(0, 14, 1, -4)
-                    bar.Size = UDim2.new(1, -28, 0, 3)
-                    bar.BackgroundColor3 = Theme.Accent
-                    bar.BorderSizePixel = 0
-                    bar.ZIndex = 11
-                    local bc = Instance.new("UICorner")
-                    bc.CornerRadius = UDim.new(1, 0)
-                    bc.Parent = bar
-                    bar.Parent = AccentBar.Parent
-                    local tw = TweenService:Create(bar, TweenInfo.new(cooldown, Enum.EasingStyle.Linear), {Size = UDim2.new(0, 0, 0, 3)})
-                    tw.Completed:Connect(function() bar:Destroy() end)
-                    tw:Play()
-                end)
-                task.spawn(function()
-                    local remaining = cooldown
-                    while remaining > 0 do
-                        task.wait(0.1)
-                        remaining = math.max(0, remaining - 0.1)
-                        local cdTxt = string.format("%.1fs", remaining)
-                        StateLabel.Text = cdTxt
-                        if FloatLabel and FloatLabel.Parent then
-                            FloatLabel.Text      = cdTxt
-                            FloatLabel.TextColor3 = Color3.fromRGB(170, 170, 170)
-                        end
-                    end
-                    onCooldown = false
-                    AccentBar.BackgroundColor3 = Theme.Accent
-                    StateLabel.Text = GetText("Botón", "Button")
-                    if FloatLabel and FloatLabel.Parent then
-                        FloatLabel.Text = displayText
-                        TweenService:Create(FloatLabel, TweenInfo.new(0.20), {TextColor3 = Color3.fromRGB(255, 255, 255)}):Play()
-                    end
-                end)
-            end
-
-            local Holder = mk("Frame", {
-                Parent = TabPage,
-                Size   = UDim2.new(1, 0, 0, 64),
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.78,
-                ZIndex = 9
-            })
-            Holder:SetAttribute("ThemeRole", "Secondary")
-            corner(Holder, 10)
-            local HolderStroke = stroke(Holder, Theme.Stroke, 1, 0.55)
-            RowKit.Card(Holder)
-
-            AccentBar = mk("Frame", {
-                Parent   = Holder,
-                Size     = UDim2.new(0, 3, 0, 36),
-                Position = UDim2.new(0, 10, 0.5, -18),
-                BackgroundColor3 = Theme.Accent,
-                ZIndex   = 10
-            })
-            AccentBar:SetAttribute("ThemeRole", "Accent")
-            corner(AccentBar, 999)
-
-            local LabelTxt = mk("TextLabel", {
-                Parent   = Holder,
-                Size     = UDim2.new(1, -90, 0, 22),
-                Position = UDim2.new(0, 22, 0, 13),
-                BackgroundTransparency = 1,
-                Text  
+            

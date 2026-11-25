@@ -1,4 +1,68 @@
-  if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
+ SPage.CanvasSize = UDim2.new(0, 0, 0, 0)
+    SPage.ScrollBarThickness = 0
+    SPage.ScrollingEnabled = false
+
+    -- Capa estática de brillo ahumado; si falla la descarga, conserva el panel normal.
+    local function spotifyGlass(parent, z)
+        local overlay = mk("ImageLabel", {Parent = parent, Name = "SpotifyGlass", Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1, Image = "", ImageTransparency = 0.76,
+            ScaleType = Enum.ScaleType.Stretch, Active = false, ZIndex = z})
+        corner(overlay, 10)
+        YinIcons.get("spotify-glass", function(image) if overlay.Parent then overlay.Image = image end end)
+    end
+
+    -- Fondo continuo y geometría temporal mientras Spotify está seleccionado.
+    do
+        local A = {Active = false, Cover = "", Saved = {}}
+        Window._SpotifyAmbient = A
+        A.Frame = mk("Frame", {
+            Name = "SpotifyAmbient", Parent = Main, Size = UDim2.fromScale(1, 1),
+            BackgroundColor3 = Color3.fromRGB(12, 12, 14), BorderSizePixel = 0,
+            Visible = false, ClipsDescendants = true, ZIndex = 5,
+        })
+        corner(A.Frame, 10)
+        A.Image = mk("ImageLabel", {
+            Parent = A.Frame, Size = UDim2.new(1, 0, 1.80, 0), Position = UDim2.new(0, 0, -0.69, 0), BackgroundTransparency = 1,
+            Image = "", ScaleType = Enum.ScaleType.Crop, ImageTransparency = 0.12, ZIndex = 5,
+        })
+        local shade = mk("Frame", {
+            Parent = A.Frame, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.fromRGB(8, 8, 10),
+            BackgroundTransparency = 0.45, BorderSizePixel = 0, ZIndex = 5,
+        })
+        mk("UIGradient", {Parent = shade, Rotation = 90,
+            Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0.15), NumberSequenceKeypoint.new(1, 0)})})
+
+        function A.SetCover(cover)
+            A.Cover = type(cover) == "string" and cover or ""
+            A.Image.Image = A.Cover
+            A.Image.Visible = A.Cover ~= ""
+        end
+        function A.Layout()
+            if not A.Active then return end
+            local compact = Window.CompactNavigation == true
+            TabListArt.Visible = false
+            CatImage.Visible = false
+            local rail = Body:FindFirstChild("CompactTabRail")
+            if rail then rail.BackgroundTransparency = 1 end
+            local side = compact and 58 or 110
+            ContentArea.Position = UDim2.new(0, side, 0, -56)
+            ContentArea.Size = UDim2.new(1, -side, 1, 56)
+            if A.LayoutCatalog then A.LayoutCatalog(compact) end
+            if A.LayoutPlayer then A.LayoutPlayer(compact) end
+            if A.LayoutFavorites then A.LayoutFavorites(compact) end
+        end
+        function A.enter()
+            if A.Active then return end
+            A.Active = true
+            A.Saved = {visible = {}, tabTransparency = TabList.BackgroundTransparency,
+                topTransparency = TopBar.BackgroundTransparency, titleSize = TitleLabel.Size,
+                contentPosition = ContentArea.Position, contentSize = ContentArea.Size,
+                titleStroke = TitleLabel.TextStrokeTransparency, badgeStroke = DaraHubLabel.TextStrokeTransparency,
+                titleStrokeColor = TitleLabel.TextStrokeColor3, badgeStrokeColor = DaraHubLabel.TextStrokeColor3,
+                titleZ = TitleLabel.ZIndex, badgeZ = DaraHubLabel.ZIndex, badgeFrameZ = DaraHubLabel.Parent.ZIndex}
+            for _, obj in ipairs({BannerFrame, BoomboxPill, WindowControls, TopBarCounter,
+                TitleDivider, TopBarArt, TabListArt, CatImage, BackgroundArt, Main:FindFirstChild("RotatingSubText")}) do
+                if obj then A.Saved.visible[obj] = obj.Visible; obj.Visible = false end
             end
             A.Frame.Visible = true
             A.SetCover(A.Cover)
@@ -1173,94 +1237,4 @@
             Font = Enum.Font.GothamMedium,
             TextSize = 12,
             TextXAlignment = Enum.TextXAlignment.Left,
-            ClearTextOnFocus = false,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 83,
-        })
-        return box
-    end
-
-    local UserSongName = makeUserSongInput(GetText("Nombre de la canción", "Song title"), 84)
-    local UserSongArtist = makeUserSongInput(GetText("Artista", "Artist"), 130)
-    local UserSongURL = makeUserSongInput(GetText("Pegá la URL del MP3 o de GitHub", "Paste an MP3 or GitHub URL"), 176)
-    local UserSongCover = makeUserSongInput(GetText("URL de portada (opcional)", "Cover URL (optional)"), 222)
-    UserSongName:SetAttribute("PlaceholderSpanish", "Nombre de la canción")
-    UserSongName:SetAttribute("PlaceholderEnglish", "Song title")
-    UserSongArtist:SetAttribute("PlaceholderSpanish", "Artista")
-    UserSongArtist:SetAttribute("PlaceholderEnglish", "Artist")
-    UserSongURL:SetAttribute("PlaceholderSpanish", "Pegá la URL del MP3 o de GitHub")
-    UserSongURL:SetAttribute("PlaceholderEnglish", "Paste an MP3 or GitHub URL")
-    UserSongCover:SetAttribute("PlaceholderSpanish", "URL de portada (opcional)")
-    UserSongCover:SetAttribute("PlaceholderEnglish", "Cover URL (optional)")
-
-    local UserSongStatus = mk("TextLabel", {
-        Parent = UserSongPanel,
-        Size = UDim2.new(1, -36, 0, 26),
-        Position = UDim2.new(0, 18, 0, 264),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 10,
-        TextColor3 = Color3.fromRGB(255, 125, 125),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
-        ZIndex = 83,
-    })
-
-    local UserSongCancel = mk("TextButton", {
-        Parent = UserSongPanel,
-        Size = UDim2.new(0.42, -5, 0, 34),
-        Position = UDim2.new(0, 18, 1, -48),
-        BackgroundColor3 = Color3.fromRGB(45, 45, 49),
-        BorderSizePixel = 0,
-        Text = GetText("Cancelar", "Cancel"),
-        Font = Enum.Font.GothamBold,
-        TextSize = 12,
-        TextColor3 = spotifyText,
-        AutoButtonColor = false,
-        ZIndex = 83,
-    })
-    corner(UserSongCancel, 10)
-    UserSongCancel:SetAttribute("TextSpanish", "Cancelar")
-    UserSongCancel:SetAttribute("TextEnglish", "Cancel")
-
-    local UserSongSave = mk("TextButton", {
-        Parent = UserSongPanel,
-        Size = UDim2.new(0.58, -5, 0, 34),
-        Position = UDim2.new(0.42, 5, 1, -48),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        Text = GetText("Guardar canción", "Save song"),
-        Font = Enum.Font.GothamBold,
-        TextSize = 12,
-        TextColor3 = Color3.fromRGB(0, 0, 0),
-        AutoButtonColor = false,
-        ZIndex = 83,
-    })
-    corner(UserSongSave, 10)
-    UserSongSave:SetAttribute("TextSpanish", "Guardar canción")
-    UserSongSave:SetAttribute("TextEnglish", "Save song")
-
-    local function closeUserSongForm()
-        UserSongForm.Visible = false
-        UserSongStatus.Text = ""
-        UserSongPanelScale.Scale = 0.96
-    end
-    UserSongClose.Activated:Connect(closeUserSongForm)
-    UserSongCancel.Activated:Connect(closeUserSongForm)
-    AddUserSongButton.Activated:Connect(function()
-        UserSongName.Text = ""
-        UserSongArtist.Text = ""
-        UserSongURL.Text = ""
-        UserSongCover.Text = ""
-        UserSongStatus.Text = ""
-        UserSongStatus.TextColor3 = spotifyDim
-        UserSongForm.Visible = true
-        UserSongPanelScale.Scale = 0.94
-        TweenService:Create(UserSongPanelScale, TweenInfo.new(0.2, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        UserSongName:CaptureFocus()
-    end)
-
-    local function loadUserSongs()
-        if type(readfile) ~= "function" then
-           
+            ClearTextOnFocus = false

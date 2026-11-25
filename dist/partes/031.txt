@@ -1,4 +1,105 @@
-", value):gsub("%.0$", "")
+thModes[name] then
+                ShaderReflections:SetShadowStrength(0.30)
+                ShaderReflections:SetShadowEnabled(true)
+            end
+        end
+    end
+
+    local function shaderRestoreAll(options)
+        shaderRestoreImmersive()
+        local report = ShaderManager:Restore(options or {})
+        if report and report.ok then
+            shaderClearCustomOverrides()
+            shaderQueuePersistence()
+        end
+        return report
+    end
+
+    globalConnections.ShaderRestore = function()
+        ShaderPersistenceToken = ShaderPersistenceToken + 1
+        pcall(shaderRestoreImmersive)
+        pcall(function() ShaderManager:Restore({destroyCreated = true}) end)
+    end
+
+    local function shaderApplyPreset(name, tween)
+        local report = ShaderManager:ApplyPreset(name, {
+            tween = tween == true,
+            duration = 1,
+        })
+        if report.ok then
+            shaderClearCustomOverrides()
+            shaderSyncImmersivePreset(name)
+            pcall(PerfOpt.AfterShaders)
+            task.delay(tween and 1.05 or 0, function()
+                ShaderManualLighting.Brightness = ShaderLightingService.Brightness
+                ShaderManualLighting.ExposureCompensation = ShaderLightingService.ExposureCompensation
+                pcall(PerfOpt.AfterShaders)
+            end)
+        end
+        shaderWarn(report, "Preset " .. tostring(name))
+        if ShaderCustomRefresh then
+            task.defer(ShaderCustomRefresh)
+        end
+        if report and report.ok then shaderQueuePersistence() end
+        return report
+    end
+
+    local function shaderApplySingle(target, property, value)
+        if target == "Lighting" and (property == "Brightness" or property == "ExposureCompensation") then
+            ShaderManualLighting[property] = value
+        end
+        local report = ShaderManager:Apply({[target] = {[property] = value}}, {tween = false})
+        shaderWarn(report, target .. "." .. property)
+        if ShaderCustomRefresh then
+            task.defer(ShaderCustomRefresh)
+        end
+        if report and report.ok then shaderQueuePersistence() end
+        return report
+    end
+
+    local function shaderExistingNumber(target, property, fallback)
+        local values = ShaderManager:Read(target, {[property] = true})
+        if values and type(values[property]) == "number" then
+            return values[property]
+        end
+        return fallback
+    end
+
+    local function shaderExistingBool(target, property, fallback)
+        local values = ShaderManager:Read(target, {[property] = true})
+        if values and type(values[property]) == "boolean" then
+            return values[property]
+        end
+        return fallback
+    end
+
+    local function shaderReadCustomValue(spec, fallback, valueType)
+        local override = ShaderCustomOverrides[spec.id]
+        if type(override) == valueType then
+            return override
+        end
+
+        local current = fallback
+        if valueType == "boolean" then
+            current = shaderExistingBool(spec.target, spec.property, fallback)
+        else
+            current = shaderExistingNumber(spec.target, spec.property, fallback)
+        end
+
+        if type(spec.getValue) == "function" then
+            local ok, result = pcall(spec.getValue)
+            if ok and type(result) == valueType then
+                current = result
+            end
+        end
+        return current
+    end
+
+    local function shaderFormatValue(value)
+        if math.abs(value) >= 100 then
+            return string.format("%.0f", value)
+        elseif math.abs(value) >= 10 then
+            return string.format("%.1f", value):gsub("%.0$", "")
         end
         return string.format("%.2f", value):gsub("0+$", ""):gsub("%.$", "")
     end
@@ -865,16 +966,4 @@
             {id = "SunColorStrength", es = "Color del sol · mezcla", en = "Sun color · blend", min = 0, max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Strength end, onChange = function(value) ShaderSolarTone:SetStrength(value) end},
             {id = "SunRaysIntensity", es = "Intensidad", en = "Intensity", min = 0, max = 1, default = 0.08, step = 0.01, target = "SunRaysEffect", property = "Intensity"},
             {id = "SunRaysSpread", es = "Extensión", en = "Spread", min = 0, max = 1, default = 0.65, step = 0.01, target = "SunRaysEffect", property = "Spread"},
-            {id = "SunRaysEnabled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
-
-            {section = {"Overdrive local", "Local overdrive", "Efectos visuales locales con límites de distancia, partes y tasa de partículas.", "Local visual effects with distance, part and particle-rate limits."}},
-            {id = "WetReflections", es = "Reflejos húmedos", en = "Wet reflections", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.Enabled end, onChange = function(value) ShaderReflections:SetEnabled(value) end},
-            {id = "ReflectionIntensity", es = "Intensidad de reflejo", en = "Reflection intensity", min = 0.05, max = 0.60, default = 0.28, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Intensity end, onChange = function(value) ShaderReflections:SetIntensity(value) end},
-            {id = "Wetness", es = "Acabado mojado", en = "Wet finish", min = 0.10, max = 1, default = 0.82, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.Wetness end, onChange = function(value) ShaderReflections:SetWetness(value) end},
-            {id = "AllSurfaceCoverage", es = "Cubrir paredes y techos", en = "Cover walls and ceilings", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SurfaceMode == "All" end, onChange = function(value) ShaderReflections:SetSurfaceMode(value and "All" or "Floors") end},
-            {id = "SceneCoverage", es = "Cobertura de escena", en = "Scene coverage", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.SceneCoverage end, onChange = function(value) ShaderReflections:SetSceneCoverage(value) end},
-            {id = "ContactReflection", es = "Contacto del personaje", en = "Character contact", default = false, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ContactEnabled end, onChange = function(value) ShaderReflections:SetContactEnabled(value) end},
-            {id = "ContactStrength", es = "Detalle de contacto", en = "Contact detail", min = 0.05, max = 0.60, default = 0.24, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale", getValue = function() return ShaderReflections.ContactStrength end, onChange = function(value) ShaderReflections:SetContactStrength(value) end},
-            {id = "ModelSurfaceDetail", es = "Detalle en modelos", en = "Model surface detail", default = true, target = "Lighting", property = "EnvironmentSpecularScale", toggle = true, getValue = function() return ShaderReflections.ModelDetailEnabled end, onChange = function(value) ShaderReflections:SetModelDetailEnabled(value) end},
-            {id = "ModelShadows", es = "Sombras de modelos", en = "Model contact shadows", default = false, target = "Lighting", property = "ShadowSoftness", toggle = true, getValue = function() return ShaderReflections.ShadowEnabled end, onChange = function(value) ShaderReflections:SetShadowEnabled(value) end},
-            {id = "ModelShadowStrength", es = "Intensidad de sombras", en = "Shadow intensity", min = 0.05, max = 0.70, default = 0.30, step = 0.01, target = "Lighting", property = "ShadowSoftness", getValue = function() return ShaderReflections.ShadowStrength end, onChange = function(value) ShaderReflections:SetShadowS
+            {id = "SunRaysEna

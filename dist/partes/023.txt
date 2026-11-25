@@ -1,4 +1,73 @@
-                local p = base.Position
+urce = LocalPlayer.Character
+                    if source and source.Parent then
+                        local ok, clone = pcall(function()
+                            return source:Clone()
+                        end)
+                        if ok and clone then
+                            return clone
+                        end
+                    end
+
+                    local ok, model = pcall(function()
+                        return Players:CreateHumanoidModelFromUserId(LocalPlayer.UserId)
+                    end)
+                    if ok and model then
+                        return model
+                    end
+                    return nil
+                end
+
+                -- ==================== ANIMACIÓN PROPIA (R6 y R15, por código) ====================
+                -- Se mueven los Motor6D girando su C0 alrededor de la propia articulación, en el espacio del
+                -- torso (X = derecha, Y = arriba, -Z = adelante): así la misma pose sirve para R6 y R15.
+                local HomeAnim = {}
+                -- articulación abstracta -> nombres reales (R15 primero, R6 después)
+                HomeAnim.JOINTS = {
+                    Root = { "Root", "RootJoint" },
+                    Waist = { "Waist" },
+                    Neck = { "Neck" },
+                    RShoulder = { "RightShoulder", "Right Shoulder" },
+                    LShoulder = { "LeftShoulder", "Left Shoulder" },
+                    RElbow = { "RightElbow" },
+                    LElbow = { "LeftElbow" },
+                    RHip = { "RightHip", "Right Hip" },
+                    LHip = { "LeftHip", "Left Hip" },
+                    RKnee = { "RightKnee" },
+                    LKnee = { "LeftKnee" },
+                }
+                function HomeAnim.Rig(model)
+                    local rig = { joints = {}, count = 0, r15 = model:FindFirstChild("UpperTorso") ~= nil }
+                    for key, names in pairs(HomeAnim.JOINTS) do
+                        for _, n in ipairs(names) do
+                            local m = model:FindFirstChild(n, true)
+                            if m and m:IsA("Motor6D") then
+                                rig.joints[key] = { motor = m, base = m.C0 }
+                                rig.count += 1
+                                break
+                            end
+                        end
+                    end
+                    -- R6 no tiene cintura: lo de la cintura va al RootJoint
+                    if not rig.joints.Waist and rig.joints.Root then
+                        rig.waistIsRoot = true
+                    end
+                    -- largo y grosor de la pierna (para sentarse justo en el piso)
+                    local function sizeY(n) local p = model:FindFirstChild(n) return p and p:IsA("BasePart") and p.Size.Y or 0 end
+                    local function sizeX(n) local p = model:FindFirstChild(n) return p and p:IsA("BasePart") and p.Size.X or 0 end
+                    if rig.r15 then
+                        rig.legLen = sizeY("RightUpperLeg") + sizeY("RightLowerLeg") + sizeY("RightFoot")
+                        rig.legThick = math.max(sizeX("RightUpperLeg"), 0.6)
+                    else
+                        rig.legLen = sizeY("Right Leg")
+                        rig.legThick = math.max(sizeX("Right Leg"), 0.6)
+                    end
+                    if rig.legLen <= 0 then rig.legLen = 2 end
+                    return rig
+                end
+                -- pose = { Key = { rx, ry, rz [, dy] } en grados (dy: subir/bajar en studs, solo Root)
+                local function rotC0(j, a)
+                    local base = j.base
+                    local p = base.Position
                     local rot = CFrame.Angles(math.rad(a[1] or 0), math.rad(a[2] or 0), math.rad(a[3] or 0))
                     local lift = Vector3.new(0, a[4] or 0, 0)
                     return CFrame.new(p + lift) * rot * CFrame.new(-p) * base
@@ -691,73 +760,4 @@
                 TextSize = 13,
                 TextColor3 = Theme.Text,
                 TextXAlignment = Enum.TextXAlignment.Center,
-                ZIndex = 11,
-            })
-            NameLabel:SetAttribute("ThemeTextRole", "Text")
-            NameLabel:SetAttribute("TextSpanish", greetES)
-            NameLabel:SetAttribute("TextEnglish", greetEN)
-
-            local UserLabel = mk("TextLabel", {
-                Parent = HomeRoot,
-                Size = UDim2.new(0.44, 0, 0, 30),
-                Position = UDim2.new(0.28, 0, 0, 226),
-                BackgroundTransparency = 1,
-                Text = LocalPlayer.DisplayName or LocalPlayer.Name,
-                Font = Enum.Font.GothamBold,
-                TextSize = 24,
-                TextColor3 = Theme.Text,
-                TextXAlignment = Enum.TextXAlignment.Center,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 11,
-            })
-            UserLabel:SetAttribute("ThemeTextRole", "Text")
-            UserLabel.Font = Enum.Font.GothamBlack
-            UserLabel.TextSize = 21
-
-            local Handle = mk("TextLabel", {
-                Parent = HomeRoot,
-                Size = UDim2.new(0, 0, 0, 20),
-                AutomaticSize = Enum.AutomaticSize.X,
-                AnchorPoint = Vector2.new(0.5, 0),
-                Position = UDim2.new(0.5, 0, 0, 255),
-                BackgroundColor3 = Theme.Accent,
-                BackgroundTransparency = 0.86,
-                Text = "@" .. tostring(LocalPlayer.Name),
-                Font = Enum.Font.GothamBold,
-                TextSize = 11,
-                TextColor3 = Theme.Text,
-                ZIndex = 13,
-            })
-            Handle:SetAttribute("ThemeRole", "Accent")
-            Handle:SetAttribute("ThemeTextRole", "Text")
-            corner(Handle, 999)
-            mk("UIPadding", {Parent = Handle, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-            createViewport(HomeRoot)
-
-            local cardH = 50
-            local row1 = 55
-            local row2 = 119
-            local row3 = 183
-            -- Opción 4: el avatar queda al centro y las estadísticas a ambos lados.
-            local leftColX = 0.01
-            local rightColX = 0.70
-            local cardW = 0.29
-
-            local _, playersVal, playersSub = makeStatCard(HomeRoot, leftColX, row1, cardW, cardH, 90955646581059, "Jugadores", "Players", "1", "Conectado", "Connected")
-            local pingCard, pingVal, pingSub = makeStatCard(HomeRoot, rightColX, row2, cardW, cardH, 80031485123484, "Ping", "Ping", "0 ms", "Estado de red", "Network state")
-            local idCard, idVal = makeStatCard(HomeRoot, leftColX, row2, cardW, cardH, 126144525731859, "ID del servidor", "Server ID", "N/A", "Tocar para copiar", "Tap to copy")
-
-            local _, timeVal = makeStatCard(HomeRoot, rightColX, row1, cardW, cardH, 128054256171328, "Tiempo", "Time", "00:00:00", "Servidor en vivo", "Server live")
-            local _, regionVal = makeStatCard(HomeRoot, leftColX, row3, cardW, cardH, 84609306530754, "Región", "Region", "ES-ES", "Detectado automáticamente", "Automatically detected")
-            local _, statusVal, statusSub, statusDot = makeStatCard(HomeRoot, rightColX, row3, cardW, cardH, 88363727246005, "Estado", "Status", "Healthy", "Todo funcionando", "All systems operational")
-
-            for _, dynamic in ipairs({playersSub, pingSub, statusSub}) do
-                dynamic:SetAttribute("TextSpanish", nil)
-                dynamic:SetAttribute("TextEnglish", nil)
-            end
-            statusDot.Visible = true
-            statusVal.Position = UDim2.new(0, 38, 0, 18)
-            statusVal.Size = UDim2.new(1, -46, 0, 15)
-            statusSub.Visible = true
-            statusSub.TextSize = 9
+   

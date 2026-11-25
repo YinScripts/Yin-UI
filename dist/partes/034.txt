@@ -1,4 +1,80 @@
- BorderSizePixel = 0,
+enInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+        btn.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            cardScale.Scale = 0.93
+            TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+            SavedConfig.SelectedLogoIcon = iconName
+            SaveConfig()
+            ApplyLogoIcon(iconName)
+            for _, other in ipairs(LP.cards) do
+                LP.paint(other, other.key == iconName, true)
+            end
+            LP.setHero(iconName)
+        end)
+
+        return card
+    end
+
+    -- ==================== ESTUDIO DE LOGOS (crear logos flotantes propios) ====================
+    -- Usa IconCatalog.Custom (arriba) para guardar y ApplyLogoIcon para dibujar el botón real.
+    local function BuildLogoStudio()
+    local CL = IconCatalog.Custom
+    if not CL then return end
+
+    local WHITE = Color3.new(1, 1, 1)
+    local Z = 280 -- capa base del editor (por encima del creador de temas: 200-265)
+    local LS = { live = {}, realLive = false, zoom = 1, backdrop = "day" }
+
+    local MOVES = {
+        { "None", "Quieto", "Still" },
+        { "Spin", "Girar", "Spin" },
+        { "Pulse", "Latir", "Pulse" },
+        { "Orbit", "Órbita", "Orbit" },
+        { "Float", "Flotar", "Float" },
+        { "Shake", "Temblar", "Shake" },
+        { "Fade", "Parpadeo", "Fade" },
+    }
+    -- rango de Speed / Amount por movimiento (mismos significados que el catálogo Yin-logos)
+    local MOVE_INFO = {
+        None = {},
+        Spin = { speed = { 10, 600, 5, 60, "°/s", "Velocidad de giro", "Spin speed" }, dir = true, style = true },
+        Pulse = { speed = { 0.3, 4, 0.1, 1.2, "s", "Duración del latido", "Beat duration" }, amount = { 2, 40, 1, 12, "%", "Cuánto crece", "Grow amount" } },
+        Orbit = { speed = { 10, 360, 5, 40, "°/s", "Velocidad de órbita", "Orbit speed" }, amount = { 1, 20, 1, 6, "px", "Radio de la órbita", "Orbit radius" }, dir = true },
+        Float = { speed = { 0.5, 6, 0.1, 2, "s", "Duración sube-baja", "Up-down duration" }, amount = { 1, 14, 1, 4, "px", "Distancia", "Distance" } },
+        Shake = { speed = { 2, 30, 1, 12, "/s", "Vibraciones por segundo", "Shakes per second" }, amount = { 0.5, 8, 0.5, 2, "px", "Intensidad", "Intensity" } },
+        Fade = { speed = { 0.4, 5, 0.1, 1.5, "s", "Duración del parpadeo", "Fade duration" }, amount = { 0.1, 1, 0.05, 0.6, "", "Transparencia máxima", "Max transparency" } },
+    }
+
+    -- ---------- helpers de UI ----------
+    local function L(obj, es, en)
+        obj:SetAttribute("TextSpanish", es)
+        obj:SetAttribute("TextEnglish", en)
+        obj.Text = GetText(es, en)
+        return obj
+    end
+    local function label(parent, es, en, size, font, role, props)
+        local t = mk("TextLabel", {
+            Parent = parent,
+            BackgroundTransparency = 1,
+            TextColor3 = Theme[role or "Text"] or Theme.Text,
+            TextSize = size,
+            Font = font,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = Z + 3,
+        })
+        t:SetAttribute("ThemeTextRole", role or "Text")
+        if role and role ~= "Text" then t:SetAttribute("IgnoreTextEffect", true) end
+        L(t, es, en)
+        for k, v in pairs(props or {}) do t[k] = v end
+        return t
+    end
+    local function button(parent, es, en, role, props)
+        local b = mk("TextButton", {
+            Parent = parent,
+            BackgroundColor3 = Theme[role] or Theme.Secondary,
+            BorderSizePixel = 0,
             TextColor3 = role == "Accent" and Theme.AccentText or Theme.Text,
             TextSize = 12,
             Font = Enum.Font.GothamBold,
@@ -731,81 +807,4 @@
     corner(RealRow, 10)
     label(RealRow, "Ver en mi botón real", "Show on my real button", 12, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, -70, 0, 16), Position = UDim2.fromOffset(12, 5), ZIndex = Z + 4 })
     label(RealRow, "El botón flotante de verdad cambia mientras editás", "The actual floating button changes while you edit", 9, Enum.Font.GothamMedium, "TextDim", { Size = UDim2.new(1, -70, 0, 12), Position = UDim2.fromOffset(12, 22), ZIndex = Z + 4 })
-    local RealTrack = mk("Frame", { Parent = RealRow, Size = UDim2.fromOffset(40, 22), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -12, 0.5, 0), BackgroundColor3 = Theme.AccentOff, BorderSizePixel = 0, ZIndex = Z + 4 })
-    corner(RealTrack, 999)
-    local RealKnob = mk("Frame", { Parent = RealTrack, Size = UDim2.fromOffset(16, 16), Position = UDim2.fromOffset(3, 3), BackgroundColor3 = WHITE, BorderSizePixel = 0, ZIndex = Z + 5 })
-    corner(RealKnob, 999)
-    local PREVIEW_KEY = "Custom:__preview"
-    local realToken = 0
-    local function pushReal()
-        if not LS.realLive then return end
-        realToken += 1
-        local my = realToken
-        task.delay(0.2, function() -- un solo redibujo por ráfaga de cambios
-            if my ~= realToken or not LS.realLive then return end
-            local icon = drawableIcon(ED.rec)
-            if #icon.Layers == 0 then return end
-            icon.LabelES, icon.LabelEN, icon.Custom = "Vista previa", "Preview", true
-            local cs = ED.rec.ClickSound
-            if cs and CL.CleanAsset(cs.Id) ~= "" then icon.ClickSound = { Id = CL.CleanAsset(cs.Id), Volume = cs.Volume } end
-            IconCatalog.Icons[PREVIEW_KEY] = icon
-            pcall(ApplyLogoIcon, PREVIEW_KEY)
-        end)
-    end
-    local function setRealLive(on)
-        LS.realLive = on
-        TweenService:Create(RealKnob, TweenInfo.new(0.2, Enum.EasingStyle.Quint, Enum.EasingDirection.Out), { Position = UDim2.fromOffset(on and 21 or 3, 3) }):Play()
-        RealTrack.BackgroundColor3 = on and Theme.ToggleOn or Theme.AccentOff
-        if on then
-            pushReal()
-        else
-            realToken += 1
-            IconCatalog.Icons[PREVIEW_KEY] = nil
-            pcall(ApplyLogoIcon, SavedConfig.SelectedLogoIcon or "ClassicYinYang")
-        end
-    end
-    RealRow.MouseButton1Click:Connect(function()
-        playSound(Sounds.Click, 0.4)
-        setRealLive(not LS.realLive)
-    end)
-
-    local function changed()
-        rebuildPreview()
-        pushReal()
-    end
-
-    -- =====================================================================
-    -- 2) NOMBRE + PLANTILLAS
-    -- =====================================================================
-    sectionTitle(Content, "NOMBRE Y PUNTO DE PARTIDA", "NAME & STARTING POINT", 2, "Empezá de cero o copiá un logo del catálogo y modificalo", "Start from scratch or copy a catalog logo and tweak it")
-    local NameCard = card(Content, 3)
-    pad(NameCard, 10, 10, 10, 10)
-    list(NameCard, 8)
-    local NameBox = mk("TextBox", {
-        Parent = NameCard,
-        Size = UDim2.new(1, 0, 0, 34),
-        BackgroundColor3 = Theme.Background,
-        BackgroundTransparency = 0.2,
-        BorderSizePixel = 0,
-        Text = "",
-        PlaceholderColor3 = Theme.TextDim,
-        TextColor3 = Theme.Text,
-        TextSize = 13,
-        Font = Enum.Font.GothamBold,
-        ClearTextOnFocus = false,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        LayoutOrder = 1,
-        ZIndex = Z + 4,
-    })
-    NameBox:SetAttribute("ThemeRole", "Background")
-    NameBox:SetAttribute("ThemeTextRole", "Text")
-    NameBox:SetAttribute("PlaceholderSpanish", "Nombre de tu logo")
-    NameBox:SetAttribute("PlaceholderEnglish", "Your logo name")
-    NameBox.PlaceholderText = GetText("Nombre de tu logo", "Your logo name")
-    corner(NameBox, 10)
-    pad(NameBox, 0, 12, 12, 0)
-    local nameStroke = stroke(NameBox, Theme.Stroke, 1, 0.6)
-    NameBox.Focused:Connect(function() nameStroke.Color = Theme.Accent nameStroke.Transparency = 0.1 end)
-    NameBox.FocusLost:Connect(function()
-        nameStroke.Color = Theme.Stroke
-        nameSt
+ 

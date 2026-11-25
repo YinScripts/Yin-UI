@@ -1,4 +1,75 @@
-n:SetIntensity(value) end,
+n shaderQueuePersistence() end
+            return report
+        end,
+        RegisterPreset = function(name, preset)
+            ShaderManager:RegisterPreset(name, preset)
+        end,
+        RegisterTarget = function(id, spec)
+            return ShaderManager:RegisterTarget(id, spec)
+        end,
+        ApplyTo = function(instance, properties, options)
+            local report = ShaderManager:ApplyTo(instance, properties, options or {})
+            shaderWarn(report, "Aplicación directa")
+            ShaderCustomRefresh()
+            return report
+        end,
+        Restore = function(options)
+            local report = shaderRestoreAll(options)
+            ShaderCustomRefresh()
+            return report
+        end,
+        GetTarget = function(id, createIfMissing)
+            return ShaderManager:GetTarget(id, createIfMissing)
+        end,
+        Read = function(targetId, properties)
+            return ShaderManager:Read(targetId, properties)
+        end,
+        SetSkyMirrorEnabled = function(enabled)
+            ShaderReflections:SetSkyMirrorEnabled(enabled)
+            shaderQueuePersistence()
+        end,
+        OpenCustom = shaderOpenCustomWindow,
+        CloseCustom = function()
+            if ShaderCustomWindow then
+                shaderDisconnectAll()
+                if ShaderCustomWindow then ShaderCustomWindow:Destroy() end
+                if ShaderCustomBackdrop then ShaderCustomBackdrop:Destroy() end
+                ShaderCustomWindow = nil
+                ShaderCustomBackdrop = nil
+                ShaderCustomControls = {}
+                ShaderCustomRefresh = function() end
+            end
+        end,
+        GetActivePreset = function()
+            return ShaderManager.ActivePreset
+        end,
+        IsDemoEnabled = function()
+            return ShaderDemoEnabled
+        end,
+        Overdrive = {
+            SetQuality = shaderSetQuality,
+            GetQuality = function() return ShaderSceneQuality end,
+            Reflections = {
+                SetEnabled = function(value) ShaderReflections:SetEnabled(value) end,
+                SetIntensity = function(value) ShaderReflections:SetIntensity(value) end,
+                SetWetness = function(value) ShaderReflections:SetWetness(value) end,
+                SetSurfaceMode = function(value) ShaderReflections:SetSurfaceMode(value) end,
+                SetSceneCoverage = function(value) ShaderReflections:SetSceneCoverage(value) end,
+                SetObjectMirrorEnabled = function(value) ShaderReflections:SetObjectMirrorEnabled(value) end,
+                SetContactEnabled = function(value) ShaderReflections:SetContactEnabled(value) end,
+                SetContactStrength = function(value) ShaderReflections:SetContactStrength(value) end,
+                SetModelDetailEnabled = function(value) ShaderReflections:SetModelDetailEnabled(value) end,
+                SetShadowEnabled = function(value) ShaderReflections:SetShadowEnabled(value) end,
+                SetShadowStrength = function(value) ShaderReflections:SetShadowStrength(value) end,
+                SetSunHue = function(value) ShaderSolarTone:SetHue(value) end,
+                SetSunSaturation = function(value) ShaderSolarTone:SetSaturation(value) end,
+                SetSunStrength = function(value) ShaderSolarTone:SetStrength(value) end,
+                Refresh = function() ShaderReflections:Refresh() end,
+                IsEnabled = function() return ShaderReflections.Enabled end,
+            },
+            Rain = {
+                SetEnabled = function(value) ShaderRain:SetEnabled(value) end,
+                SetIntensity = function(value) ShaderRain:SetIntensity(value) end,
                 SetSoundEnabled = function(value) ShaderRain:SetSoundEnabled(value) end,
                 SetSoundVolume = function(value) ShaderRain:SetSoundVolume(value) end,
                 SetRespectShelter = function(value) ShaderRain:SetRespectShelter(value) end,
@@ -929,80 +1000,4 @@ n:SetIntensity(value) end,
             TweenService:Create(cardScale, TweenInfo.new(0.14, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1.04}):Play()
         end)
         btn.MouseLeave:Connect(function()
-            TweenService:Create(cardScale, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        end)
-        btn.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            cardScale.Scale = 0.93
-            TweenService:Create(cardScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-            SavedConfig.SelectedLogoIcon = iconName
-            SaveConfig()
-            ApplyLogoIcon(iconName)
-            for _, other in ipairs(LP.cards) do
-                LP.paint(other, other.key == iconName, true)
-            end
-            LP.setHero(iconName)
-        end)
-
-        return card
-    end
-
-    -- ==================== ESTUDIO DE LOGOS (crear logos flotantes propios) ====================
-    -- Usa IconCatalog.Custom (arriba) para guardar y ApplyLogoIcon para dibujar el botón real.
-    local function BuildLogoStudio()
-    local CL = IconCatalog.Custom
-    if not CL then return end
-
-    local WHITE = Color3.new(1, 1, 1)
-    local Z = 280 -- capa base del editor (por encima del creador de temas: 200-265)
-    local LS = { live = {}, realLive = false, zoom = 1, backdrop = "day" }
-
-    local MOVES = {
-        { "None", "Quieto", "Still" },
-        { "Spin", "Girar", "Spin" },
-        { "Pulse", "Latir", "Pulse" },
-        { "Orbit", "Órbita", "Orbit" },
-        { "Float", "Flotar", "Float" },
-        { "Shake", "Temblar", "Shake" },
-        { "Fade", "Parpadeo", "Fade" },
-    }
-    -- rango de Speed / Amount por movimiento (mismos significados que el catálogo Yin-logos)
-    local MOVE_INFO = {
-        None = {},
-        Spin = { speed = { 10, 600, 5, 60, "°/s", "Velocidad de giro", "Spin speed" }, dir = true, style = true },
-        Pulse = { speed = { 0.3, 4, 0.1, 1.2, "s", "Duración del latido", "Beat duration" }, amount = { 2, 40, 1, 12, "%", "Cuánto crece", "Grow amount" } },
-        Orbit = { speed = { 10, 360, 5, 40, "°/s", "Velocidad de órbita", "Orbit speed" }, amount = { 1, 20, 1, 6, "px", "Radio de la órbita", "Orbit radius" }, dir = true },
-        Float = { speed = { 0.5, 6, 0.1, 2, "s", "Duración sube-baja", "Up-down duration" }, amount = { 1, 14, 1, 4, "px", "Distancia", "Distance" } },
-        Shake = { speed = { 2, 30, 1, 12, "/s", "Vibraciones por segundo", "Shakes per second" }, amount = { 0.5, 8, 0.5, 2, "px", "Intensidad", "Intensity" } },
-        Fade = { speed = { 0.4, 5, 0.1, 1.5, "s", "Duración del parpadeo", "Fade duration" }, amount = { 0.1, 1, 0.05, 0.6, "", "Transparencia máxima", "Max transparency" } },
-    }
-
-    -- ---------- helpers de UI ----------
-    local function L(obj, es, en)
-        obj:SetAttribute("TextSpanish", es)
-        obj:SetAttribute("TextEnglish", en)
-        obj.Text = GetText(es, en)
-        return obj
-    end
-    local function label(parent, es, en, size, font, role, props)
-        local t = mk("TextLabel", {
-            Parent = parent,
-            BackgroundTransparency = 1,
-            TextColor3 = Theme[role or "Text"] or Theme.Text,
-            TextSize = size,
-            Font = font,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = Z + 3,
-        })
-        t:SetAttribute("ThemeTextRole", role or "Text")
-        if role and role ~= "Text" then t:SetAttribute("IgnoreTextEffect", true) end
-        L(t, es, en)
-        for k, v in pairs(props or {}) do t[k] = v end
-        return t
-    end
-    local function button(parent, es, en, role, props)
-        local b = mk("TextButton", {
-            Parent = parent,
-            BackgroundColor3 = Theme[role] or Theme.Secondary,
-           
+            TweenService:Create(cardScale, Twe

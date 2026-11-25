@@ -1,4 +1,87 @@
- -27),
+          local state = default or false
+            local isFloating = false
+            local isLocked = false
+
+
+            local tog = self:CreateToggle(textSpanish, textEnglish, state, function(newState)
+                state = newState
+                pcall(cb, state)
+            end, nil, creditInfo)
+
+            local Holder     = tog.Holder
+            local HolderSwitch = tog.Switch
+            local HolderClick  = tog.Click
+
+            local credHasBadge = type(creditInfo) == "table" and (creditInfo.imageId or creditInfo.name) and true or false
+            local credHasDesc  = type(creditInfo) == "table" and type(creditInfo.description) == "string" and #creditInfo.description > 0
+            local hasCredit    = credHasBadge or credHasDesc
+            local credZoneH    = (credHasBadge and credHasDesc) and 110 or 90
+            local credRowY     = credZoneH + 4
+
+            Holder.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH + 38) or UDim2.new(1, 0, 0, 92)
+            HolderSwitch.Position = hasCredit and UDim2.new(1, -66, 0, math.floor(credZoneH / 2) - 14) or UDim2.new(1, -66, 0, 18)
+
+            local DetachBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -130, 0, 18),
+                BackgroundColor3 = Theme.Accent,
+                Text = "↗",
+                TextColor3 = Color3.fromRGB(0, 0, 0),
+                Font = Enum.Font.GothamBold,
+                TextSize = 13,
+                ZIndex = 15
+            })
+            corner(DetachBtn, 6)
+            RowKit.Control(DetachBtn, true)
+
+            local PinBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 28, 0, 28),
+                Position = UDim2.new(1, -98, 0, 18),
+                BackgroundColor3 = Theme.Secondary,
+                Image = "rbxassetid://83537941312438",
+                ImageColor3 = Theme.Text,
+                ScaleType = Enum.ScaleType.Stretch,
+                ZIndex = 15
+            })
+            corner(PinBtn, 6)
+            stroke(PinBtn, Theme.Stroke, 1, 0.5)
+            RowKit.Control(PinBtn)
+
+            local favId = nameSpanish .. "::" .. textSpanish
+            FloatingPillV5.Studio.Register(favId, textSpanish, textEnglish, nameSpanish, "Toggle")
+            local isFavorite = SavedFavoriteIds[favId] or false
+            local FavBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 30, 0, 30),
+                Position = UDim2.new(1, -164, 0, 17),
+                BackgroundTransparency = 1,
+                Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 15
+            })
+
+            local isInCombo = false
+            local ComboBtn = mk("ImageButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 24, 0, 24),
+                Position = UDim2.new(1, -194, 0, 20),
+                BackgroundColor3 = Theme.Secondary,
+                Image = "rbxassetid://114334068728895",
+                ImageColor3 = Theme.TextDim,
+                ScaleType = Enum.ScaleType.Fit,
+                ZIndex = 15
+            })
+            corner(ComboBtn, 6)
+            stroke(ComboBtn, Theme.Stroke, 1, 0.5)
+            ComboBtn:SetAttribute("ThemeImageRole", "TextDim")
+            RowKit.Control(ComboBtn)
+
+            local KeybindBtn = mk("TextButton", {
+                Parent = Holder,
+                Size = UDim2.new(0, 150, 0, 20),
+                Position = UDim2.new(1, -164, 1, -27),
                 BackgroundColor3 = Theme.Secondary,
                 BackgroundTransparency = 0.12,
                 Text = GetText("Tecla: Sin tecla", "Key: No key"),
@@ -823,95 +906,3 @@
                 TextSize = 16,
                 TextXAlignment = Enum.TextXAlignment.Left,
                 TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 10
-            })
-            ComboLabel:SetAttribute("ThemeTextRole", "Accent")
-
-            local DetachBtn = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 28, 0, 28),
-                Position = UDim2.new(1, -130, 0, 18),
-                BackgroundColor3 = Theme.Accent,
-                Text = "↗",
-                TextColor3 = Color3.fromRGB(0, 0, 0),
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                ZIndex = 15
-            })
-            corner(DetachBtn, 6)
-            RowKit.Control(DetachBtn, true)
-
-            local PinBtn = mk("ImageButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 28, 0, 28),
-                Position = UDim2.new(1, -98, 0, 18),
-                BackgroundColor3 = Theme.Secondary,
-                Image = "rbxassetid://83537941312438",
-                ImageColor3 = Theme.Text,
-                ScaleType = Enum.ScaleType.Stretch,
-                ZIndex = 15
-            })
-            corner(PinBtn, 6)
-            stroke(PinBtn, Theme.Stroke, 1, 0.5)
-            RowKit.Control(PinBtn)
-
-            local Switch = mk("Frame", {
-                Parent = Holder,
-                Size = UDim2.new(0, 52, 0, 28),
-                Position = UDim2.new(1, -66, 0, 18),
-                BackgroundColor3 = Theme.AccentOff,
-                ZIndex = 10
-            })
-            Switch:SetAttribute("ThemeRole", "AccentOff")
-            corner(Switch, 999)
-
-            local Knob = mk("Frame", {
-                Parent = Switch,
-                Size = UDim2.new(0, 24, 0, 24),
-                Position = UDim2.new(0, 2, 0.5, -12),
-                BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-                ZIndex = 12
-            })
-            corner(Knob, 999)
-
-            local Click = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Text = "",
-                ZIndex = 13
-            })
-
-            local function applyVisual(newState, animate)
-                local knobPos = newState and UDim2.new(1, -26, 0.5, -12) or UDim2.new(0, 2, 0.5, -12)
-                local trackColor = newState and Theme.Accent or Theme.AccentOff
-                if animate then
-                    TweenService:Create(Knob, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {Position = knobPos}):Play()
-                    TweenService:Create(Switch, TweenInfo.new(0.18, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundColor3 = trackColor}):Play()
-                else
-                    Knob.Position = knobPos
-                    Switch.BackgroundColor3 = trackColor
-                end
-                Switch:SetAttribute("ThemeRole", newState and "Accent" or "AccentOff")
-            end
-
-            local function fireComboMembers(newState)
-                for _, member in ipairs(Window.ComboMembers) do
-                    pcall(member.SetState, newState)
-                end
-            end
-
-            Click.MouseButton1Click:Connect(function()
-                state = not state
-                playSound(Sounds.Click, 0.5)
-                applyVisual(state, true)
-                fireComboMembers(state)
-            end)
-
-            local FloatingWindow = nil
-            local FloatingGlow = nil
-
-            local function createFloatingWindow()
-                local floatStyle    = SavedConfig.FloatingToggleStyle or "Pill"
-                local isCircleStyle = (floatStyle == "Circle")
-                local floatW = isCircleSty

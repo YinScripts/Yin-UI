@@ -1,4 +1,74 @@
-= true,
+= nil))
+        end
+    end
+
+    PM.switch(4, "Repetir canción", function() return SpotifyState.IsRepeat end, PM.setRepeat)
+    PM.switch(5, "Aleatorio", function() return SpotifyState.Shuffle end, function(v)
+        SpotifyState.Shuffle = v == true
+        if SpotifyState.OnPlaybackChanged then pcall(SpotifyState.OnPlaybackChanged) end
+    end)
+    PM.switch(6, "Reproductor flotante", function() return SpotifyState.FloatingPlayerVisible end, function(v)
+        if v and (not FloatingPlayer or not FloatingPlayer.Parent) then createFloatingPlayer() end
+        setFloatingVisible(v)
+    end)
+
+    refreshSpotifyFloatingPlayer = function()
+        if not FloatingPlayer or not FloatingPlayer.Parent then return end
+        FloatingPlayer.Visible = SpotifyState.FloatingPlayerVisible == true
+        local currentTrack = SpotifyState.CurrentTrack or SpotifyState.Catalog[SpotifyState.SelectedIndex]
+        if not currentTrack then return end
+        local cover = resolveTrackCoverImage(currentTrack) or ""
+        if cover ~= FP.lastCover then
+            FP.lastCover = cover
+            FP.Cover.Image = cover
+            FP.Disc.Image = cover
+            FP.Backdrop.Image = cover
+            FP.Fallback.Visible = trim(cover) == ""
+        end
+        FP.Title.Text = currentTrack.Name or "Selecciona una canción"
+        FP.Artist.Text = currentTrack.Artist or "Spotify"
+        local current = SpotifyState.CurrentSound and math.max(0, tonumber(SpotifyState.CurrentSound.TimePosition) or 0) or 0
+        local total = SpotifyState.CurrentSound and tonumber(SpotifyState.CurrentSound.TimeLength) or durationToSeconds(currentTrack.Duration)
+        total = math.max(total or 0, 1)
+        FP.Bar.Size = UDim2.new(clamp(current / total, 0, 1), 0, 1, 0)
+        FP.Time.Text = secondsToClock(current) .. " / " .. (currentTrack.Duration or secondsToClock(total))
+        FP.PlayIcon.Image = SpotifyState.IsPlaying and asset(74873705394436) or asset(135609604299893)
+        local liked = isLiked(SpotifyState.SelectedIndex)
+        FP.LikeIcon.Image = asset(116559368303288)
+        FP.LikeIcon.ImageColor3 = liked and spotifyGreen or Color3.fromRGB(255, 255, 255)
+    end
+    local function openPlaybackMenu()
+        SpotifyState.SettingsMenuVisible = true
+        refreshSpotifyPlaybackMenu()
+        PM.Scale.Scale = 0.94
+        TweenService:Create(PM.Scale, TweenInfo.new(0.18, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        task.defer(refreshSpotifyPlaybackMenu)
+    end
+    bindRowTap(SettingsClose, function() SpotifyState.SettingsMenuVisible = false; refreshSpotifyPlaybackMenu() end)
+    MoreTopBtn.Activated:Connect(openPlaybackMenu)
+    MoreBtn.Activated:Connect(openPlaybackMenu)
+    refreshSpotifyPlaybackMenu()
+
+
+    createFavoritesTile = function(layoutOrder)
+        local m = getSpotifyMetrics()
+        local cardH = m.cardHeight
+        local coverPad = m.compact and 9 or 11
+        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
+        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
+        local coverSize = math.max(42, cellW - 20)
+        coverSize = math.floor(math.min(coverSize, m.coverMax))
+
+        local Card = mk("TextButton", {
+            Parent = SongList,
+            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
+            BackgroundColor3 = Color3.fromRGB(96, 38, 160),
+            BackgroundTransparency = 0,
+            BorderSizePixel = 0,
+            LayoutOrder = layoutOrder or 1,
+            Text = "",
+            AutoButtonColor = false,
+            ClipsDescendants = true,
             ZIndex = 12,
         })
         Card.Name = "SpotifyFavoritesTile"
@@ -1111,91 +1181,4 @@
         tw:Play()
     end
 
-    FavPage.playAll = function()
-        local list = FavPage.likedList()
-        if #list == 0 then
-            return
-        end
-        if SpotifyState.CurrentSound and isLiked(SpotifyState.SelectedIndex) then
-            SpotifyState.FavQueue = true
-            togglePlayback()
-        elseif SpotifyState.Shuffle then
-            FavPage.play(FavPage.randomFrom(list, nil))
-        else
-            FavPage.play(list[1])
-        end
-    end
-
-    bindRowTap(FavPage.Back, FavPage.hide)
-    bindRowTap(FavPage.PlayAll, FavPage.playAll)
-    bindRowTap(FavPage.MiniPlay, FavPage.playAll)
-    bindRowTap(FavPage.ShuffleBtn, function()
-        SpotifyState.Shuffle = not SpotifyState.Shuffle
-        FavPage.history = {}
-        FavPage.paint()
-    end)
-
-    SpotifyState.OnPlaybackChanged = FavPage.refresh
-    SpotifyState.FavoriteNeighbor = FavPage.neighbor
-
-    createSongRow = function(track, index, layoutOrder)
-        if SpotifyState.HiddenRows[index] then
-            return
-        end
-
-        local m = getSpotifyMetrics()
-        local cardH = m.cardHeight
-        local coverPad = m.compact and 9 or 11
-        local availableW = math.max(0, spotifyLogicalSize(SongList).X - ((m.gridColumns - 1) * m.gridGapX) - 8)
-        local cellW = math.max(90, math.floor(availableW / m.gridColumns))
-        local coverSize = math.max(42, cellW - 20)
-        coverSize = math.floor(math.min(coverSize, m.coverMax))
-
-        local Row = mk("Frame", {
-            Parent = SongList,
-            Size = UDim2.fromOffset(math.floor(coverSize + 20), cardH),
-            BackgroundColor3 = Color3.fromRGB(24, 24, 24),
-            BackgroundTransparency = 0.22,
-            BorderSizePixel = 0,
-            LayoutOrder = layoutOrder or (index + 1),
-            ClipsDescendants = true,
-            ZIndex = 11,
-        })
-        Row.Name = "SpotifySongCard_" .. index
-        corner(Row, 12)
-        stroke(Row, Color3.fromRGB(95, 95, 100), 1, 0.78)
-
-        local TapArea = mk("TextButton", {
-            Parent = Row, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1,
-            Text = "", AutoButtonColor = false, ZIndex = 13,
-        })
-        TapArea.Name = "SongTapArea"
-
-        local Accent = mk("Frame", {
-            Parent = Row, Size = UDim2.new(1, 0, 0, 3), Position = UDim2.new(0, 0, 0, 0),
-            BackgroundColor3 = spotifyGreen, BorderSizePixel = 0,
-            Visible = index == SpotifyState.SelectedIndex, ZIndex = 14,
-        })
-        corner(Accent, 999)
-
-        local Cover = mk("ImageButton", {
-            Parent = Row, Size = UDim2.fromOffset(coverSize, coverSize),
-            Position = UDim2.new(0.5, -(coverSize / 2), 0, coverPad),
-            BackgroundColor3 = Color3.fromRGB(18, 18, 18), BackgroundTransparency = 0,
-            BorderSizePixel = 0, Image = "",
-            ScaleType = Enum.ScaleType.Crop, AutoButtonColor = false, ZIndex = 15,
-        })
-        corner(Cover, 9)
-
-        local Title = mk("TextLabel", {
-            Parent = Row, Size = UDim2.new(1, -22, 0, 20),
-            Position = UDim2.new(0, 11, 0, coverPad + coverSize + 9),
-            BackgroundTransparency = 1, Text = track.Name, Font = Enum.Font.GothamBold,
-            TextSize = m.compact and 12 or 14, TextColor3 = index == SpotifyState.SelectedIndex and spotifyGreen or spotifyText,
-            TextXAlignment = Enum.TextXAlignment.Left, TextWrapped = true, TextTruncate = Enum.TextTruncate.None, TextYAlignment = Enum.TextYAlignment.Top, ZIndex = 16,
-        })
-        Title.Name = "SongTitle"
-
-        local Artist = mk("TextLabel", {
-            Parent = Row, Size = UDim2.new(1, -22, 0, 16),
-            Position = UDim2.new(
+    FavPage.pla

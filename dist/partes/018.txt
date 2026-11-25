@@ -529,8 +529,10 @@ reen.Y > 0 then
                 local Rx = math.clamp(Ry * 1.5, 125, math.max(125, math.min(240, view.X / 2 - 90)))
                 local textSize = count > 12 and 11 or 12
                 local ap, as, op = anchor.AbsolutePosition, anchor.AbsoluteSize, overlay.AbsolutePosition
-                local cx = math.clamp(ap.X + as.X / 2 - op.X, Rx + 80, math.max(Rx + 80, view.X - Rx - 80))
-                local cy = math.clamp(ap.Y + as.Y / 2 - op.Y, Ry + 20, math.max(Ry + 20, view.Y - Ry - 20))
+                -- v4: la rueda se abre en el centro de la pantalla y el toggle viaja hasta ahí; al cerrar vuelve a su lugar
+                local cx, cy = view.X / 2, view.Y / 2
+                local savedPos = anchor.Position
+                local moveDelta = Vector2.new(cx, cy) - Vector2.new(ap.X + as.X / 2 - op.X, ap.Y + as.Y / 2 - op.Y)
                 local orbit = mk("Frame", {
                     AnchorPoint = Vector2.new(0.5, 0.5), Position = UDim2.fromOffset(cx, cy), Size = UDim2.fromOffset(0, 0),
                     BackgroundTransparency = 1, ZIndex = 2001,
@@ -558,18 +560,66 @@ reen.Y > 0 then
                     p.stroke.Color = on and Theme.Accent or Theme.Stroke
                     p.baseStroke = on and 0.1 or 0.45
                 end
+                -- aviso al prender/apagar: tarjeta abajo al centro con punto de estado, nombre y "Activado/Desactivado"
                 local toast
-                local function showToast(text)
+                local function showToast(name, on)
                     if toast then toast:Destroy() end
-                    toast = mk("TextLabel", {
-                        AnchorPoint = Vector2.new(1, 1), Position = UDim2.new(1, -14, 1, -14), Size = UDim2.fromOffset(220, 34),
-                        BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.05, Text = text, TextColor3 = Theme.Text,
-                        Font = Enum.Font.GothamBold, TextSize = 12, ZIndex = 2005, TextTruncate = Enum.TextTruncate.AtEnd,
+                    local accent = on and Theme.Accent or Theme.TextDim
+                    toast = mk("Frame", {
+                        AnchorPoint = Vector2.new(0.5, 1), Position = UDim2.new(0.5, 0, 1, 10), Size = UDim2.fromOffset(0, 46),
+                        AutomaticSize = Enum.AutomaticSize.X, BackgroundColor3 = Theme.Background, BackgroundTransparency = 1,
+                        ZIndex = 2006,
                     }, overlay)
-                    corner(toast, 8)
-                    stroke(toast, Theme.Stroke, 1, 0.4)
+                    corner(toast, 14)
+                    local ts = stroke(toast, accent, 1.5, 1)
+                    mk("UIPadding", { PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 18) }, toast)
+                    mk("UIListLayout", {
+                        FillDirection = Enum.FillDirection.Horizontal, VerticalAlignment = Enum.VerticalAlignment.Center,
+                        Padding = UDim.new(0, 10), SortOrder = Enum.SortOrder.LayoutOrder,
+                    }, toast)
+                    local badge = mk("Frame", {
+                        Size = UDim2.fromOffset(22, 22), BackgroundColor3 = accent, BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 2007,
+                    }, toast)
+                    corner(badge, 999)
+                    local mark = mk("TextLabel", {
+                        Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = on and "✓" or "–",
+                        TextColor3 = on and (Theme.AccentText or getContrastColor(Theme.Accent)) or Theme.Background,
+                        Font = Enum.Font.GothamBlack, TextSize = 13, TextTransparency = 1, ZIndex = 2008,
+                    }, badge)
+                    local texts = mk("Frame", {
+                        Size = UDim2.fromOffset(0, 34), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                        LayoutOrder = 2, ZIndex = 2007,
+                    }, toast)
+                    local title = mk("TextLabel", {
+                        Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, BackgroundTransparency = 1,
+                        Text = name, TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 13,
+                        TextXAlignment = Enum.TextXAlignment.Left, TextTransparency = 1, ZIndex = 2008,
+                    }, texts)
+                    local sub = mk("TextLabel", {
+                        Position = UDim2.fromOffset(0, 18), Size = UDim2.fromOffset(0, 14), AutomaticSize = Enum.AutomaticSize.X,
+                        BackgroundTransparency = 1, Text = on and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled"),
+                        TextColor3 = on and Theme.Accent or Theme.TextDim, Font = Enum.Font.GothamMedium, TextSize = 11,
+                        TextXAlignment = Enum.TextXAlignment.Left, TextTransparency = 1, ZIndex = 2008,
+                    }, texts)
                     local mine = toast
-                    task.delay(1.6, function() if mine and mine.Parent then mine:Destroy() end end)
+                    -- entra subiendo y se va bajando (animación propia, sin tweens)
+                    task.spawn(function()
+                        local t0 = os.clock()
+                        while mine.Parent do
+                            local t = os.clock() - t0
+                            local a = t < 0.25 and t / 0.25 or (t > 1.5 and math.max(0, 1 - (t - 1.5) / 0.25) or 1)
+                            local e = 1 - (1 - a) ^ 3
+                            mine.Position = UDim2.new(0.5, 0, 1, 10 - 34 * e)
+                            mine.BackgroundTransparency = 1 - 0.95 * e
+                            ts.Transparency = 1 - 0.8 * e
+                            badge.BackgroundTransparency = 1 - e
+                            mark.TextTransparency = 1 - e
+                            title.TextTransparency = 1 - e
+                            sub.TextTransparency = 1 - e
+                            if t > 1.75 then mine:Destroy() break end
+                            RunService.RenderStepped:Wait()
+                        end
+                    end)
                 end
                 for i, o in ipairs(options) do
                     local btn = mk("TextButton", {
@@ -595,7 +645,7 @@ reen.Y > 0 then
                         if p.dragged then return end
                         p.fn.Flip()
                         paint(p)
-                        showToast(p.fn.Name() .. (p.fn.Get() and GetText(": activado", ": on") or GetText(": desactivado", ": off")))
+                        showToast(p.fn.Name(), p.fn.Get())
                     end)
                 end
 
@@ -645,6 +695,7 @@ reen.Y > 0 then
                     if not drag then rot = rot + dt * 0.18 end
                     local e = 1 - (1 - math.clamp(k, 0, 1)) ^ 3
                     orbit.Size = UDim2.fromOffset(2 * Rx * e, 2 * Ry * e)
+                    if anchor.Parent then anchor.Position = savedPos + UDim2.fromOffset(moveDelta.X * e, moveDelta.Y * e) end
                     orbitStroke.Transparency = 1 - 0.55 * e
                     dot.Size = UDim2.fromOffset(40, 40)
                     for _, p in ipairs(pills) do
@@ -658,6 +709,7 @@ reen.Y > 0 then
                         p.stroke.Transparency = 1 - ee * (1 - (p.baseStroke or 0.45))
                     end
                     if closing and k < 0.03 then
+                        if anchor.Parent then anchor.Position = savedPos end
                         conn:Disconnect()
                         for _, c in ipairs(inputs) do c:Disconnect() end
                         overlay:Destroy()
@@ -899,87 +951,4 @@ reen.Y > 0 then
             end
 
             local displayText = GetText(textSpanish, textEnglish)
-            local state = default or false
-            local isFloating = false
-            local isLocked = false
-
-
-            local tog = self:CreateToggle(textSpanish, textEnglish, state, function(newState)
-                state = newState
-                pcall(cb, state)
-            end, nil, creditInfo)
-
-            local Holder     = tog.Holder
-            local HolderSwitch = tog.Switch
-            local HolderClick  = tog.Click
-
-            local credHasBadge = type(creditInfo) == "table" and (creditInfo.imageId or creditInfo.name) and true or false
-            local credHasDesc  = type(creditInfo) == "table" and type(creditInfo.description) == "string" and #creditInfo.description > 0
-            local hasCredit    = credHasBadge or credHasDesc
-            local credZoneH    = (credHasBadge and credHasDesc) and 110 or 90
-            local credRowY     = credZoneH + 4
-
-            Holder.Size = hasCredit and UDim2.new(1, 0, 0, credZoneH + 38) or UDim2.new(1, 0, 0, 92)
-            HolderSwitch.Position = hasCredit and UDim2.new(1, -66, 0, math.floor(credZoneH / 2) - 14) or UDim2.new(1, -66, 0, 18)
-
-            local DetachBtn = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 28, 0, 28),
-                Position = UDim2.new(1, -130, 0, 18),
-                BackgroundColor3 = Theme.Accent,
-                Text = "↗",
-                TextColor3 = Color3.fromRGB(0, 0, 0),
-                Font = Enum.Font.GothamBold,
-                TextSize = 13,
-                ZIndex = 15
-            })
-            corner(DetachBtn, 6)
-            RowKit.Control(DetachBtn, true)
-
-            local PinBtn = mk("ImageButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 28, 0, 28),
-                Position = UDim2.new(1, -98, 0, 18),
-                BackgroundColor3 = Theme.Secondary,
-                Image = "rbxassetid://83537941312438",
-                ImageColor3 = Theme.Text,
-                ScaleType = Enum.ScaleType.Stretch,
-                ZIndex = 15
-            })
-            corner(PinBtn, 6)
-            stroke(PinBtn, Theme.Stroke, 1, 0.5)
-            RowKit.Control(PinBtn)
-
-            local favId = nameSpanish .. "::" .. textSpanish
-            FloatingPillV5.Studio.Register(favId, textSpanish, textEnglish, nameSpanish, "Toggle")
-            local isFavorite = SavedFavoriteIds[favId] or false
-            local FavBtn = mk("ImageButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 30, 0, 30),
-                Position = UDim2.new(1, -164, 0, 17),
-                BackgroundTransparency = 1,
-                Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431",
-                ScaleType = Enum.ScaleType.Fit,
-                ZIndex = 15
-            })
-
-            local isInCombo = false
-            local ComboBtn = mk("ImageButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 24, 0, 24),
-                Position = UDim2.new(1, -194, 0, 20),
-                BackgroundColor3 = Theme.Secondary,
-                Image = "rbxassetid://114334068728895",
-                ImageColor3 = Theme.TextDim,
-                ScaleType = Enum.ScaleType.Fit,
-                ZIndex = 15
-            })
-            corner(ComboBtn, 6)
-            stroke(ComboBtn, Theme.Stroke, 1, 0.5)
-            ComboBtn:SetAttribute("ThemeImageRole", "TextDim")
-            RowKit.Control(ComboBtn)
-
-            local KeybindBtn = mk("TextButton", {
-                Parent = Holder,
-                Size = UDim2.new(0, 150, 0, 20),
-                Position = UDim2.new(1, -164, 1,
+  
