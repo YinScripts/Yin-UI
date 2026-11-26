@@ -1,4 +1,93 @@
-          holder:GetAttributeChangedSignal("ScriptState"):Connect(CL.refresh)
+ackgroundTransparency = 0.4,
+        BorderSizePixel = 0,
+        ZIndex = 9,
+    })
+    CL.searchHolder:SetAttribute("ThemeRole", "Secondary")
+    corner(CL.searchHolder, 12)
+    local searchStroke = stroke(CL.searchHolder, Theme.Stroke, 1, 0.6)
+    RowKit.IconAt(CL.searchHolder, 100388562921803, 16, UDim2.new(0, 10, 0.5, -8), 10, "TextDim")
+    CL.search = mk("TextBox", {
+        Parent = CL.searchHolder,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        PlaceholderText = GetText("Buscar script...", "Search script..."),
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ClearTextOnFocus = false,
+        ZIndex = 10,
+    })
+    CL.search:SetAttribute("ThemeTextRole", "Text")
+    CL.search:SetAttribute("PlaceholderSpanish", "Buscar script...")
+    CL.search:SetAttribute("PlaceholderEnglish", "Search script...")
+    CL.search.Focused:Connect(function()
+        searchStroke.Color = Theme.Accent
+        searchStroke.Transparency = 0.1
+    end)
+    CL.search.FocusLost:Connect(function()
+        searchStroke.Color = Theme.Stroke
+        searchStroke.Transparency = 0.6
+    end)
+
+    CL.empty = mk("TextLabel", {
+        Parent = ClassicPage,
+        Size = UDim2.new(1, 0, 0, 60),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Theme.TextDim,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 12,
+        TextWrapped = true,
+        Visible = false,
+        ZIndex = 9,
+    })
+    CL.empty:SetAttribute("ThemeTextRole", "TextDim")
+
+    function CL.refresh()
+        local active = 0
+        for _, h in ipairs(CL.holders) do
+            local st = h.holder:GetAttribute("ScriptState")
+            if st == "active" or st == "loading" then active = active + 1 end
+        end
+        CL.countChip.Text = GetText(#CL.holders .. " scripts", #CL.holders .. " scripts")
+        CL.activeChip.Text = GetText(active .. " activos", active .. " active")
+    end
+
+    function CL.filter()
+        local q = string.lower(CL.search.Text or "")
+        local shown = 0
+        for _, h in ipairs(CL.holders) do
+            local match = q == "" or string.find(h.es, q, 1, true) ~= nil or string.find(h.en, q, 1, true) ~= nil
+            h.holder.Visible = match
+            if match then shown = shown + 1 end
+        end
+        if #CL.holders == 0 then
+            CL.empty.Text = GetText("No se pudo cargar la lista de scripts.", "Could not load the script list.")
+            CL.empty.Visible = true
+        elseif shown == 0 then
+            CL.empty.Text = GetText("Ningún script coincide con la búsqueda.", "No script matches your search.")
+            CL.empty.Visible = true
+        else
+            CL.empty.Visible = false
+        end
+    end
+    CL.search:GetPropertyChangedSignal("Text"):Connect(CL.filter)
+
+    for _, entry in ipairs(classicScripts) do
+        if type(entry) == "table" and entry.es and entry.en and entry.file and entry.key then
+            local holder = TabClassic:CreateScriptToggle(
+                tostring(entry.es),
+                tostring(entry.en),
+                entry.url and tostring(entry.url) or CLASSIC_SCRIPT_URL,
+                tostring(entry.key)
+            )
+            if holder then
+                table.insert(CL.holders, {holder = holder, es = string.lower(tostring(entry.es)), en = string.lower(tostring(entry.en))})
+                holder:GetAttributeChangedSignal("ScriptState"):Connect(CL.refresh)
             end
         else
             warn("[YinYang Classic] Entrada de manifest inválida; se omite")
@@ -1142,102 +1231,4 @@
         FillDirectionMaxCells = 4,
         SortOrder = Enum.SortOrder.LayoutOrder,
         HorizontalAlignment = Enum.HorizontalAlignment.Left,
-        VerticalAlignment = Enum.VerticalAlignment.Top,
-    })
-
-    mk("UIPadding", {
-        Parent = SongList,
-        PaddingTop = UDim.new(0, 4),
-        PaddingBottom = UDim.new(0, 4),
-    })
-
-    SongListLayout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
-        updateSongListCanvas()
-    end)
-
-    local USER_SONGS_FILE = "YinYang_Spotify_MySongs.json"
-    local UserSongForm = mk("Frame", {
-        Parent = SongsCard,
-        Size = UDim2.new(1, 0, 1, 0),
-        BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-        BackgroundTransparency = 0.22,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 80,
-    })
-
-    local UserSongPanel = mk("Frame", {
-        Parent = UserSongForm,
-        Size = UDim2.new(1, -28, 0, 356),
-        Position = UDim2.new(0, 14, 0.5, -178),
-        BackgroundColor3 = Color3.fromRGB(20, 20, 23),
-        BorderSizePixel = 0,
-        ZIndex = 81,
-    })
-    corner(UserSongPanel, 18)
-    stroke(UserSongPanel, Color3.fromRGB(93, 205, 151), 1, 0.48)
-    mk("UIGradient", {
-        Parent = UserSongPanel,
-        Rotation = 120,
-        Color = ColorSequence.new({
-            ColorSequenceKeypoint.new(0, Color3.fromRGB(30, 38, 38)),
-            ColorSequenceKeypoint.new(0.5, Color3.fromRGB(20, 23, 27)),
-            ColorSequenceKeypoint.new(1, Color3.fromRGB(15, 20, 19)),
-        }),
-    })
-
-    local UserSongPanelScale = mk("UIScale", {Parent = UserSongPanel, Scale = 0.96})
-    local UserSongTitleLabel = mk("TextLabel", {
-        Parent = UserSongPanel,
-        Size = UDim2.new(1, -56, 0, 28),
-        Position = UDim2.new(0, 18, 0, 14),
-        BackgroundTransparency = 1,
-        Text = GetText("Agregar canción", "Add a song"),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 18,
-        TextColor3 = spotifyText,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 82,
-    })
-    UserSongTitleLabel:SetAttribute("TextSpanish", "Agregar canción")
-    UserSongTitleLabel:SetAttribute("TextEnglish", "Add a song")
-
-    local UserSongClose = mk("TextButton", {
-        Parent = UserSongPanel,
-        Size = UDim2.fromOffset(30, 30),
-        Position = UDim2.new(1, -42, 0, 12),
-        BackgroundColor3 = Color3.fromRGB(42, 42, 46),
-        BorderSizePixel = 0,
-        Text = "×",
-        Font = Enum.Font.GothamBold,
-        TextSize = 20,
-        TextColor3 = spotifyText,
-        AutoButtonColor = false,
-        ZIndex = 82,
-    })
-    corner(UserSongClose, 9)
-
-    local UserSongHint = mk("TextLabel", {
-        Parent = UserSongPanel,
-        Size = UDim2.new(1, -36, 0, 32),
-        Position = UDim2.new(0, 18, 0, 44),
-        BackgroundTransparency = 1,
-        Text = GetText("Pegá un enlace al archivo; si es de GitHub, lo convertimos automáticamente.", "Paste a file link; GitHub file links are converted automatically."),
-        Font = Enum.Font.GothamMedium,
-        TextSize = 11,
-        TextColor3 = spotifyDim,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextWrapped = true,
-        ZIndex = 82,
-    })
-    UserSongHint:SetAttribute("TextSpanish", "Pegá un enlace al archivo; si es de GitHub, lo convertimos automáticamente.")
-    UserSongHint:SetAttribute("TextEnglish", "Paste a file link; GitHub file links are converted automatically.")
-
-    local function makeUserSongInput(placeholder, y)
-        local holder = mk("Frame", {
-            Parent = UserSongPanel,
-            Size = UDim2.new(1, -36, 0, 38),
-            Position = UDim2.new(0, 18, 0, y),
-            BackgroundColor3 = Color3.fromRGB(34, 34, 38),
-            BorderSizePixel = 0,
-      
+        VerticalAlignment = Enum.VerticalAlignm

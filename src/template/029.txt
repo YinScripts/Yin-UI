@@ -587,6 +587,39 @@
         end
     end
 
+    -- Imágenes reales de cada modo (capturas de Nick en assets/shaders del repo). Se bajan una vez al
+    -- workspace del ejecutor y se muestran con getcustomasset; sin eso, la tarjeta queda con su dibujo.
+    if not Window._ShaderArt then
+        local SA = {base = "https://raw.githubusercontent.com/YinScripts/Yin-UI/main/assets/shaders/", ver = "v1", ok = {}, espera = {}}
+        function SA.get(name, cb)
+            if type(getcustomasset) ~= "function" or type(writefile) ~= "function" then return end
+            if SA.ok[name] then cb(SA.ok[name]) return end
+            if SA.espera[name] then table.insert(SA.espera[name], cb) return end
+            SA.espera[name] = {cb}
+            task.spawn(function()
+                local archivo = "YinYang_Shader_" .. SA.ver .. "_" .. name .. ".jpg"
+                local okA, asset = pcall(function()
+                    local existe = type(isfile) == "function" and isfile(archivo)
+                    if not existe then
+                        local data = game:HttpGet(SA.base .. name .. ".jpg", true)
+                        if type(data) ~= "string" or data:sub(1, 2) ~= "\255\216" then error("no es un JPG") end
+                        writefile(archivo, data)
+                    end
+                    return getcustomasset(archivo)
+                end)
+                local lista = SA.espera[name]
+                SA.espera[name] = nil
+                if okA and type(asset) == "string" and asset ~= "" then
+                    SA.ok[name] = asset
+                    for _, f in ipairs(lista) do pcall(f, asset) end
+                else
+                    warn("[YinYang Shaders] No se pudo cargar la imagen " .. name .. ": " .. tostring(asset))
+                end
+            end)
+        end
+        Window._ShaderArt = SA
+    end
+
     local function shaderCreateModeCard(parent, spec)
         local holder = mk("Frame", {
             Parent = parent,
@@ -638,6 +671,18 @@
                 ColorSequenceKeypoint.new(1, skyLow),
             }),
         })
+
+        if spec.key ~= "Custom" and spec.key ~= "Original" then
+            -- la captura del modo tapa el dibujo (la hora y el botón APLICAR quedan encima)
+            Window._ShaderArt.get(spec.key, function(img)
+                if not banner.Parent then return end
+                local art = mk("ImageLabel", {
+                    Parent = banner, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+                    Image = img, ScaleType = Enum.ScaleType.Crop, ZIndex = 13,
+                })
+                corner(art, 11)
+            end)
+        end
 
         local clock = tonumber(lighting.ClockTime)
         if clock then

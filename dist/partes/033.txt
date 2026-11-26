@@ -1,4 +1,47 @@
-manual")
+aint(true)
+                    item.set(state)
+                    shaderQueuePersistence()
+                    refreshCounter()
+                end)
+                paint(false)
+                table.insert(states, {get = function() return state end})
+                Window._RegisterGlobalOption(AutoTabShaders, {
+                    Id = "Shaders::" .. item.es,
+                    NameSpanish = item.es,
+                    NameEnglish = item.en,
+                    Holder = tile,
+                    Kind = "Toggle",
+                })
+            end
+            refreshCounter()
+        end
+
+        overdriveGroup(114956632479378, "Superficies y reflejos", "Surfaces and reflections", {
+            {icon = 109668384272715, es = "Reflejos húmedos", en = "Wet reflections", get = function() return ShaderReflections.Enabled end, set = function(v) ShaderReflections:SetEnabled(v) end},
+            {icon = 97860481644613, es = "Espejo de cielo en suelo", en = "Sky mirror on floors", get = function() return ShaderReflections.SkyMirrorEnabled end, set = function(v) ShaderReflections:SetSkyMirrorEnabled(v) end},
+            {icon = 110711900112815, es = "Quitar texturas (reversible)", en = "Remove textures (reversible)", get = function() return ShaderReflections.StripTextures end, set = function(v) ShaderReflections:SetStripTexturesEnabled(v) end},
+            {icon = 97733925946541, es = "Reflejo de objetos (espejo real)", en = "Object reflections (real mirror)", get = function() return ShaderReflections.ObjectMirrorEnabled end, set = function(v) ShaderReflections:SetObjectMirrorEnabled(v) end},
+        })
+        overdriveGroup(108353110510004, "Personaje y modelos", "Character and models", {
+            {icon = 113127542853193, es = "Sombras de modelos", en = "Model shadows", get = function() return ShaderReflections.ShadowEnabled end, set = function(v) ShaderReflections:SetShadowEnabled(v) end},
+            {icon = 116161334433160, es = "Contacto del personaje", en = "Character contact", get = function() return ShaderReflections.ContactEnabled end, set = function(v) ShaderReflections:SetContactEnabled(v) end},
+            {icon = 100212473103391, es = "Brillo solar del personaje", en = "Character solar sheen", get = function() return ShaderReflections.CharacterSpecularEnabled end, set = function(v) ShaderReflections:SetCharacterSpecularEnabled(v) end},
+            {icon = 95096736026306, es = "Excluir mi avatar", en = "Exclude my avatar", get = function() return ShaderReflections.ExcludeLocalAvatar end, set = function(v) ShaderReflections:SetExcludeLocalAvatar(v) end},
+        })
+        overdriveGroup(98854559186277, "Lluvia y clima", "Rain and weather", {
+            {icon = 98854559186277, es = "Lluvia física", en = "Physical rain", get = function() return ShaderRain.Enabled end, set = function(v) ShaderRain:SetEnabled(v) end},
+            {icon = 72126043741813, es = "Audio de lluvia", en = "Rain audio", get = function() return ShaderRain.SoundEnabled end, set = function(v) ShaderRain:SetSoundEnabled(v) end},
+            {icon = 139958464372083, es = "Relámpagos dinámicos", en = "Dynamic lightning", get = function() return ShaderRain.StormEnabled end, set = function(v) ShaderRain:SetStormEnabled(v) end},
+        })
+    end
+
+    Window.Shaders = {
+        Core = ShaderManager,
+        Presets = ShaderPresets,
+        Catalog = ShaderPropertyCatalog,
+        Apply = function(patch, options)
+            local report = ShaderManager:Apply(patch, options or {})
+            shaderWarn(report, "Aplicación manual")
             ShaderCustomRefresh()
             if report and report.ok then shaderQueuePersistence() end
             return report
@@ -920,86 +963,4 @@ manual")
         CellSize           = UDim2.new(1 / 3, -6, 0, 118),
         CellPadding        = UDim2.new(0, 8, 0, 8),
         SortOrder          = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-    })
-
-    function LP.paint(entry, sel, animate)
-        local info = TweenInfo.new(animate and 0.22 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-        TweenService:Create(entry.stroke, info, {Transparency = sel and 0 or 0.6, Thickness = sel and 2 or 1}):Play()
-        entry.stroke.Color = sel and Theme.Accent or Theme.Stroke
-        entry.stroke:SetAttribute("ThemeRole", sel and "Accent" or "Stroke")
-        entry.ring.Color = sel and Theme.Accent or Theme.Stroke
-        entry.ring.Transparency = sel and 0 or 0.7
-        entry.ring:SetAttribute("ThemeRole", sel and "Accent" or "Stroke")
-        entry.badge.Visible = sel
-        entry.card.BackgroundTransparency = sel and 0.15 or 0.4
-        entry.name.TextColor3 = sel and Theme.Accent or Theme.Text
-        entry.name:SetAttribute("ThemeTextRole", sel and "Accent" or "Text")
-    end
-
-    local function CreateIconCard(iconName, iconData, order)
-        local card = mk("Frame", {
-            Parent               = LP_Grid,
-            BackgroundColor3     = Theme.Secondary,
-            BackgroundTransparency = 0.4,
-            BorderSizePixel      = 0,
-            LayoutOrder          = order or 1,
-            ZIndex               = 12,
-        })
-        corner(card, 14)
-        local cardStroke = stroke(card, Theme.Stroke, 1, 0.6)
-        card:SetAttribute("IconName", iconName)
-        card:SetAttribute("ThemeRole", "Secondary")
-        local cardScale = mk("UIScale", {Parent = card, Scale = 1})
-
-        local stage = mk("Frame", {
-            Parent = card,
-            Size = UDim2.fromOffset(62, 62),
-            AnchorPoint = Vector2.new(0.5, 0),
-            Position = UDim2.new(0.5, 0, 0, 10),
-            BackgroundColor3 = Theme.Background,
-            BackgroundTransparency = 0.25,
-            BorderSizePixel = 0,
-            ZIndex = 13,
-        })
-        stage:SetAttribute("ThemeRole", "Background")
-        corner(stage, 999)
-        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
-        LP_Preview(stage, iconData, 44, 14)
-
-        local nameLbl = mk("TextLabel", {
-            Parent               = card,
-            Size                 = UDim2.new(1, -10, 0, 30),
-            Position             = UDim2.new(0, 5, 0, 78),
-            BackgroundTransparency = 1,
-            Text                 = GetText(iconData.LabelES or iconName, iconData.LabelEN or iconData.LabelES or iconName),
-            TextColor3           = Theme.Text,
-            TextSize             = 11,
-            Font                 = Enum.Font.GothamBold,
-            TextXAlignment       = Enum.TextXAlignment.Center,
-            TextYAlignment       = Enum.TextYAlignment.Center,
-            TextWrapped          = true,
-            TextTruncate         = Enum.TextTruncate.AtEnd,
-            ZIndex               = 14,
-        })
-        nameLbl:SetAttribute("ThemeTextRole", "Text")
-
-        local badge = mk("TextLabel", {
-            Parent = card,
-            Size = UDim2.fromOffset(20, 20),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -6, 0, 6),
-            BackgroundColor3 = Theme.Accent,
-            Text = "",
-            Visible = false,
-            ZIndex = 15,
-        })
-        badge:SetAttribute("ThemeRole", "Accent")
-        corner(badge, 999)
-        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
-
-        local btn = mk("TextButton", {
-            Parent               = card,
-            Size                 = UDim2.new(1, 0, 1, 0),
-            BackgroundTransparency = 1,
-            Text    
+        HorizontalAlignment = Enum.HorizontalAlignment

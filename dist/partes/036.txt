@@ -1,4 +1,81 @@
-nd
+TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        stopLoop()
+        -- la vista previa se anima solo mientras el editor está abierto
+        LS.loop = RunService.RenderStepped:Connect(function(dt)
+            stepLayers(LS.live, dt)
+        end)
+    end
+
+    CloseBtn.MouseButton1Click:Connect(closeEditor)
+    CancelBtn.MouseButton1Click:Connect(closeEditor)
+    SaveBtn.MouseButton1Click:Connect(function()
+        ED.rec.Name = NameBox.Text:sub(1, 24)
+        if ED.rec.Name:match("^%s*$") then
+            setStatus("Ponele un nombre a tu logo", "Give your logo a name", Color3.fromRGB(235, 90, 90))
+            NameBox:CaptureFocus()
+            return
+        end
+        local saved = recToSaved(ED.rec, ED.editingId or CL.NewId())
+        if not saved then
+            setStatus("Falta la imagen: pegá un ID en la capa 1", "Missing image: paste an ID in layer 1", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        local okSave, err = CL.Put(saved)
+        if err == "max" then
+            setStatus("Llegaste al máximo de " .. CL.Max .. " logos: borrá uno primero", "You reached the max of " .. CL.Max .. " logos: delete one first", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        playSound(Sounds.Click, 0.6)
+        local key = CL.Key(saved.Id)
+        SavedConfig.SelectedLogoIcon = key
+        SaveConfig()
+        if LS.realLive then
+            setRealLive(false) -- vuelve a dibujar SavedConfig.SelectedLogoIcon (el nuevo)
+        else
+            ApplyLogoIcon(key)
+        end
+        LS.RefreshCards()
+        for _, other in ipairs(LP.cards) do
+            LP.paint(other, other.key == key, true)
+        end
+        LP.setHero(key)
+        closeEditor()
+        if not okSave then
+            warn("[YinYang Logos] Tu ejecutor no tiene writefile: el logo dura hasta que cierres el juego")
+        end
+    end)
+
+    -- =====================================================================
+    -- PREMIUM (gamepass "Yin Yang Studio Logos"): crear / editar logos
+    -- =====================================================================
+    -- El gamepass queda en la CUENTA de Roblox: se consulta a Roblox cada vez que carga el script
+    -- (cualquier dispositivo, cualquier ejecutor). El archivo local solo se usa si Roblox no responde.
+    local MPS = game:GetService("MarketplaceService")
+    local PR = { owned = false, checking = true, listeners = {}, price = nil }
+    local PASS_ID = PremiumConfig.GamepassId
+    local PASS_URL = "https://www.roblox.com/game-pass/" .. tostring(PASS_ID)
+
+    local function readCache()
+        local ok, data = pcall(function()
+            if isfile and readfile and isfile(PremiumConfig.CacheFile) then
+                return HttpService:JSONDecode(readfile(PremiumConfig.CacheFile))
+            end
+            return nil
+        end)
+        return ok and type(data) == "table" and data.UserId == LocalPlayer.UserId and data.Pass == PASS_ID and data.Owned == true
+    end
+    local function writeCache(owned)
+        pcall(function()
+            if writefile then
+                writefile(PremiumConfig.CacheFile, HttpService:JSONEncode({ UserId = LocalPlayer.UserId, Pass = PASS_ID, Owned = owned == true, At = os.time() }))
+            end
+        end)
+    end
+    function PR.set(owned, fromApi)
+        PR.owned = owned == true
+        PR.checking = false
+        if fromApi then writeCache(PR.owned) end
+        for _, fn in ipairs(PR.listeners) do pcall(fn, PR.owned) end
     end
     local function isOwnerName()
         local me = string.lower(LocalPlayer.Name)
@@ -712,93 +789,4 @@ nd
         Parent = ClassicPage,
         Size = UDim2.new(1, 0, 0, 34),
         BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.4,
-        BorderSizePixel = 0,
-        ZIndex = 9,
-    })
-    CL.searchHolder:SetAttribute("ThemeRole", "Secondary")
-    corner(CL.searchHolder, 12)
-    local searchStroke = stroke(CL.searchHolder, Theme.Stroke, 1, 0.6)
-    RowKit.IconAt(CL.searchHolder, 100388562921803, 16, UDim2.new(0, 10, 0.5, -8), 10, "TextDim")
-    CL.search = mk("TextBox", {
-        Parent = CL.searchHolder,
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 32, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        PlaceholderText = GetText("Buscar script...", "Search script..."),
-        PlaceholderColor3 = Theme.TextDim,
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ClearTextOnFocus = false,
-        ZIndex = 10,
-    })
-    CL.search:SetAttribute("ThemeTextRole", "Text")
-    CL.search:SetAttribute("PlaceholderSpanish", "Buscar script...")
-    CL.search:SetAttribute("PlaceholderEnglish", "Search script...")
-    CL.search.Focused:Connect(function()
-        searchStroke.Color = Theme.Accent
-        searchStroke.Transparency = 0.1
-    end)
-    CL.search.FocusLost:Connect(function()
-        searchStroke.Color = Theme.Stroke
-        searchStroke.Transparency = 0.6
-    end)
-
-    CL.empty = mk("TextLabel", {
-        Parent = ClassicPage,
-        Size = UDim2.new(1, 0, 0, 60),
-        BackgroundTransparency = 1,
-        Text = "",
-        TextColor3 = Theme.TextDim,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 12,
-        TextWrapped = true,
-        Visible = false,
-        ZIndex = 9,
-    })
-    CL.empty:SetAttribute("ThemeTextRole", "TextDim")
-
-    function CL.refresh()
-        local active = 0
-        for _, h in ipairs(CL.holders) do
-            local st = h.holder:GetAttribute("ScriptState")
-            if st == "active" or st == "loading" then active = active + 1 end
-        end
-        CL.countChip.Text = GetText(#CL.holders .. " scripts", #CL.holders .. " scripts")
-        CL.activeChip.Text = GetText(active .. " activos", active .. " active")
-    end
-
-    function CL.filter()
-        local q = string.lower(CL.search.Text or "")
-        local shown = 0
-        for _, h in ipairs(CL.holders) do
-            local match = q == "" or string.find(h.es, q, 1, true) ~= nil or string.find(h.en, q, 1, true) ~= nil
-            h.holder.Visible = match
-            if match then shown = shown + 1 end
-        end
-        if #CL.holders == 0 then
-            CL.empty.Text = GetText("No se pudo cargar la lista de scripts.", "Could not load the script list.")
-            CL.empty.Visible = true
-        elseif shown == 0 then
-            CL.empty.Text = GetText("Ningún script coincide con la búsqueda.", "No script matches your search.")
-            CL.empty.Visible = true
-        else
-            CL.empty.Visible = false
-        end
-    end
-    CL.search:GetPropertyChangedSignal("Text"):Connect(CL.filter)
-
-    for _, entry in ipairs(classicScripts) do
-        if type(entry) == "table" and entry.es and entry.en and entry.file and entry.key then
-            local holder = TabClassic:CreateScriptToggle(
-                tostring(entry.es),
-                tostring(entry.en),
-                entry.url and tostring(entry.url) or CLASSIC_SCRIPT_URL,
-                tostring(entry.key)
-            )
-            if holder then
-                table.insert(CL.holders, {holder = holder, es = string.lower(tostring(entry.es)), en = string.lower(tostring(entry.en))})
-      
+        B

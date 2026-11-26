@@ -151,6 +151,39 @@ tEnabled(true)
         end
     end
 
+    -- Imágenes reales de cada modo (capturas de Nick en assets/shaders del repo). Se bajan una vez al
+    -- workspace del ejecutor y se muestran con getcustomasset; sin eso, la tarjeta queda con su dibujo.
+    if not Window._ShaderArt then
+        local SA = {base = "https://raw.githubusercontent.com/YinScripts/Yin-UI/main/assets/shaders/", ver = "v1", ok = {}, espera = {}}
+        function SA.get(name, cb)
+            if type(getcustomasset) ~= "function" or type(writefile) ~= "function" then return end
+            if SA.ok[name] then cb(SA.ok[name]) return end
+            if SA.espera[name] then table.insert(SA.espera[name], cb) return end
+            SA.espera[name] = {cb}
+            task.spawn(function()
+                local archivo = "YinYang_Shader_" .. SA.ver .. "_" .. name .. ".jpg"
+                local okA, asset = pcall(function()
+                    local existe = type(isfile) == "function" and isfile(archivo)
+                    if not existe then
+                        local data = game:HttpGet(SA.base .. name .. ".jpg", true)
+                        if type(data) ~= "string" or data:sub(1, 2) ~= "\255\216" then error("no es un JPG") end
+                        writefile(archivo, data)
+                    end
+                    return getcustomasset(archivo)
+                end)
+                local lista = SA.espera[name]
+                SA.espera[name] = nil
+                if okA and type(asset) == "string" and asset ~= "" then
+                    SA.ok[name] = asset
+                    for _, f in ipairs(lista) do pcall(f, asset) end
+                else
+                    warn("[YinYang Shaders] No se pudo cargar la imagen " .. name .. ": " .. tostring(asset))
+                end
+            end)
+        end
+        Window._ShaderArt = SA
+    end
+
     local function shaderCreateModeCard(parent, spec)
         local holder = mk("Frame", {
             Parent = parent,
@@ -202,6 +235,18 @@ tEnabled(true)
                 ColorSequenceKeypoint.new(1, skyLow),
             }),
         })
+
+        if spec.key ~= "Custom" and spec.key ~= "Original" then
+            -- la captura del modo tapa el dibujo (la hora y el botón APLICAR quedan encima)
+            Window._ShaderArt.get(spec.key, function(img)
+                if not banner.Parent then return end
+                local art = mk("ImageLabel", {
+                    Parent = banner, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+                    Image = img, ScaleType = Enum.ScaleType.Crop, ZIndex = 13,
+                })
+                corner(art, 11)
+            end)
+        end
 
         local clock = tonumber(lighting.ClockTime)
         if clock then
@@ -959,18 +1004,4 @@ tEnabled(true)
             {id = "BloomIntensity", es = "Intensidad Bloom", en = "Bloom intensity", min = 0, max = 4, default = 0.1, step = 0.01, target = "BloomEffect", property = "Intensity"},
             {id = "BloomSize", es = "Tamaño Bloom", en = "Bloom size", min = 0, max = 56, default = 18, step = 1, target = "BloomEffect", property = "Size"},
             {id = "BloomThreshold", es = "Umbral Bloom", en = "Bloom threshold", min = 0, max = 4, default = 1.2, step = 0.01, target = "BloomEffect", property = "Threshold"},
-            {id = "BloomEnabled", es = "Bloom activo", en = "Bloom enabled", default = true, target = "BloomEffect", property = "Enabled", toggle = true},
-            {id = "BlurSize", es = "Tamaño Blur", en = "Blur size", min = 0, max = 56, default = 0, step = 1, target = "BlurEffect", property = "Size"},
-            {id = "BlurEnabled", es = "Blur activo", en = "Blur enabled", default = false, target = "BlurEffect", property = "Enabled", toggle = true},
-
-            {section = {"DepthOfField", "DepthOfField", "Enfoque de cámara para una apariencia más cinematográfica.", "Camera focus for a more cinematic look."}},
-            {id = "DepthFarIntensity", es = "Intensidad lejana", en = "Far intensity", min = 0, max = 1, default = 0.12, step = 0.01, target = "DepthOfFieldEffect", property = "FarIntensity"},
-            {id = "DepthFocusDistance", es = "Distancia de enfoque", en = "Focus distance", min = 0, max = 200, default = 80, step = 1, target = "DepthOfFieldEffect", property = "FocusDistance"},
-            {id = "DepthInFocusRadius", es = "Radio enfocado", en = "In-focus radius", min = 0, max = 50, default = 20, step = 0.5, target = "DepthOfFieldEffect", property = "InFocusRadius"},
-            {id = "DepthNearIntensity", es = "Intensidad cercana", en = "Near intensity", min = 0, max = 1, default = 0.06, step = 0.01, target = "DepthOfFieldEffect", property = "NearIntensity"},
-            {id = "DepthEnabled", es = "DepthOfField activo", en = "DepthOfField enabled", default = false, target = "DepthOfFieldEffect", property = "Enabled", toggle = true},
-
-            {section = {"SunRays", "SunRays", "Rayos solares, tono y atmósfera luminosa.", "Sun rays, tone and luminous atmosphere."}},
-            {id = "SunColorHue", es = "Color del sol · tono", en = "Sun color · hue", min = 0, max = 1, default = 0.10, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Hue end, onChange = function(value) ShaderSolarTone:SetHue(value) end},
-            {id = "SunColorSaturation", es = "Color del sol · saturación", en = "Sun color · saturation", min = 0, max = 1, default = 0.38, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Saturation end, onChange = function(value) ShaderSolarTone:SetSaturation(value) end},
-            {id = "SunColorStrength", es = "Color del sol · mezcla", en = "Sun color · blend", min = 0, 
+            {id = "BloomEnabled", es = "Bloom activo", en = "Bloom enabled", de

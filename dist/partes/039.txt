@@ -1,4 +1,116 @@
-30),
+n()
+            guiObject.Active = true
+            guiObject.Selectable = false
+        end)
+
+        local lastFire = 0
+        local function fireOnce()
+            local now = os.clock()
+            if now - lastFire < 0.35 then
+                return
+            end
+            lastFire = now
+
+            local ok, err = pcall(callback)
+            if not ok then
+                warn("[YinYang Spotify] Row tap failed: " .. tostring(err))
+            end
+        end
+
+        if guiObject:IsA("GuiButton") then
+            track(guiObject.Activated:Connect(fireOnce))
+            track(guiObject.MouseButton1Click:Connect(fireOnce))
+            track(guiObject.TouchTap:Connect(fireOnce))
+            return
+        end
+
+        local activeInput = nil
+        local startPosition = nil
+        local moved = false
+        local threshold = 14
+
+        track(guiObject.InputBegan:Connect(function(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                activeInput = input
+                startPosition = input.Position
+                moved = false
+            end
+        end))
+
+        track(UserInputService.InputChanged:Connect(function(input)
+            if activeInput and input == activeInput and startPosition then
+                local delta = input.Position - startPosition
+                if delta.Magnitude > threshold then
+                    moved = true
+                end
+            end
+        end))
+
+        track(UserInputService.InputEnded:Connect(function(input)
+            if activeInput and input == activeInput then
+                if not moved then
+                    fireOnce()
+                end
+                activeInput = nil
+                startPosition = nil
+                moved = false
+            end
+        end))
+    end
+
+    local PM = {
+        WIDTH = 284,
+        SPEEDS = {0.5, 0.75, 1, 1.25, 1.5, 2},
+        TIMERS = {0, 5, 15, 30, 60},
+        chips = {},
+        timerChips = {},
+        switches = {},
+    }
+
+    PM.Panel = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.fromOffset(PM.WIDTH, 360),
+        AnchorPoint = Vector2.new(1, 0),
+        Position = UDim2.new(1, -12, 0, 34),
+        BackgroundColor3 = Color3.fromRGB(24, 24, 24),
+        BackgroundTransparency = 0,
+        BorderSizePixel = 0,
+        Visible = false,
+        Active = true,
+        ClipsDescendants = true,
+        ZIndex = 40,
+    })
+    corner(PM.Panel, 14)
+    stroke(PM.Panel, Color3.fromRGB(255, 255, 255), 1, 0.88)
+    PM.Scale = mk("UIScale", {Parent = PM.Panel, Scale = 1})
+
+    PM.Head = mk("Frame", {
+        Parent = PM.Panel,
+        Size = UDim2.new(1, 0, 0, 48),
+        BackgroundTransparency = 1,
+        ZIndex = 41,
+    })
+    mk("TextLabel", {
+        Parent = PM.Head,
+        Size = UDim2.new(1, -60, 1, 0),
+        Position = UDim2.new(0, 16, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "Ajustes de reproducción",
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        Font = Enum.Font.GothamBlack,
+        TextSize = 15,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 42,
+    })
+    local SettingsClose = mk("TextButton", {
+        Parent = PM.Head,
+        Size = UDim2.fromOffset(28, 28),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -12, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.9,
+        Text = "×",
+        TextColor3 = Color3.fromRGB(230, 230, 230),
         Font = Enum.Font.GothamBold,
         TextSize = 18,
         AutoButtonColor = false,
@@ -887,93 +999,4 @@
             ZIndex = 525,
         })
         FP.Artist = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -164, 0, 14),
-            Position = UDim2.new(0, 100, 0, 31),
-            BackgroundTransparency = 1,
-            Text = "Spotify",
-            TextColor3 = Color3.fromRGB(200, 200, 200),
-            Font = Enum.Font.GothamMedium,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            TextTruncate = Enum.TextTruncate.AtEnd,
-            ZIndex = 525,
-        })
-
-        local controls = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(170, 38),
-            Position = UDim2.new(0, 96, 0, 50),
-            BackgroundTransparency = 1,
-            ZIndex = 525,
-        })
-        FP.LikeBtn, FP.LikeIcon = FP.iconButton(controls, asset(89748414415617), 32, 18, 0)
-        FP.LikeBtn.Position = UDim2.new(0, 0, 0.5, -16)
-        local prevBtn = FP.iconButton(controls, asset(70466132711334), 34, 18, 38, 180)
-        prevBtn.Position = UDim2.new(0, 38, 0.5, -17)
-        FP.PlayBtn, FP.PlayIcon = FP.iconButton(controls, asset(135609604299893), 38, 16, 78)
-        FP.PlayBtn.Position = UDim2.new(0, 78, 0.5, -19)
-        FP.PlayBtn.BackgroundTransparency = 0
-        FP.PlayIcon.ImageColor3 = Color3.fromRGB(0, 0, 0)
-        local nextBtn = FP.iconButton(controls, asset(124844823753990), 34, 18, 122)
-        nextBtn.Position = UDim2.new(0, 122, 0.5, -17)
-
-        FP.Time = mk("TextLabel", {
-            Parent = FP.Full,
-            Size = UDim2.fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.75,
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(barBack, 999)
-        FP.Bar = mk("Frame", {
-            Parent = barBack,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 526,
-        })
-        corner(FP.Bar, 999)
-        local seekHit = mk("TextButton", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 18),
-            Position = UDim2.new(0, 12, 1, -19),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 527,
-        })
-
-        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        closeBtn.Position = UDim2.new(1, -32, 0, 8)
-        closeBtn.BackgroundTransparency = 0.88
-        closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 15
-        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        miniBtn.Position = UDim2.new(1, -60, 0, 8)
-        miniBtn.BackgroundTransparency = 0.88
-        miniBtn.Text = "–"
-        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        miniBtn.Font = Enum.Font.GothamBold
-        miniBtn.TextSize = 15
-
-        FP.Disc = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, -4, 1
+       

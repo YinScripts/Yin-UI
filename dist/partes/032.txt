@@ -1,4 +1,18 @@
-max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Strength end, onChange = function(value) ShaderSolarTone:SetStrength(value) end},
+fault = true, target = "BloomEffect", property = "Enabled", toggle = true},
+            {id = "BlurSize", es = "Tamaño Blur", en = "Blur size", min = 0, max = 56, default = 0, step = 1, target = "BlurEffect", property = "Size"},
+            {id = "BlurEnabled", es = "Blur activo", en = "Blur enabled", default = false, target = "BlurEffect", property = "Enabled", toggle = true},
+
+            {section = {"DepthOfField", "DepthOfField", "Enfoque de cámara para una apariencia más cinematográfica.", "Camera focus for a more cinematic look."}},
+            {id = "DepthFarIntensity", es = "Intensidad lejana", en = "Far intensity", min = 0, max = 1, default = 0.12, step = 0.01, target = "DepthOfFieldEffect", property = "FarIntensity"},
+            {id = "DepthFocusDistance", es = "Distancia de enfoque", en = "Focus distance", min = 0, max = 200, default = 80, step = 1, target = "DepthOfFieldEffect", property = "FocusDistance"},
+            {id = "DepthInFocusRadius", es = "Radio enfocado", en = "In-focus radius", min = 0, max = 50, default = 20, step = 0.5, target = "DepthOfFieldEffect", property = "InFocusRadius"},
+            {id = "DepthNearIntensity", es = "Intensidad cercana", en = "Near intensity", min = 0, max = 1, default = 0.06, step = 0.01, target = "DepthOfFieldEffect", property = "NearIntensity"},
+            {id = "DepthEnabled", es = "DepthOfField activo", en = "DepthOfField enabled", default = false, target = "DepthOfFieldEffect", property = "Enabled", toggle = true},
+
+            {section = {"SunRays", "SunRays", "Rayos solares, tono y atmósfera luminosa.", "Sun rays, tone and luminous atmosphere."}},
+            {id = "SunColorHue", es = "Color del sol · tono", en = "Sun color · hue", min = 0, max = 1, default = 0.10, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Hue end, onChange = function(value) ShaderSolarTone:SetHue(value) end},
+            {id = "SunColorSaturation", es = "Color del sol · saturación", en = "Sun color · saturation", min = 0, max = 1, default = 0.38, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Saturation end, onChange = function(value) ShaderSolarTone:SetSaturation(value) end},
+            {id = "SunColorStrength", es = "Color del sol · mezcla", en = "Sun color · blend", min = 0, max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShift_Top", getValue = function() return ShaderSolarTone.Strength end, onChange = function(value) ShaderSolarTone:SetStrength(value) end},
             {id = "SunRaysIntensity", es = "Intensidad", en = "Intensity", min = 0, max = 1, default = 0.08, step = 0.01, target = "SunRaysEffect", property = "Intensity"},
             {id = "SunRaysSpread", es = "Extensión", en = "Spread", min = 0, max = 1, default = 0.65, step = 0.01, target = "SunRaysEffect", property = "Spread"},
             {id = "SunRaysEnabled", es = "SunRays activo", en = "SunRays enabled", default = false, target = "SunRaysEffect", property = "Enabled", toggle = true},
@@ -443,7 +457,7 @@ max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShif
     mk("UIStroke", {Parent = heroSun, Color = Color3.fromRGB(255, 200, 120), Thickness = 8, Transparency = 0.75})
     for _, p in ipairs({{0.08, 0.18}, {0.2, 0.32}, {0.36, 0.12}, {0.52, 0.26}, {0.66, 0.1}, {0.9, 0.2}, {0.44, 0.4}}) do
         local star = mk("Frame", {
-            Parent = ShaderHero, Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
+            Parent = ShaderHero, Name = "HeroStar", Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 10,
         })
         corner(star, 999)
@@ -459,6 +473,32 @@ max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShif
         ZIndex = 11,
     })
     corner(heroHill, 999)
+    -- Imagen real de portada (assets/shaders/Hero.jpg): reemplaza el dibujo de sol, estrellas y colina.
+    -- Un degradé oscuro a la izquierda deja leer el título y el texto.
+    Window._ShaderArt.get("Hero", function(img)
+        if not ShaderHero.Parent then return end
+        heroSun.Visible = false
+        heroHill.Visible = false
+        for _, ch in ipairs(ShaderHero:GetChildren()) do
+            if ch.Name == "HeroStar" then ch.Visible = false end
+        end
+        mk("ImageLabel", {
+            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+            Image = img, ScaleType = Enum.ScaleType.Crop, ZIndex = 10,
+        })
+        local sombra = mk("Frame", {
+            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+            BorderSizePixel = 0, ZIndex = 11,
+        })
+        mk("UIGradient", {
+            Parent = sombra,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.35),
+                NumberSequenceKeypoint.new(0.6, 0.75),
+                NumberSequenceKeypoint.new(1, 1),
+            }),
+        })
+    end)
     local heroTitle = mk("TextLabel", {
         Parent = ShaderHero,
         Size = UDim2.new(0.7, 0, 0, 32),
@@ -719,47 +759,4 @@ max = 1, default = 0.42, step = 0.01, target = "Lighting", property = "ColorShif
                     state = not state
                     tileScale.Scale = 0.95
                     TweenService:Create(tileScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-                    paint(true)
-                    item.set(state)
-                    shaderQueuePersistence()
-                    refreshCounter()
-                end)
-                paint(false)
-                table.insert(states, {get = function() return state end})
-                Window._RegisterGlobalOption(AutoTabShaders, {
-                    Id = "Shaders::" .. item.es,
-                    NameSpanish = item.es,
-                    NameEnglish = item.en,
-                    Holder = tile,
-                    Kind = "Toggle",
-                })
-            end
-            refreshCounter()
-        end
-
-        overdriveGroup(114956632479378, "Superficies y reflejos", "Surfaces and reflections", {
-            {icon = 109668384272715, es = "Reflejos húmedos", en = "Wet reflections", get = function() return ShaderReflections.Enabled end, set = function(v) ShaderReflections:SetEnabled(v) end},
-            {icon = 97860481644613, es = "Espejo de cielo en suelo", en = "Sky mirror on floors", get = function() return ShaderReflections.SkyMirrorEnabled end, set = function(v) ShaderReflections:SetSkyMirrorEnabled(v) end},
-            {icon = 110711900112815, es = "Quitar texturas (reversible)", en = "Remove textures (reversible)", get = function() return ShaderReflections.StripTextures end, set = function(v) ShaderReflections:SetStripTexturesEnabled(v) end},
-            {icon = 97733925946541, es = "Reflejo de objetos (espejo real)", en = "Object reflections (real mirror)", get = function() return ShaderReflections.ObjectMirrorEnabled end, set = function(v) ShaderReflections:SetObjectMirrorEnabled(v) end},
-        })
-        overdriveGroup(108353110510004, "Personaje y modelos", "Character and models", {
-            {icon = 113127542853193, es = "Sombras de modelos", en = "Model shadows", get = function() return ShaderReflections.ShadowEnabled end, set = function(v) ShaderReflections:SetShadowEnabled(v) end},
-            {icon = 116161334433160, es = "Contacto del personaje", en = "Character contact", get = function() return ShaderReflections.ContactEnabled end, set = function(v) ShaderReflections:SetContactEnabled(v) end},
-            {icon = 100212473103391, es = "Brillo solar del personaje", en = "Character solar sheen", get = function() return ShaderReflections.CharacterSpecularEnabled end, set = function(v) ShaderReflections:SetCharacterSpecularEnabled(v) end},
-            {icon = 95096736026306, es = "Excluir mi avatar", en = "Exclude my avatar", get = function() return ShaderReflections.ExcludeLocalAvatar end, set = function(v) ShaderReflections:SetExcludeLocalAvatar(v) end},
-        })
-        overdriveGroup(98854559186277, "Lluvia y clima", "Rain and weather", {
-            {icon = 98854559186277, es = "Lluvia física", en = "Physical rain", get = function() return ShaderRain.Enabled end, set = function(v) ShaderRain:SetEnabled(v) end},
-            {icon = 72126043741813, es = "Audio de lluvia", en = "Rain audio", get = function() return ShaderRain.SoundEnabled end, set = function(v) ShaderRain:SetSoundEnabled(v) end},
-            {icon = 139958464372083, es = "Relámpagos dinámicos", en = "Dynamic lightning", get = function() return ShaderRain.StormEnabled end, set = function(v) ShaderRain:SetStormEnabled(v) end},
-        })
-    end
-
-    Window.Shaders = {
-        Core = ShaderManager,
-        Presets = ShaderPresets,
-        Catalog = ShaderPropertyCatalog,
-        Apply = function(patch, options)
-            local report = ShaderManager:Apply(patch, options or {})
-            shaderWarn(report, "Aplicación 
+                    p

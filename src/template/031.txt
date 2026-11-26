@@ -50,7 +50,7 @@
     mk("UIStroke", {Parent = heroSun, Color = Color3.fromRGB(255, 200, 120), Thickness = 8, Transparency = 0.75})
     for _, p in ipairs({{0.08, 0.18}, {0.2, 0.32}, {0.36, 0.12}, {0.52, 0.26}, {0.66, 0.1}, {0.9, 0.2}, {0.44, 0.4}}) do
         local star = mk("Frame", {
-            Parent = ShaderHero, Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
+            Parent = ShaderHero, Name = "HeroStar", Size = UDim2.fromOffset(2, 2), Position = UDim2.new(p[1], 0, p[2], 0),
             BackgroundColor3 = Color3.new(1, 1, 1), BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 10,
         })
         corner(star, 999)
@@ -66,6 +66,32 @@
         ZIndex = 11,
     })
     corner(heroHill, 999)
+    -- Imagen real de portada (assets/shaders/Hero.jpg): reemplaza el dibujo de sol, estrellas y colina.
+    -- Un degradé oscuro a la izquierda deja leer el título y el texto.
+    Window._ShaderArt.get("Hero", function(img)
+        if not ShaderHero.Parent then return end
+        heroSun.Visible = false
+        heroHill.Visible = false
+        for _, ch in ipairs(ShaderHero:GetChildren()) do
+            if ch.Name == "HeroStar" then ch.Visible = false end
+        end
+        mk("ImageLabel", {
+            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
+            Image = img, ScaleType = Enum.ScaleType.Crop, ZIndex = 10,
+        })
+        local sombra = mk("Frame", {
+            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
+            BorderSizePixel = 0, ZIndex = 11,
+        })
+        mk("UIGradient", {
+            Parent = sombra,
+            Transparency = NumberSequence.new({
+                NumberSequenceKeypoint.new(0, 0.35),
+                NumberSequenceKeypoint.new(0.6, 0.75),
+                NumberSequenceKeypoint.new(1, 1),
+            }),
+        })
+    end)
     local heroTitle = mk("TextLabel", {
         Parent = ShaderHero,
         Size = UDim2.new(0.7, 0, 0, 32),
