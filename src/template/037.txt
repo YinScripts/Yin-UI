@@ -703,63 +703,35 @@ dPosition = 0
     -- Reutilizan el catálogo real y el mismo estado de reproducción.
     do
         local N = {lastProgress = -1}
-        -- Botón "Catálogo" (rediseño): cápsula de vidrio con borde de luz que gira, brillo que la cruza,
-        -- ecualizador que baila mientras suena una canción y un pequeño rebote al tocarlo.
+        -- Botón "Catálogo" (rediseño): chico y sin fondo, con un ecualizador que baila mientras suena una
+        -- canción y un pequeño rebote al tocarlo.
         N.openCatalog = mk("TextButton", {
-            Parent = NowPlayingCard, Size = UDim2.fromOffset(122, 30),
-            Position = UDim2.fromOffset(12, 7), BackgroundColor3 = Color3.fromRGB(18, 18, 22),
-            BackgroundTransparency = 0.12, BorderSizePixel = 0,
+            Parent = NowPlayingCard, Size = UDim2.fromOffset(98, 24),
+            Position = UDim2.fromOffset(12, 7), BackgroundTransparency = 1, BorderSizePixel = 0,
             Text = "", AutoButtonColor = false, ZIndex = 25,
         })
-        corner(N.openCatalog, 15)
         N.catScale = mk("UIScale", { Scale = 1 }, N.openCatalog)
-        -- brillo diagonal que cruza el fondo (se mueve cambiando el Offset del degradé)
-        N.catShine = mk("UIGradient", {
-            Rotation = 20,
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 155)),
-                ColorSequenceKeypoint.new(0.45, Color3.fromRGB(150, 150, 155)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
-                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(150, 150, 155)),
-                ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 155)),
-            }),
-            Offset = Vector2.new(-1, 0),
-        }, N.openCatalog)
-        -- borde de luz verde que gira alrededor
-        N.catStroke = mk("UIStroke", {
-            Thickness = 1.6, Color = Color3.new(1, 1, 1), Transparency = 0.05,
-            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
-        }, N.openCatalog)
-        N.catRing = mk("UIGradient", {
-            Color = ColorSequence.new({
-                ColorSequenceKeypoint.new(0, spotifyGreen),
-                ColorSequenceKeypoint.new(0.25, Color3.fromRGB(190, 255, 210)),
-                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 40, 46)),
-                ColorSequenceKeypoint.new(0.75, Color3.fromRGB(40, 40, 46)),
-                ColorSequenceKeypoint.new(1, spotifyGreen),
-            }),
-        }, N.catStroke)
         -- ecualizador (3 barras)
         N.catBars = {}
         for i = 1, 3 do
             N.catBars[i] = mk("Frame", {
                 Parent = N.openCatalog, AnchorPoint = Vector2.new(0, 1),
-                Position = UDim2.new(0, 12 + (i - 1) * 5, 0.5, 6), Size = UDim2.fromOffset(3, 4),
+                Position = UDim2.new(0, 4 + (i - 1) * 4, 0.5, 5), Size = UDim2.fromOffset(2, 3),
                 BackgroundColor3 = spotifyGreen, BorderSizePixel = 0, ZIndex = 27,
             })
             corner(N.catBars[i], 2)
         end
         N.catLabel = mk("TextLabel", {
-            Parent = N.openCatalog, Size = UDim2.new(1, -46, 1, 0), Position = UDim2.fromOffset(32, 0),
+            Parent = N.openCatalog, Size = UDim2.new(1, -36, 1, 0), Position = UDim2.fromOffset(20, 0),
             BackgroundTransparency = 1, Text = GetText("Catálogo", "Catalog"), Font = Enum.Font.GothamBold,
-            TextColor3 = spotifyText, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 27,
+            TextColor3 = spotifyText, TextSize = 11, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 27,
         })
         N.catLabel:SetAttribute("TextSpanish", "Catálogo")
         N.catLabel:SetAttribute("TextEnglish", "Catalog")
         N.catArrow = mk("TextLabel", {
-            Parent = N.openCatalog, AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.fromOffset(14, 20),
-            Position = UDim2.new(1, -10, 0.5, -1), BackgroundTransparency = 1, Text = "›", Font = Enum.Font.GothamBold,
-            TextColor3 = spotifyGreen, TextSize = 18, ZIndex = 27,
+            Parent = N.openCatalog, AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.fromOffset(12, 18),
+            Position = UDim2.new(1, -2, 0.5, -1), BackgroundTransparency = 1, Text = "›", Font = Enum.Font.GothamBold,
+            TextColor3 = spotifyText, TextSize = 15, ZIndex = 27,
         })
         if Window._SpotifyAmbient then
             Window._SpotifyAmbient.LayoutPlayer = function(compact)
@@ -777,8 +749,8 @@ dPosition = 0
         N.openCatalog.MouseLeave:Connect(N.soltarCatalogo)
         N.openCatalog.Activated:Connect(function() SpotifyPages:JumpTo(CatalogPage) end)
 
-        -- Título de la canción: mientras suena, una ola oscurece las letras UNA POR UNA (pasan a negro con un
-        -- borde claro para que se lean) y vuelven. Se dibuja en una copia con RichText encima del título real,
+        -- Título de la canción: mientras suena, una ola oscurece las letras UNA POR UNA (pasan a negro, sin
+        -- bordes) y vuelven. Se dibuja en una copia con RichText encima del título real,
         -- así PlayerSongTitle.Text sigue siendo texto plano para el resto del reproductor.
         N.titleFx = mk("TextLabel", {
             Parent = PlayerSongTitle, Name = "YYTitleWave", Size = UDim2.fromScale(1, 1),
@@ -808,13 +780,10 @@ dPosition = 0
             end
             local t = N.fxTime
             local playing = SpotifyState.IsPlaying == true and SpotifyState.CurrentTrack ~= nil
-            -- botón: el borde gira, el brillo cruza cada ~3 s, las barras bailan solo si suena
-            N.catRing.Rotation = (t * 120) % 360
-            local ciclo = (t % 3) / 3
-            N.catShine.Offset = Vector2.new(ciclo * 2.4 - 1.2, 0)
+            -- botón: las barras bailan solo si suena
             for i, bar in ipairs(N.catBars) do
-                local h = playing and (5 + (math.sin(t * (7 + i * 2.3) + i * 1.7) * 0.5 + 0.5) * 9) or 4
-                bar.Size = UDim2.fromOffset(3, math.floor(h + 0.5))
+                local h = playing and (3 + (math.sin(t * (7 + i * 2.3) + i * 1.7) * 0.5 + 0.5) * 8) or 3
+                bar.Size = UDim2.fromOffset(2, math.floor(h + 0.5))
             end
             -- título: ola de letras negras
             if playing and PlayerSongTitle.Visible then
@@ -832,17 +801,12 @@ dPosition = 0
                     if ch == " " then
                         partes[#partes + 1] = " "
                     else
-                        -- la ola avanza ~9 letras por segundo; cada letra se oscurece y vuelve suave
-                        local fase = (t * 9 - i) % 28
+                        -- la ola avanza ~4 letras por segundo; cada letra se oscurece y vuelve suave (sin bordes)
+                        local fase = (t * 4 - i) % 24
                         local k = 0
-                        if fase < 7 then k = math.sin(fase / 7 * math.pi) end
+                        if fase < 6 then k = math.sin(fase / 6 * math.pi) end
                         local col = spotifyText:Lerp(N.NEGRO, k)
-                        if k > 0.35 then
-                            partes[#partes + 1] = string.format('<font color="%s"><stroke color="#FFFFFF" thickness="1" transparency="%.2f">%s</stroke></font>',
-                                N.hex(col), 1 - (k - 0.35) * 0.8, N.escapar(ch))
-                        else
-                            partes[#partes + 1] = string.format('<font color="%s">%s</font>', N.hex(col), N.escapar(ch))
-                        end
+                        partes[#partes + 1] = string.format('<font color="%s">%s</font>', N.hex(col), N.escapar(ch))
                     end
                 end
                 N.titleFx.Text = table.concat(partes)

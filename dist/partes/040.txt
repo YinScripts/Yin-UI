@@ -1,60 +1,4 @@
-fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.75,
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(barBack, 999)
-        FP.Bar = mk("Frame", {
-            Parent = barBack,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 526,
-        })
-        corner(FP.Bar, 999)
-        local seekHit = mk("TextButton", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 18),
-            Position = UDim2.new(0, 12, 1, -19),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 527,
-        })
-
-        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        closeBtn.Position = UDim2.new(1, -32, 0, 8)
-        closeBtn.BackgroundTransparency = 0.88
-        closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 15
-        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        miniBtn.Position = UDim2.new(1, -60, 0, 8)
-        miniBtn.BackgroundTransparency = 0.88
-        miniBtn.Text = "–"
-        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        miniBtn.Font = Enum.Font.GothamBold
-        miniBtn.TextSize = 15
-
-        FP.Disc = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, -4, 1, -4),
+, -4),
             AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(0.5, 0, 0.5, 0),
             BackgroundColor3 = Color3.fromRGB(30, 30, 30),
@@ -1148,4 +1092,65 @@ fromOffset(70, 14),
             Font = Enum.Font.GothamMedium,
             TextSize = 13,
             TextColor3 = Color3.fromRGB(179, 179, 179),
-            TextXAlignment = Enum.TextXAlignmen
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 43,
+        })
+        local Heart = mk("TextButton", {
+            Parent = Row,
+            Size = UDim2.fromOffset(36, 36),
+            Position = UDim2.new(1, -126, 0.5, -18),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 45,
+        })
+        mk("ImageLabel", {
+            Parent = Heart,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0.5, 0, 0.5, 0),
+            BackgroundTransparency = 1,
+            Image = FavPage.HEART_ON,
+            ImageColor3 = spotifyGreen,
+            ScaleType = Enum.ScaleType.Fit,
+            ZIndex = 46,
+        })
+        mk("TextLabel", {
+            Parent = Row,
+            Size = UDim2.fromOffset(60, 58),
+            Position = UDim2.new(1, -78, 0, 0),
+            BackgroundTransparency = 1,
+            Text = song.Duration,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 13,
+            TextColor3 = Color3.fromRGB(179, 179, 179),
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 43,
+        })
+
+        local row = {Index = index, Row = Row, Title = Title, Number = Number, Bars = Bars, BarList = bars, HoverIcon = HoverIcon, Heart = Heart}
+        FavPage.rows[#FavPage.rows + 1] = row
+        Row.MouseEnter:Connect(function()
+            row.Hover = true
+            Row.BackgroundTransparency = 0.9
+            FavPage.paintRow(row)
+        end)
+        Row.MouseLeave:Connect(function()
+            row.Hover = false
+            Row.BackgroundTransparency = 1
+            FavPage.paintRow(row)
+        end)
+        FavPage.paintRow(row)
+
+        bindRowTap(Heart, function()
+            toggleTrackLike(index)
+        end)
+        bindRowTap(Row, function()
+            FavPage.toggleRow(index)
+        end)
+    end
+
+    FavPage.rebuild = function()
+        for _, child in ipairs(FavPage.Body:GetChildren()) do
+            if child:IsA("GuiObj
