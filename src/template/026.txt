@@ -1,18 +1,39 @@
 ", accent = Color3.fromRGB(255, 200, 0)},
-        {mode = "RainbowFast", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
-        {mode = "RainbowDarkWhite", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
-        {mode = "ErisRainbow", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
-        {mode = "FireEffect", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
-        {mode = "NeonPulse", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
-        {mode = "GoldenShine", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
-        {mode = "IceBlue", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
-        {mode = "PurpleGlow", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
-        {mode = "MatrixGreen", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
-        {mode = "Sunset", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
+        {mode = "RainbowFast", cat = "rainbow", titleES = "Arcoíris rápido", titleEN = "Fast Rainbow", descES = "Arcoíris ultra veloz", descEN = "Ultra-fast rainbow", accent = Color3.fromRGB(255, 80, 255)},
+        {mode = "RainbowDarkWhite", cat = "special", titleES = "Dark-White", titleEN = "Dark-White", descES = "Transición lenta negro a blanco", descEN = "Slow transition black to white", accent = Color3.fromRGB(160, 160, 160)},
+        {mode = "ErisRainbow", cat = "special", titleES = "Rojo-Negro-Blanco", titleEN = "Red-Black-White", descES = "Transición especial rojo, negro y blanco", descEN = "Special red, black and white transition", accent = Color3.fromRGB(255, 90, 90)},
+        {mode = "FireEffect", cat = "warm", titleES = "Fuego", titleEN = "Fire", descES = "Llamas rojo, naranja y amarillo", descEN = "Flames red, orange and yellow", accent = Color3.fromRGB(255, 100, 30)},
+        {mode = "NeonPulse", cat = "neon", titleES = "Neón verde", titleEN = "Neon Green", descES = "Pulso neón verde-cian brillante", descEN = "Bright neon green-cyan pulse", accent = Color3.fromRGB(0, 220, 160)},
+        {mode = "GoldenShine", cat = "warm", titleES = "Brillo dorado", titleEN = "Golden Shine", descES = "Brillo cálido dorado y blanco", descEN = "Warm golden and white glow", accent = Color3.fromRGB(255, 210, 60)},
+        {mode = "IceBlue", cat = "cold", titleES = "Hielo azul", titleEN = "Ice Blue", descES = "Cristal de hielo azul frío", descEN = "Cold blue ice crystal", accent = Color3.fromRGB(120, 200, 255)},
+        {mode = "PurpleGlow", cat = "neon", titleES = "Brillo violeta", titleEN = "Purple Glow", descES = "Pulso profundo entre violeta y lila", descEN = "Deep violet to lilac pulse", accent = Color3.fromRGB(160, 80, 255)},
+        {mode = "MatrixGreen", cat = "neon", titleES = "Matrix verde", titleEN = "Matrix Green", descES = "Parpadeo verde tipo Matrix", descEN = "Digital Matrix green flicker", accent = Color3.fromRGB(0, 200, 60)},
+        {mode = "Sunset", cat = "warm", titleES = "Atardecer", titleEN = "Sunset", descES = "Coral, magenta y naranja cálido", descEN = "Coral, magenta and warm orange", accent = Color3.fromRGB(255, 140, 80)},
+        -- efectos nuevos
+        {mode = "Aurora", cat = "cold", titleES = "Aurora boreal", titleEN = "Aurora", descES = "Verde, turquesa y violeta como el cielo polar", descEN = "Green, teal and violet like polar skies", accent = Color3.fromRGB(60, 255, 170)},
+        {mode = "Ocean", cat = "cold", titleES = "Océano", titleEN = "Ocean", descES = "Olas de azul profundo a espuma blanca", descEN = "Waves from deep blue to white foam", accent = Color3.fromRGB(40, 160, 240)},
+        {mode = "CottonCandy", cat = "soft", titleES = "Algodón de azúcar", titleEN = "Cotton Candy", descES = "Rosa, blanco y celeste pastel", descEN = "Pastel pink, white and sky blue", accent = Color3.fromRGB(255, 170, 220)},
+        {mode = "Sakura", cat = "soft", titleES = "Sakura", titleEN = "Sakura", descES = "Pétalos de cerezo rosa suave", descEN = "Soft pink cherry petals", accent = Color3.fromRGB(255, 150, 185)},
+        {mode = "Mint", cat = "soft", titleES = "Menta", titleEN = "Mint", descES = "Verde menta fresco y blanco", descEN = "Fresh mint green and white", accent = Color3.fromRGB(120, 240, 190)},
+        {mode = "Lava", cat = "warm", titleES = "Lava", titleEN = "Lava", descES = "Brasa roja que se enciende en naranja", descEN = "Red embers flaring into orange", accent = Color3.fromRGB(255, 70, 0)},
+        {mode = "Heartbeat", cat = "warm", titleES = "Latido", titleEN = "Heartbeat", descES = "Rojo que late con doble pulso", descEN = "Red with a double heartbeat pulse", accent = Color3.fromRGB(255, 60, 100)},
+        {mode = "Galaxy", cat = "neon", titleES = "Galaxia", titleEN = "Galaxy", descES = "Violeta, azul y rosa nebulosa", descEN = "Nebula violet, blue and pink", accent = Color3.fromRGB(140, 90, 255)},
+        {mode = "Vaporwave", cat = "neon", titleES = "Vaporwave", titleEN = "Vaporwave", descES = "Rosa y cian retro de los 80", descEN = "Retro 80s pink and cyan", accent = Color3.fromRGB(255, 110, 210)},
+        {mode = "Toxic", cat = "neon", titleES = "Tóxico", titleEN = "Toxic", descES = "Verde ácido radiactivo", descEN = "Radioactive acid green", accent = Color3.fromRGB(160, 255, 30)},
+        {mode = "Electric", cat = "special", titleES = "Eléctrico", titleEN = "Electric", descES = "Azul con destellos de rayo", descEN = "Blue with lightning flashes", accent = Color3.fromRGB(80, 170, 255)},
+        {mode = "Chrome", cat = "special", titleES = "Cromo", titleEN = "Chrome", descES = "Plata metálica con reflejo", descEN = "Metallic silver with a glint", accent = Color3.fromRGB(200, 205, 215)},
+        {mode = "Christmas", cat = "special", titleES = "Navidad", titleEN = "Christmas", descES = "Rojo, blanco y verde navideño", descEN = "Festive red, white and green", accent = Color3.fromRGB(230, 40, 50)},
     }
 
     for i, spec in ipairs(effectSpecs) do
         createEffectRow(spec.mode, spec.titleES, spec.titleEN, spec.descES, spec.descEN, spec.accent, i)
+        effectRows[#effectRows].cat = spec.cat or "soft"
+    end
+    -- filtro por categoría: muestra solo las tarjetas de la categoría elegida
+    EffectsUI.ApplyFilter = function()
+        for _, row in ipairs(effectRows) do
+            if row.card then row.card.Visible = EffectsUI.Filter == "all" or row.cat == EffectsUI.Filter or row.mode == "Off" end
+        end
     end
 
     -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
@@ -37,7 +58,12 @@
         end
         local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
         local heroColor = current or Theme.Text
-        EffectsUI.HeroText.TextColor3 = heroColor
+        EffectsUI.HeroText.TextColor3 = current and Color3.new(1, 1, 1) or heroColor
+        EffectsUI.HeroTextGrad.Color = current and ColorSequence.new({
+            ColorSequenceKeypoint.new(0, current),
+            ColorSequenceKeypoint.new(0.5, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.35) or current),
+            ColorSequenceKeypoint.new(1, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.7) or current),
+        }) or ColorSequence.new(Color3.new(1, 1, 1))
         EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
     end))
 

@@ -1,4 +1,159 @@
-fault = true, target = "BloomEffect", property = "Enabled", toggle = true},
+t = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(defaultPercent, 0, 0.5, 0),
+            BackgroundColor3 = Theme.TextDim,
+            BackgroundTransparency = 0.3,
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        defaultTick:SetAttribute("ThemeRole", "TextDim")
+
+        local thumb = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.fromOffset(18, 18),
+            AnchorPoint = Vector2.new(0.5, 0.5),
+            Position = UDim2.new(0, 0, 0.5, 0),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ZIndex = 316,
+        })
+        corner(thumb, 99)
+        local thumbRing = stroke(thumb, Theme.Accent, 3, 0)
+        thumbRing:SetAttribute("ThemeRole", "Accent")
+
+        local minLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 60, 0, 12),
+            Position = UDim2.new(0, 14, 1, -18),
+            BackgroundTransparency = 1,
+            Text = shaderFormatValue(spec.min),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        minLabel:SetAttribute("ThemeTextRole", "TextDim")
+
+        local maxLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 60, 0, 12),
+            Position = UDim2.new(1, -74, 1, -18),
+            BackgroundTransparency = 1,
+            Text = shaderFormatValue(spec.max),
+            TextColor3 = Theme.TextDim,
+            Font = Enum.Font.GothamMedium,
+            TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Right,
+            ZIndex = 314,
+        })
+        maxLabel:SetAttribute("ThemeTextRole", "TextDim")
+
+        local dragging = false
+
+        local function setValue(newValue, invoke)
+            local range = spec.max - spec.min
+            if spec.step and spec.step > 0 then
+                newValue = math.floor((newValue / spec.step) + 0.5) * spec.step
+            end
+            value = math.clamp(newValue, spec.min, spec.max)
+            local percent = range == 0 and 0 or math.clamp((value - spec.min) / range, 0, 1)
+            fill.Size = UDim2.new(percent, 0, 1, 0)
+            thumb.Position = UDim2.new(percent, 0, 0.5, 0)
+            valueLabel.Text = shaderFormatValue(value)
+            if invoke then
+                ShaderCustomOverrides[spec.id] = value
+                if type(spec.onChange) == "function" then
+                    pcall(spec.onChange, value)
+                else
+                    shaderApplySingle(spec.target, spec.property, value)
+                end
+                shaderQueuePersistence()
+            end
+        end
+
+        local function setFromInput(input)
+            local width = math.max(1, bar.AbsoluteSize.X)
+            local percent = math.clamp((input.Position.X - bar.AbsolutePosition.X) / width, 0, 1)
+            setValue(spec.min + (spec.max - spec.min) * percent, true)
+        end
+
+        local function beginDrag(input)
+            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
+                if ShaderCustomActiveSlider and ShaderCustomActiveSlider ~= spec.id then return end
+                ShaderCustomActiveSlider = spec.id
+                dragging = true
+                thumb.Size = UDim2.fromOffset(22, 22)
+                setFromInput(input)
+            end
+        end
+
+        shaderAddConnection(bar.InputBegan:Connect(beginDrag))
+        shaderAddConnection(thumb.InputBegan:Connect(beginDrag))
+        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
+            if dragging and ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
+                setFromInput(input)
+            end
+        end))
+        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
+            if ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
+                dragging = false
+                ShaderCustomActiveSlider = nil
+                thumb.Size = UDim2.fromOffset(18, 18)
+            end
+        end))
+        resetButton.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.4)
+            setValue(spec.default, true)
+        end)
+
+        setValue(value, false)
+
+        ShaderCustomControls[spec.id] = {
+            refresh = function()
+                local refreshed = shaderReadCustomValue(spec, value, "number")
+                setValue(refreshed, false)
+            end,
+            set = function(newValue)
+                setValue(newValue, false)
+            end,
+        }
+    end
+
+    local function shaderCustomSpecs()
+        return {
+            {section = {"Lighting", "Lighting", "Control global de luz, tiempo, sombras y exposición.", "Global light, time, shadows and exposure control."}},
+            {id = "ClockTime", es = "Hora del día", en = "Clock time", min = 0, max = 24, default = 12, step = 0.05, target = "Lighting", property = "ClockTime"},
+            {id = "Brightness", es = "Brillo global", en = "Global brightness", min = 0, max = 10, default = 2, step = 0.05, target = "Lighting", property = "Brightness"},
+            {id = "GeographicLatitude", es = "Latitud geográfica", en = "Geographic latitude", min = 0, max = 180, default = 35, step = 1, target = "Lighting", property = "GeographicLatitude"},
+            {id = "ExposureCompensation", es = "Compensación de exposición", en = "Exposure compensation", min = -5, max = 5, default = 0, step = 0.05, target = "Lighting", property = "ExposureCompensation"},
+            {id = "EnvironmentDiffuseScale", es = "Difusión ambiental", en = "Environment diffuse", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentDiffuseScale"},
+            {id = "EnvironmentSpecularScale", es = "Reflejo ambiental", en = "Environment specular", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale"},
+            {id = "ShadowSoftness", es = "Suavidad de sombras", en = "Shadow softness", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "ShadowSoftness"},
+            {id = "FogStart", es = "Inicio de niebla", en = "Fog start", min = 0, max = 1000, default = 0, step = 1, target = "Lighting", property = "FogStart"},
+            {id = "FogEnd", es = "Final de niebla", en = "Fog end", min = 1, max = 10000, default = 1000, step = 1, target = "Lighting", property = "FogEnd"},
+            {id = "GlobalShadows", es = "Sombras globales", en = "Global shadows", default = true, target = "Lighting", property = "GlobalShadows", toggle = true},
+
+            {section = {"Atmosphere", "Atmosphere", "Neblina, profundidad y dispersión de luz.", "Haze, depth and light scattering."}},
+            {id = "AtmosphereDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.2, step = 0.01, target = "Atmosphere", property = "Density"},
+            {id = "AtmosphereOffset", es = "Offset", en = "Offset", min = 0, max = 1, default = 0.1, step = 0.01, target = "Atmosphere", property = "Offset"},
+            {id = "AtmosphereGlare", es = "Brillo atmosférico", en = "Glare", min = 0, max = 10, default = 0.2, step = 0.01, target = "Atmosphere", property = "Glare"},
+            {id = "AtmosphereHaze", es = "Neblina", en = "Haze", min = 0, max = 10, default = 0.7, step = 0.01, target = "Atmosphere", property = "Haze"},
+
+            {section = {"Clouds", "Clouds", "Cantidad, densidad y presencia visual de las nubes.", "Cloud cover, density and visual presence."}},
+            {id = "CloudsCover", es = "Cobertura", en = "Cover", min = 0, max = 1, default = 0.25, step = 0.01, target = "Clouds", property = "Cover"},
+            {id = "CloudsDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.18, step = 0.01, target = "Clouds", property = "Density"},
+
+            {section = {"ColorCorrection", "ColorCorrection", "Ajuste fino del tono cinematográfico.", "Fine cinematic tone control."}},
+            {id = "ColorBrightness", es = "Brillo de color", en = "Color brightness", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Brightness"},
+            {id = "ColorContrast", es = "Contraste", en = "Contrast", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Contrast"},
+            {id = "ColorSaturation", es = "Saturación", en = "Saturation", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Saturation"},
+            {id = "ColorCorrectionEnabled", es = "ColorCorrection activo", en = "ColorCorrection enabled", default = true, target = "ColorCorrectionEffect", property = "Enabled", toggle = true},
+
+            {section = {"Bloom y Blur", "Bloom and Blur", "Resplandor y desenfoque global.", "Glow and global blur."}},
+            {id = "BloomIntensity", es = "Intensidad Bloom", en = "Bloom intensity", min = 0, max = 4, default = 0.1, step = 0.01, target = "BloomEffect", property = "Intensity"},
+            {id = "BloomSize", es = "Tamaño Bloom", en = "Bloom size", min = 0, max = 56, default = 18, step = 1, target = "BloomEffect", property = "Size"},
+            {id = "BloomThreshold", es = "Umbral Bloom", en = "Bloom threshold", min = 0, max = 4, default = 1.2, step = 0.01, target = "BloomEffect", property = "Threshold"},
+            {id = "BloomEnabled", es = "Bloom activo", en = "Bloom enabled", default = true, target = "BloomEffect", property = "Enabled", toggle = true},
             {id = "BlurSize", es = "Tamaño Blur", en = "Blur size", min = 0, max = 56, default = 0, step = 1, target = "BlurEffect", property = "Size"},
             {id = "BlurEnabled", es = "Blur activo", en = "Blur enabled", default = false, target = "BlurEffect", property = "Enabled", toggle = true},
 
@@ -611,152 +766,4 @@ fault = true, target = "BloomEffect", property = "Enabled", toggle = true},
         {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
         {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
         {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
-        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos con brillo sutil", "Natural light, crisp shadows and subtly glossy floors"},
-        {"Hora Azul", "Blue Hour", "BlueHour", "Crepúsculo azul y violeta con bloom suave", "Blue and violet dusk with soft bloom"},
-        {"Niebla", "Fog", "Foggy", "Mañana con neblina espesa y colores apagados", "Thick misty morning with muted colors"},
-        {"Desierto", "Desert", "Desert", "Sol fuerte, calima dorada y cielo despejado", "Harsh sun, golden haze and clear sky"},
-        {"Ciudad Neón", "Neon City", "NeonNight", "Noche magenta y cian con piso espejo realista", "Magenta and cyan night with realistic mirror floor"},
-        {"Diluvio", "Monsoon", "Monsoon", "Lluvia torrencial, cielo negro y rayos constantes", "Torrential rain, black sky and frequent lightning"},
-        {"Nivel 0", "Level 0", "Level0", "Cinta perdida: luz amarilla, grano, lente abierto y algo que no está bien", "Lost tape: yellow light, grain, wide lens and something not quite right"},
-    }
-    for _, presetData in ipairs(shaderPresetButtons) do
-        local data = presetData
-        shaderCreateModeCard(ShaderModeGrid, {
-            key = data[3],
-            labelES = data[1],
-            labelEN = data[2],
-            descES = data[4],
-            descEN = data[5] or (data[2] .. " atmosphere"),
-            callback = function()
-                ShaderDemoPreset = data[3]
-                ShaderDemoEnabled = true
-                shaderSetModeLabel(data[3])
-                shaderApplyPreset(data[3], true)
-            end,
-        })
-    end
-
-    shaderCreateModeCard(ShaderModeGrid, {
-        key = "Original",
-        labelES = "Restaurar original",
-        labelEN = "Restore original",
-        descES = "Volver a la iluminación guardada del juego",
-        descEN = "Return to the game's saved lighting",
-        callback = function()
-            ShaderDemoEnabled = false
-            local report = shaderRestoreAll()
-            shaderWarn(report, "Restauración")
-            shaderSetModeLabel("Original")
-            ShaderCustomRefresh()
-        end,
-    })
-    shaderSetModeLabel("Morning")
-
-    AutoTabShaders:CreateDivider()
-    AutoTabShaders:CreateLabel("Overdrive local", "Local overdrive", 13)
-    AutoTabShaders:CreateLabel(
-        "Lluvia realista, superficies húmedas y presupuesto adaptable. Todo se restaura al desactivar el modo.",
-        "Realistic rain, wet surfaces and adaptable budget. Everything restores when the mode is disabled.",
-        10
-    )
-    do
-        -- Grupos compactos de 2 columnas (antes: 11 filas grandes seguidas)
-        local function overdriveGroup(icon, titleES, titleEN, items)
-            local group = mk("Frame", {
-                Parent = AutoTabShaders.Page,
-                Size = UDim2.new(1, -8, 0, 0),
-                AutomaticSize = Enum.AutomaticSize.Y,
-                BackgroundColor3 = Theme.Secondary,
-                BackgroundTransparency = 0.35,
-                BorderSizePixel = 0,
-                ZIndex = 9,
-            })
-            group:SetAttribute("ThemeRole", "Secondary")
-            corner(group, 14)
-            stroke(group, Theme.Stroke, 1, 0.6)
-            mk("UIPadding", {Parent = group, PaddingTop = UDim.new(0, 10), PaddingBottom = UDim.new(0, 10), PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-            mk("UIListLayout", {Parent = group, Padding = UDim.new(0, 8), SortOrder = Enum.SortOrder.LayoutOrder})
-
-            local head = mk("Frame", {Parent = group, Size = UDim2.new(1, 0, 0, 28), BackgroundTransparency = 1, LayoutOrder = 0, ZIndex = 10})
-            local headIcon = mk("Frame", {
-                Parent = head, Size = UDim2.fromOffset(28, 28), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.82,
-                BorderSizePixel = 0, ZIndex = 11,
-            })
-            headIcon:SetAttribute("ThemeRole", "Accent")
-            corner(headIcon, 9)
-            RowKit.Icon(headIcon, icon, 15, 12, "Accent")
-            local headTitle = mk("TextLabel", {
-                Parent = head, Size = UDim2.new(1, -110, 1, 0), Position = UDim2.new(0, 38, 0, 0), BackgroundTransparency = 1,
-                Text = GetText(titleES, titleEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
-            })
-            headTitle:SetAttribute("ThemeTextRole", "Accent")
-            headTitle:SetAttribute("TextSpanish", titleES)
-            headTitle:SetAttribute("TextEnglish", titleEN)
-            local counter = mk("TextLabel", {
-                Parent = head, Size = UDim2.new(0, 0, 0, 22), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
-                Position = UDim2.new(1, 0, 0.5, 0), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.3,
-                Text = "", TextColor3 = Theme.TextDim, Font = Enum.Font.GothamBold, TextSize = 10, ZIndex = 11,
-            })
-            counter:SetAttribute("ThemeRole", "Background")
-            counter:SetAttribute("ThemeTextRole", "TextDim")
-            counter:SetAttribute("IgnoreTextEffect", true)
-            corner(counter, 999)
-            mk("UIPadding", {Parent = counter, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
-
-            local grid = mk("Frame", {Parent = group, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y, BackgroundTransparency = 1, LayoutOrder = 1, ZIndex = 10})
-            mk("UIGridLayout", {Parent = grid, CellSize = UDim2.new(0.5, -4, 0, 58), CellPadding = UDim2.fromOffset(8, 8), SortOrder = Enum.SortOrder.LayoutOrder})
-
-            local states = {}
-            local function refreshCounter()
-                local on = 0
-                for _, v in ipairs(states) do if v.get() then on = on + 1 end end
-                counter.Text = GetText(on .. "/" .. #states .. " activos", on .. "/" .. #states .. " on")
-                counter.TextColor3 = on > 0 and Theme.ToggleOn or Theme.TextDim
-                counter:SetAttribute("ThemeTextRole", on > 0 and "ToggleOn" or "TextDim")
-            end
-
-            for order, item in ipairs(items) do
-                local state = item.get() == true
-                local tile = mk("Frame", {Parent = grid, BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, LayoutOrder = order, ZIndex = 10})
-                tile:SetAttribute("ThemeRole", "Background")
-                corner(tile, 12)
-                local tileStroke = stroke(tile, Theme.Stroke, 1.2, 0.6)
-                local tileScale = mk("UIScale", {Parent = tile, Scale = 1})
-                local tileIcon = mk("Frame", {
-                    Parent = tile, Size = UDim2.fromOffset(30, 30), Position = UDim2.new(0, 9, 0.5, -15), BackgroundColor3 = Theme.AccentOff,
-                    BackgroundTransparency = 0.4, BorderSizePixel = 0, ZIndex = 11,
-                })
-                corner(tileIcon, 9)
-                RowKit.Icon(tileIcon, item.icon, 16, 12, "Text")
-                local tileName = mk("TextLabel", {
-                    Parent = tile, Size = UDim2.new(1, -92, 1, -12), Position = UDim2.new(0, 46, 0, 6), BackgroundTransparency = 1,
-                    Text = GetText(item.es, item.en), TextColor3 = Theme.Text, Font = Enum.Font.GothamBold, TextSize = 11,
-                    TextWrapped = true, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 11,
-                })
-                tileName:SetAttribute("ThemeTextRole", "Text")
-                tileName:SetAttribute("TextSpanish", item.es)
-                tileName:SetAttribute("TextEnglish", item.en)
-                local sw = mk("Frame", {Parent = tile, Size = UDim2.fromOffset(34, 18), AnchorPoint = Vector2.new(1, 0.5), Position = UDim2.new(1, -9, 0.5, 0), BackgroundColor3 = Theme.AccentOff, BorderSizePixel = 0, ZIndex = 11})
-                corner(sw, 999)
-                local knob = mk("Frame", {Parent = sw, Size = UDim2.fromOffset(14, 14), AnchorPoint = Vector2.new(0, 0.5), Position = UDim2.new(0, 2, 0.5, 0), BackgroundColor3 = Color3.new(1, 1, 1), BorderSizePixel = 0, ZIndex = 12})
-                corner(knob, 999)
-                local click = mk("TextButton", {Parent = tile, Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 13})
-
-                local function paint(animate)
-                    local info = TweenInfo.new(animate and 0.2 or 0, Enum.EasingStyle.Quint, Enum.EasingDirection.Out)
-                    TweenService:Create(sw, info, {BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff}):Play()
-                    TweenService:Create(knob, info, {Position = state and UDim2.new(1, -16, 0.5, 0) or UDim2.new(0, 2, 0.5, 0)}):Play()
-                    TweenService:Create(tileIcon, info, {BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff, BackgroundTransparency = state and 0.55 or 0.4}):Play()
-                    sw:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-                    tileIcon:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
-                    tileStroke.Color = state and Theme.ToggleOn or Theme.Stroke
-                    tileStroke.Transparency = state and 0.15 or 0.6
-                    tileStroke:SetAttribute("ThemeRole", state and "ToggleOn" or "Stroke")
-                end
-                click.MouseButton1Click:Connect(function()
-                    playSound(Sounds.Click, 0.45)
-                    state = not state
-                    tileScale.Scale = 0.95
-                    TweenService:Create(tileScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-                    p
+        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos c

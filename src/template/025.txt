@@ -637,6 +637,7 @@ local draggingPicker, draggingHue = false, false
         ZIndex = 12,
     })
     EffectsUI.HeroText:SetAttribute("IgnoreTextEffect", true)
+    EffectsUI.HeroTextGrad = mk("UIGradient", {Parent = EffectsUI.HeroText})
     EffectsUI.HeroSub = mk("TextLabel", {
         Parent = EffectsUI.Hero,
         Size = UDim2.new(1, -140, 0, 14),
@@ -678,9 +679,46 @@ local draggingPicker, draggingHue = false, false
         Size = UDim2.new(1, 0, 0, 0),
         AutomaticSize = Enum.AutomaticSize.Y,
         BackgroundTransparency = 1,
-        LayoutOrder = 1,
+        LayoutOrder = 2,
         ZIndex = 9,
     })
+    -- Filtros por categoría (chips deslizables entre la cabecera y la grilla)
+    EffectsUI.Filter = "all"
+    EffectsUI.Chips = {}
+    EffectsUI.ChipBar = mk("ScrollingFrame", {
+        Parent = EffectsRoot, Size = UDim2.new(1, 0, 0, 30), BackgroundTransparency = 1, BorderSizePixel = 0,
+        ScrollBarThickness = 0, ScrollingDirection = Enum.ScrollingDirection.X, AutomaticCanvasSize = Enum.AutomaticSize.X,
+        CanvasSize = UDim2.new(0, 0, 0, 0), LayoutOrder = 1, ZIndex = 10,
+    })
+    mk("UIListLayout", {Parent = EffectsUI.ChipBar, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    EffectsUI.PaintChips = function()
+        for _, c in ipairs(EffectsUI.Chips) do
+            local on = c.key == EffectsUI.Filter
+            c.button.BackgroundColor3 = on and Theme.Accent or Theme.Secondary
+            c.button.BackgroundTransparency = on and 0 or 0.3
+            c.button.TextColor3 = on and Theme.AccentText or Theme.TextDim
+        end
+    end
+    for i, f in ipairs({{"all", "Todos", "All"}, {"soft", "Suaves", "Soft"}, {"rainbow", "Arcoíris", "Rainbow"}, {"neon", "Neón", "Neon"},
+        {"warm", "Cálidos", "Warm"}, {"cold", "Fríos", "Cold"}, {"special", "Especiales", "Special"}}) do
+        local b = mk("TextButton", {
+            Parent = EffectsUI.ChipBar, Size = UDim2.new(0, 0, 1, -4), AutomaticSize = Enum.AutomaticSize.X, LayoutOrder = i,
+            Text = GetText(f[2], f[3]), Font = Enum.Font.GothamBold, TextSize = 11, AutoButtonColor = false, ZIndex = 11,
+        })
+        b:SetAttribute("TextSpanish", f[2])
+        b:SetAttribute("TextEnglish", f[3])
+        b:SetAttribute("IgnoreTextEffect", true)
+        corner(b, 999)
+        mk("UIPadding", {Parent = b, PaddingLeft = UDim.new(0, 12), PaddingRight = UDim.new(0, 12)})
+        table.insert(EffectsUI.Chips, {key = f[1], button = b})
+        b.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.5)
+            EffectsUI.Filter = f[1]
+            EffectsUI.PaintChips()
+            if EffectsUI.ApplyFilter then EffectsUI.ApplyFilter() end
+        end)
+    end
+    EffectsUI.PaintChips()
     mk("UIGridLayout", {
         Parent = EffectsUI.Grid,
         CellSize = UDim2.new(0.5, -5, 0, 136),
@@ -730,12 +768,14 @@ local draggingPicker, draggingHue = false, false
     -- Aplica los 3 colores de una muestra: texto, brillo de fondo y barra inferior
     local function setPreviewStripColors(entry, c1, c2, c3)
         if not entry then return end
-        if entry.text then entry.text.TextColor3 = c1 end
         local seq = ColorSequence.new({
             ColorSequenceKeypoint.new(0, c1),
             ColorSequenceKeypoint.new(0.5, c2),
             ColorSequenceKeypoint.new(1, c3),
         })
+        -- el texto de la muestra lleva el degradé de los 3 colores (se ve cómo corre el efecto por las letras)
+        if entry.text then entry.text.TextColor3 = Color3.new(1, 1, 1) end
+        if entry.textGrad then entry.textGrad.Color = seq end
         if entry.glowGrad then entry.glowGrad.Color = seq end
         if entry.barGrad then entry.barGrad.Color = seq end
     end
@@ -800,6 +840,8 @@ local draggingPicker, draggingHue = false, false
             end
             local t = (cycle - 0.5) * 2
             return Color3.fromRGB(255, math.floor(160 - 80 * t), math.floor(50 * t))
+        elseif Window._TextEffectExtra and Window._TextEffectExtra[mode] then
+            return Window._TextEffectExtra[mode](elapsed)
         end
         return nil
     end
@@ -852,6 +894,7 @@ local draggingPicker, draggingHue = false, false
             ZIndex = 13,
         })
         PreviewLabel:SetAttribute("IgnoreTextEffect", true)
+        local textGrad = mk("UIGradient", {Parent = PreviewLabel})
 
         local bar = mk("Frame", {
             Parent = preview,
@@ -884,6 +927,7 @@ local draggingPicker, draggingHue = false, false
             frame = preview,
             mode = mode,
             text = PreviewLabel,
+            textGrad = textGrad,
             glowGrad = glowGrad,
             barGrad = barGrad,
         }
@@ -1028,6 +1072,6 @@ local draggingPicker, draggingHue = false, false
 
     local effectSpecs = {
         {mode = "Off", titleES = "Normal (Blanco)", titleEN = "Normal (White)", descES = "Sin efecto - color del tema", descEN = "No effect - theme color", accent = Color3.fromRGB(200, 200, 200)},
-        {mode = "WhiteCyan", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
-        {mode = "WhitePink", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
-        {mode = "Rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle
+        {mode = "WhiteCyan", cat = "soft", titleES = "Blanco-Celeste", titleEN = "White-Cyan", descES = "Pulso suave entre blanco y celeste", descEN = "Soft pulse white to cyan", accent = Color3.fromRGB(100, 220, 255)},
+        {mode = "WhitePink", cat = "soft", titleES = "Blanco-Rosa", titleEN = "White-Pink", descES = "Oscilación lenta blanco y rosa", descEN = "Slow oscillation white to pink", accent = Color3.fromRGB(255, 130, 200)},
+        {mode = "Rainbow", cat = "rainbow", titleES = "Arcoíris", titleEN = "Rainbow", descES = "Ciclo completo del espectro de color", descEN = "Full color spectrum cycle

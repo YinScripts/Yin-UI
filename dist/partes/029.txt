@@ -1,4 +1,190 @@
-ormal * 0.14, -normal * 9, params)
+ultiplier(part)
+        if not multiplier then return false end
+        if self.StripTextures then self:_stripPartTextures(part) end
+        local ok, current = pcall(function() return part.Reflectance end)
+        if not ok then return false end
+        if self.Original[part] == nil then self.Original[part] = current end
+        if inModel then multiplier = multiplier * 0.92 end
+        local skyMirrorFloor = self:_isSkyMirrorFloor(part, inModel)
+        if skyMirrorFloor then self:_applySkyMirrorSurface(part) end
+        local applied = pcall(function()
+            local wetReflectance = self.Original[part] + self.Intensity * self.Wetness * multiplier
+            if skyMirrorFloor then wetReflectance = math.max(wetReflectance, self.SkyMirrorStrength) end
+            part.Reflectance = math.clamp(wetReflectance, 0, 0.90)
+        end)
+        if applied then
+            self.Applied[part] = true
+            if inModel then self.ModelApplied[part] = true end
+            if isLocalCharacter then self.CharacterApplied[part] = true end
+        end
+        return applied
+    end
+
+    function ShaderReflections:QueueSceneCoverage()
+        if self.SceneBuilding or self.SceneComplete or not self.SceneCoverage then return end
+        self.SceneBuilding, self.SceneQueue, self.SceneCursor = true, {}, 1
+        task.spawn(function()
+            local descendants = workspace:GetDescendants()
+            for index, instance in ipairs(descendants) do
+                if self.Enabled and instance:IsA("BasePart") then table.insert(self.SceneQueue, instance) end
+                if index % 240 == 0 then task.wait() end
+            end
+            self.SceneBuilding = false
+            self.SceneComplete = true
+        end)
+    end
+
+    function ShaderReflections:_processSceneCoverage(limit)
+        if not self.SceneCoverage then return end
+        if self.SceneCursor > #self.SceneQueue then
+            return
+        end
+        local processed = 0
+        while processed < limit and self.SceneCursor <= #self.SceneQueue do
+            self:_applyWetPart(self.SceneQueue[self.SceneCursor])
+            self.SceneCursor = self.SceneCursor + 1
+            processed = processed + 1
+        end
+    end
+
+    function ShaderReflections:_clearContact()
+        if self.ContactRig and self.ContactRig.Parent then pcall(function() self.ContactRig:Destroy() end) end
+        self.ContactRig, self.ContactParts, self.ContactCore = nil, {}, nil
+    end
+
+    function ShaderReflections:_clearSceneShadows()
+        if self.ShadowConnection then self.ShadowConnection:Disconnect(); self.ShadowConnection = nil end
+        if self.ShadowRig and self.ShadowRig.Parent then pcall(function() self.ShadowRig:Destroy() end) end
+        self.ShadowRig, self.ShadowParts = nil, {}
+    end
+
+    function ShaderReflections:_refreshSceneShadows()
+        if not self.ShadowEnabled then
+            self:_clearSceneShadows()
+            return
+        end
+        local character, root = self:_root()
+        if not character or not root then return end
+        if not self.ShadowRig or not self.ShadowRig.Parent then
+            local rig = Instance.new("Folder")
+            rig.Name = "YinYangShader_ModelShadows"
+            rig.Parent = workspace
+            self.ShadowRig, self.ShadowParts = rig, {}
+        end
+
+        local profile = shaderQualityProfile()
+        local models, active, count = {}, {}, 0
+        for _, part in ipairs((self:_sortedScan(root.Position, profile.shadowRadius, character))) do
+            if count >= profile.shadowLimit then break end
+            local model = part:FindFirstAncestorOfClass("Model")
+            if model and model ~= character and model.Parent and not models[model] then
+                models[model] = true
+                local okBounds, bounds, size = pcall(function() return model:GetBoundingBox() end)
+                if okBounds and size and size.Magnitude >= 1.2 then
+                    local params = RaycastParams.new()
+                    params.FilterType = Enum.RaycastFilterType.Exclude
+                    params.FilterDescendantsInstances = {character, self.ShadowRig, model}
+                    params.IgnoreWater = false
+                    local origin = bounds.Position + Vector3.new(0, math.max(2, size.Y * 0.55), 0)
+                    local hit = workspace:Raycast(origin, Vector3.new(0, -(math.max(10, size.Y + 16)), 0), params)
+                    if hit and hit.Instance and math.abs(hit.Normal.Y) >= 0.34 then
+                        count = count + 1
+                        local proxy = self.ShadowParts[model]
+                        if not proxy or not proxy.Parent then
+                            proxy = Instance.new("Part")
+                            proxy.Name = "YinYangShader_ModelShadow"
+                            proxy.Shape = Enum.PartType.Ball
+                            proxy.Anchored, proxy.CanCollide, proxy.CanQuery, proxy.CanTouch, proxy.CastShadow = true, false, false, false, false
+                            proxy.Material = Enum.Material.SmoothPlastic
+                            proxy.Color = Color3.fromRGB(5, 7, 12)
+                            proxy.Parent = self.ShadowRig
+                            self.ShadowParts[model] = proxy
+                        end
+                        local right = Vector3.new(1, 0, 0)
+                        if math.abs(right:Dot(hit.Normal)) > 0.92 then right = Vector3.new(0, 0, 1) end
+                        local back = hit.Normal:Cross(right).Unit
+                        right = back:Cross(hit.Normal).Unit
+                        proxy.Size = Vector3.new(
+                            math.clamp(size.X * 0.70, 1.0, 18),
+                            0.055,
+                            math.clamp(size.Z * 0.70, 1.0, 18)
+                        )
+                        proxy.CFrame = CFrame.fromMatrix(hit.Position + hit.Normal * (0.018 + count * 0.0002), right, hit.Normal, back)
+                        proxy.Transparency = math.clamp(0.93 - self.ShadowStrength * 0.38, 0.64, 0.89)
+                        active[model] = true
+                    end
+                end
+            end
+        end
+        for model, proxy in pairs(self.ShadowParts) do
+            if not active[model] then
+                if proxy and proxy.Parent then proxy:Destroy() end
+                self.ShadowParts[model] = nil
+            end
+        end
+    end
+
+    function ShaderReflections:_refreshContact()
+        if self.ExcludeLocalAvatar or not self.ContactEnabled or not self.Enabled then
+            self:_clearContact()
+            return
+        end
+        local character, root = self:_root()
+        if not character or not root then return end
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = {character, self.ContactRig}
+        params.IgnoreWater = false
+        local hit = workspace:Raycast(root.Position + Vector3.new(0, 2, 0), Vector3.new(0, -12, 0), params)
+        if not hit or not hit.Instance or math.abs(hit.Normal.Y) < 0.28 then
+            self:_clearContact()
+            return
+        end
+        if not self.ContactRig or not self.ContactRig.Parent then
+            local rig = Instance.new("Folder")
+            rig.Name = "YinYangShader_ContactReflection"
+            rig.Parent = workspace
+            self.ContactRig, self.ContactParts = rig, {}
+        end
+
+        local normal = hit.Normal
+        local right = root.CFrame.RightVector
+        if math.abs(right:Dot(normal)) > 0.92 then right = root.CFrame.LookVector end
+        local back = normal:Cross(right).Unit
+        right = back:Cross(normal).Unit
+        local groundDistance = (root.Position - hit.Position).Magnitude
+        local distanceFade = math.clamp(1 - math.max(0, groundDistance - 2.4) / 8.5, 0.18, 1)
+        local wetFactor = math.clamp((self.Intensity * self.Wetness) / 0.34, 0.42, 1)
+
+        if not self.ContactCore or not self.ContactCore.Parent then
+            local core = Instance.new("Part")
+            core.Name = "ContactReflectionCore"
+            core.Shape = Enum.PartType.Ball
+            core.Anchored, core.CanCollide, core.CanQuery, core.CanTouch, core.CastShadow = true, false, false, false, false
+            core.Material = Enum.Material.Glass
+            core.Parent = self.ContactRig
+            self.ContactCore = core
+        end
+        local extents = Vector3.new(3, 5, 2)
+        pcall(function() extents = character:GetExtentsSize() end)
+        self.ContactCore.Size = Vector3.new(
+            math.clamp(extents.X * 0.52, 0.90, 4.8),
+            0.026,
+            math.clamp(extents.Z * 0.52, 0.90, 4.8)
+        )
+        self.ContactCore.CFrame = CFrame.fromMatrix(hit.Position + normal * 0.019, right, normal, back)
+        if self.OilSheen then
+            self.ContactCore.Color = root.Color:Lerp(Color3.fromHSV((os.clock() * 0.07) % 1, 0.62, 1), 0.55)
+        else
+            self.ContactCore.Color = root.Color:Lerp(Color3.fromRGB(158, 198, 246), 0.46)
+        end
+        self.ContactCore.Transparency = math.clamp(0.95 - self.ContactStrength * 0.18 * wetFactor * distanceFade, 0.76, 0.93)
+
+        local active, index = {}, 0
+        for _, sourcePart in ipairs(character:GetDescendants()) do
+            if sourcePart:IsA("BasePart") and sourcePart.Transparency < 0.95 and sourcePart.Name ~= "HumanoidRootPart" then
+                if index >= 18 then break end
+                local sourceHit = workspace:Raycast(sourcePart.Position + normal * 0.14, -normal * 9, params)
                 if sourceHit and sourceHit.Instance and math.abs(sourceHit.Normal.Y) >= 0.28 then
                     index = index + 1
                     local proxy = self.ContactParts[sourcePart]
@@ -796,229 +982,4 @@ ormal * 0.14, -normal * 9, params)
             pcall(function() ShaderTerrain.WaterColor = self.TerrainWaterColor end)
         end
         self.TerrainOriginal = {}
-        self.TerrainWaterColor = nil
-    end
-
-    function ShaderSilhouette:SetEnabled(enabled)
-        enabled = enabled == true
-        if self.Enabled == enabled then
-            if enabled then self:_scan() end
-            return
-        end
-
-        self.Enabled = enabled
-        if self.Connection then
-            self.Connection:Disconnect()
-            self.Connection = nil
-        end
-
-        if not enabled then
-            self:_restore()
-            return
-        end
-
-        self:_scan()
-        self.Connection = workspace.DescendantAdded:Connect(function(instance)
-            if self.Enabled and (instance:IsA("BasePart") or instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic")) then
-                task.defer(function()
-                    if not self.Enabled then return end
-                    if instance:IsA("BasePart") then
-                        self:_applyPart(instance)
-                    else
-                        self:_applyClothing(instance)
-                    end
-                end)
-            end
-        end)
-    end
-
-    function ShaderSilhouette:Destroy()
-        self.Enabled = false
-        if self.Connection then
-            self.Connection:Disconnect()
-            self.Connection = nil
-        end
-        self:_restore()
-    end
-
-    local ShaderRain = {
-        Enabled = false,
-        StormEnabled = false,
-        Intensity = 0.72,
-        Rig = nil,
-        Emitter = nil,
-        Drops = {},
-        Random = Random.new(),
-        Sound = nil,
-        SoundEnabled = true,
-        SoundVolume = 0.34,
-        RespectShelter = false,
-        FollowConnection = nil,
-        StormToken = 0,
-        Splashes = {},
-        SplashCursor = 1,
-        SplashSpawned = 0,
-        ResetBudget = 0,
-        Clock = 0,
-        DropColor = nil,
-        ColorElapsed = 1,
-        SkySnapshot = nil,
-        SkyPresets = {Rain = true, Stormfront = true, Monsoon = true},
-        FlashToken = 0,
-        FlashBase = nil,
-        BoltFolder = nil,
-        ThunderSoundId = nil,
-        -- truenos reales (IDs de Nick): corto 6 s para relámpagos entre nubes, largo 9 s para rayos visibles
-        ThunderSounds = {
-            {id = "rbxassetid://139319051979882", length = 6},
-            {id = "rbxassetid://136909414800877", length = 9},
-        },
-        StormGapMin = 5,
-        StormGapMax = 12,
-    }
-
-    function ShaderRain:_destroyRig()
-        if self.FollowConnection then self.FollowConnection:Disconnect(); self.FollowConnection = nil end
-        if self.Sound then pcall(function() self.Sound:Stop() end) end
-        if self.Rig and self.Rig.Parent then pcall(function() self.Rig:Destroy() end) end
-        self.Rig, self.Emitter, self.Drops = nil, nil, {}
-        self.Splashes, self.SplashCursor = {}, 1
-    end
-
-    function ShaderRain:_syncVisuals()
-        if self.Emitter then self.Emitter.Rate = math.floor(shaderQualityProfile().rainRate * self.Intensity) end
-        if self.Sound then self.Sound.Volume = self.SoundVolume * self.Intensity end
-    end
-
-    function ShaderRain:_ensureSound()
-        if self.Sound and self.Sound.Parent then return self.Sound end
-        local existing = SoundService:FindFirstChild("YinYangShader_RainLoop")
-        if existing and existing:IsA("Sound") then
-            self.Sound = existing
-            return existing
-        end
-        local sound = Instance.new("Sound")
-        sound.Name = "YinYangShader_RainLoop"
-        sound.SoundId = "rbxassetid://107459242972988"
-        sound.Looped, sound.Volume = true, self.SoundVolume * self.Intensity
-        sound.Parent = SoundService
-        self.Sound = sound
-        return sound
-    end
-
-    function ShaderRain:_dropTargetCount()
-        local profile = shaderQualityProfile()
-        return math.clamp(math.floor(profile.rainDrops * (0.35 + 0.65 * self.Intensity)), 12, 220)
-    end
-
-    function ShaderRain:_center(root)
-        local camera = workspace.CurrentCamera
-        if camera then
-            local look = camera.CFrame.LookVector
-            return camera.CFrame.Position + Vector3.new(look.X, 0, look.Z) * 8
-        end
-        return root.Position
-    end
-
-    -- Color de las gotas según la luz del momento (de noche casi no se ven, como en la vida real)
-    function ShaderRain:_refreshDropColor()
-        local lighting = ShaderLightingService
-        local ambient = lighting.OutdoorAmbient
-        local fog = lighting.FogColor
-        local base = ambient:Lerp(fog, 0.35):Lerp(Color3.fromRGB(226, 234, 246), 0.55)
-        local brightness = math.clamp(lighting.Brightness / 2.4, 0.35, 1)
-        self.DropColor = base:Lerp(Color3.new(0, 0, 0), (1 - brightness) * 0.45)
-    end
-
-    function ShaderRain:_resetDrop(drop, center, character, initial)
-        local radius = shaderQualityProfile().rainRadius
-        local angle = self.Random:NextNumber() * math.pi * 2
-        local distance = math.sqrt(self.Random:NextNumber()) * radius
-        local x = center.X + math.cos(angle) * distance
-        local z = center.Z + math.sin(angle) * distance
-        local top = center.Y + 34
-        local filter = {}
-        if self.Rig then table.insert(filter, self.Rig) end
-        if character then table.insert(filter, character) end
-        local params = RaycastParams.new()
-        params.FilterType = Enum.RaycastFilterType.Exclude
-        params.FilterDescendantsInstances = filter
-        params.IgnoreWater = false
-        local hit = workspace:Raycast(Vector3.new(x, top, z), Vector3.new(0, -120, 0), params)
-        local ground = hit and hit.Position.Y or (center.Y - 20)
-        local startY = top - self.Random:NextNumber(0, 4)
-        if initial then startY = self.Random:NextNumber(math.min(ground + 1, top - 1), top) end
-        drop.ground = ground
-        drop.landed = hit ~= nil
-        drop.position = Vector3.new(x, startY, z)
-        drop.speed = self.Random:NextNumber(92, 124)
-        -- gotas finas y largas (estela de movimiento real); las cercanas a la cámara un poco más gruesas
-        local near = 1 - math.clamp(distance / math.max(radius, 1), 0, 1)
-        local width = self.Random:NextNumber(0.018, 0.032) + near * 0.018
-        drop.part.Size = Vector3.new(width, width, drop.speed * self.Random:NextNumber(0.022, 0.032))
-        drop.alpha = math.clamp(self.Random:NextNumber(0.42, 0.66) + (1 - near) * 0.16 - (self.Intensity - 0.6) * 0.12, 0.34, 0.86)
-        local tone = self.DropColor or Color3.fromRGB(205, 216, 232)
-        drop.part.Color = tone:Lerp(Color3.fromRGB(240, 246, 255), self.Random:NextNumber(0, 0.35))
-        drop.active = true
-    end
-
-    function ShaderRain:_ensureDrops(center, character)
-        local target = self:_dropTargetCount()
-        local created = 0
-        while #self.Drops < target and created < 40 do
-            local part = Instance.new("Part")
-            part.Name = "YinYangShader_RainDrop"
-            part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
-            -- vidrio: la gota refracta y refleja la luz en vez de brillar como neón
-            part.Material = Enum.Material.Glass
-            part.Reflectance = 0.18
-            part.Transparency = 1
-            part.Parent = self.Rig
-            local drop = {part = part, active = false, position = center, ground = center.Y, landed = false, speed = 96, alpha = 0.7}
-            table.insert(self.Drops, drop)
-            self:_resetDrop(drop, center, character, true)
-            created = created + 1
-        end
-        while #self.Drops > target do
-            local drop = table.remove(self.Drops)
-            if drop and drop.part and drop.part.Parent then drop.part:Destroy() end
-        end
-    end
-
-    function ShaderRain._splashPart(name, shape, parent)
-        local part = Instance.new("Part")
-        part.Name = name
-        part.Shape = shape
-        part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
-        part.Material = Enum.Material.Glass
-        part.Reflectance = 0.2
-        part.Color = Color3.fromRGB(222, 232, 246)
-        part.Transparency = 1
-        part.Parent = parent
-        return part
-    end
-
-    -- Salpicadura: anillo que se abre en el piso + dos gotitas que rebotan (corona)
-    function ShaderRain:_spawnSplash(position, center)
-        local limit = shaderQualityProfile().rainSplashes
-        if self.SplashSpawned >= 4 or not self.Rig then return end
-        if (position - center).Magnitude > 38 then return end
-        self.SplashSpawned = self.SplashSpawned + 1
-        local index = self.SplashCursor
-        self.SplashCursor = index % limit + 1
-        local splash = self.Splashes[index]
-        if not splash or not splash.part.Parent then
-            local ring = ShaderRain._splashPart("YinYangShader_RainSplash", Enum.PartType.Cylinder, self.Rig)
-            local bits = {}
-            for bit = 1, 2 do
-                bits[bit] = {part = ShaderRain._splashPart("YinYangShader_RainBit", Enum.PartType.Ball, self.Rig), velocity = Vector3.new(0, 0, 0), position = position}
-            end
-            splash = {part = ring, bits = bits, age = 1, life = 0.3, size = 1, position = position}
-            self.Splashes[index] = splash
-        end
-        splash.age = 0
-        splash.life = self.Random:NextNumber(0.24, 0.38)
-        splash.size = self.Random:NextNumber(0.6, 1.3)
-        splash.position = position + Vector3.new(0, 0.03, 0)
-        for _, bit in ipairs(splash.bits or {}) do
-            local angle = self.
+        self.TerrainWater

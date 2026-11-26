@@ -1,4 +1,70 @@
-   local IconTile = mk("Frame", {
+ction openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
+            local Backdrop = mk("TextButton", {
+                Parent = Window.ScreenGui,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+                BackgroundTransparency = 1,
+                BorderSizePixel = 0,
+                Active = true,
+                AutoButtonColor = false,
+                Text = "",
+                ZIndex = 500,
+            })
+            local Panel = mk("Frame", {
+                Parent = Window.ScreenGui,
+                Size = UDim2.new(0.92, 0, 0.9, 0),
+                Position = UDim2.fromScale(0.5, 0.5),
+                AnchorPoint = Vector2.new(0.5, 0.5),
+                BackgroundColor3 = Theme.Background,
+                BackgroundTransparency = 0.04,
+                BorderSizePixel = 0,
+                ClipsDescendants = false,
+                ZIndex = 501,
+            })
+            Panel:SetAttribute("ThemeRole", "Background")
+            corner(Panel, 18)
+            mk("UISizeConstraint", {
+                Parent = Panel,
+                MinSize = Vector2.new(260, 220),
+                MaxSize = Vector2.new(maxW, maxH),
+            })
+            local PanelScale = mk("UIScale", {Parent = Panel, Scale = 0.9})
+
+            -- Borde con luz que gira (un solo tween nativo)
+            local ring = mk("UIStroke", {Parent = Panel, Thickness = 1.6, Color = Color3.new(1, 1, 1), Transparency = 0.05})
+            local ringGrad = mk("UIGradient", {Parent = ring, Rotation = 0})
+            do
+                local base = Theme.Stroke
+                local h, s, v = Color3.toHSV(Theme.Accent)
+                local light = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
+                ringGrad.Color = ColorSequence.new({
+                    ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.35, base),
+                    ColorSequenceKeypoint.new(0.47, Theme.Accent), ColorSequenceKeypoint.new(0.5, light),
+                    ColorSequenceKeypoint.new(0.53, Theme.Accent), ColorSequenceKeypoint.new(0.65, base),
+                    ColorSequenceKeypoint.new(1, base),
+                })
+            end
+            local ringSpin = TweenService:Create(ringGrad, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Rotation = 360})
+            ringSpin:Play()
+
+            -- Brillo superior suave
+            local glow = mk("Frame", {
+                Parent = Panel,
+                Size = UDim2.new(1, 0, 0, 90),
+                BackgroundColor3 = Theme.Accent,
+                BackgroundTransparency = 0.86,
+                BorderSizePixel = 0,
+                ZIndex = 501,
+            })
+            glow:SetAttribute("ThemeRole", "Accent")
+            corner(glow, 18)
+            mk("UIGradient", {
+                Parent = glow,
+                Rotation = 90,
+                Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)}),
+            })
+
+            local IconTile = mk("Frame", {
                 Parent = Panel,
                 Size = UDim2.fromOffset(44, 44),
                 Position = UDim2.new(0, 16, 0, 16),
@@ -945,92 +1011,4 @@
         Position = UDim2.new(0, 32, 0, 0),
         BackgroundTransparency = 1,
         Text = "",
-        ClearTextOnFocus = false,
-        PlaceholderText = GetText("Buscar tema...", "Search themes..."),
-        PlaceholderColor3 = Theme.TextDim,
-        TextColor3 = Theme.Text,
-        TextSize = 13,
-        Font = Enum.Font.GothamMedium,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 10,
-    })
-    ThemeSearchBox:SetAttribute("ThemeTextRole", "Text")
-    ThemeSearchBox:SetAttribute("PlaceholderSpanish", "Buscar tema...")
-    ThemeSearchBox:SetAttribute("PlaceholderEnglish", "Search themes...")
-
-    local CreateThemeButton = mk("TextButton", {
-        Parent = ThemeToolbar,
-        Size = UDim2.new(0.32, -4, 1, 0),
-        Position = UDim2.new(0.68, 4, 0, 0),
-        BackgroundColor3 = Theme.Accent,
-        BorderSizePixel = 0,
-        Text = GetText("Crear Tema", "Create Theme"),
-        TextColor3 = Theme.AccentText,
-        TextSize = 13,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 10,
-    })
-    CreateThemeButton:SetAttribute("ThemeRole", "Accent")
-    CreateThemeButton:SetAttribute("ThemeTextRole", "AccentText")
-    CreateThemeButton:SetAttribute("TextSpanish", "Crear Tema")
-    CreateThemeButton:SetAttribute("TextEnglish", "Create Theme")
-    corner(CreateThemeButton, 6)
-    stroke(CreateThemeButton, Theme.Stroke, 1, 0.6)
-    resetScrollTop(AutoTabTemas.Page)
-
-    local temas = ThemeOrder or {
-        "Dark", "DarkV2",
-        "Red", "RedV2",
-        "Pink", "PinkV2", "PinkV3",
-        "Blue", "BlueV2",
-        "White", "WhiteV2", "WhiteV3", "WhiteAndDark",
-        "Green", "NaranjaV1", "VioletaV1",
-        "CatV1",
-        "LightV1",
-        "ErisV1",
-        "ShylfieV1",
-        "SukunaV1", "SukunaV2",
-        "J1",
-        "V1", "V2", "V3", "V4", "V5", "V6", "V9", "V10", "V11", "V14",
-        "PibbleV1",
-    }
-
-    local hasJ1 = false
-    for _, themeId in ipairs(temas) do
-        if themeId == "J1" then
-            hasJ1 = true
-            break
-        end
-    end
-    if ThemePalettes.J1 and not hasJ1 then
-        table.insert(temas, "J1")
-    end
-
-    local ThemeGridHolder = mk("Frame", {
-        Parent = AutoTabTemas.Page,
-        Size = UDim2.new(1, 0, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        BorderSizePixel = 0,
-        ZIndex = 9,
-    })
-
-    mk("UIGridLayout", {
-        Parent = ThemeGridHolder,
-        CellSize = UDim2.new(0.485, 0, 0, 172),
-        CellPadding = UDim2.new(0.03, 0, 0, 12),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-        HorizontalAlignment = Enum.HorizontalAlignment.Left,
-    })
-
-    local ThemeButtons = {}
-
-    local function highlightThemeCards()
-        local active = Window.CurrentTheme
-        for _, entry in ipairs(ThemeButtons) do
-            local isActive = (entry.Name == active)
-            entry.CheckBadge.Visible = isActive
-            entry.CardStroke.Thickness = isActive and 2 or 1
-            entry.CardStroke.Transparency = isActive and 0 or 0.7
-            entry.CardStroke.Color = isActive and Theme.Accent or Theme.Stroke
-            entry.CardStroke:SetAttribute("ThemeRole", isActive and
+        ClearTextOnFo

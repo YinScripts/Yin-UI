@@ -1,4 +1,205 @@
-tEnabled(true)
+       self.Enabled = enabled
+        local camera = workspace.CurrentCamera
+        if enabled then
+            if camera then self.SavedFov = camera.FieldOfView end
+            -- base propia (la del preset): así la auto-exposición no se "acumula" con otros ajustes
+            local preset = ShaderManager.Presets.Level0
+            self.BaseExposure = preset and preset.Lighting and preset.Lighting.ExposureCompensation or 0.25
+            self.LastLook, self.Blur, self.Acc, self.GlitchT = nil, self.BaseBlur, 0, nil
+            self.NextGlitch = os.clock() + 4
+            self.Gui = self:_buildGui()
+            self:_muteAll()
+            self:_startAmbient()
+            self.Connection = RunService.RenderStepped:Connect(function(delta)
+                local ok = pcall(self._step, self, delta)
+                if not ok then return end
+            end)
+            return
+        end
+        if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
+        self:_unmuteAll()
+        self:_stopAmbient()
+        if self.Gui then pcall(function() self.Gui:Destroy() end) end
+        self.Gui, self.Lines, self.Flicker, self.Band, self.Grain = nil, nil, nil, nil, {}
+        if camera and self.SavedFov then pcall(function() camera.FieldOfView = self.SavedFov end) end
+        self.SavedFov = nil
+        -- la exposición no se toca acá: la pone el modo siguiente (o "Restaurar original")
+    end
+
+    local shaderQueuePersistence = function() end
+
+    local function shaderSetQuality(name)
+        if not ShaderQualityProfiles[name] then return false end
+        ShaderSceneQuality = name
+        if ShaderReflections.Enabled then ShaderReflections:Refresh() end
+        ShaderRain:_syncVisuals()
+        shaderQueuePersistence()
+        return true
+    end
+
+    local function shaderRestoreImmersive()
+        ShaderFootage:SetEnabled(false)
+        ShaderSilhouette:SetEnabled(false)
+        ShaderRain:Destroy()
+        ShaderReflections.Enabled = false
+        if ShaderReflections.Connection then ShaderReflections.Connection:Disconnect(); ShaderReflections.Connection = nil end
+        ShaderReflections:Restore()
+    end
+
+
+    local ShaderCustomWindow = nil
+    local ShaderCustomBackdrop = nil
+    local ShaderCustomRefresh = function() end
+    local ShaderCustomControls = {}
+    local ShaderCustomOverrides = {}
+    local ShaderCustomActiveSlider = nil
+    local ShaderUISections = {}
+    local ShaderDemoEnabled = true
+    local ShaderDemoPreset = "Morning"
+    local ShaderModeLabel = nil
+    local ShaderModeCards = {}
+    local ShaderCustomConnections = {}
+    local ShaderPersistenceFile = "YinYang_Shader_Autosave.json"
+    local ShaderPersistenceToken = 0
+    local ShaderSavedState = nil
+
+    local function shaderWarn(report, context)
+        if report and not report.ok then
+            warn("[YinYang Shaders] " .. tostring(context) .. " tuvo errores", report.failed)
+        end
+    end
+
+    local function shaderClearCustomOverrides()
+        ShaderCustomOverrides = {}
+        ShaderCustomActiveSlider = nil
+    end
+
+    local function shaderSerializableOverrides()
+        local result = {}
+        for id, value in pairs(ShaderCustomOverrides) do
+            if type(id) == "string" and (type(value) == "number" or type(value) == "boolean") then
+                result[id] = value
+            end
+        end
+        return result
+    end
+
+    local function shaderCapturePersistence()
+        return {
+            version = 1,
+            demoEnabled = ShaderDemoEnabled == true,
+            preset = ShaderDemoPreset,
+            custom = shaderSerializableOverrides(),
+            customMode = next(ShaderCustomOverrides) ~= nil,
+            quality = ShaderSceneQuality,
+            overdrive = {
+                wetReflections = ShaderReflections.Enabled == true,
+                reflectionIntensity = ShaderReflections.Intensity,
+                wetness = ShaderReflections.Wetness,
+                surfaceMode = ShaderReflections.SurfaceMode,
+                sceneCoverage = ShaderReflections.SceneCoverage == true,
+                skyMirror = ShaderReflections.SkyMirrorEnabled == true,
+                stripTextures = ShaderReflections.StripTextures == true,
+                objectMirror = ShaderReflections.ObjectMirrorEnabled == true,
+                contact = ShaderReflections.ContactEnabled == true,
+                contactStrength = ShaderReflections.ContactStrength,
+                modelDetail = ShaderReflections.ModelDetailEnabled == true,
+                characterSpecular = ShaderReflections.CharacterSpecularEnabled == true,
+                excludeLocalAvatar = ShaderReflections.ExcludeLocalAvatar == true,
+                modelShadows = ShaderReflections.ShadowEnabled == true,
+                shadowStrength = ShaderReflections.ShadowStrength,
+                sunHue = ShaderSolarTone.Hue,
+                sunSaturation = ShaderSolarTone.Saturation,
+                sunStrength = ShaderSolarTone.Strength,
+                rain = ShaderRain.Enabled == true,
+                rainIntensity = ShaderRain.Intensity,
+                rainAudio = ShaderRain.SoundEnabled == true,
+                rainAudioVolume = ShaderRain.SoundVolume,
+                rainShelter = ShaderRain.RespectShelter == true,
+                storm = ShaderRain.StormEnabled == true,
+            },
+        }
+    end
+
+    shaderQueuePersistence = function()
+        if type(writefile) ~= "function" then return end
+        ShaderPersistenceToken = ShaderPersistenceToken + 1
+        local token = ShaderPersistenceToken
+        task.delay(0.35, function()
+            if token ~= ShaderPersistenceToken then return end
+            pcall(function()
+                game:GetService("HttpService"):JSONEncode(shaderCapturePersistence())
+            end)
+            pcall(function()
+                writefile(ShaderPersistenceFile, game:GetService("HttpService"):JSONEncode(shaderCapturePersistence()))
+            end)
+        end)
+    end
+
+    local function shaderLoadPersistence()
+        if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
+        local ok, state = pcall(function()
+            if not isfile(ShaderPersistenceFile) then return nil end
+            return game:GetService("HttpService"):JSONDecode(readfile(ShaderPersistenceFile))
+        end)
+        if ok and type(state) == "table" and state.version == 1 then return state end
+        return nil
+    end
+
+    local function shaderSyncImmersivePreset(name)
+        ShaderReflections.OilSheen = false
+        local mirrorPreset = name == "OilWet" or name == "NeonNight"
+        local rainPreset = ShaderRain.SkyPresets[name] == true
+        if not mirrorPreset then
+            if ShaderReflections.ObjectMirrorEnabled then ShaderReflections:SetObjectMirrorEnabled(false) end
+            if ShaderReflections.StripTextures then ShaderReflections:SetStripTexturesEnabled(false) end
+            if ShaderReflections.SkyMirrorEnabled then ShaderReflections:SetSkyMirrorEnabled(false) end
+        end
+        -- la cámara de cinta solo vive en "Nivel 0"
+        ShaderFootage:SetEnabled(name == "Level0")
+        -- la silueta negra solo vive en depthstyle (antes quedaba prendida al pasar a otro modo)
+        if name ~= "depthstyle" then ShaderSilhouette:SetEnabled(false) end
+        if name == "depthstyle" then
+            ShaderRain:Destroy()
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetContactEnabled(false)
+            ShaderReflections:SetShadowEnabled(false)
+            ShaderReflections:SetEnabled(false)
+            ShaderSilhouette:SetEnabled(true)
+        elseif rainPreset then
+            local heavy = name ~= "Rain"
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetWetness(name == "Monsoon" and 1 or 0.92)
+            ShaderReflections:SetIntensity(name == "Monsoon" and 0.42 or (heavy and 0.36 or 0.30))
+            ShaderReflections:SetEnabled(true)
+            ShaderReflections:SetContactEnabled(true)
+            ShaderReflections:SetShadowStrength(0.24)
+            ShaderReflections:SetShadowEnabled(true)
+            ShaderRain.StormGapMin, ShaderRain.StormGapMax = (name == "Monsoon" and 3 or 5), (name == "Monsoon" and 7 or 12)
+            ShaderRain:SetIntensity(name == "Monsoon" and 1 or (heavy and 0.95 or 0.72))
+            ShaderRain:SetEnabled(true)
+            ShaderRain:SetStormEnabled(heavy)
+        elseif name == "GoldenSpecular" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyGoldenFinish()
+        elseif name == "OilWet" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyOilFinish()
+        elseif name == "NeonNight" then
+            ShaderRain:Destroy()
+            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
+            ShaderReflections:ApplyMirrorFinish()
+        elseif name == "Photoreal" then
+            ShaderRain:Destroy()
+            ShaderReflections:SetCharacterSpecularEnabled(false)
+            ShaderReflections:SetSurfaceMode("Floors")
+            ShaderReflections:SetSceneCoverage(true)
+            ShaderReflections:SetIntensity(0.12)
+            ShaderReflections:SetWetness(0.5)
+            ShaderReflections:SetEnabled(true)
+            ShaderReflections:SetContactEnabled(true)
             ShaderReflections:SetShadowStrength(0.36)
             ShaderReflections:SetShadowEnabled(true)
         else
@@ -17,7 +218,9 @@ tEnabled(true)
 
     local function shaderRestoreAll(options)
         shaderRestoreImmersive()
-        local report = ShaderManager:Restore(options or {})
+        -- destroyCreated: lo que creó el sistema (Blur, DepthOfField, Atmosphere...) se borra. Si quedaba, volvía
+        -- a los valores con los que Roblox lo crea (Blur Size 24) y la pantalla quedaba toda borrosa.
+        local report = ShaderManager:Restore(options or {destroyCreated = true})
         if report and report.ok then
             shaderClearCustomOverrides()
             shaderQueuePersistence()
@@ -849,159 +1052,4 @@ tEnabled(true)
         local defaultTick = mk("Frame", {
             Parent = bar,
             Size = UDim2.fromOffset(2, 14),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(defaultPercent, 0, 0.5, 0),
-            BackgroundColor3 = Theme.TextDim,
-            BackgroundTransparency = 0.3,
-            BorderSizePixel = 0,
-            ZIndex = 315,
-        })
-        defaultTick:SetAttribute("ThemeRole", "TextDim")
-
-        local thumb = mk("Frame", {
-            Parent = bar,
-            Size = UDim2.fromOffset(18, 18),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0, 0, 0.5, 0),
-            BackgroundColor3 = Color3.new(1, 1, 1),
-            BorderSizePixel = 0,
-            ZIndex = 316,
-        })
-        corner(thumb, 99)
-        local thumbRing = stroke(thumb, Theme.Accent, 3, 0)
-        thumbRing:SetAttribute("ThemeRole", "Accent")
-
-        local minLabel = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(0, 60, 0, 12),
-            Position = UDim2.new(0, 14, 1, -18),
-            BackgroundTransparency = 1,
-            Text = shaderFormatValue(spec.min),
-            TextColor3 = Theme.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 9,
-            TextXAlignment = Enum.TextXAlignment.Left,
-            ZIndex = 314,
-        })
-        minLabel:SetAttribute("ThemeTextRole", "TextDim")
-
-        local maxLabel = mk("TextLabel", {
-            Parent = holder,
-            Size = UDim2.new(0, 60, 0, 12),
-            Position = UDim2.new(1, -74, 1, -18),
-            BackgroundTransparency = 1,
-            Text = shaderFormatValue(spec.max),
-            TextColor3 = Theme.TextDim,
-            Font = Enum.Font.GothamMedium,
-            TextSize = 9,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 314,
-        })
-        maxLabel:SetAttribute("ThemeTextRole", "TextDim")
-
-        local dragging = false
-
-        local function setValue(newValue, invoke)
-            local range = spec.max - spec.min
-            if spec.step and spec.step > 0 then
-                newValue = math.floor((newValue / spec.step) + 0.5) * spec.step
-            end
-            value = math.clamp(newValue, spec.min, spec.max)
-            local percent = range == 0 and 0 or math.clamp((value - spec.min) / range, 0, 1)
-            fill.Size = UDim2.new(percent, 0, 1, 0)
-            thumb.Position = UDim2.new(percent, 0, 0.5, 0)
-            valueLabel.Text = shaderFormatValue(value)
-            if invoke then
-                ShaderCustomOverrides[spec.id] = value
-                if type(spec.onChange) == "function" then
-                    pcall(spec.onChange, value)
-                else
-                    shaderApplySingle(spec.target, spec.property, value)
-                end
-                shaderQueuePersistence()
-            end
-        end
-
-        local function setFromInput(input)
-            local width = math.max(1, bar.AbsoluteSize.X)
-            local percent = math.clamp((input.Position.X - bar.AbsolutePosition.X) / width, 0, 1)
-            setValue(spec.min + (spec.max - spec.min) * percent, true)
-        end
-
-        local function beginDrag(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                if ShaderCustomActiveSlider and ShaderCustomActiveSlider ~= spec.id then return end
-                ShaderCustomActiveSlider = spec.id
-                dragging = true
-                thumb.Size = UDim2.fromOffset(22, 22)
-                setFromInput(input)
-            end
-        end
-
-        shaderAddConnection(bar.InputBegan:Connect(beginDrag))
-        shaderAddConnection(thumb.InputBegan:Connect(beginDrag))
-        shaderAddConnection(UserInputService.InputChanged:Connect(function(input)
-            if dragging and ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseMovement or input.UserInputType == Enum.UserInputType.Touch) then
-                setFromInput(input)
-            end
-        end))
-        shaderAddConnection(UserInputService.InputEnded:Connect(function(input)
-            if ShaderCustomActiveSlider == spec.id and (input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch) then
-                dragging = false
-                ShaderCustomActiveSlider = nil
-                thumb.Size = UDim2.fromOffset(18, 18)
-            end
-        end))
-        resetButton.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.4)
-            setValue(spec.default, true)
-        end)
-
-        setValue(value, false)
-
-        ShaderCustomControls[spec.id] = {
-            refresh = function()
-                local refreshed = shaderReadCustomValue(spec, value, "number")
-                setValue(refreshed, false)
-            end,
-            set = function(newValue)
-                setValue(newValue, false)
-            end,
-        }
-    end
-
-    local function shaderCustomSpecs()
-        return {
-            {section = {"Lighting", "Lighting", "Control global de luz, tiempo, sombras y exposición.", "Global light, time, shadows and exposure control."}},
-            {id = "ClockTime", es = "Hora del día", en = "Clock time", min = 0, max = 24, default = 12, step = 0.05, target = "Lighting", property = "ClockTime"},
-            {id = "Brightness", es = "Brillo global", en = "Global brightness", min = 0, max = 10, default = 2, step = 0.05, target = "Lighting", property = "Brightness"},
-            {id = "GeographicLatitude", es = "Latitud geográfica", en = "Geographic latitude", min = 0, max = 180, default = 35, step = 1, target = "Lighting", property = "GeographicLatitude"},
-            {id = "ExposureCompensation", es = "Compensación de exposición", en = "Exposure compensation", min = -5, max = 5, default = 0, step = 0.05, target = "Lighting", property = "ExposureCompensation"},
-            {id = "EnvironmentDiffuseScale", es = "Difusión ambiental", en = "Environment diffuse", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentDiffuseScale"},
-            {id = "EnvironmentSpecularScale", es = "Reflejo ambiental", en = "Environment specular", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "EnvironmentSpecularScale"},
-            {id = "ShadowSoftness", es = "Suavidad de sombras", en = "Shadow softness", min = 0, max = 1, default = 0.5, step = 0.01, target = "Lighting", property = "ShadowSoftness"},
-            {id = "FogStart", es = "Inicio de niebla", en = "Fog start", min = 0, max = 1000, default = 0, step = 1, target = "Lighting", property = "FogStart"},
-            {id = "FogEnd", es = "Final de niebla", en = "Fog end", min = 1, max = 10000, default = 1000, step = 1, target = "Lighting", property = "FogEnd"},
-            {id = "GlobalShadows", es = "Sombras globales", en = "Global shadows", default = true, target = "Lighting", property = "GlobalShadows", toggle = true},
-
-            {section = {"Atmosphere", "Atmosphere", "Neblina, profundidad y dispersión de luz.", "Haze, depth and light scattering."}},
-            {id = "AtmosphereDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.2, step = 0.01, target = "Atmosphere", property = "Density"},
-            {id = "AtmosphereOffset", es = "Offset", en = "Offset", min = 0, max = 1, default = 0.1, step = 0.01, target = "Atmosphere", property = "Offset"},
-            {id = "AtmosphereGlare", es = "Brillo atmosférico", en = "Glare", min = 0, max = 10, default = 0.2, step = 0.01, target = "Atmosphere", property = "Glare"},
-            {id = "AtmosphereHaze", es = "Neblina", en = "Haze", min = 0, max = 10, default = 0.7, step = 0.01, target = "Atmosphere", property = "Haze"},
-
-            {section = {"Clouds", "Clouds", "Cantidad, densidad y presencia visual de las nubes.", "Cloud cover, density and visual presence."}},
-            {id = "CloudsCover", es = "Cobertura", en = "Cover", min = 0, max = 1, default = 0.25, step = 0.01, target = "Clouds", property = "Cover"},
-            {id = "CloudsDensity", es = "Densidad", en = "Density", min = 0, max = 1, default = 0.18, step = 0.01, target = "Clouds", property = "Density"},
-
-            {section = {"ColorCorrection", "ColorCorrection", "Ajuste fino del tono cinematográfico.", "Fine cinematic tone control."}},
-            {id = "ColorBrightness", es = "Brillo de color", en = "Color brightness", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Brightness"},
-            {id = "ColorContrast", es = "Contraste", en = "Contrast", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Contrast"},
-            {id = "ColorSaturation", es = "Saturación", en = "Saturation", min = -1, max = 1, default = 0, step = 0.01, target = "ColorCorrectionEffect", property = "Saturation"},
-            {id = "ColorCorrectionEnabled", es = "ColorCorrection activo", en = "ColorCorrection enabled", default = true, target = "ColorCorrectionEffect", property = "Enabled", toggle = true},
-
-            {section = {"Bloom y Blur", "Bloom and Blur", "Resplandor y desenfoque global.", "Glow and global blur."}},
-            {id = "BloomIntensity", es = "Intensidad Bloom", en = "Bloom intensity", min = 0, max = 4, default = 0.1, step = 0.01, target = "BloomEffect", property = "Intensity"},
-            {id = "BloomSize", es = "Tamaño Bloom", en = "Bloom size", min = 0, max = 56, default = 18, step = 1, target = "BloomEffect", property = "Size"},
-            {id = "BloomThreshold", es = "Umbral Bloom", en = "Bloom threshold", min = 0, max = 4, default = 1.2, step = 0.01, target = "BloomEffect", property = "Threshold"},
-            {id = "BloomEnabled", es = "Bloom activo", en = "Bloom enabled", de
+            AnchorPoin

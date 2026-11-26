@@ -1,4 +1,229 @@
-Random:NextNumber() * math.pi * 2
+Color = nil
+    end
+
+    function ShaderSilhouette:SetEnabled(enabled)
+        enabled = enabled == true
+        if self.Enabled == enabled then
+            if enabled then self:_scan() end
+            return
+        end
+
+        self.Enabled = enabled
+        if self.Connection then
+            self.Connection:Disconnect()
+            self.Connection = nil
+        end
+
+        if not enabled then
+            self:_restore()
+            return
+        end
+
+        self:_scan()
+        self.Connection = workspace.DescendantAdded:Connect(function(instance)
+            if self.Enabled and (instance:IsA("BasePart") or instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic")) then
+                task.defer(function()
+                    if not self.Enabled then return end
+                    if instance:IsA("BasePart") then
+                        self:_applyPart(instance)
+                    else
+                        self:_applyClothing(instance)
+                    end
+                end)
+            end
+        end)
+    end
+
+    function ShaderSilhouette:Destroy()
+        self.Enabled = false
+        if self.Connection then
+            self.Connection:Disconnect()
+            self.Connection = nil
+        end
+        self:_restore()
+    end
+
+    local ShaderRain = {
+        Enabled = false,
+        StormEnabled = false,
+        Intensity = 0.72,
+        Rig = nil,
+        Emitter = nil,
+        Drops = {},
+        Random = Random.new(),
+        Sound = nil,
+        SoundEnabled = true,
+        SoundVolume = 0.34,
+        RespectShelter = false,
+        FollowConnection = nil,
+        StormToken = 0,
+        Splashes = {},
+        SplashCursor = 1,
+        SplashSpawned = 0,
+        ResetBudget = 0,
+        Clock = 0,
+        DropColor = nil,
+        ColorElapsed = 1,
+        SkySnapshot = nil,
+        SkyPresets = {Rain = true, Stormfront = true, Monsoon = true},
+        FlashToken = 0,
+        FlashBase = nil,
+        BoltFolder = nil,
+        ThunderSoundId = nil,
+        -- truenos reales (IDs de Nick): corto 6 s para relámpagos entre nubes, largo 9 s para rayos visibles
+        ThunderSounds = {
+            {id = "rbxassetid://139319051979882", length = 6},
+            {id = "rbxassetid://136909414800877", length = 9},
+        },
+        StormGapMin = 5,
+        StormGapMax = 12,
+    }
+
+    function ShaderRain:_destroyRig()
+        if self.FollowConnection then self.FollowConnection:Disconnect(); self.FollowConnection = nil end
+        if self.Sound then pcall(function() self.Sound:Stop() end) end
+        if self.Rig and self.Rig.Parent then pcall(function() self.Rig:Destroy() end) end
+        self.Rig, self.Emitter, self.Drops = nil, nil, {}
+        self.Splashes, self.SplashCursor = {}, 1
+    end
+
+    function ShaderRain:_syncVisuals()
+        if self.Emitter then self.Emitter.Rate = math.floor(shaderQualityProfile().rainRate * self.Intensity) end
+        if self.Sound then self.Sound.Volume = self.SoundVolume * self.Intensity end
+    end
+
+    function ShaderRain:_ensureSound()
+        if self.Sound and self.Sound.Parent then return self.Sound end
+        local existing = SoundService:FindFirstChild("YinYangShader_RainLoop")
+        if existing and existing:IsA("Sound") then
+            self.Sound = existing
+            return existing
+        end
+        local sound = Instance.new("Sound")
+        sound.Name = "YinYangShader_RainLoop"
+        sound.SoundId = "rbxassetid://107459242972988"
+        sound.Looped, sound.Volume = true, self.SoundVolume * self.Intensity
+        sound.Parent = SoundService
+        self.Sound = sound
+        return sound
+    end
+
+    function ShaderRain:_dropTargetCount()
+        local profile = shaderQualityProfile()
+        return math.clamp(math.floor(profile.rainDrops * (0.35 + 0.65 * self.Intensity)), 12, 220)
+    end
+
+    function ShaderRain:_center(root)
+        local camera = workspace.CurrentCamera
+        if camera then
+            local look = camera.CFrame.LookVector
+            return camera.CFrame.Position + Vector3.new(look.X, 0, look.Z) * 8
+        end
+        return root.Position
+    end
+
+    -- Color de las gotas según la luz del momento (de noche casi no se ven, como en la vida real)
+    function ShaderRain:_refreshDropColor()
+        local lighting = ShaderLightingService
+        local ambient = lighting.OutdoorAmbient
+        local fog = lighting.FogColor
+        local base = ambient:Lerp(fog, 0.35):Lerp(Color3.fromRGB(226, 234, 246), 0.55)
+        local brightness = math.clamp(lighting.Brightness / 2.4, 0.35, 1)
+        self.DropColor = base:Lerp(Color3.new(0, 0, 0), (1 - brightness) * 0.45)
+    end
+
+    function ShaderRain:_resetDrop(drop, center, character, initial)
+        local radius = shaderQualityProfile().rainRadius
+        local angle = self.Random:NextNumber() * math.pi * 2
+        local distance = math.sqrt(self.Random:NextNumber()) * radius
+        local x = center.X + math.cos(angle) * distance
+        local z = center.Z + math.sin(angle) * distance
+        local top = center.Y + 34
+        local filter = {}
+        if self.Rig then table.insert(filter, self.Rig) end
+        if character then table.insert(filter, character) end
+        local params = RaycastParams.new()
+        params.FilterType = Enum.RaycastFilterType.Exclude
+        params.FilterDescendantsInstances = filter
+        params.IgnoreWater = false
+        local hit = workspace:Raycast(Vector3.new(x, top, z), Vector3.new(0, -120, 0), params)
+        local ground = hit and hit.Position.Y or (center.Y - 20)
+        local startY = top - self.Random:NextNumber(0, 4)
+        if initial then startY = self.Random:NextNumber(math.min(ground + 1, top - 1), top) end
+        drop.ground = ground
+        drop.landed = hit ~= nil
+        drop.position = Vector3.new(x, startY, z)
+        drop.speed = self.Random:NextNumber(92, 124)
+        -- gotas finas y largas (estela de movimiento real); las cercanas a la cámara un poco más gruesas
+        local near = 1 - math.clamp(distance / math.max(radius, 1), 0, 1)
+        local width = self.Random:NextNumber(0.018, 0.032) + near * 0.018
+        drop.part.Size = Vector3.new(width, width, drop.speed * self.Random:NextNumber(0.022, 0.032))
+        drop.alpha = math.clamp(self.Random:NextNumber(0.42, 0.66) + (1 - near) * 0.16 - (self.Intensity - 0.6) * 0.12, 0.34, 0.86)
+        local tone = self.DropColor or Color3.fromRGB(205, 216, 232)
+        drop.part.Color = tone:Lerp(Color3.fromRGB(240, 246, 255), self.Random:NextNumber(0, 0.35))
+        drop.active = true
+    end
+
+    function ShaderRain:_ensureDrops(center, character)
+        local target = self:_dropTargetCount()
+        local created = 0
+        while #self.Drops < target and created < 40 do
+            local part = Instance.new("Part")
+            part.Name = "YinYangShader_RainDrop"
+            part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+            -- vidrio: la gota refracta y refleja la luz en vez de brillar como neón
+            part.Material = Enum.Material.Glass
+            part.Reflectance = 0.18
+            part.Transparency = 1
+            part.Parent = self.Rig
+            local drop = {part = part, active = false, position = center, ground = center.Y, landed = false, speed = 96, alpha = 0.7}
+            table.insert(self.Drops, drop)
+            self:_resetDrop(drop, center, character, true)
+            created = created + 1
+        end
+        while #self.Drops > target do
+            local drop = table.remove(self.Drops)
+            if drop and drop.part and drop.part.Parent then drop.part:Destroy() end
+        end
+    end
+
+    function ShaderRain._splashPart(name, shape, parent)
+        local part = Instance.new("Part")
+        part.Name = name
+        part.Shape = shape
+        part.Anchored, part.CanCollide, part.CanQuery, part.CanTouch, part.CastShadow = true, false, false, false, false
+        part.Material = Enum.Material.Glass
+        part.Reflectance = 0.2
+        part.Color = Color3.fromRGB(222, 232, 246)
+        part.Transparency = 1
+        part.Parent = parent
+        return part
+    end
+
+    -- Salpicadura: anillo que se abre en el piso + dos gotitas que rebotan (corona)
+    function ShaderRain:_spawnSplash(position, center)
+        local limit = shaderQualityProfile().rainSplashes
+        if self.SplashSpawned >= 4 or not self.Rig then return end
+        if (position - center).Magnitude > 38 then return end
+        self.SplashSpawned = self.SplashSpawned + 1
+        local index = self.SplashCursor
+        self.SplashCursor = index % limit + 1
+        local splash = self.Splashes[index]
+        if not splash or not splash.part.Parent then
+            local ring = ShaderRain._splashPart("YinYangShader_RainSplash", Enum.PartType.Cylinder, self.Rig)
+            local bits = {}
+            for bit = 1, 2 do
+                bits[bit] = {part = ShaderRain._splashPart("YinYangShader_RainBit", Enum.PartType.Ball, self.Rig), velocity = Vector3.new(0, 0, 0), position = position}
+            end
+            splash = {part = ring, bits = bits, age = 1, life = 0.3, size = 1, position = position}
+            self.Splashes[index] = splash
+        end
+        splash.age = 0
+        splash.life = self.Random:NextNumber(0.24, 0.38)
+        splash.size = self.Random:NextNumber(0.6, 1.3)
+        splash.position = position + Vector3.new(0, 0.03, 0)
+        for _, bit in ipairs(splash.bits or {}) do
+            local angle = self.Random:NextNumber() * math.pi * 2
             local spread = self.Random:NextNumber(2.2, 4.2)
             bit.position = splash.position
             bit.velocity = Vector3.new(math.cos(angle) * spread, self.Random:NextNumber(5.5, 9), math.sin(angle) * spread)
@@ -690,205 +915,4 @@ Random:NextNumber() * math.pi * 2
     function ShaderFootage:SetEnabled(enabled)
         enabled = enabled == true
         if enabled == self.Enabled then return end
-        self.Enabled = enabled
-        local camera = workspace.CurrentCamera
-        if enabled then
-            if camera then self.SavedFov = camera.FieldOfView end
-            -- base propia (la del preset): así la auto-exposición no se "acumula" con otros ajustes
-            local preset = ShaderManager.Presets.Level0
-            self.BaseExposure = preset and preset.Lighting and preset.Lighting.ExposureCompensation or 0.25
-            self.LastLook, self.Blur, self.Acc, self.GlitchT = nil, self.BaseBlur, 0, nil
-            self.NextGlitch = os.clock() + 4
-            self.Gui = self:_buildGui()
-            self:_muteAll()
-            self:_startAmbient()
-            self.Connection = RunService.RenderStepped:Connect(function(delta)
-                local ok = pcall(self._step, self, delta)
-                if not ok then return end
-            end)
-            return
-        end
-        if self.Connection then self.Connection:Disconnect(); self.Connection = nil end
-        self:_unmuteAll()
-        self:_stopAmbient()
-        if self.Gui then pcall(function() self.Gui:Destroy() end) end
-        self.Gui, self.Lines, self.Flicker, self.Band, self.Grain = nil, nil, nil, nil, {}
-        if camera and self.SavedFov then pcall(function() camera.FieldOfView = self.SavedFov end) end
-        self.SavedFov = nil
-        -- la exposición no se toca acá: la pone el modo siguiente (o "Restaurar original")
-    end
-
-    local shaderQueuePersistence = function() end
-
-    local function shaderSetQuality(name)
-        if not ShaderQualityProfiles[name] then return false end
-        ShaderSceneQuality = name
-        if ShaderReflections.Enabled then ShaderReflections:Refresh() end
-        ShaderRain:_syncVisuals()
-        shaderQueuePersistence()
-        return true
-    end
-
-    local function shaderRestoreImmersive()
-        ShaderFootage:SetEnabled(false)
-        ShaderSilhouette:SetEnabled(false)
-        ShaderRain:Destroy()
-        ShaderReflections.Enabled = false
-        if ShaderReflections.Connection then ShaderReflections.Connection:Disconnect(); ShaderReflections.Connection = nil end
-        ShaderReflections:Restore()
-    end
-
-
-    local ShaderCustomWindow = nil
-    local ShaderCustomBackdrop = nil
-    local ShaderCustomRefresh = function() end
-    local ShaderCustomControls = {}
-    local ShaderCustomOverrides = {}
-    local ShaderCustomActiveSlider = nil
-    local ShaderUISections = {}
-    local ShaderDemoEnabled = true
-    local ShaderDemoPreset = "Morning"
-    local ShaderModeLabel = nil
-    local ShaderModeCards = {}
-    local ShaderCustomConnections = {}
-    local ShaderPersistenceFile = "YinYang_Shader_Autosave.json"
-    local ShaderPersistenceToken = 0
-    local ShaderSavedState = nil
-
-    local function shaderWarn(report, context)
-        if report and not report.ok then
-            warn("[YinYang Shaders] " .. tostring(context) .. " tuvo errores", report.failed)
-        end
-    end
-
-    local function shaderClearCustomOverrides()
-        ShaderCustomOverrides = {}
-        ShaderCustomActiveSlider = nil
-    end
-
-    local function shaderSerializableOverrides()
-        local result = {}
-        for id, value in pairs(ShaderCustomOverrides) do
-            if type(id) == "string" and (type(value) == "number" or type(value) == "boolean") then
-                result[id] = value
-            end
-        end
-        return result
-    end
-
-    local function shaderCapturePersistence()
-        return {
-            version = 1,
-            demoEnabled = ShaderDemoEnabled == true,
-            preset = ShaderDemoPreset,
-            custom = shaderSerializableOverrides(),
-            customMode = next(ShaderCustomOverrides) ~= nil,
-            quality = ShaderSceneQuality,
-            overdrive = {
-                wetReflections = ShaderReflections.Enabled == true,
-                reflectionIntensity = ShaderReflections.Intensity,
-                wetness = ShaderReflections.Wetness,
-                surfaceMode = ShaderReflections.SurfaceMode,
-                sceneCoverage = ShaderReflections.SceneCoverage == true,
-                skyMirror = ShaderReflections.SkyMirrorEnabled == true,
-                stripTextures = ShaderReflections.StripTextures == true,
-                objectMirror = ShaderReflections.ObjectMirrorEnabled == true,
-                contact = ShaderReflections.ContactEnabled == true,
-                contactStrength = ShaderReflections.ContactStrength,
-                modelDetail = ShaderReflections.ModelDetailEnabled == true,
-                characterSpecular = ShaderReflections.CharacterSpecularEnabled == true,
-                excludeLocalAvatar = ShaderReflections.ExcludeLocalAvatar == true,
-                modelShadows = ShaderReflections.ShadowEnabled == true,
-                shadowStrength = ShaderReflections.ShadowStrength,
-                sunHue = ShaderSolarTone.Hue,
-                sunSaturation = ShaderSolarTone.Saturation,
-                sunStrength = ShaderSolarTone.Strength,
-                rain = ShaderRain.Enabled == true,
-                rainIntensity = ShaderRain.Intensity,
-                rainAudio = ShaderRain.SoundEnabled == true,
-                rainAudioVolume = ShaderRain.SoundVolume,
-                rainShelter = ShaderRain.RespectShelter == true,
-                storm = ShaderRain.StormEnabled == true,
-            },
-        }
-    end
-
-    shaderQueuePersistence = function()
-        if type(writefile) ~= "function" then return end
-        ShaderPersistenceToken = ShaderPersistenceToken + 1
-        local token = ShaderPersistenceToken
-        task.delay(0.35, function()
-            if token ~= ShaderPersistenceToken then return end
-            pcall(function()
-                game:GetService("HttpService"):JSONEncode(shaderCapturePersistence())
-            end)
-            pcall(function()
-                writefile(ShaderPersistenceFile, game:GetService("HttpService"):JSONEncode(shaderCapturePersistence()))
-            end)
-        end)
-    end
-
-    local function shaderLoadPersistence()
-        if type(readfile) ~= "function" or type(isfile) ~= "function" then return nil end
-        local ok, state = pcall(function()
-            if not isfile(ShaderPersistenceFile) then return nil end
-            return game:GetService("HttpService"):JSONDecode(readfile(ShaderPersistenceFile))
-        end)
-        if ok and type(state) == "table" and state.version == 1 then return state end
-        return nil
-    end
-
-    local function shaderSyncImmersivePreset(name)
-        ShaderReflections.OilSheen = false
-        local mirrorPreset = name == "OilWet" or name == "NeonNight"
-        local rainPreset = ShaderRain.SkyPresets[name] == true
-        if not mirrorPreset then
-            if ShaderReflections.ObjectMirrorEnabled then ShaderReflections:SetObjectMirrorEnabled(false) end
-            if ShaderReflections.StripTextures then ShaderReflections:SetStripTexturesEnabled(false) end
-            if ShaderReflections.SkyMirrorEnabled then ShaderReflections:SetSkyMirrorEnabled(false) end
-        end
-        -- la cámara de cinta solo vive en "Nivel 0"
-        ShaderFootage:SetEnabled(name == "Level0")
-        -- la silueta negra solo vive en depthstyle (antes quedaba prendida al pasar a otro modo)
-        if name ~= "depthstyle" then ShaderSilhouette:SetEnabled(false) end
-        if name == "depthstyle" then
-            ShaderRain:Destroy()
-            ShaderReflections:SetCharacterSpecularEnabled(false)
-            ShaderReflections:SetContactEnabled(false)
-            ShaderReflections:SetShadowEnabled(false)
-            ShaderReflections:SetEnabled(false)
-            ShaderSilhouette:SetEnabled(true)
-        elseif rainPreset then
-            local heavy = name ~= "Rain"
-            ShaderReflections:SetCharacterSpecularEnabled(false)
-            ShaderReflections:SetWetness(name == "Monsoon" and 1 or 0.92)
-            ShaderReflections:SetIntensity(name == "Monsoon" and 0.42 or (heavy and 0.36 or 0.30))
-            ShaderReflections:SetEnabled(true)
-            ShaderReflections:SetContactEnabled(true)
-            ShaderReflections:SetShadowStrength(0.24)
-            ShaderReflections:SetShadowEnabled(true)
-            ShaderRain.StormGapMin, ShaderRain.StormGapMax = (name == "Monsoon" and 3 or 5), (name == "Monsoon" and 7 or 12)
-            ShaderRain:SetIntensity(name == "Monsoon" and 1 or (heavy and 0.95 or 0.72))
-            ShaderRain:SetEnabled(true)
-            ShaderRain:SetStormEnabled(heavy)
-        elseif name == "GoldenSpecular" then
-            ShaderRain:Destroy()
-            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
-            ShaderReflections:ApplyGoldenFinish()
-        elseif name == "OilWet" then
-            ShaderRain:Destroy()
-            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
-            ShaderReflections:ApplyOilFinish()
-        elseif name == "NeonNight" then
-            ShaderRain:Destroy()
-            if not PerfOpt.Flags.LiteShaders then shaderSetQuality("Cinematic") end
-            ShaderReflections:ApplyMirrorFinish()
-        elseif name == "Photoreal" then
-            ShaderRain:Destroy()
-            ShaderReflections:SetCharacterSpecularEnabled(false)
-            ShaderReflections:SetSurfaceMode("Floors")
-            ShaderReflections:SetSceneCoverage(true)
-            ShaderReflections:SetIntensity(0.12)
-            ShaderReflections:SetWetness(0.5)
-            ShaderReflections:SetEnabled(true)
-            ShaderReflections:SetContac
+ 

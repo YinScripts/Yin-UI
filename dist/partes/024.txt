@@ -649,6 +649,42 @@ and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "
         end
     end
 
+    -- Efectos de texto nuevos: cada uno es una función (tiempo -> color). Los usan SetTextEffect y las
+    -- muestras de la pestaña Efectos. Window._TEciclo pasa suave por una lista de colores (sin locales nuevos).
+    Window._TEciclo = function(colores, vel)
+        return function(t)
+            local n = #colores
+            local x = (t * vel) % n
+            local i = math.floor(x)
+            local f = x - i
+            f = f * f * (3 - 2 * f)
+            return colores[i + 1]:Lerp(colores[(i + 1) % n + 1], f)
+        end
+    end
+    Window._TextEffectExtra = {
+        Aurora = Window._TEciclo({Color3.fromRGB(60, 255, 170), Color3.fromRGB(40, 200, 255), Color3.fromRGB(170, 90, 255), Color3.fromRGB(80, 255, 220)}, 0.35),
+        Ocean = Window._TEciclo({Color3.fromRGB(20, 110, 220), Color3.fromRGB(60, 200, 255), Color3.fromRGB(200, 245, 255), Color3.fromRGB(40, 160, 240)}, 0.3),
+        CottonCandy = Window._TEciclo({Color3.fromRGB(255, 170, 220), Color3.fromRGB(255, 255, 255), Color3.fromRGB(150, 215, 255)}, 0.4),
+        Lava = Window._TEciclo({Color3.fromRGB(120, 10, 0), Color3.fromRGB(255, 60, 0), Color3.fromRGB(255, 170, 30), Color3.fromRGB(200, 30, 0)}, 0.55),
+        Galaxy = Window._TEciclo({Color3.fromRGB(110, 60, 255), Color3.fromRGB(40, 120, 255), Color3.fromRGB(255, 90, 200), Color3.fromRGB(200, 170, 255)}, 0.3),
+        Mint = Window._TEciclo({Color3.fromRGB(150, 255, 200), Color3.fromRGB(255, 255, 255), Color3.fromRGB(90, 230, 170)}, 0.35),
+        Vaporwave = Window._TEciclo({Color3.fromRGB(255, 110, 210), Color3.fromRGB(120, 240, 255), Color3.fromRGB(190, 130, 255)}, 0.45),
+        Sakura = Window._TEciclo({Color3.fromRGB(255, 190, 210), Color3.fromRGB(255, 120, 165), Color3.fromRGB(255, 240, 245)}, 0.3),
+        Toxic = Window._TEciclo({Color3.fromRGB(140, 255, 20), Color3.fromRGB(230, 255, 60), Color3.fromRGB(40, 220, 60)}, 0.8),
+        Christmas = Window._TEciclo({Color3.fromRGB(230, 40, 50), Color3.fromRGB(255, 255, 255), Color3.fromRGB(40, 190, 80), Color3.fromRGB(255, 255, 255)}, 0.6),
+        Chrome = Window._TEciclo({Color3.fromRGB(150, 155, 165), Color3.fromRGB(255, 255, 255), Color3.fromRGB(200, 205, 215), Color3.fromRGB(110, 115, 125)}, 0.7),
+        Electric = function(t)
+            local base = Color3.fromRGB(40, 130, 255):Lerp(Color3.fromRGB(120, 220, 255), (math.sin(t * 4) + 1) / 2)
+            if math.sin(t * 23) * math.sin(t * 7.3) > 0.82 then return Color3.new(1, 1, 1) end
+            return base
+        end,
+        Heartbeat = function(t)
+            local p = t % 1.1
+            local v = math.exp(-((p - 0.1) / 0.06) ^ 2) + 0.7 * math.exp(-((p - 0.32) / 0.07) ^ 2)
+            return Color3.fromRGB(110, 0, 20):Lerp(Color3.fromRGB(255, 70, 110), math.clamp(v, 0, 1))
+        end,
+    }
+
     function Window:SetTextEffect(mode)
         stopTextEffect()
         Window.CurrentTextEffect = mode
@@ -919,6 +955,13 @@ and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "
                 applyTextColorToAll(color)
             end))
 
+        elseif Window._TextEffectExtra[mode] then
+            local fn = Window._TextEffectExtra[mode]
+            textEffectConnection = track(RunService.Heartbeat:Connect(function(dt)
+                elapsed = elapsed + dt
+                applyTextColorToAll(fn(elapsed))
+            end))
+
         else
             warn("Efecto de texto no reconocido: " .. tostring(mode))
         end
@@ -975,70 +1018,4 @@ and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "
             err = Color3.fromRGB(240, 85, 85),
         }
 
-        local function openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
-            local Backdrop = mk("TextButton", {
-                Parent = Window.ScreenGui,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-                BackgroundTransparency = 1,
-                BorderSizePixel = 0,
-                Active = true,
-                AutoButtonColor = false,
-                Text = "",
-                ZIndex = 500,
-            })
-            local Panel = mk("Frame", {
-                Parent = Window.ScreenGui,
-                Size = UDim2.new(0.92, 0, 0.9, 0),
-                Position = UDim2.fromScale(0.5, 0.5),
-                AnchorPoint = Vector2.new(0.5, 0.5),
-                BackgroundColor3 = Theme.Background,
-                BackgroundTransparency = 0.04,
-                BorderSizePixel = 0,
-                ClipsDescendants = false,
-                ZIndex = 501,
-            })
-            Panel:SetAttribute("ThemeRole", "Background")
-            corner(Panel, 18)
-            mk("UISizeConstraint", {
-                Parent = Panel,
-                MinSize = Vector2.new(260, 220),
-                MaxSize = Vector2.new(maxW, maxH),
-            })
-            local PanelScale = mk("UIScale", {Parent = Panel, Scale = 0.9})
-
-            -- Borde con luz que gira (un solo tween nativo)
-            local ring = mk("UIStroke", {Parent = Panel, Thickness = 1.6, Color = Color3.new(1, 1, 1), Transparency = 0.05})
-            local ringGrad = mk("UIGradient", {Parent = ring, Rotation = 0})
-            do
-                local base = Theme.Stroke
-                local h, s, v = Color3.toHSV(Theme.Accent)
-                local light = Color3.fromHSV(h, math.max(0, s - 0.3), math.min(1, v + 0.25))
-                ringGrad.Color = ColorSequence.new({
-                    ColorSequenceKeypoint.new(0, base), ColorSequenceKeypoint.new(0.35, base),
-                    ColorSequenceKeypoint.new(0.47, Theme.Accent), ColorSequenceKeypoint.new(0.5, light),
-                    ColorSequenceKeypoint.new(0.53, Theme.Accent), ColorSequenceKeypoint.new(0.65, base),
-                    ColorSequenceKeypoint.new(1, base),
-                })
-            end
-            local ringSpin = TweenService:Create(ringGrad, TweenInfo.new(5, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Rotation = 360})
-            ringSpin:Play()
-
-            -- Brillo superior suave
-            local glow = mk("Frame", {
-                Parent = Panel,
-                Size = UDim2.new(1, 0, 0, 90),
-                BackgroundColor3 = Theme.Accent,
-                BackgroundTransparency = 0.86,
-                BorderSizePixel = 0,
-                ZIndex = 501,
-            })
-            glow:SetAttribute("ThemeRole", "Accent")
-            corner(glow, 18)
-            mk("UIGradient", {
-                Parent = glow,
-                Rotation = 90,
-                Transparency = NumberSequence.new({NumberSequenceKeypoint.new(0, 0), NumberSequenceKeypoint.new(1, 1)}),
-            })
-
-         
+        local fun

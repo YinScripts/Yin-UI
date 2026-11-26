@@ -1,4 +1,196 @@
-TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+nd)
+        local tint = swatchRow(c, 10, "Teñir la imagen", "Tint the image", function() return lay.Color end, function(col)
+            lay.Color = col
+            thumb.ImageColor3 = col or WHITE
+        end, "Original", "Original")
+        tint.Refresh()
+        refreshMovement()
+        return c
+    end
+
+    local AddLayerBtn = button(Content, "+  Agregar capa", "+  Add layer", "Secondary", { Size = UDim2.new(1, -4, 0, 38), LayoutOrder = 8, TextSize = 12 })
+    AddLayerBtn.MouseButton1Click:Connect(function()
+        if #ED.rec.Layers >= 3 then return end
+        table.insert(ED.rec.Layers, blankLayer(""))
+        rebuildLayerCards()
+        changed()
+        task.defer(function()
+            Content.CanvasPosition = Vector2.new(0, math.max(0, AddLayerBtn.AbsolutePosition.Y - Content.AbsolutePosition.Y + Content.CanvasPosition.Y - 260))
+        end)
+    end)
+    rebuildLayerCards = function()
+        activeSlider = nil
+        for _, ch in ipairs(LayersHolder:GetChildren()) do
+            if ch:IsA("Frame") then ch:Destroy() end
+        end
+        for i = 1, #ED.rec.Layers do
+            layerCard(i)
+        end
+        AddLayerBtn.Visible = #ED.rec.Layers < 3
+    end
+
+    -- =====================================================================
+    -- 5) SONIDOS
+    -- =====================================================================
+    sectionTitle(Content, "SONIDOS (OPCIONAL)", "SOUNDS (OPTIONAL)", 9, "Al tocar el botón y uno de fondo mientras flota", "On tap, plus an ambient one while it floats")
+    local SoundCard = card(Content, 10)
+    pad(SoundCard, 10, 10, 10, 10)
+    list(SoundCard, 8)
+    local function soundInput(order, es, en, getId, setId, getVol)
+        local row = mk("Frame", { Parent = SoundCard, Size = UDim2.new(1, 0, 0, 52), BackgroundTransparency = 1, LayoutOrder = order, ZIndex = Z + 3 })
+        label(row, es, en, 11, Enum.Font.GothamBold, "Text", { Size = UDim2.new(1, 0, 0, 16), ZIndex = Z + 4 })
+        local box = mk("TextBox", {
+            Parent = row,
+            Size = UDim2.new(1, -84, 0, 30),
+            Position = UDim2.fromOffset(0, 20),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.2,
+            BorderSizePixel = 0,
+            Text = "",
+            PlaceholderColor3 = Theme.TextDim,
+            TextColor3 = Theme.Text,
+            TextSize = 11,
+            Font = Enum.Font.Code,
+            ClearTextOnFocus = false,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = Z + 4,
+        })
+        box:SetAttribute("ThemeRole", "Background")
+        box:SetAttribute("ThemeTextRole", "Text")
+        box:SetAttribute("PlaceholderSpanish", "ID del sonido (vacío = el de siempre)")
+        box:SetAttribute("PlaceholderEnglish", "Sound ID (empty = default)")
+        box.PlaceholderText = GetText("ID del sonido (vacío = el de siempre)", "Sound ID (empty = default)")
+        corner(box, 9)
+        pad(box, 0, 10, 10, 0)
+        local test = button(row, "Probar", "Test", "Accent", { Size = UDim2.fromOffset(76, 30), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, 0, 0, 20), TextSize = 11 })
+        box.FocusLost:Connect(function()
+            setId(CL.CleanAsset(box.Text))
+            box.Text = getId()
+        end)
+        test.MouseButton1Click:Connect(function()
+            local id = CL.CleanAsset(box.Text)
+            if id == "" then
+                playSound(Sounds.Click, 0.6)
+            else
+                playSound(id, getVol())
+            end
+        end)
+        return box
+    end
+    local clickBox = soundInput(1, "Sonido al tocar", "Tap sound", function() return ED.rec.ClickSound.Id end, function(v) ED.rec.ClickSound.Id = v end, function() return ED.rec.ClickSound.Volume end)
+    local clickVol = slider(SoundCard, 2, "Volumen al tocar", "Tap volume", { 0, 1, 0.05, 0.6, "" }, 0.6, function(v) ED.rec.ClickSound.Volume = v end)
+    local idleBox = soundInput(3, "Sonido de fondo (con la ventana cerrada)", "Ambient sound (window closed)", function() return ED.rec.IdleSound.Id end, function(v) ED.rec.IdleSound.Id = v end, function() return ED.rec.IdleSound.Volume end)
+    local idleEvery = slider(SoundCard, 4, "Cada cuántos segundos", "Every how many seconds", { 3, 120, 1, 15, "s" }, 15, function(v) ED.rec.IdleSound.Interval = v end)
+    local idleVol = slider(SoundCard, 5, "Volumen de fondo", "Ambient volume", { 0, 1, 0.05, 0.15, "" }, 0.15, function(v) ED.rec.IdleSound.Volume = v end)
+    refreshSoundCard = function()
+        clickBox.Text = ED.rec.ClickSound.Id or ""
+        clickVol.Set(ED.rec.ClickSound.Volume or 0.6, false)
+        idleBox.Text = ED.rec.IdleSound.Id or ""
+        idleEvery.Set(ED.rec.IdleSound.Interval or 15, false)
+        idleVol.Set(ED.rec.IdleSound.Volume or 0.15, false)
+    end
+
+    -- =====================================================================
+    -- 6) COMPARTIR
+    -- =====================================================================
+    sectionTitle(Content, "COMPARTIR", "SHARE", 11, "Pasale el código a un amigo y él lo pega acá", "Send the code to a friend and they paste it here")
+    local ShareCard = card(Content, 12)
+    pad(ShareCard, 10, 10, 10, 10)
+    list(ShareCard, 8)
+    local CodeBox = mk("TextBox", {
+        Parent = ShareCard,
+        Size = UDim2.new(1, 0, 0, 32),
+        BackgroundColor3 = Theme.Background,
+        BackgroundTransparency = 0.2,
+        BorderSizePixel = 0,
+        Text = "",
+        PlaceholderColor3 = Theme.TextDim,
+        TextColor3 = Theme.Text,
+        TextSize = 10,
+        Font = Enum.Font.Code,
+        ClearTextOnFocus = false,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        LayoutOrder = 1,
+        ZIndex = Z + 4,
+    })
+    CodeBox:SetAttribute("ThemeRole", "Background")
+    CodeBox:SetAttribute("ThemeTextRole", "Text")
+    CodeBox:SetAttribute("PlaceholderSpanish", "Pegá acá un código YYLOGO1:...")
+    CodeBox:SetAttribute("PlaceholderEnglish", "Paste a YYLOGO1:... code here")
+    CodeBox.PlaceholderText = GetText("Pegá acá un código YYLOGO1:...", "Paste a YYLOGO1:... code here")
+    corner(CodeBox, 9)
+    pad(CodeBox, 0, 10, 10, 0)
+    local shareRow = mk("Frame", { Parent = ShareCard, Size = UDim2.new(1, 0, 0, 32), BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = Z + 3 })
+    local CopyBtn = button(shareRow, "Copiar código", "Copy code", "Accent", { Size = UDim2.new(0.5, -4, 1, 0), TextSize = 11 })
+    local ImportBtn = button(shareRow, "Cargar código", "Load code", "Secondary", { Size = UDim2.new(0.5, -4, 1, 0), Position = UDim2.new(0.5, 4, 0, 0), TextSize = 11 })
+    CopyBtn.MouseButton1Click:Connect(function()
+        local saved = recToSaved(ED.rec, "share")
+        if not saved then
+            setStatus("Agregá al menos una imagen antes de copiar", "Add at least one image before copying", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        local code = CL.Export(saved)
+        CodeBox.Text = code
+        if type(setclipboard) == "function" then
+            pcall(setclipboard, code)
+            setStatus("Código copiado: pegalo en un chat para compartirlo", "Code copied: paste it in a chat to share it", Color3.fromRGB(80, 200, 120))
+        else
+            setStatus("Tu ejecutor no copia al portapapeles: el código quedó en el cuadro", "Your executor can't copy: the code is in the box", Theme.Accent)
+        end
+    end)
+    ImportBtn.MouseButton1Click:Connect(function()
+        local rec = CL.Import(CodeBox.Text)
+        if not rec then
+            setStatus("Ese código no es válido (tiene que empezar con YYLOGO1:)", "That code isn't valid (it must start with YYLOGO1:)", Color3.fromRGB(235, 90, 90))
+            return
+        end
+        loadRecIntoEditor(recFromIcon(CL.ToIcon(rec), rec.Name), false)
+        setStatus("Logo \"" .. rec.Name .. "\" cargado: tocá Crear logo para guardarlo", "Logo \"" .. rec.Name .. "\" loaded: tap Create logo to save it", Color3.fromRGB(80, 200, 120))
+    end)
+
+    -- =====================================================================
+    -- ABRIR / CERRAR / GUARDAR
+    -- =====================================================================
+    local function stopLoop()
+        if LS.loop then LS.loop:Disconnect() LS.loop = nil end
+    end
+    local function closeEditor()
+        stopLoop()
+        activeSlider = nil
+        if LS.realLive then setRealLive(false) end
+        setGhost(false)
+        TweenService:Create(PanelScale, TweenInfo.new(0.15, Enum.EasingStyle.Quad, Enum.EasingDirection.In), { Scale = 0.94 }):Play()
+        task.delay(0.15, function() Overlay.Visible = false end)
+    end
+
+    openEditor = function(id)
+        ED.editingId = id
+        local saved = id and CL.Logos[id]
+        if saved then
+            ED.rec = recFromIcon(CL.ToIcon(saved), saved.Name)
+        else
+            ED.rec = blankRec()
+        end
+        NameBox.Text = ED.rec.Name
+        L(Title, saved and "Editar logo" or "Estudio de Logos", saved and "Edit logo" or "Logo Studio")
+        L(SaveBtn, saved and "Guardar cambios" or "Crear logo", saved and "Save changes" or "Create logo")
+        L(Status, "", "")
+        rebuildLayerCards()
+        refreshBaseCard()
+        refreshSoundCard()
+        setBackdrop(LS.backdrop)
+        backdropChips.Set(LS.backdrop)
+        zoomChips.Set(LS.zoom)
+        applyZoom()
+        Hint.Visible, Hint.TextTransparency, Hint.BackgroundTransparency = true, 0, 0.45
+        Ghost.Visible, ghostOpen, Ghost.GroupTransparency = false, false, 1
+        PvButton.Position = UDim2.fromOffset(26, 52)
+        Content.CanvasPosition = Vector2.new(0, 0)
+        rebuildPreview()
+        Overlay.Visible = true
+        PanelScale.Scale = 0.94
+        TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
         stopLoop()
         -- la vista previa se anima solo mientras el editor está abierto
         LS.loop = RunService.RenderStepped:Connect(function(dt)
@@ -564,229 +756,4 @@ TweenService:Create(PanelScale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.
         c:SetAttribute("ThemeRole", "Secondary")
         corner(c, 14)
         local cStroke = stroke(c, Theme.Stroke, 1, 0.6)
-        local sc = mk("UIScale", { Parent = c, Scale = 1 })
-        local stage = mk("Frame", { Parent = c, Size = UDim2.fromOffset(58, 58), AnchorPoint = Vector2.new(0.5, 0), Position = UDim2.new(0.5, 0, 0, 8), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.25, BorderSizePixel = 0, ZIndex = 13 })
-        stage:SetAttribute("ThemeRole", "Background")
-        corner(stage, 999)
-        local ring = stroke(stage, Theme.Stroke, 2, 0.7)
-        composite(stage, icon, 54, 14)
-        local name = mk("TextLabel", { Parent = c, Size = UDim2.new(1, -10, 0, 16), Position = UDim2.fromOffset(5, 68), BackgroundTransparency = 1, Text = rec.Name, TextColor3 = Theme.Text, TextSize = 11, Font = Enum.Font.GothamBold, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 14 })
-        name:SetAttribute("ThemeTextRole", "Text")
-        local badge = mk("TextLabel", { Parent = c, Size = UDim2.fromOffset(20, 20), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -6, 0, 6), BackgroundColor3 = Theme.Accent, Text = "", Visible = false, ZIndex = 15 })
-        badge:SetAttribute("ThemeRole", "Accent")
-        corner(badge, 999)
-        RowKit.Icon(badge, 103456899356871, 12, 16, "AccentText")
-        local hit = mk("TextButton", { Parent = c, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, Text = "", ZIndex = 16 })
-        -- acciones: editar / borrar (borrar pide un segundo toque)
-        local edit = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0, 6, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
-        edit:SetAttribute("ThemeRole", "Background")
-        edit:SetAttribute("ThemeTextRole", "Text")
-        L(edit, "Editar", "Edit")
-        corner(edit, 999)
-        local del = mk("TextButton", { Parent = c, Size = UDim2.new(0.5, -9, 0, 20), Position = UDim2.new(0.5, 3, 1, -26), BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.2, TextColor3 = Theme.Text, TextSize = 9, Font = Enum.Font.GothamBold, ZIndex = 17 })
-        del:SetAttribute("ThemeRole", "Background")
-        del:SetAttribute("ThemeTextRole", "Text")
-        L(del, "Borrar", "Delete")
-        corner(del, 999)
-        local entry = { card = c, stroke = cStroke, ring = ring, badge = badge, name = name, key = key, custom = true }
-        LP.cards[#LP.cards + 1] = entry
-        LP.paint(entry, SavedConfig.SelectedLogoIcon == key, false)
-        hit.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            sc.Scale = 0.93
-            TweenService:Create(sc, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
-            SavedConfig.SelectedLogoIcon = key
-            SaveConfig()
-            ApplyLogoIcon(key)
-            for _, other in ipairs(LP.cards) do
-                LP.paint(other, other.key == key, true)
-            end
-            LP.setHero(key)
-        end)
-        edit.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.5)
-            guardedOpen(id)
-        end)
-        local armed = false
-        del.MouseButton1Click:Connect(function()
-            if not armed then
-                armed = true
-                L(del, "¿Seguro?", "Sure?")
-                del.BackgroundColor3 = Color3.fromRGB(200, 60, 70)
-                del.TextColor3 = WHITE
-                task.delay(3, function()
-                    if armed and del.Parent then
-                        armed = false
-                        L(del, "Borrar", "Delete")
-                        del.BackgroundColor3 = Theme.Background
-                        del.TextColor3 = Theme.Text
-                    end
-                end)
-                return
-            end
-            playSound(Sounds.Click, 0.5)
-            CL.Remove(id)
-            if SavedConfig.SelectedLogoIcon == key then
-                SavedConfig.SelectedLogoIcon = "ClassicYinYang"
-                SaveConfig()
-                ApplyLogoIcon("ClassicYinYang")
-                LP.setHero("ClassicYinYang")
-                for _, other in ipairs(LP.cards) do
-                    LP.paint(other, other.key == "ClassicYinYang", true)
-                end
-            end
-            LS.RefreshCards()
-        end)
-    end
-
-    function LS.RefreshCards()
-        for i = #LP.cards, 1, -1 do
-            if LP.cards[i].custom then
-                LP.cards[i].card:Destroy()
-                table.remove(LP.cards, i)
-            end
-        end
-        for i, id in ipairs(CL.Order) do
-            local rec = CL.Logos[id]
-            if rec and IconCatalog.Icons[CL.Key(id)] then
-                customCard(id, rec, i)
-            end
-        end
-        local n = #CL.Order
-        if n == 0 then
-            L(MineSub, "Creá tu propio botón flotante con tus imágenes", "Create your own floating button with your images")
-        else
-            L(MineSub, n .. " de " .. CL.Max .. " · tocá uno para usarlo", n .. " of " .. CL.Max .. " · tap one to use it")
-        end
-    end
-    LS.RefreshCards()
-    LP.studio = LS
-    PR.check()
-    end
-    BuildLogoStudio()
-
-    local firstIcon = nil
-    for i, name in ipairs(IconCatalog.Order or { "ClassicYinYang" }) do
-        local data = IconCatalog.Icons[name]
-        if data then
-            firstIcon = firstIcon or name
-            CreateIconCard(name, data, i)
-        end
-    end
-    LP.setHero(IconCatalog.Icons[SavedConfig.SelectedLogoIcon or ""] and SavedConfig.SelectedLogoIcon or firstIcon)
-    end
-    BuildLogoTab()
-
-    function Window:CreateClassicTab()
-    local TabClassic = Window:CreateTab("Classic", "Classic", "rbxassetid://99086270459218")
-    local ClassicPage = TabClassic.Page
-
-    ClassicPage.AutomaticCanvasSize = Enum.AutomaticSize.Y
-    ClassicPage.CanvasSize = UDim2.new(0, 0, 0, 0)
-    ClassicPage.ScrollBarThickness = 2
-    ClassicPage.ScrollingEnabled = true
-    ClassicPage.BackgroundTransparency = 1
-    ClassicPage:SetAttribute("ThemeRole", "Background")
-
-    local classicScripts = LoadClassicManifest()
-    local CL = {holders = {}}
-
-    CL.hero = mk("Frame", {
-        Parent = ClassicPage,
-        Size = UDim2.new(1, 0, 0, 92),
-        BackgroundColor3 = Theme.Secondary,
-        BackgroundTransparency = 0.35,
-        BorderSizePixel = 0,
-        ZIndex = 9,
-    })
-    CL.hero:SetAttribute("ThemeRole", "Secondary")
-    corner(CL.hero, 16)
-    stroke(CL.hero, Theme.Stroke, 1, 0.55)
-    CL.emblem = mk("Frame", {
-        Parent = CL.hero,
-        Size = UDim2.fromOffset(60, 60),
-        Position = UDim2.new(0, 14, 0.5, -30),
-        BackgroundColor3 = Theme.Accent,
-        BackgroundTransparency = 0.8,
-        BorderSizePixel = 0,
-        ZIndex = 10,
-    })
-    CL.emblem:SetAttribute("ThemeRole", "Accent")
-    corner(CL.emblem, 18)
-    local emblemRing = stroke(CL.emblem, Theme.Accent, 1.5, 0.3)
-    emblemRing:SetAttribute("ThemeRole", "Accent")
-    mk("ImageLabel", {
-        Parent = CL.emblem,
-        Size = UDim2.fromOffset(38, 38),
-        Position = UDim2.new(0.5, -19, 0.5, -19),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://99086270459218",
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 11,
-    })
-    CL.title = mk("TextLabel", {
-        Parent = CL.hero,
-        Size = UDim2.new(1, -100, 0, 24),
-        Position = UDim2.new(0, 88, 0, 14),
-        BackgroundTransparency = 1,
-        Text = "Classic",
-        TextColor3 = Theme.Text,
-        Font = Enum.Font.GothamBlack,
-        TextSize = 20,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 10,
-    })
-    CL.title:SetAttribute("ThemeTextRole", "Text")
-    CL.sub = mk("TextLabel", {
-        Parent = CL.hero,
-        Size = UDim2.new(1, -100, 0, 14),
-        Position = UDim2.new(0, 88, 0, 38),
-        BackgroundTransparency = 1,
-        Text = GetText("Scripts clásicos de Yin Yang · tocá uno para cargarlo", "Classic Yin Yang scripts · tap one to load it"),
-        TextColor3 = Theme.TextDim,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 10,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 10,
-    })
-    CL.sub:SetAttribute("ThemeTextRole", "TextDim")
-    CL.sub:SetAttribute("TextSpanish", "Scripts clásicos de Yin Yang · tocá uno para cargarlo")
-    CL.sub:SetAttribute("TextEnglish", "Classic Yin Yang scripts · tap one to load it")
-    CL.chips = mk("Frame", {
-        Parent = CL.hero,
-        Size = UDim2.new(1, -100, 0, 20),
-        Position = UDim2.new(0, 88, 0, 58),
-        BackgroundTransparency = 1,
-        ZIndex = 10,
-    })
-    mk("UIListLayout", {Parent = CL.chips, FillDirection = Enum.FillDirection.Horizontal, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
-    function CL.chip(order, role)
-        local c = mk("TextLabel", {
-            Parent = CL.chips,
-            Size = UDim2.new(0, 0, 1, 0),
-            AutomaticSize = Enum.AutomaticSize.X,
-            BackgroundColor3 = Theme[role],
-            BackgroundTransparency = 0.8,
-            Text = "",
-            TextColor3 = Theme[role],
-            Font = Enum.Font.GothamBlack,
-            TextSize = 10,
-            LayoutOrder = order,
-            ZIndex = 11,
-        })
-        c:SetAttribute("ThemeRole", role)
-        c:SetAttribute("ThemeTextRole", role)
-        c:SetAttribute("IgnoreTextEffect", true)
-        corner(c, 999)
-        mk("UIPadding", {Parent = c, PaddingLeft = UDim.new(0, 9), PaddingRight = UDim.new(0, 9)})
-        return c
-    end
-    CL.countChip = CL.chip(1, "Accent")
-    CL.activeChip = CL.chip(2, "ToggleOn")
-
-    CL.searchHolder = mk("Frame", {
-        Parent = ClassicPage,
-        Size = UDim2.new(1, 0, 0, 34),
-        BackgroundColor3 = Theme.Secondary,
-        B
+        local sc = mk("UIScale", { Parent = c, Scal

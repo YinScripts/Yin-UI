@@ -453,7 +453,9 @@
 
     local function shaderRestoreAll(options)
         shaderRestoreImmersive()
-        local report = ShaderManager:Restore(options or {})
+        -- destroyCreated: lo que creó el sistema (Blur, DepthOfField, Atmosphere...) se borra. Si quedaba, volvía
+        -- a los valores con los que Roblox lo crea (Blur Size 24) y la pantalla quedaba toda borrosa.
+        local report = ShaderManager:Restore(options or {destroyCreated = true})
         if report and report.ok then
             shaderClearCustomOverrides()
             shaderQueuePersistence()
