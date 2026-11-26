@@ -502,12 +502,63 @@
     -- Reutilizan el catálogo real y el mismo estado de reproducción.
     do
         local N = {lastProgress = -1}
+        -- Botón "Catálogo" (rediseño): cápsula de vidrio con borde de luz que gira, brillo que la cruza,
+        -- ecualizador que baila mientras suena una canción y un pequeño rebote al tocarlo.
         N.openCatalog = mk("TextButton", {
-            Parent = NowPlayingCard, Size = UDim2.fromOffset(102, 27),
-            Position = UDim2.fromOffset(12, 7), BackgroundColor3 = Color3.fromRGB(24, 24, 27),
-            BackgroundTransparency = 0.22, BorderSizePixel = 0,
-            Text = GetText("♫  Catálogo", "♫  Catalog"), Font = Enum.Font.GothamBold,
-            TextColor3 = spotifyText, TextSize = 11, AutoButtonColor = false, ZIndex = 25,
+            Parent = NowPlayingCard, Size = UDim2.fromOffset(122, 30),
+            Position = UDim2.fromOffset(12, 7), BackgroundColor3 = Color3.fromRGB(18, 18, 22),
+            BackgroundTransparency = 0.12, BorderSizePixel = 0,
+            Text = "", AutoButtonColor = false, ZIndex = 25,
+        })
+        corner(N.openCatalog, 15)
+        N.catScale = mk("UIScale", { Scale = 1 }, N.openCatalog)
+        -- brillo diagonal que cruza el fondo (se mueve cambiando el Offset del degradé)
+        N.catShine = mk("UIGradient", {
+            Rotation = 20,
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, Color3.fromRGB(150, 150, 155)),
+                ColorSequenceKeypoint.new(0.45, Color3.fromRGB(150, 150, 155)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(255, 255, 255)),
+                ColorSequenceKeypoint.new(0.55, Color3.fromRGB(150, 150, 155)),
+                ColorSequenceKeypoint.new(1, Color3.fromRGB(150, 150, 155)),
+            }),
+            Offset = Vector2.new(-1, 0),
+        }, N.openCatalog)
+        -- borde de luz verde que gira alrededor
+        N.catStroke = mk("UIStroke", {
+            Thickness = 1.6, Color = Color3.new(1, 1, 1), Transparency = 0.05,
+            ApplyStrokeMode = Enum.ApplyStrokeMode.Border,
+        }, N.openCatalog)
+        N.catRing = mk("UIGradient", {
+            Color = ColorSequence.new({
+                ColorSequenceKeypoint.new(0, spotifyGreen),
+                ColorSequenceKeypoint.new(0.25, Color3.fromRGB(190, 255, 210)),
+                ColorSequenceKeypoint.new(0.5, Color3.fromRGB(40, 40, 46)),
+                ColorSequenceKeypoint.new(0.75, Color3.fromRGB(40, 40, 46)),
+                ColorSequenceKeypoint.new(1, spotifyGreen),
+            }),
+        }, N.catStroke)
+        -- ecualizador (3 barras)
+        N.catBars = {}
+        for i = 1, 3 do
+            N.catBars[i] = mk("Frame", {
+                Parent = N.openCatalog, AnchorPoint = Vector2.new(0, 1),
+                Position = UDim2.new(0, 12 + (i - 1) * 5, 0.5, 6), Size = UDim2.fromOffset(3, 4),
+                BackgroundColor3 = spotifyGreen, BorderSizePixel = 0, ZIndex = 27,
+            })
+            corner(N.catBars[i], 2)
+        end
+        N.catLabel = mk("TextLabel", {
+            Parent = N.openCatalog, Size = UDim2.new(1, -46, 1, 0), Position = UDim2.fromOffset(32, 0),
+            BackgroundTransparency = 1, Text = GetText("Catálogo", "Catalog"), Font = Enum.Font.GothamBold,
+            TextColor3 = spotifyText, TextSize = 12, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 27,
+        })
+        N.catLabel:SetAttribute("TextSpanish", "Catálogo")
+        N.catLabel:SetAttribute("TextEnglish", "Catalog")
+        N.catArrow = mk("TextLabel", {
+            Parent = N.openCatalog, AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.fromOffset(14, 20),
+            Position = UDim2.new(1, -10, 0.5, -1), BackgroundTransparency = 1, Text = "›", Font = Enum.Font.GothamBold,
+            TextColor3 = spotifyGreen, TextSize = 18, ZIndex = 27,
         })
         if Window._SpotifyAmbient then
             Window._SpotifyAmbient.LayoutPlayer = function(compact)
@@ -515,11 +566,91 @@
             end
             Window._SpotifyAmbient.LayoutPlayer(Window.CompactNavigation == true)
         end
-        N.openCatalog:SetAttribute("TextSpanish", "♫  Catálogo")
-        N.openCatalog:SetAttribute("TextEnglish", "♫  Catalog")
-        corner(N.openCatalog, 14)
-        stroke(N.openCatalog, Color3.fromRGB(130, 130, 135), 1, 0.80)
+        N.openCatalog.MouseButton1Down:Connect(function()
+            TweenService:Create(N.catScale, TweenInfo.new(0.08, Enum.EasingStyle.Quad), { Scale = 0.93 }):Play()
+        end)
+        N.soltarCatalogo = function()
+            TweenService:Create(N.catScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), { Scale = 1 }):Play()
+        end
+        N.openCatalog.MouseButton1Up:Connect(N.soltarCatalogo)
+        N.openCatalog.MouseLeave:Connect(N.soltarCatalogo)
         N.openCatalog.Activated:Connect(function() SpotifyPages:JumpTo(CatalogPage) end)
+
+        -- Título de la canción: mientras suena, una ola oscurece las letras UNA POR UNA (pasan a negro con un
+        -- borde claro para que se lean) y vuelven. Se dibuja en una copia con RichText encima del título real,
+        -- así PlayerSongTitle.Text sigue siendo texto plano para el resto del reproductor.
+        N.titleFx = mk("TextLabel", {
+            Parent = PlayerSongTitle, Name = "YYTitleWave", Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1, Text = "", RichText = true, Font = PlayerSongTitle.Font,
+            TextSize = PlayerSongTitle.TextSize, TextColor3 = spotifyText,
+            TextXAlignment = PlayerSongTitle.TextXAlignment, TextTruncate = PlayerSongTitle.TextTruncate,
+            Visible = false, ZIndex = PlayerSongTitle.ZIndex + 1,
+        })
+        N.escapar = function(c)
+            if c == "<" then return "&lt;" elseif c == ">" then return "&gt;" elseif c == "&" then return "&amp;"
+            elseif c == "\"" then return "&quot;" elseif c == "'" then return "&apos;" end
+            return c
+        end
+        N.hex = function(c)
+            return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+        end
+        N.NEGRO = Color3.fromRGB(12, 12, 14)
+        N.fxAcc, N.fxTime, N.fxOn = 0, 0, false
+        N.fxConn = RunService.Heartbeat:Connect(function(dt)
+            N.fxAcc = N.fxAcc + dt
+            N.fxTime = N.fxTime + dt
+            if N.fxAcc < 1 / 30 then return end
+            N.fxAcc = 0
+            if not N.openCatalog.Parent then
+                N.fxConn:Disconnect()
+                return
+            end
+            local t = N.fxTime
+            local playing = SpotifyState.IsPlaying == true and SpotifyState.CurrentTrack ~= nil
+            -- botón: el borde gira, el brillo cruza cada ~3 s, las barras bailan solo si suena
+            N.catRing.Rotation = (t * 120) % 360
+            local ciclo = (t % 3) / 3
+            N.catShine.Offset = Vector2.new(ciclo * 2.4 - 1.2, 0)
+            for i, bar in ipairs(N.catBars) do
+                local h = playing and (5 + (math.sin(t * (7 + i * 2.3) + i * 1.7) * 0.5 + 0.5) * 9) or 4
+                bar.Size = UDim2.fromOffset(3, math.floor(h + 0.5))
+            end
+            -- título: ola de letras negras
+            if playing and PlayerSongTitle.Visible then
+                if not N.fxOn then
+                    N.fxOn = true
+                    N.titleFx.Visible = true
+                    PlayerSongTitle.TextTransparency = 1
+                end
+                local texto = PlayerSongTitle.Text
+                if not utf8.len(texto) then texto = texto:gsub("[\128-\255]", "?") end -- texto raro: no romper la ola
+                local partes, i = {}, 0
+                for _, cp in utf8.codes(texto) do
+                    i = i + 1
+                    local ch = utf8.char(cp)
+                    if ch == " " then
+                        partes[#partes + 1] = " "
+                    else
+                        -- la ola avanza ~9 letras por segundo; cada letra se oscurece y vuelve suave
+                        local fase = (t * 9 - i) % 28
+                        local k = 0
+                        if fase < 7 then k = math.sin(fase / 7 * math.pi) end
+                        local col = spotifyText:Lerp(N.NEGRO, k)
+                        if k > 0.35 then
+                            partes[#partes + 1] = string.format('<font color="%s"><stroke color="#FFFFFF" thickness="1" transparency="%.2f">%s</stroke></font>',
+                                N.hex(col), 1 - (k - 0.35) * 0.8, N.escapar(ch))
+                        else
+                            partes[#partes + 1] = string.format('<font color="%s">%s</font>', N.hex(col), N.escapar(ch))
+                        end
+                    end
+                end
+                N.titleFx.Text = table.concat(partes)
+            elseif N.fxOn then
+                N.fxOn = false
+                N.titleFx.Visible = false
+                PlayerSongTitle.TextTransparency = 0
+            end
+        end)
 
         N.root = mk("Frame", {
             Parent = CatalogPage, Name = "SpotifyBottomNavigation",
@@ -825,171 +956,4 @@
 
         FP.Time = mk("TextLabel", {
             Parent = FP.Full,
-            Size = UDim2.fromOffset(70, 14),
-            AnchorPoint = Vector2.new(1, 0),
-            Position = UDim2.new(1, -12, 0, 62),
-            BackgroundTransparency = 1,
-            Text = "0:00",
-            TextColor3 = Color3.fromRGB(220, 220, 220),
-            Font = Enum.Font.GothamBold,
-            TextSize = 11,
-            TextXAlignment = Enum.TextXAlignment.Right,
-            ZIndex = 525,
-        })
-        local barBack = mk("Frame", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 4),
-            Position = UDim2.new(0, 12, 1, -12),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BackgroundTransparency = 0.75,
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(barBack, 999)
-        FP.Bar = mk("Frame", {
-            Parent = barBack,
-            Size = UDim2.new(0, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-            BorderSizePixel = 0,
-            ZIndex = 526,
-        })
-        corner(FP.Bar, 999)
-        local seekHit = mk("TextButton", {
-            Parent = FP.Full,
-            Size = UDim2.new(1, -24, 0, 18),
-            Position = UDim2.new(0, 12, 1, -19),
-            BackgroundTransparency = 1,
-            Text = "",
-            AutoButtonColor = false,
-            ZIndex = 527,
-        })
-
-        local closeBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        closeBtn.Position = UDim2.new(1, -32, 0, 8)
-        closeBtn.BackgroundTransparency = 0.88
-        closeBtn.Text = "×"
-        closeBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        closeBtn.Font = Enum.Font.GothamBold
-        closeBtn.TextSize = 15
-        local miniBtn = FP.iconButton(FP.Full, "", 24, 0, 0)
-        miniBtn.Position = UDim2.new(1, -60, 0, 8)
-        miniBtn.BackgroundTransparency = 0.88
-        miniBtn.Text = "–"
-        miniBtn.TextColor3 = Color3.fromRGB(235, 235, 235)
-        miniBtn.Font = Enum.Font.GothamBold
-        miniBtn.TextSize = 15
-
-        FP.Disc = mk("ImageLabel", {
-            Parent = FloatingPlayer,
-            Size = UDim2.new(1, -4, 1, -4),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(30, 30, 30),
-            BorderSizePixel = 0,
-            Image = "",
-            ScaleType = Enum.ScaleType.Crop,
-            Visible = false,
-            ZIndex = 524,
-        })
-        corner(FP.Disc, 999)
-        FP.Ring.Parent = FP.Disc
-        local hole = mk("Frame", {
-            Parent = FP.Disc,
-            Size = UDim2.fromOffset(8, 8),
-            AnchorPoint = Vector2.new(0.5, 0.5),
-            Position = UDim2.new(0.5, 0, 0.5, 0),
-            BackgroundColor3 = Color3.fromRGB(14, 14, 16),
-            BorderSizePixel = 0,
-            ZIndex = 525,
-        })
-        corner(hole, 999)
-
-        bindRowTap(closeBtn, function() setFloatingVisible(false) end)
-        bindRowTap(miniBtn, function()
-            FP.mini = true
-            FP.applyMode()
-        end)
-        bindRowTap(FP.LikeBtn, function()
-            if SpotifyState.Catalog[SpotifyState.SelectedIndex] then toggleTrackLike(SpotifyState.SelectedIndex) end
-        end)
-        bindRowTap(prevBtn, previousTrack)
-        bindRowTap(FP.PlayBtn, togglePlayback)
-        bindRowTap(nextBtn, nextTrack)
-        bindRowTap(seekHit, function()
-            local sound = SpotifyState.CurrentSound
-            local x = UserInputService:GetMouseLocation().X
-            if FP.lastPointer then x = FP.lastPointer.X end
-            if sound and sound.TimeLength and sound.TimeLength > 0 then
-                local pct = clamp((x - barBack.AbsolutePosition.X) / math.max(1, barBack.AbsoluteSize.X), 0, 1)
-                pcall(function()
-                    sound.TimePosition = pct * sound.TimeLength
-                    SpotifyState.CurrentPausedPosition = sound.TimePosition
-                end)
-                refreshSpotifyFloatingPlayer()
-            end
-        end)
-        track(seekHit.InputBegan:Connect(function(input)
-            FP.lastPointer = input.Position
-        end))
-
-        local dragInput, dragStart, startPos, moved = nil, nil, nil, false
-        track(FP.Drag.InputBegan:Connect(function(input)
-            if input.UserInputType == Enum.UserInputType.MouseButton1 or input.UserInputType == Enum.UserInputType.Touch then
-                dragInput, dragStart, startPos, moved = input, input.Position, FloatingPlayer.Position, false
-                SpotifyState.BlockSwipe = true
-            end
-        end))
-        track(UserInputService.InputChanged:Connect(function(input)
-            if not dragInput or not dragStart then return end
-            if input ~= dragInput and input.UserInputType ~= Enum.UserInputType.MouseMovement then return end
-            local delta = input.Position - dragStart
-            if not moved and delta.Magnitude < 6 then return end
-            moved = true
-            local screen = Window.ScreenGui.AbsoluteSize
-            local size = FloatingPlayer.AbsoluteSize
-            local x = startPos.X.Offset + delta.X
-            local y = startPos.Y.Offset + delta.Y
-            local baseX = startPos.X.Scale * screen.X
-            local baseY = startPos.Y.Scale * screen.Y
-            x = clamp(x, -baseX, screen.X - baseX - size.X)
-            y = clamp(y, -baseY, screen.Y - baseY - size.Y)
-            FloatingPlayer.Position = UDim2.new(startPos.X.Scale, x, startPos.Y.Scale, y)
-        end))
-        track(UserInputService.InputEnded:Connect(function(input)
-            if not dragInput then return end
-            if input ~= dragInput and input.UserInputType ~= Enum.UserInputType.MouseButton1 then return end
-            if not moved and FP.mini then
-                FP.mini = false
-                FP.applyMode()
-            end
-            dragInput, dragStart, startPos, moved = nil, nil, nil, false
-            task.defer(function() SpotifyState.BlockSwipe = false end)
-        end))
-
-        task.spawn(function()
-            while FloatingPlayer and FloatingPlayer.Parent do
-                if FP.mini and SpotifyState.IsPlaying then
-                    FP.rotation = (FP.rotation + 2) % 360
-                    FP.Disc.Rotation = FP.rotation
-                end
-                task.wait(0.03)
-            end
-        end)
-
-        FP.lastCover = nil
-        FP.applyMode()
-    end
-
-    refreshSpotifyPlaybackMenu = function()
-        PM.Panel.Visible = SpotifyState.SettingsMenuVisible == true
-        if not PM.Panel.Visible then return end
-        local available = NowPlayingCard.AbsoluteSize.Y - 46
-        local content = PM.BodyLayout.AbsoluteContentSize.Y + 24 + 49
-        local cardW = NowPlayingCard.AbsoluteSize.X
-        local width = (cardW > 0) and math.min(PM.WIDTH, cardW - 24) or PM.WIDTH
-        PM.Panel.Size = UDim2.fromOffset(width, math.floor(math.max(160, math.min(content, available > 0 and available or content))))
-        local volume = SpotifyState.PlaybackVolume
-        PM.VolumeValue.Text = string.format("%d%%", math.floor(volume * 100 + 0.5))
-        PM.VolumeFill.Size = UDim2.new(volume, 0, 1, 0)
-        PM.VolumeKnob.Position = UDim2.new(volume, 0, 0.5, 0)
-        PM.Speed
+            Size = UDim2.
