@@ -1,4 +1,16 @@
-reen.Y > 0 then
+            if Window.DetectPlatformType() == "PC" then
+                effectiveMode = "PC"
+            end
+        elseif platformMode == "PC" then
+            effectiveMode = "PC"
+        end
+
+        local preset = LibrarySizePresets[effectiveMode] or LibrarySizePresets.Small
+        local screen  = ScreenGui.AbsoluteSize
+        local width   = preset.Width
+        local height  = preset.Height
+
+        if screen.X > 0 and screen.Y > 0 then
             width  = math.min(width,  math.floor(screen.X * 0.92))
             height = math.min(height, math.floor(screen.Y * 0.92))
         end
@@ -932,15 +944,4 @@ reen.Y > 0 then
                 local isActive = (TabPage.Visible)
                 if not isActive then
                     TweenService:Create(TabButton, TweenInfo.new(0.20, Enum.EasingStyle.Quad, Enum.EasingDirection.Out),
-                        {BackgroundTransparency = (Window._SpotifyAmbient and Window._SpotifyAmbient.Active) and 1 or (Theme.TransparentTabs and 1 or 0)}):Play()
-                end
-            end
-        end)
-
-        table.insert(Window.Tabs, Tab)
-        Tab.Select = Select
-        if Window._RegisterCompactTab then Window._RegisterCompactTab(Tab) end
-        Window._RegisterCarouselTab(Tab, TabButton, Select)
-        if #Window.Tabs == 1 then Select() end
-        if SavedConfig.TabIconLayout == "Carousel" then
-            Window._RefreshTabIconLayout()
+                        {BackgroundTransparency = (Window._SpotifyAmbient and Window._SpotifyAmbient.Active) and 1 or (Theme.Tran

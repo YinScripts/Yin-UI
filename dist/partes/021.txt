@@ -1,4 +1,15 @@
-hen
+      })
+
+            return FloatingWindow
+        end
+
+        function Tab:CreateFloatingButton(textSpanish, textEnglishOrCooldown, cooldownOrCallback, callback, isMirror, mirrorSource)
+            local textEnglish = textSpanish
+            local cooldown, cb
+
+            if type(textEnglishOrCooldown) == "string" then
+                textEnglish = textEnglishOrCooldown
+                if type(cooldownOrCallback) == "number" then
                     cooldown = cooldownOrCallback
                     cb = callback
                 else
@@ -1007,13 +1018,4 @@ hen
                             pcall(callback, newVal)
                         end, true)
                     end
-                end
-                syncFavoriteRow()
-
-                FavBtn.MouseButton1Click:Connect(function()
-                    playSound(Sounds.Click, 0.5)
-                    isFavorite = not isFavorite
-                    FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
-                    SavedFavoriteIds[favId] = isFavorite or nil
-                    syncFavoriteRow()
-             
+       

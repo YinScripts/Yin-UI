@@ -1,4 +1,19 @@
-ction openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
+                tab = base:match("^(.-)::") or base,
+                        entry = entry,
+                    })
+                end
+            end
+            return list
+        end
+
+        local STATS_CHECK = 103456899356871
+        local STATS_COLORS = {
+            ok = Color3.fromRGB(70, 210, 120),
+            warn = Color3.fromRGB(240, 190, 60),
+            err = Color3.fromRGB(240, 85, 85),
+        }
+
+        local function openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
             local Backdrop = mk("TextButton", {
                 Parent = Window.ScreenGui,
                 Size = UDim2.new(1, 0, 1, 0),
@@ -998,17 +1013,3 @@ ction openPanel(titleES, titleEN, maxW, maxH, iconImage, subES, subEN)
     mk("ImageLabel", {
         Parent = ThemeSearchHolder,
         Size = UDim2.new(0, 16, 0, 16),
-        Position = UDim2.new(0, 10, 0.5, -8),
-        BackgroundTransparency = 1,
-        Image = "rbxassetid://83456197177232",
-        ImageColor3 = Theme.TextDim,
-        ZIndex = 10,
-    })
-
-    local ThemeSearchBox = mk("TextBox", {
-        Parent = ThemeSearchHolder,
-        Size = UDim2.new(1, -40, 1, 0),
-        Position = UDim2.new(0, 32, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        ClearTextOnFo

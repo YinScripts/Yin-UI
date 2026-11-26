@@ -1,4 +1,182 @@
-t = Vector2.new(0.5, 0.5),
+        TextSize = 9,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            ZIndex = 314,
+        })
+        status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+
+        local switch = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(0, 48, 0, 25),
+            Position = UDim2.new(1, -62, 0.5, -12),
+            BackgroundColor3 = state and Theme.ToggleOn or Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+        corner(switch, 99)
+
+        local knob = mk("Frame", {
+            Parent = switch,
+            Size = UDim2.new(0, 21, 0, 21),
+            Position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10),
+            BackgroundColor3 = Color3.new(1, 1, 1),
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        corner(knob, 99)
+
+        local click = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundTransparency = 1,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 316,
+        })
+
+        local function applyVisual(animate)
+            local tweenInfo = TweenInfo.new(animate and 0.18 or 0, Enum.EasingStyle.Quad, Enum.EasingDirection.Out)
+            local color = state and Theme.ToggleOn or Theme.AccentOff
+            local position = state and UDim2.new(1, -23, 0.5, -10) or UDim2.new(0, 2, 0.5, -10)
+            TweenService:Create(switch, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(accent, tweenInfo, {BackgroundColor3 = color}):Play()
+            TweenService:Create(knob, tweenInfo, {Position = position}):Play()
+            switch:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            accent:SetAttribute("ThemeRole", state and "ToggleOn" or "AccentOff")
+            status.Text = state and GetText("Activado", "Enabled") or GetText("Desactivado", "Disabled")
+            status.TextColor3 = state and Theme.ToggleOn or Theme.TextDim
+            status:SetAttribute("ThemeTextRole", state and "ToggleOn" or "TextDim")
+        end
+
+        local function setValue(newValue, invoke)
+            state = newValue == true
+            applyVisual(true)
+            if invoke then
+                ShaderCustomOverrides[spec.id] = state
+                if type(spec.onChange) == "function" then
+                    pcall(spec.onChange, state)
+                else
+                    shaderApplySingle(spec.target, spec.property, state)
+                end
+                shaderQueuePersistence()
+            end
+        end
+
+        click.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            setValue(not state, true)
+        end)
+
+        ShaderCustomControls[spec.id] = {
+            refresh = function()
+                local refreshed = shaderReadCustomValue(spec, state, "boolean")
+                state = refreshed
+                applyVisual(false)
+            end,
+            set = function(value)
+                setValue(value, false)
+            end,
+        }
+    end
+
+    local function shaderCreateSlider(parent, spec)
+        local value = shaderReadCustomValue(spec, spec.default, "number")
+        local holder = mk("Frame", {
+            Parent = parent,
+            Size = UDim2.new(1, 0, 0, 78),
+            BackgroundColor3 = Theme.Background,
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            ZIndex = 313,
+        })
+        holder:SetAttribute("ThemeRole", "Background")
+        holder:SetAttribute("IsShaderCustomSlider", true)
+        corner(holder, 12)
+        stroke(holder, Theme.Stroke, 1.1, 0.62)
+
+        local label = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(1, -140, 0, 18),
+            Position = UDim2.new(0, 14, 0, 10),
+            BackgroundTransparency = 1,
+            Text = GetText(spec.es, spec.en),
+            TextColor3 = Theme.Text,
+            Font = Enum.Font.GothamBold,
+            TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left,
+            TextTruncate = Enum.TextTruncate.AtEnd,
+            ZIndex = 314,
+        })
+        label:SetAttribute("ThemeTextRole", "Text")
+        label:SetAttribute("TextSpanish", spec.es)
+        label:SetAttribute("TextEnglish", spec.en)
+
+        local valueLabel = mk("TextLabel", {
+            Parent = holder,
+            Size = UDim2.new(0, 0, 0, 22),
+            AutomaticSize = Enum.AutomaticSize.X,
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -46, 0, 8),
+            BackgroundColor3 = Theme.Accent,
+            BackgroundTransparency = 0.82,
+            Text = shaderFormatValue(value),
+            TextColor3 = Theme.Accent,
+            Font = Enum.Font.GothamBlack,
+            TextSize = 11,
+            TextXAlignment = Enum.TextXAlignment.Center,
+            ZIndex = 315,
+        })
+        valueLabel:SetAttribute("ThemeRole", "Accent")
+        valueLabel:SetAttribute("ThemeTextRole", "Accent")
+        valueLabel:SetAttribute("IgnoreTextEffect", true)
+        corner(valueLabel, 999)
+        mk("UIPadding", {Parent = valueLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        local resetButton = mk("TextButton", {
+            Parent = holder,
+            Size = UDim2.fromOffset(26, 22),
+            AnchorPoint = Vector2.new(1, 0),
+            Position = UDim2.new(1, -12, 0, 8),
+            BackgroundColor3 = Theme.AccentOff,
+            BackgroundTransparency = 0.2,
+            Text = "",
+            AutoButtonColor = false,
+            ZIndex = 315,
+        })
+        resetButton:SetAttribute("ThemeRole", "AccentOff")
+        corner(resetButton, 999)
+        RowKit.Icon(resetButton, 125802172782007, 13, 316, "Text")
+
+        local bar = mk("Frame", {
+            Parent = holder,
+            Size = UDim2.new(1, -36, 0, 8),
+            Position = UDim2.new(0, 18, 0, 44),
+            BackgroundColor3 = Theme.AccentOff,
+            BorderSizePixel = 0,
+            ZIndex = 314,
+        })
+        bar:SetAttribute("ThemeRole", "AccentOff")
+        corner(bar, 99)
+
+        local fill = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.new(0, 0, 1, 0),
+            BackgroundColor3 = Theme.Accent,
+            BorderSizePixel = 0,
+            ZIndex = 315,
+        })
+        fill:SetAttribute("ThemeRole", "Accent")
+        corner(fill, 99)
+        mk("UIGradient", {
+            Parent = fill,
+            Color = ColorSequence.new(Color3.fromRGB(190, 190, 190), Color3.new(1, 1, 1)),
+        })
+
+        local defaultPercent = (spec.max - spec.min) == 0 and 0 or math.clamp((spec.default - spec.min) / (spec.max - spec.min), 0, 1)
+        local defaultTick = mk("Frame", {
+            Parent = bar,
+            Size = UDim2.fromOffset(2, 14),
+            AnchorPoint = Vector2.new(0.5, 0.5),
             Position = UDim2.new(defaultPercent, 0, 0.5, 0),
             BackgroundColor3 = Theme.TextDim,
             BackgroundTransparency = 0.3,
@@ -628,142 +806,4 @@ t = Vector2.new(0.5, 0.5),
         ZIndex = 11,
     })
     corner(heroHill, 999)
-    -- Imagen real de portada (assets/shaders/Hero.jpg): reemplaza el dibujo de sol, estrellas y colina.
-    -- Un degradé oscuro a la izquierda deja leer el título y el texto.
-    Window._ShaderArt.get("Hero", function(img)
-        if not ShaderHero.Parent then return end
-        heroSun.Visible = false
-        heroHill.Visible = false
-        for _, ch in ipairs(ShaderHero:GetChildren()) do
-            if ch.Name == "HeroStar" then ch.Visible = false end
-        end
-        mk("ImageLabel", {
-            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1,
-            Image = img, ScaleType = Enum.ScaleType.Crop, ZIndex = 10,
-        })
-        local sombra = mk("Frame", {
-            Parent = ShaderHero, Size = UDim2.fromScale(1, 1), BackgroundColor3 = Color3.new(0, 0, 0),
-            BorderSizePixel = 0, ZIndex = 11,
-        })
-        mk("UIGradient", {
-            Parent = sombra,
-            Transparency = NumberSequence.new({
-                NumberSequenceKeypoint.new(0, 0.35),
-                NumberSequenceKeypoint.new(0.6, 0.75),
-                NumberSequenceKeypoint.new(1, 1),
-            }),
-        })
-    end)
-    local heroTitle = mk("TextLabel", {
-        Parent = ShaderHero,
-        Size = UDim2.new(0.7, 0, 0, 32),
-        Position = UDim2.new(0, 16, 0, 12),
-        BackgroundTransparency = 1,
-        Text = "Shaders",
-        TextColor3 = Color3.new(1, 1, 1),
-        Font = Enum.Font.GothamBlack,
-        TextSize = 28,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 12,
-    })
-    heroTitle:SetAttribute("IgnoreTextEffect", true)
-    local heroSub = mk("TextLabel", {
-        Parent = ShaderHero,
-        Size = UDim2.new(0.66, 0, 0, 44),
-        Position = UDim2.new(0, 16, 0, 46),
-        BackgroundTransparency = 1,
-        Text = GetText(
-            "Elegí un modo visual o abrí Personalizado para ajustar cada parámetro sin tocar los sliders del resto de la librería.",
-            "Choose a visual mode or open Custom to tune every parameter without touching the library's other sliders."),
-        TextColor3 = Color3.fromRGB(225, 222, 240),
-        Font = Enum.Font.GothamMedium,
-        TextSize = 11,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Top,
-        ZIndex = 12,
-    })
-    heroSub:SetAttribute("IgnoreTextEffect", true)
-    heroSub:SetAttribute("TextSpanish", "Elegí un modo visual o abrí Personalizado para ajustar cada parámetro sin tocar los sliders del resto de la librería.")
-    heroSub:SetAttribute("TextEnglish", "Choose a visual mode or open Custom to tune every parameter without touching the library's other sliders.")
-
-    ShaderModeLabel = AutoTabShaders:CreateLabel("Modo activo: Morning", "Active mode: Morning", 11)
-    ShaderModeLabel:SetAttribute("ThemeTextRole", "Accent")
-    ShaderModeLabel.Parent = ShaderHero
-    ShaderModeLabel.AutomaticSize = Enum.AutomaticSize.X
-    ShaderModeLabel.TextWrapped = false
-    ShaderModeLabel.Size = UDim2.new(0, 0, 0, 22)
-    ShaderModeLabel.Position = UDim2.new(0, 16, 1, -32)
-    ShaderModeLabel.BackgroundColor3 = Color3.new(0, 0, 0)
-    ShaderModeLabel.BackgroundTransparency = 0.4
-    ShaderModeLabel.ZIndex = 13
-    corner(ShaderModeLabel, 999)
-    mk("UIPadding", {Parent = ShaderModeLabel, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-    AutoTabShaders:CreateButton("Restablecer todo por defecto", "Reset everything to default", function()
-        playSound(Sounds.Click, 0.55)
-        ShaderDemoEnabled = false
-        local report = shaderRestoreAll()
-        ShaderReflections.OilSheen = false
-        ShaderReflections:SetObjectMirrorEnabled(false)
-        ShaderReflections:SetStripTexturesEnabled(false)
-        ShaderReflections:SetSkyMirrorEnabled(false)
-        ShaderReflections:SetContactEnabled(false)
-        ShaderReflections:SetShadowEnabled(false)
-        ShaderReflections:SetCharacterSpecularEnabled(false)
-        shaderWarn(report, "Restablecer todo")
-        shaderSetModeLabel("Original")
-        ShaderCustomRefresh()
-        shaderQueuePersistence()
-    end)
-
-    AutoTabShaders:CreateDivider()
-    AutoTabShaders:CreateLabel("Modos visuales", "Visual modes", 13)
-    AutoTabShaders:CreateLabel(
-        "Cada tarjeta muestra el cielo, la hora y la luz del modo · tocá para aplicarlo.",
-        "Each card shows the mode's sky, time and light · tap to apply it.",
-        10
-    )
-    local ShaderModeGrid = mk("Frame", {
-        Parent = AutoTabShaders.Page,
-        Size = UDim2.new(1, -8, 0, 0),
-        AutomaticSize = Enum.AutomaticSize.Y,
-        BackgroundTransparency = 1,
-        ZIndex = 9,
-    })
-    mk("UIGridLayout", {
-        Parent = ShaderModeGrid,
-        CellSize = UDim2.new(0.5, -5, 0, 156),
-        CellPadding = UDim2.fromOffset(10, 10),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    mk("UIPadding", {Parent = ShaderModeGrid, PaddingTop = UDim.new(0, 4), PaddingBottom = UDim.new(0, 4)})
-
-    shaderCreateModeCard(ShaderModeGrid, {
-        key = "Custom",
-        labelES = "Personalizado",
-        labelEN = "Custom",
-        descES = "Ajustá cada shader en tiempo real",
-        descEN = "Tune every shader in real time",
-        callback = function()
-            playSound(Sounds.Click, 0.55)
-            ShaderDemoEnabled = true
-            shaderSetModeLabel("Custom")
-            shaderOpenCustomWindow()
-        end,
-    })
-
-    local shaderPresetButtons = {
-        {"Mañana", "Morning", "Morning", "Luz suave y cálida para comenzar"},
-        {"Mediodía", "Midday", "Midday", "Claridad alta y sombras definidas"},
-        {"Atardecer", "Sunset", "Sunset", "Tonos dorados con contraste cinematográfico"},
-        {"Noche", "Night", "Night", "Azules profundos y ambiente nocturno"},
-        {"Lluvia", "Rain", "Rain", "Niebla fría y cielo cubierto"},
-        {"Tormenta", "Stormfront", "Stormfront", "Lluvia local, reflejos húmedos y relámpagos dinámicos", "Local rain, wet reflections and dynamic lightning"},
-        {"Cinemático", "Cinematic", "Cinematic", "Profundidad de campo y look de película"},
-        {"Sol Especular", "Golden Specular", "GoldenSpecular", "Hora dorada, reflejos cálidos en superficies y modelos", "Golden hour, warm highlights on surfaces and models"},
-        {"Aceite Mojado", "Oil Wet", "OilWet", "Suelo y paredes espejo, bloom intenso y look aceitoso", "Mirror floors and walls, intense bloom and oily look"},
-        {"Glow Vibrante", "Vibrant Glow", "VibrantGlow", "Pasteles saturados · bloom intenso y atmósfera etérea", "Saturated pastels · intense bloom and ethereal atmosphere"},
-        {"Retro", "Retro", "Retro", "Gradación clásica y color vintage"},
-        {"depthstyle", "depthstyle", "depthstyle", "Personajes y escenario negros con cielo y atmósfera blancos", "Black characters and scene with white sky and atmosphere"},
-        {"Ultra Realista", "Photoreal", "Photoreal", "Luz natural, sombras nítidas y pisos c
+    -- Imagen rea

@@ -1,4 +1,9 @@
-oatingPillV5.BuildDial(win, label, entries)
+tiene varios). entries = { { Slider = <objeto de CreateSlider>, Tag = "VEL" }, ... }
+-- Al cambiar: Slider.Set(v) + Slider._callback(v) (Set solo mueve la barra, no aplica el valor).
+-- Si el slider del menu se mueve, el tambor lo lee cada 0.25 s mientras la pildora existe.
+-- Va dentro de FloatingPillV5: no suma locales al chunk principal.
+-- ============================================================================
+function FloatingPillV5.BuildDial(win, label, entries)
     if not (win and label and type(entries) == "table" and #entries > 0) then return end
     local STEP_PX, CELL = 14, 13
     local idx = 1
@@ -1046,10 +1051,4 @@ do
             if not isC then
                 mk("UIGradient", {
                     Color = ColorSequence.new({
-                        ColorSequenceKeypoint.new(0, Color3.fromRGB(180, 185, 200)),
-                        ColorSequenceKeypoint.new(0.5, Color3.fromRGB(240, 243, 250)),
-                        ColorSequenceKeypoint.new(1, Color3.fromRGB(180, 185, 200)),
-                    }),
-                    Transparency = NumberSequence.new({
-                        NumberSequenceKeypoint.new(0, 0.45),
-                        NumberSequenceKeypoint.new(0.
+                 

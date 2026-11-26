@@ -1,3 +1,14 @@
+cale.Scale = 0.975
+    TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+end
+
+-- Mini interfaz que muestra los 8 colores de un tema (tarjetas de temas y editor)
+function RowKit.ThemeMock(parent, z)
+    local m = {}
+    local function f(props, par)
+        local o = Instance.new("Frame")
+        o.BorderSizePixel = 0
+        for k, v in pairs(props) do o[k] = v end
         o.Parent = par
         return o
     end
@@ -962,9 +973,4 @@ end
 -- TAMBOR DE VALORES (DIAL) PARA LA PILDORA V6
 -- Va en el borde derecho de la pildora, en lugar del mini interruptor.
 -- Deslizar hacia ABAJO sube el valor, hacia ARRIBA lo baja. Un toque cambia de slider
--- (si el toggle tiene varios). entries = { { Slider = <objeto de CreateSlider>, Tag = "VEL" }, ... }
--- Al cambiar: Slider.Set(v) + Slider._callback(v) (Set solo mueve la barra, no aplica el valor).
--- Si el slider del menu se mueve, el tambor lo lee cada 0.25 s mientras la pildora existe.
--- Va dentro de FloatingPillV5: no suma locales al chunk principal.
--- ============================================================================
-function Fl
+-- (si el toggle 

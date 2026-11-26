@@ -108,6 +108,18 @@ local function applyCustomThemeToRuntime(name, data)
         ThemeClickSounds[name] = nil
     end
 
+    -- íconos propios de las pestañas (creador de temas)
+    if type(data.TabIcons) == "table" and next(data.TabIcons) then
+        local icons = {}
+        for key, id in pairs(data.TabIcons) do
+            local clean = normalizeAssetId(id)
+            if type(key) == "string" and clean and clean ~= "" then icons[key] = clean end
+        end
+        ThemeTabIcons[name] = icons
+    else
+        ThemeTabIcons[name] = nil
+    end
+
     return true
 end
 
@@ -1230,14 +1242,4 @@ function RowKit.Press(holder)
         scale.Name = "RowPressScale"
         scale.Parent = holder
     end
-    scale.Scale = 0.975
-    TweenService:Create(scale, TweenInfo.new(0.28, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-end
-
--- Mini interfaz que muestra los 8 colores de un tema (tarjetas de temas y editor)
-function RowKit.ThemeMock(parent, z)
-    local m = {}
-    local function f(props, par)
-        local o = Instance.new("Frame")
-        o.BorderSizePixel = 0
-        for k, v in pairs(props) do o[k] = v end
+    s

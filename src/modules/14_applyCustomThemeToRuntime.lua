@@ -37,5 +37,17 @@ local function applyCustomThemeToRuntime(name, data)
         ThemeClickSounds[name] = nil
     end
 
+    -- íconos propios de las pestañas (creador de temas)
+    if type(data.TabIcons) == "table" and next(data.TabIcons) then
+        local icons = {}
+        for key, id in pairs(data.TabIcons) do
+            local clean = normalizeAssetId(id)
+            if type(key) == "string" and clean and clean ~= "" then icons[key] = clean end
+        end
+        ThemeTabIcons[name] = icons
+    else
+        ThemeTabIcons[name] = nil
+    end
+
     return true
 end

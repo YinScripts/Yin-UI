@@ -1,4 +1,18 @@
-cus = false,
+
+        Position = UDim2.new(0, 10, 0.5, -8),
+        BackgroundTransparency = 1,
+        Image = "rbxassetid://83456197177232",
+        ImageColor3 = Theme.TextDim,
+        ZIndex = 10,
+    })
+
+    local ThemeSearchBox = mk("TextBox", {
+        Parent = ThemeSearchHolder,
+        Size = UDim2.new(1, -40, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ClearTextOnFocus = false,
         PlaceholderText = GetText("Buscar tema...", "Search themes..."),
         PlaceholderColor3 = Theme.TextDim,
         TextColor3 = Theme.Text,
@@ -109,7 +123,7 @@ cus = false,
         local Card = mk("TextButton", {
             Parent = ThemeGridHolder,
             BackgroundColor3 = Theme.Secondary,
-            BackgroundTransparency = 0,
+            BackgroundTransparency = 0.2, -- antes opaca (se veía muy oscura): deja ver el fondo del tema
             Text = "",
             LayoutOrder = layoutOrder,
             ZIndex = 9,
@@ -1049,101 +1063,55 @@ cus = false,
     local ThemeImageInput = createEditorInput("ID de imagen (opcional)", "Image ID (optional)", "123456789", "123456789", 21)
     local ThemeSoundInput = createEditorInput("ID de sonido (opcional)", "Sound ID (optional)", "123456789", "123456789", 22)
 
-    local EditorStatus = mk("TextLabel", {
-        Parent = EditorPanel,
-        Size = UDim2.new(1, -290, 0, 34),
-        Position = UDim2.new(0, 12, 1, -42),
-        BackgroundTransparency = 1,
-        Text = "",
-        TextColor3 = Color3.fromRGB(235, 85, 85),
-        TextSize = 11,
-        Font = Enum.Font.GothamMedium,
-        TextWrapped = true,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        ZIndex = 203,
+    -- Íconos propios para cada pestaña (opcional): una fila por pestaña con su ícono actual y un ID nuevo
+    local TabIconEditor = {rows = {}}
+    TabIconEditor.holder = mk("Frame", {
+        Parent = EditorContent, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1, LayoutOrder = 23, ZIndex = 202,
     })
-
-    local SaveThemeButton = mk("TextButton", {
-        Parent = EditorPanel,
-        Size = UDim2.new(0, 132, 0, 36),
-        Position = UDim2.new(1, -144, 1, -46),
-        BackgroundColor3 = Theme.Accent,
-        BorderSizePixel = 0,
-        Text = GetText("Crear Tema", "Create Theme"),
-        TextColor3 = Theme.AccentText,
-        TextSize = 12,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 203,
+    mk("UIListLayout", {Parent = TabIconEditor.holder, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    TabIconEditor.title = mk("TextLabel", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 0,
+        Text = GetText("Íconos de las pestañas (opcional)", "Tab icons (optional)"), TextColor3 = Theme.Text,
+        TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 203,
     })
-    SaveThemeButton:SetAttribute("ThemeRole", "Accent")
-    SaveThemeButton:SetAttribute("ThemeTextRole", "AccentText")
-    SaveThemeButton:SetAttribute("TextSpanish", "Crear Tema")
-    SaveThemeButton:SetAttribute("TextEnglish", "Create Theme")
-    corner(SaveThemeButton, 12)
-    SaveThemeButton.Font = Enum.Font.GothamBlack
-    SaveThemeButton.TextSize = 13
-    RowKit.Control(SaveThemeButton, true)
-    SaveThemeButton.TextSize = 13
-    local CancelThemeButton = mk("TextButton", {
-        Parent = EditorPanel,
-        Size = UDim2.new(0, 118, 0, 36),
-        Position = UDim2.new(1, -270, 1, -46),
-        BackgroundColor3 = Theme.Secondary,
-        BorderSizePixel = 0,
-        Text = GetText("Cancelar", "Cancel"),
-        TextColor3 = Theme.Text,
-        TextSize = 13,
-        Font = Enum.Font.GothamBold,
-        ZIndex = 203,
+    TabIconEditor.title:SetAttribute("ThemeTextRole", "Text")
+    TabIconEditor.title:SetAttribute("TextSpanish", "Íconos de las pestañas (opcional)")
+    TabIconEditor.title:SetAttribute("TextEnglish", "Tab icons (optional)")
+    TabIconEditor.hint = mk("TextLabel", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, LayoutOrder = 1,
+        Text = GetText("Pegá el ID de una imagen para cambiar el ícono de esa pestaña. Vacío = el de siempre.", "Paste an image ID to change that tab's icon. Empty = default."),
+        TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 203,
     })
-    CancelThemeButton:SetAttribute("ThemeRole", "Secondary")
-    CancelThemeButton:SetAttribute("ThemeTextRole", "Text")
-    CancelThemeButton:SetAttribute("TextSpanish", "Cancelar")
-    CancelThemeButton:SetAttribute("TextEnglish", "Cancel")
-    corner(CancelThemeButton, 12)
-    RowKit.Control(CancelThemeButton)
-    CancelThemeButton.BackgroundTransparency = 0
-    mk("Frame", {
-        Parent = EditorPanel,
-        Size = UDim2.new(1, -28, 0, 1),
-        Position = UDim2.new(0, 14, 1, -54),
-        BackgroundColor3 = Theme.Stroke,
-        BackgroundTransparency = 0.5,
-        BorderSizePixel = 0,
-        ZIndex = 202,
-    }):SetAttribute("ThemeRole", "Stroke")
-
-    local editingThemeName = nil
-
-    openThemeEditor = function(themeName)
-        editingThemeName = themeName
-        EditorStatus:SetAttribute("TextSpanish", "")
-        EditorStatus:SetAttribute("TextEnglish", "")
-        EditorStatus.Text = ""
-        EditorContent.CanvasPosition = Vector2.new(0, 0)
-
-        local data = themeName and CustomThemes[themeName] or nil
-        local palette = themeName and ThemePalettes[themeName] or ThemePalettes.Dark
-        local titleSpanish = themeName and "Editar Tema Personalizado" or "Crear Tema Personalizado"
-        local titleEnglish = themeName and "Edit Custom Theme" or "Create Custom Theme"
-        EditorTitle:SetAttribute("TextSpanish", titleSpanish)
-        EditorTitle:SetAttribute("TextEnglish", titleEnglish)
-        EditorTitle.Text = GetText(titleSpanish, titleEnglish)
-        local saveSpanish = themeName and "Guardar Cambios" or "Crear Tema"
-        local saveEnglish = themeName and "Save Changes" or "Create Theme"
-        SaveThemeButton:SetAttribute("TextSpanish", saveSpanish)
-        SaveThemeButton:SetAttribute("TextEnglish", saveEnglish)
-        SaveThemeButton.Text = GetText(saveSpanish, saveEnglish)
-        ThemeNameInput.Text = themeName or ""
-        ThemeNameInput.TextEditable = not themeName
-        ThemeImageInput.Text = data and (data.Background or "") or ""
-        ThemeSoundInput.Text = data and (data.Sound or "") or ""
-
-        for _, info in ipairs(colorRoles) do
-            local color = palette[info[1]]
-            colorFields[info[1]].Box.Text = colorToHex(color)
-            colorFields[info[1]].Swatch.BackgroundColor3 = color
+    TabIconEditor.hint:SetAttribute("ThemeTextRole", "TextDim")
+    TabIconEditor.hint:SetAttribute("TextSpanish", "Pegá el ID de una imagen para cambiar el ícono de esa pestaña. Vacío = el de siempre.")
+    TabIconEditor.hint:SetAttribute("TextEnglish", "Paste an image ID to change that tab's icon. Empty = default.")
+    TabIconEditor.grid = mk("Frame", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 202,
+    })
+    mk("UIGridLayout", {Parent = TabIconEditor.grid, CellSize = UDim2.new(0.5, -4, 0, 40), CellPadding = UDim2.new(0, 8, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    -- arma una fila por pestaña de la ventana (con los íconos del tema que se está editando)
+    TabIconEditor.build = function(saved)
+        for _, r in ipairs(TabIconEditor.rows) do r.frame:Destroy() end
+        TabIconEditor.rows = {}
+        local tabs = {}
+        for _, t in pairs(Window.Tabs or {}) do
+            if t.NameEnglish then table.insert(tabs, t) end
         end
-
-        EditorMock.Paint(palette)
-        EditorMock.Play(
+        table.sort(tabs, function(a, b)
+            local la = a.Button and a.Button.LayoutOrder or 0
+            local lb = b.Button and b.Button.LayoutOrder or 0
+            return la < lb
+        end)
+        for i, t in ipairs(tabs) do
+            local f = mk("Frame", {Parent = TabIconEditor.grid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.25, LayoutOrder = i, ZIndex = 203})
+            f:SetAttribute("ThemeRole", "Secondary")
+            corner(f, 9)
+            local icon = mk("ImageLabel", {
+                Parent = f, Size = UDim2.fromOffset(24, 24), Position = UDim2.new(0, 8, 0.5, -12), BackgroundTransparency = 1,
+                Image = t.DefaultIconAsset or t.IconAsset or "", ScaleType = Enum.ScaleType.Fit, ZIndex = 204,
+            })
+            mk("TextLabel", {
+                Parent = f, Size = UDim2.ne

@@ -1,4 +1,10 @@
-Enum.Font.GothamBlack,
+ndex = zs + 4,
+                    })
+                    r:SetAttribute("ThemeRole", K.ED.scope == e.Id and "Accent" or "Secondary")
+                    corner(r, 10)
+                    local t = mk("TextLabel", {
+                        Parent = r, Size = UDim2.new(1, -110, 0, 16), Position = UDim2.fromOffset(12, 5), BackgroundTransparency = 1,
+                        Text = name, TextColor3 = Theme.Text, TextSize = 12, Font = Enum.Font.GothamBlack,
                         TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = zs + 5,
                     })
                     t:SetAttribute("ThemeTextRole", "Text")
@@ -752,14 +758,4 @@ ThemePalettes["ShylfieV1"] = ThemePalettes["ShylfieV1"] or {
 }
 
 local function setActiveTheme(name)
-    local palette = ThemePalettes[name]
-    if not palette then return false end
-    Theme = table.clone(palette)
-    Theme.AccentText = getContrastColor(Theme.Accent)
-    Theme.TextStroke = getContrastColor(Theme.Text)
-    Theme.ThemeName = name
-    Theme.SliderTrack = Theme.SliderTrack or Theme.AccentOff
-    Theme.SliderFill = Theme.SliderFill or Theme.Accent
-    Theme.SliderThumb = Theme.SliderThumb or Theme.Accent
-    Theme.Border = Theme.Border or Theme.Accent
- 
+    local palette = ThemePalettes[nam

@@ -1,4 +1,139 @@
-)
+w(0.4, -36, 1, 0), Position = UDim2.new(0, 38, 0, 0), BackgroundTransparency = 1,
+                Text = GetText(t.NameSpanish or t.NameEnglish, t.NameEnglish), TextColor3 = Theme.Text, TextSize = 11,
+                Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 204,
+            }):SetAttribute("ThemeTextRole", "Text")
+            local box = mk("TextBox", {
+                Parent = f, AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.new(0.6, -8, 0, 28), Position = UDim2.new(1, -6, 0.5, 0),
+                BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.3, BorderSizePixel = 0,
+                Text = saved and saved[t.NameEnglish] and tostring(saved[t.NameEnglish]):match("(%d+)") or "",
+                PlaceholderText = "ID", PlaceholderColor3 = Theme.TextDim, TextColor3 = Theme.Text, ClearTextOnFocus = false,
+                TextSize = 11, Font = Enum.Font.GothamMedium, ZIndex = 204,
+            })
+            box:SetAttribute("ThemeRole", "Background")
+            box:SetAttribute("ThemeTextRole", "Text")
+            corner(box, 7)
+            local function vistaPrevia()
+                local id = normalizeAssetId(box.Text)
+                icon.Image = (id and id ~= "") and id or (t.DefaultIconAsset or t.IconAsset or "")
+            end
+            box:GetPropertyChangedSignal("Text"):Connect(vistaPrevia)
+            vistaPrevia()
+            table.insert(TabIconEditor.rows, {frame = f, key = t.NameEnglish, box = box})
+        end
+    end
+    -- lee lo escrito: nil si no hay ninguno, o false + nombre de la pestaña si un ID no es válido
+    TabIconEditor.collect = function()
+        local icons, any = {}, false
+        for _, r in ipairs(TabIconEditor.rows) do
+            if r.box.Text:match("%S") then
+                local id = normalizeAssetId(r.box.Text)
+                if not id or id == "" then return false, r.key end
+                icons[r.key] = id
+                any = true
+            end
+        end
+        return any and icons or nil
+    end
+
+    local EditorStatus = mk("TextLabel", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -290, 0, 34),
+        Position = UDim2.new(0, 12, 1, -42),
+        BackgroundTransparency = 1,
+        Text = "",
+        TextColor3 = Color3.fromRGB(235, 85, 85),
+        TextSize = 11,
+        Font = Enum.Font.GothamMedium,
+        TextWrapped = true,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        ZIndex = 203,
+    })
+
+    local SaveThemeButton = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 132, 0, 36),
+        Position = UDim2.new(1, -144, 1, -46),
+        BackgroundColor3 = Theme.Accent,
+        BorderSizePixel = 0,
+        Text = GetText("Crear Tema", "Create Theme"),
+        TextColor3 = Theme.AccentText,
+        TextSize = 12,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    SaveThemeButton:SetAttribute("ThemeRole", "Accent")
+    SaveThemeButton:SetAttribute("ThemeTextRole", "AccentText")
+    SaveThemeButton:SetAttribute("TextSpanish", "Crear Tema")
+    SaveThemeButton:SetAttribute("TextEnglish", "Create Theme")
+    corner(SaveThemeButton, 12)
+    SaveThemeButton.Font = Enum.Font.GothamBlack
+    SaveThemeButton.TextSize = 13
+    RowKit.Control(SaveThemeButton, true)
+    SaveThemeButton.TextSize = 13
+    local CancelThemeButton = mk("TextButton", {
+        Parent = EditorPanel,
+        Size = UDim2.new(0, 118, 0, 36),
+        Position = UDim2.new(1, -270, 1, -46),
+        BackgroundColor3 = Theme.Secondary,
+        BorderSizePixel = 0,
+        Text = GetText("Cancelar", "Cancel"),
+        TextColor3 = Theme.Text,
+        TextSize = 13,
+        Font = Enum.Font.GothamBold,
+        ZIndex = 203,
+    })
+    CancelThemeButton:SetAttribute("ThemeRole", "Secondary")
+    CancelThemeButton:SetAttribute("ThemeTextRole", "Text")
+    CancelThemeButton:SetAttribute("TextSpanish", "Cancelar")
+    CancelThemeButton:SetAttribute("TextEnglish", "Cancel")
+    corner(CancelThemeButton, 12)
+    RowKit.Control(CancelThemeButton)
+    CancelThemeButton.BackgroundTransparency = 0
+    mk("Frame", {
+        Parent = EditorPanel,
+        Size = UDim2.new(1, -28, 0, 1),
+        Position = UDim2.new(0, 14, 1, -54),
+        BackgroundColor3 = Theme.Stroke,
+        BackgroundTransparency = 0.5,
+        BorderSizePixel = 0,
+        ZIndex = 202,
+    }):SetAttribute("ThemeRole", "Stroke")
+
+    local editingThemeName = nil
+
+    openThemeEditor = function(themeName)
+        editingThemeName = themeName
+        EditorStatus:SetAttribute("TextSpanish", "")
+        EditorStatus:SetAttribute("TextEnglish", "")
+        EditorStatus.Text = ""
+        EditorContent.CanvasPosition = Vector2.new(0, 0)
+
+        local data = themeName and CustomThemes[themeName] or nil
+        local palette = themeName and ThemePalettes[themeName] or ThemePalettes.Dark
+        local titleSpanish = themeName and "Editar Tema Personalizado" or "Crear Tema Personalizado"
+        local titleEnglish = themeName and "Edit Custom Theme" or "Create Custom Theme"
+        EditorTitle:SetAttribute("TextSpanish", titleSpanish)
+        EditorTitle:SetAttribute("TextEnglish", titleEnglish)
+        EditorTitle.Text = GetText(titleSpanish, titleEnglish)
+        local saveSpanish = themeName and "Guardar Cambios" or "Crear Tema"
+        local saveEnglish = themeName and "Save Changes" or "Create Theme"
+        SaveThemeButton:SetAttribute("TextSpanish", saveSpanish)
+        SaveThemeButton:SetAttribute("TextEnglish", saveEnglish)
+        SaveThemeButton.Text = GetText(saveSpanish, saveEnglish)
+        ThemeNameInput.Text = themeName or ""
+        ThemeNameInput.TextEditable = not themeName
+        ThemeImageInput.Text = data and (data.Background or "") or ""
+        ThemeSoundInput.Text = data and (data.Sound or "") or ""
+        TabIconEditor.build(data and data.TabIcons or nil)
+
+        for _, info in ipairs(colorRoles) do
+            local color = palette[info[1]]
+            colorFields[info[1]].Box.Text = colorToHex(color)
+            colorFields[info[1]].Swatch.BackgroundColor3 = color
+        end
+
+        EditorMock.Paint(palette)
+        EditorMock.Play()
         EditorOverlay.Visible = true
     end
 
@@ -56,11 +191,22 @@
             return
         end
 
+        local tabIcons, badTab = TabIconEditor.collect()
+        if tabIcons == false then
+            local errES = "El ID del ícono de " .. tostring(badTab) .. " no es válido."
+            local errEN = "The icon ID for " .. tostring(badTab) .. " is invalid."
+            EditorStatus:SetAttribute("TextSpanish", errES)
+            EditorStatus:SetAttribute("TextEnglish", errEN)
+            EditorStatus.Text = GetText(errES, errEN)
+            return
+        end
+
         local finalName = editingThemeName or name
         CustomThemes[finalName] = {
             Palette = paletteData,
             Background = image or "",
             Sound = sound or "",
+            TabIcons = tabIcons, -- íconos propios de las pestañas (nil = los de siempre)
         }
         if not editingThemeName then
             table.insert(CustomThemeOrder, finalName)
@@ -247,12 +393,14 @@
     EffectsUI.Hero = mk("Frame", {
         Parent = EffectsRoot,
         Size = UDim2.new(1, 0, 0, 96),
-        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BackgroundColor3 = Theme.Secondary, -- antes negro fijo: ahora sigue al tema
+        BackgroundTransparency = 0.12,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         LayoutOrder = 0,
         ZIndex = 10,
     })
+    EffectsUI.Hero:SetAttribute("ThemeRole", "Secondary")
     corner(EffectsUI.Hero, 16)
     EffectsUI.HeroStroke = mk("UIStroke", {Parent = EffectsUI.Hero, Thickness = 1.5, Transparency = 0.35, Color = Theme.Accent})
     EffectsUI.HeroGlow = mk("Frame", {
@@ -516,12 +664,13 @@
             Parent = parent,
             Size = UDim2.new(1, -12, 0, 64),
             Position = UDim2.new(0, 6, 0, 6),
-            BackgroundColor3 = Color3.fromRGB(12, 12, 16),
-            BackgroundTransparency = 0,
+            BackgroundColor3 = Theme.Background, -- antes negro fijo: ahora sigue al tema
+            BackgroundTransparency = 0.25,
             BorderSizePixel = 0,
             ClipsDescendants = true,
             ZIndex = 11,
         })
+        preview:SetAttribute("ThemeRole", "Background")
         corner(preview, 11)
 
         local glow = mk("Frame", {
@@ -775,133 +924,4 @@
         for _, row in ipairs(effectRows) do
             if row.card then row.card.Visible = EffectsUI.Filter == "all" or row.cat == EffectsUI.Filter or row.mode == "Off" end
         end
-    end
-
-    -- Animacion de las muestras: solo con la pestana visible y a 30 fps como maximo
-    EffectsUI.Acc = 0
-    track(RunService.Heartbeat:Connect(function(dt)
-        effectPreviewElapsed = effectPreviewElapsed + dt
-        EffectsUI.Acc = EffectsUI.Acc + dt
-        if EffectsUI.Acc < 1 / 30 or not EffectsPage.Visible or PerfOpt.Flags.NoDecorAnim then return end
-        EffectsUI.Acc = 0
-        for index = #effectPreviews, 1, -1 do
-            local previewData = effectPreviews[index]
-            if not previewData.frame or not previewData.frame.Parent then
-                table.remove(effectPreviews, index)
-            else
-                local first = getEffectPreviewColor(previewData.mode, effectPreviewElapsed)
-                if first then
-                    local second = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.33)
-                    local third = getEffectPreviewColor(previewData.mode, effectPreviewElapsed + 0.66)
-                    setPreviewStripColors(previewData, first, second, third)
-                end
-            end
-        end
-        local current = getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed)
-        local heroColor = current or Theme.Text
-        EffectsUI.HeroText.TextColor3 = current and Color3.new(1, 1, 1) or heroColor
-        EffectsUI.HeroTextGrad.Color = current and ColorSequence.new({
-            ColorSequenceKeypoint.new(0, current),
-            ColorSequenceKeypoint.new(0.5, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.35) or current),
-            ColorSequenceKeypoint.new(1, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.7) or current),
-        }) or ColorSequence.new(Color3.new(1, 1, 1))
-        EffectsUI.HeroGrad.Color = ColorSequence.new(heroColor, getEffectPreviewColor(Window.CurrentTextEffect, effectPreviewElapsed + 0.5) or Theme.Accent)
-    end))
-
-    refreshEffectRows()
-
-    function Window:InitializeShaderSystem()
-    local ShaderLightingService = game:GetService("Lighting")
-    local ShaderTerrain = workspace:FindFirstChildOfClass("Terrain") or workspace.Terrain
-    local ShaderCore = {}
-    ShaderCore.__index = ShaderCore
-
-    local function shaderCopy(value, seen)
-        if type(value) ~= "table" then return value end
-        seen = seen or {}
-        if seen[value] then return seen[value] end
-        local result = {}
-        seen[value] = result
-        for key, item in pairs(value) do
-            result[shaderCopy(key, seen)] = shaderCopy(item, seen)
-        end
-        return result
-    end
-
-    local function shaderSafe(callback)
-        local ok, result = pcall(callback)
-        return ok, result
-    end
-
-    local function shaderParent(spec)
-        if spec.parent == "Lighting" then
-            return ShaderLightingService
-        elseif spec.parent == "Terrain" then
-            return ShaderTerrain
-        elseif spec.parent == "CurrentCamera" then
-            return workspace.CurrentCamera
-        end
-        return spec.parent
-    end
-
-    local ShaderTargets = {
-        Lighting = {kind = "service", serviceName = "Lighting"},
-        Terrain = {kind = "direct", instance = ShaderTerrain},
-        Sky = {kind = "class", className = "Sky", parent = "Lighting"},
-        Atmosphere = {kind = "class", className = "Atmosphere", parent = "Lighting"},
-        Clouds = {kind = "class", className = "Clouds", parent = "Terrain"},
-        BloomEffect = {kind = "class", className = "BloomEffect", parent = "Lighting"},
-        BlurEffect = {kind = "class", className = "BlurEffect", parent = "Lighting"},
-        ColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "Lighting"},
-        ColorGradingEffect = {kind = "class", className = "ColorGradingEffect", parent = "Lighting"},
-        DepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "Lighting"},
-        SunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "Lighting"},
-        CameraBloomEffect = {kind = "class", className = "BloomEffect", parent = "CurrentCamera"},
-        CameraBlurEffect = {kind = "class", className = "BlurEffect", parent = "CurrentCamera"},
-        CameraColorCorrectionEffect = {kind = "class", className = "ColorCorrectionEffect", parent = "CurrentCamera"},
-        CameraDepthOfFieldEffect = {kind = "class", className = "DepthOfFieldEffect", parent = "CurrentCamera"},
-        CameraSunRaysEffect = {kind = "class", className = "SunRaysEffect", parent = "CurrentCamera"},
-    }
-
-    local ShaderPropertyCatalog = {
-        Lighting = {
-            "Ambient", "Brightness", "ClockTime", "ColorShift_Bottom", "ColorShift_Top",
-            "EnvironmentDiffuseScale", "EnvironmentSpecularScale", "ExposureCompensation",
-            "FogColor", "FogEnd", "FogStart", "GeographicLatitude", "GlobalShadows",
-            "OutdoorAmbient", "ShadowSoftness", "TimeOfDay",
-        },
-        Terrain = {"WaterColor", "WaterReflectance", "WaterTransparency", "WaterWaveSize", "WaterWaveSpeed"},
-        Sky = {
-            "CelestialBodiesShown", "MoonAngularSize", "MoonTextureId", "SkyboxBk", "SkyboxDn",
-            "SkyboxFt", "SkyboxLf", "SkyboxOrientation", "SkyboxRt", "SkyboxUp", "StarCount",
-            "SunAngularSize", "SunTextureId",
-        },
-        Atmosphere = {"Color", "Decay", "Density", "Glare", "Haze", "Offset"},
-        Clouds = {"Color", "Cover", "Density"},
-        BloomEffect = {"Enabled", "Intensity", "Size", "Threshold"},
-        BlurEffect = {"Enabled", "Size"},
-        ColorCorrectionEffect = {"Enabled", "Brightness", "Contrast", "Saturation", "TintColor"},
-        ColorGradingEffect = {"Enabled", "TonemapperPreset"},
-        DepthOfFieldEffect = {"Enabled", "FarIntensity", "FocusDistance", "InFocusRadius", "NearIntensity"},
-        SunRaysEffect = {"Enabled", "Intensity", "Spread"},
-    }
-
-    local ShaderPresets = {
-        Morning = {
-            Lighting = {
-                ClockTime = 6.9, GeographicLatitude = 41, Brightness = 2.6,
-                Ambient = Color3.fromRGB(78, 82, 96), OutdoorAmbient = Color3.fromRGB(128, 124, 132),
-                ColorShift_Top = Color3.fromRGB(255, 214, 170), ColorShift_Bottom = Color3.fromRGB(170, 190, 228),
-                EnvironmentDiffuseScale = 0.90, EnvironmentSpecularScale = 0.85,
-                ExposureCompensation = 0.12, GlobalShadows = true, ShadowSoftness = 0.28,
-            },
-            Atmosphere = {
-                Density = 0.32, Offset = 0.18, Color = Color3.fromRGB(214, 214, 236),
-                Decay = Color3.fromRGB(126, 128, 168), Glare = 0.55, Haze = 1.60,
-            },
-            Clouds = {Cover = 0.34, Density = 0.22, Color = Color3.fromRGB(255, 236, 222)},
-            ColorCorrectionEffect = {
-                Enabled = true, Brightness = 0.03, Contrast = 0.18, Saturation = 0.16,
-                TintColor = Color3.fromRGB(255, 246, 232),
-            },
-            BloomEffect = {Enab
+    

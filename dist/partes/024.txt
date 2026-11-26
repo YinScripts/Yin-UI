@@ -1,4 +1,13 @@
-and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
+= tostring(text or "")
+                if #text <= 14 then
+                    return text
+                end
+                return text:sub(1, 10) .. "..."
+            end
+
+            local hourNow = tonumber(os.date("%H")) or 12
+            local greetES = (hourNow >= 5 and hourNow < 12) and "Buenos días," or ((hourNow >= 12 and hourNow < 20) and "Buenas tardes," or "Buenas noches,")
+            local greetEN = (hourNow >= 5 and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "Good afternoon," or "Good evening,")
             local NameLabel = mk("TextLabel", {
                 Parent = HomeRoot,
                 Size = UDim2.new(0.44, 0, 0, 20),
@@ -1003,19 +1012,4 @@ and hourNow < 12) and "Good morning," or ((hourNow >= 12 and hourNow < 20) and "
                     if seen[base] > 1 then id = base .. "#" .. seen[base] end
                     table.insert(list, {
                         id = id,
-                        tab = base:match("^(.-)::") or base,
-                        entry = entry,
-                    })
-                end
-            end
-            return list
-        end
-
-        local STATS_CHECK = 103456899356871
-        local STATS_COLORS = {
-            ok = Color3.fromRGB(70, 210, 120),
-            warn = Color3.fromRGB(240, 190, 60),
-            err = Color3.fromRGB(240, 85, 85),
-        }
-
-        local fun
+        

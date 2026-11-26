@@ -1,4 +1,8 @@
-.Font.GothamBold,
+ocal num = new("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = tostring(number), TextColor3 = p.Text,
+            TextSize = 13, Font = Enum.Font.GothamBlack, ZIndex = 12}, badge)
+        num:SetAttribute("ThemeTextRole", "Text")
+        num:SetAttribute("IgnoreTextEffect", true)
+        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum.Font.GothamBold,
             Role = "TextDim", Position = UDim2.fromOffset(52, 8), Size = UDim2.new(1, -64, 0, 14)})
         caption.TextWrapped = false
         caption.TextTruncate = Enum.TextTruncate.AtEnd
@@ -757,16 +761,3 @@ function YinYang._BuildChatGlobal(ctx)
                         }).Body
                     else
                         return HttpService:GetAsync(opts.Url)
-                    end
-                end)
-                return {
-                    Success = ok,
-                    Body = ok and tostring(result or "") or "",
-                    StatusCode = ok and 200 or 0,
-                }
-            end
-    end
-    local request = getRequest()
-    local OverlayParent = ctx.OverlayParent or LocalPlayer:WaitForChild("PlayerGui")
-    pcall(function()
-        local old = OverlayParent:F

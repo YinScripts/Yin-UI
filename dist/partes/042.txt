@@ -1,4 +1,141 @@
-       Size = UDim2.new(1, -28, 1, -70),
+ng")
+        heroSub:SetAttribute("TextEnglish", "Art from the Yin Yang community")
+        local countES = #FanArt_Items .. (#FanArt_Items == 1 and " obra" or " obras")
+        local countEN = #FanArt_Items .. (#FanArt_Items == 1 and " piece" or " pieces")
+        local heroCount = mk("TextLabel", {
+            Parent = FA.hero, Size = UDim2.new(0, 0, 0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -14, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8,
+            Text = GetText(countES, countEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 10,
+        })
+        heroCount:SetAttribute("ThemeRole", "Accent")
+        heroCount:SetAttribute("ThemeTextRole", "Accent")
+        heroCount:SetAttribute("TextSpanish", countES)
+        heroCount:SetAttribute("TextEnglish", countEN)
+        heroCount:SetAttribute("IgnoreTextEffect", true)
+        corner(heroCount, 999)
+        mk("UIPadding", {Parent = heroCount, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
+
+        -- Visor a pantalla completa (se crea una sola vez)
+        FA.viewer = mk("Frame", {
+            Parent = Main,
+            Size = UDim2.new(1, 0, 1, 0),
+            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
+            BackgroundTransparency = 0.12,
+            BorderSizePixel = 0,
+            Active = true,
+            Visible = false,
+            ZIndex = 400,
+        })
+        corner(FA.viewer, 10)
+        FA.viewerImage = mk("ImageButton", {
+            Parent = FA.viewer, Size = UDim2.new(1, -40, 1, -90), Position = UDim2.new(0, 20, 0, 50),
+            BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 401,
+        })
+        corner(FA.viewerImage, 10)
+        FA.viewerTitle = mk("TextLabel", {
+            Parent = FA.viewer, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1,
+            Text = "", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 16,
+            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 402,
+        })
+        FA.viewerTitle:SetAttribute("IgnoreTextEffect", true)
+        FA.viewerHint = mk("TextLabel", {
+            Parent = FA.viewer, Size = UDim2.new(1, -40, 0, 20), Position = UDim2.new(0, 20, 1, -32), BackgroundTransparency = 1,
+            Text = GetText("Tocá la imagen para acercar / alejar", "Tap the image to zoom in / out"), TextColor3 = Color3.fromRGB(190, 190, 190),
+            Font = Enum.Font.GothamMedium, TextSize = 11, ZIndex = 402,
+        })
+        FA.viewerHint:SetAttribute("TextSpanish", "Tocá la imagen para acercar / alejar")
+        FA.viewerHint:SetAttribute("TextEnglish", "Tap the image to zoom in / out")
+        FA.viewerHint:SetAttribute("IgnoreTextEffect", true)
+        FA.viewerClose = mk("TextButton", {
+            Parent = FA.viewer, Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8),
+            BackgroundColor3 = Color3.fromRGB(40, 40, 46), Text = "×", TextColor3 = Color3.new(1, 1, 1),
+            Font = Enum.Font.GothamBold, TextSize = 20, AutoButtonColor = false, ZIndex = 403,
+        })
+        corner(FA.viewerClose, 999)
+        FA.viewerScale = mk("UIScale", {Parent = FA.viewerImage, Scale = 1})
+        FA.viewerClose.MouseButton1Click:Connect(function()
+            playSound(Sounds.Click, 0.45)
+            FA.viewer.Visible = false
+        end)
+        FA.viewerImage.MouseButton1Click:Connect(function()
+            local zoomed = FA.viewerImage.ScaleType == Enum.ScaleType.Fit
+            FA.viewerImage.ScaleType = zoomed and Enum.ScaleType.Crop or Enum.ScaleType.Fit
+            FA.viewerScale.Scale = 0.96
+            TweenService:Create(FA.viewerScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end)
+        function FA.open(image, titleText)
+            FA.viewerImage.Image = image
+            FA.viewerImage.ScaleType = Enum.ScaleType.Fit
+            FA.viewerTitle.Text = titleText
+            FA.viewer.Visible = true
+            FA.viewer.BackgroundTransparency = 1
+            TweenService:Create(FA.viewer, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.12}):Play()
+            FA.viewerScale.Scale = 0.9
+            TweenService:Create(FA.viewerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
+        end
+
+        for artIndex, art in ipairs(FanArt_Items) do
+            local Card = mk("Frame", {
+                Parent = FanArtPage,
+                Size = UDim2.new(1, 0, 0, 320),
+                BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+                BackgroundTransparency = 0,
+                BorderSizePixel = 0,
+                ClipsDescendants = true,
+                ZIndex = 9,
+            })
+            corner(Card, 16)
+            local cardStroke = stroke(Card, Theme.Accent, 1.5, 0.45)
+            cardStroke:SetAttribute("ThemeRole", "Accent")
+
+            local Ambient = mk("ImageLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, 0, 1, 0),
+                BackgroundTransparency = 1,
+                Image = "",
+                ImageTransparency = 0.78,
+                ScaleType = Enum.ScaleType.Crop,
+                ZIndex = 9,
+            })
+            corner(Ambient, 16)
+
+            local Skeleton = mk("Frame", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
+                Position = UDim2.new(0, 14, 0, 14),
+                BackgroundColor3 = Color3.fromRGB(40, 40, 46),
+                BorderSizePixel = 0,
+                ZIndex = 10,
+            })
+            corner(Skeleton, 12)
+            local shimmer = mk("UIGradient", {
+                Parent = Skeleton,
+                Rotation = 20,
+                Offset = Vector2.new(-1, 0),
+                Transparency = NumberSequence.new({
+                    NumberSequenceKeypoint.new(0, 0.6),
+                    NumberSequenceKeypoint.new(0.5, 0),
+                    NumberSequenceKeypoint.new(1, 0.6),
+                }),
+            })
+            local shimmerTween = TweenService:Create(shimmer, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Offset = Vector2.new(1, 0)})
+            shimmerTween:Play()
+
+            local ArtImage = mk("ImageLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
+                Position = UDim2.new(0, 14, 0, 14),
+                BackgroundTransparency = 1,
+                Image = "",
+                ScaleType = Enum.ScaleType.Fit,
+                Visible = false,
+                ZIndex = 11,
+            })
+            corner(ArtImage, 12)
+
+            local ArtStatus = mk("TextLabel", {
+                Parent = Card,
+                Size = UDim2.new(1, -28, 1, -70),
                 Position = UDim2.new(0, 14, 0, 14),
                 BackgroundTransparency = 1,
                 Text = GetText("Cargando imagen...", "Loading image..."),

@@ -1,4 +1,13 @@
-o, how are you today?" or "Hola, ¿cómo estás hoy?"
+t) ~= "table" then return nil end
+                local v = t[tl] or t[Tr.locale]
+                if v == nil then for _, x in pairs(t) do v = x break end end
+                return type(v) == "string" and v or nil
+            end)
+            return ok and out or nil
+        end
+        Tr.probe = function()
+            if Tr.robloxOk ~= nil then return Tr.robloxOk end
+            local sample = Tr.base(Tr.lang) == "es" and "Hello, how are you today?" or "Hola, ¿cómo estás hoy?"
             local out = Tr.roblox(sample, Tr.lang)
             Tr.robloxOk = type(out) == "string" and out ~= "" and out ~= sample
             return Tr.robloxOk
@@ -1085,19 +1094,4 @@ function YinYang:CreateWindow(title_text, startTheme, options)
 
         local turboEnd = os.clock() + 4
         for _, entry in ipairs(logoLayers) do
-            if entry.def.Movement == "Spin" then
-                entry.state.turboEndTime = entry.def.TurboSeconds and (os.clock() + entry.def.TurboSeconds) or turboEnd
-            end
-        end
-    end
-
-    local function hideMainWindow()
-        if windowTweenBusy or not uiVisible then
-            return
-        end
-
-        windowTweenBusy = true
-        uiVisible = false
-
-        if activeWindowTween then
-            pcall(function() activeWind
+            if entry

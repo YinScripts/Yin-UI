@@ -1,4 +1,14 @@
-      })
+  Size = UDim2.new(1, -170, 0, 18),
+                Position = UDim2.new(0, 48, 0, 8),
+                BackgroundTransparency = 1,
+                Text = displayText,
+                TextColor3 = Theme.Text,
+                Font = Enum.Font.GothamBlack,
+                TextSize = 13,
+                TextXAlignment = Enum.TextXAlignment.Left,
+                TextTruncate = Enum.TextTruncate.AtEnd,
+                ZIndex = 10
+            })
             LabelTxt:SetAttribute("ThemeTextRole", "Text")
 
             local ComboLabel = mk("TextLabel", {
@@ -997,15 +1007,4 @@
                 NameEnglish = text,
                 Holder = FloatingWindow,
                 Kind = "Floating",
-            })
-
-            return FloatingWindow
-        end
-
-        function Tab:CreateFloatingButton(textSpanish, textEnglishOrCooldown, cooldownOrCallback, callback, isMirror, mirrorSource)
-            local textEnglish = textSpanish
-            local cooldown, cb
-
-            if type(textEnglishOrCooldown) == "string" then
-                textEnglish = textEnglishOrCooldown
-                if type(cooldownOrCallback) == "number" t
+      

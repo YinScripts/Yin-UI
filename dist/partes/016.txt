@@ -1,4 +1,19 @@
-owTween:Cancel() end)
+.def.Movement == "Spin" then
+                entry.state.turboEndTime = entry.def.TurboSeconds and (os.clock() + entry.def.TurboSeconds) or turboEnd
+            end
+        end
+    end
+
+    local function hideMainWindow()
+        if windowTweenBusy or not uiVisible then
+            return
+        end
+
+        windowTweenBusy = true
+        uiVisible = false
+
+        if activeWindowTween then
+            pcall(function() activeWindowTween:Cancel() end)
             activeWindowTween = nil
         end
 
@@ -1124,13 +1139,4 @@ owTween:Cancel() end)
             local sine = 0.6 + 0.4 * ((math.sin(math.rad(animValue)) + 1) / 2)
             
             if string.find(title_text, "Yin Yang") or string.find(title_text, "yin yang") then
-                TitleLabel.TextColor3 = Color3.new(
-                    (Theme.TitleText or Theme.Accent).R * sine,
-                    (Theme.TitleText or Theme.Accent).G * sine,
-                    (Theme.TitleText or Theme.Accent).B * sine
-                )
-            else
-                TitleLabel.TextColor3 = Color3.new(
-                    (Theme.TitleText or Theme.Accent).R * sine,
-                    (Theme.TitleText or Theme.Accent).G * sine,
-                
+                TitleLabel.TextColor3 = 

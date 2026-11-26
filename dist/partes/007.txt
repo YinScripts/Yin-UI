@@ -1,4 +1,14 @@
-   Theme.TabActive = Theme.TabActive or Color3.fromRGB(225, 100, 0)
+e]
+    if not palette then return false end
+    Theme = table.clone(palette)
+    Theme.AccentText = getContrastColor(Theme.Accent)
+    Theme.TextStroke = getContrastColor(Theme.Text)
+    Theme.ThemeName = name
+    Theme.SliderTrack = Theme.SliderTrack or Theme.AccentOff
+    Theme.SliderFill = Theme.SliderFill or Theme.Accent
+    Theme.SliderThumb = Theme.SliderThumb or Theme.Accent
+    Theme.Border = Theme.Border or Theme.Accent
+    Theme.TabActive = Theme.TabActive or Color3.fromRGB(225, 100, 0)
     local function lighten(c)
         local h, sat, val = Color3.toHSV(c)
         return Color3.fromHSV(h, math.max(0, sat - 0.3), math.min(1, val + 0.25))
@@ -890,9 +900,4 @@ do
     function Widgets:Grid(o)
         o = o or {}
         local list = Kit.New("ScrollingFrame", {LayoutOrder = self:_next(), Size = UDim2.new(1, 0, 0, o.Height or 120), BackgroundTransparency = 0.4,
-            BorderSizePixel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
-            AutomaticCanvasSize = Enum.AutomaticSize.Y}, self.Frame, {bg = "Secondary"})
-        Kit.Corner(list, 10)
-        Kit.Pad(list, 6, 6, 6, 6)
-        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / (o.Columns or 2), -4, 0, 26), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder}, list)
-     
+            BorderSizePi

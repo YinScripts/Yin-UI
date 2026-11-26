@@ -1,4 +1,16 @@
-m.ApplyStrokeMode.Contextual}, label)
+.new(-0.5, 0)}, label)
+        task.spawn(function()
+            local t = 0
+            while label.Parent do
+                t = (t + 0.02) % 1
+                g.Offset = Vector2.new(t - 0.5, 0)
+                task.wait(0.05)
+            end
+        end)
+        return g
+    end
+    Chat.ownerNameFx = function(label)
+        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transparency = 0.72, ApplyStrokeMode = Enum.ApplyStrokeMode.Contextual}, label)
         local grad = mk("UIGradient", {
             Transparency = NumberSequence.new({
                 NumberSequenceKeypoint.new(0, 0.65),
@@ -845,13 +857,4 @@ m.ApplyStrokeMode.Contextual}, label)
             if found then table.remove(list, found) end
             table.insert(list, 1, entry)
             entry.ts = os.time()
-            while #list > 12 do table.remove(list) end
-            changed = true
-        end
-        if changed then Chat.saveSettings() end
-    end
-    do
-        UI.BackButton = UI.iconButton(Header, UI.ICON.back, 34, 22, {Position = UDim2.fromOffset(8, 12), Visible = false, ZIndex = 3})
-        UI.BackCount = mk("TextLabel", {
-            Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0, 0),
-            Positio
+            while #list > 12 do t

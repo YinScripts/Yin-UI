@@ -1,4 +1,129 @@
-adding = UDim.new(0, 4),
+a copia con RichText encima del título real,
+        -- así PlayerSongTitle.Text sigue siendo texto plano para el resto del reproductor.
+        N.titleFx = mk("TextLabel", {
+            Parent = PlayerSongTitle, Name = "YYTitleWave", Size = UDim2.fromScale(1, 1),
+            BackgroundTransparency = 1, Text = "", RichText = true, Font = PlayerSongTitle.Font,
+            TextSize = PlayerSongTitle.TextSize, TextColor3 = spotifyText,
+            TextXAlignment = PlayerSongTitle.TextXAlignment, TextTruncate = PlayerSongTitle.TextTruncate,
+            Visible = false, ZIndex = PlayerSongTitle.ZIndex + 1,
+        })
+        N.escapar = function(c)
+            if c == "<" then return "&lt;" elseif c == ">" then return "&gt;" elseif c == "&" then return "&amp;"
+            elseif c == "\"" then return "&quot;" elseif c == "'" then return "&apos;" end
+            return c
+        end
+        N.hex = function(c)
+            return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
+        end
+        N.NEGRO = Color3.fromRGB(12, 12, 14)
+        N.fxAcc, N.fxTime, N.fxOn = 0, 0, false
+        N.fxConn = RunService.Heartbeat:Connect(function(dt)
+            N.fxAcc = N.fxAcc + dt
+            N.fxTime = N.fxTime + dt
+            if N.fxAcc < 1 / 30 then return end
+            N.fxAcc = 0
+            if not N.openCatalog.Parent then
+                N.fxConn:Disconnect()
+                return
+            end
+            local t = N.fxTime
+            local playing = SpotifyState.IsPlaying == true and SpotifyState.CurrentTrack ~= nil
+            -- botón: las barras bailan solo si suena
+            for i, bar in ipairs(N.catBars) do
+                local h = playing and (3 + (math.sin(t * (7 + i * 2.3) + i * 1.7) * 0.5 + 0.5) * 8) or 3
+                bar.Size = UDim2.fromOffset(2, math.floor(h + 0.5))
+            end
+            -- título: ola de letras negras
+            if playing and PlayerSongTitle.Visible then
+                if not N.fxOn then
+                    N.fxOn = true
+                    N.titleFx.Visible = true
+                    PlayerSongTitle.TextTransparency = 1
+                end
+                local texto = PlayerSongTitle.Text
+                if not utf8.len(texto) then texto = texto:gsub("[\128-\255]", "?") end -- texto raro: no romper la ola
+                local partes, i = {}, 0
+                for _, cp in utf8.codes(texto) do
+                    i = i + 1
+                    local ch = utf8.char(cp)
+                    if ch == " " then
+                        partes[#partes + 1] = " "
+                    else
+                        -- la ola avanza ~4 letras por segundo; cada letra se oscurece y vuelve suave (sin bordes)
+                        local fase = (t * 4 - i) % 24
+                        local k = 0
+                        if fase < 6 then k = math.sin(fase / 6 * math.pi) end
+                        local col = spotifyText:Lerp(N.NEGRO, k)
+                        partes[#partes + 1] = string.format('<font color="%s">%s</font>', N.hex(col), N.escapar(ch))
+                    end
+                end
+                N.titleFx.Text = table.concat(partes)
+            elseif N.fxOn then
+                N.fxOn = false
+                N.titleFx.Visible = false
+                PlayerSongTitle.TextTransparency = 0
+            end
+        end)
+
+        N.root = mk("Frame", {
+            Parent = CatalogPage, Name = "SpotifyBottomNavigation",
+            Size = UDim2.new(1, 0, 0, 90), AnchorPoint = Vector2.new(0, 1),
+            Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
+            BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 55,
+        })
+        N.mini = mk("TextButton", {
+            Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
+            BackgroundColor3 = Color3.fromRGB(32, 32, 36), BackgroundTransparency = 0.24, BorderSizePixel = 0,
+            Text = "", AutoButtonColor = false, ClipsDescendants = true, ZIndex = 56,
+        })
+        corner(N.mini, 8)
+        spotifyGlass(N.mini, 56)
+        N.cover = mk("ImageLabel", {
+            Parent = N.mini, Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(5, 5),
+            BackgroundColor3 = Color3.fromRGB(25, 25, 28), BorderSizePixel = 0,
+            Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 57,
+        })
+        corner(N.cover, 5)
+        N.title = mk("TextLabel", {
+            Parent = N.mini, Size = UDim2.new(1, -100, 0, 20), Position = UDim2.fromOffset(51, 5),
+            BackgroundTransparency = 1, Text = GetText("Selecciona una canción", "Select a song"),
+            Font = Enum.Font.GothamBold, TextColor3 = spotifyText, TextSize = 12,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
+        })
+        N.artist = mk("TextLabel", {
+            Parent = N.mini, Size = UDim2.new(1, -100, 0, 16), Position = UDim2.fromOffset(51, 24),
+            BackgroundTransparency = 1, Text = "", Font = Enum.Font.GothamMedium,
+            TextColor3 = Color3.fromRGB(205, 205, 210), TextSize = 10,
+            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
+        })
+        N.play = mk("ImageButton", {
+            Parent = N.mini, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0.5),
+            Position = UDim2.new(1, -10, 0.5, -1), BackgroundTransparency = 1,
+            Image = asset(135609604299893), ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 59,
+        })
+        N.progress = mk("Frame", {
+            Parent = N.mini, Size = UDim2.fromOffset(0, 2), Position = UDim2.new(0, 0, 1, -2),
+            BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, ZIndex = 58,
+        })
+        N.mini.Activated:Connect(function() SpotifyPages:JumpTo(PlayerPage) end)
+        N.play.Activated:Connect(togglePlayback)
+
+        N.nav = mk("Frame", {
+            Parent = N.root, Size = UDim2.new(1, -16, 0, 36), Position = UDim2.new(0, 8, 0, 53),
+            BackgroundTransparency = 1, ZIndex = 56,
+        })
+        function N.button(index, iconName, fallback, es, en)
+            local button = mk("TextButton", {
+                Parent = N.nav, Size = UDim2.new(1/3, 0, 1, 0), Position = UDim2.new((index-1)/3, 0, 0, 0),
+                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 57,
+            })
+            local content = mk("Frame", {
+                Parent = button, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 57,
+            })
+            mk("UIListLayout", {
+                Parent = content, FillDirection = Enum.FillDirection.Horizontal,
+                HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
+                SortOrder = Enum.SortOrder.LayoutOrder, Padding = UDim.new(0, 4),
             })
             local glyph = mk("TextLabel", {
                 Parent = content, Size = UDim2.fromOffset(16, 16), LayoutOrder = 1,
@@ -895,201 +1020,4 @@ adding = UDim.new(0, 4),
         Parent = FavPage.Info,
         Size = UDim2.new(1, 0, 0, 72),
         Position = UDim2.new(0, 0, 0, 32),
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamBlack,
-        TextSize = 34,
-        TextWrapped = true,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextYAlignment = Enum.TextYAlignment.Center,
-        ZIndex = 43,
-    })
-    FavPage.text(FavPage.Title, "Canciones que te gustan", "Liked Songs")
-    FavPage.Meta = mk("Frame", {
-        Parent = FavPage.Info,
-        Size = UDim2.new(1, 0, 0, 22),
-        Position = UDim2.new(0, 0, 1, -22),
-        BackgroundTransparency = 1,
-        ZIndex = 43,
-    })
-    mk("UIListLayout", {
-        Parent = FavPage.Meta,
-        FillDirection = Enum.FillDirection.Horizontal,
-        VerticalAlignment = Enum.VerticalAlignment.Center,
-        Padding = UDim.new(0, 6),
-        SortOrder = Enum.SortOrder.LayoutOrder,
-    })
-    FavPage.Avatar = mk("ImageLabel", {
-        Parent = FavPage.Meta,
-        Size = UDim2.fromOffset(22, 22),
-        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
-        BorderSizePixel = 0,
-        Image = ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(LocalPlayer.UserId) or 0),
-        LayoutOrder = 1,
-        ZIndex = 44,
-    })
-    corner(FavPage.Avatar, 999)
-    FavPage.Owner = mk("TextLabel", {
-        Parent = FavPage.Meta,
-        Size = UDim2.fromOffset(0, 22),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        Text = tostring(LocalPlayer.Name),
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(255, 255, 255),
-        LayoutOrder = 2,
-        ZIndex = 44,
-    })
-    FavPage.Count = mk("TextLabel", {
-        Parent = FavPage.Meta,
-        Size = UDim2.fromOffset(0, 22),
-        AutomaticSize = Enum.AutomaticSize.X,
-        BackgroundTransparency = 1,
-        Text = "",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(220, 215, 235),
-        LayoutOrder = 3,
-        ZIndex = 44,
-    })
-
-    FavPage.Actions = mk("Frame", {
-        Parent = FavPage.Scroll,
-        Size = UDim2.new(1, 0, 0, 84),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 0.80,
-        BorderSizePixel = 0,
-        LayoutOrder = 2,
-        ZIndex = 41,
-    })
-    mk("UIGradient", {
-        Parent = FavPage.Actions,
-        Rotation = 90,
-        Color = ColorSequence.new(Color3.fromRGB(34, 24, 66), Color3.fromRGB(18, 18, 18)),
-    })
-    FavPage.PlayAll = mk("TextButton", {
-        Parent = FavPage.Actions,
-        Size = UDim2.fromOffset(56, 56),
-        Position = UDim2.new(0, 20, 0.5, -28),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        Text = "",
-        AutoButtonColor = false,
-        ZIndex = 44,
-    })
-    corner(FavPage.PlayAll, 999)
-    FavPage.PlayIcon = mk("ImageLabel", {
-        Parent = FavPage.PlayAll,
-        Size = UDim2.fromOffset(24, 24),
-        AnchorPoint = Vector2.new(0.5, 0.5),
-        Position = UDim2.new(0.5, 0, 0.5, 0),
-        BackgroundTransparency = 1,
-        Image = FavPage.PLAY,
-        ImageColor3 = Color3.fromRGB(0, 0, 0),
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 45,
-    })
-    FavPage.PlayScale = mk("UIScale", {Parent = FavPage.PlayAll, Scale = 1})
-    FavPage.PlayAll.MouseEnter:Connect(function()
-        FavPage.tween(FavPage.PlayScale, 0.12, {Scale = 1.06})
-        FavPage.PlayAll.BackgroundColor3 = Color3.fromRGB(30, 215, 96)
-    end)
-    FavPage.PlayAll.MouseLeave:Connect(function()
-        FavPage.tween(FavPage.PlayScale, 0.12, {Scale = 1})
-        FavPage.PlayAll.BackgroundColor3 = spotifyGreen
-    end)
-
-    FavPage.ShuffleBtn = mk("TextButton", {
-        Parent = FavPage.Actions,
-        Size = UDim2.fromOffset(0, 32),
-        AutomaticSize = Enum.AutomaticSize.X,
-        Position = UDim2.new(0, 92, 0.5, -16),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 0.92,
-        BorderSizePixel = 0,
-        Text = "",
-        Font = Enum.Font.GothamBold,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(179, 179, 179),
-        AutoButtonColor = false,
-        ZIndex = 44,
-    })
-    corner(FavPage.ShuffleBtn, 999)
-    mk("UIPadding", {Parent = FavPage.ShuffleBtn, PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)})
-    FavPage.text(FavPage.ShuffleBtn, "Aleatorio", "Shuffle")
-    FavPage.ShuffleDot = mk("Frame", {
-        Parent = FavPage.ShuffleBtn,
-        Size = UDim2.fromOffset(4, 4),
-        AnchorPoint = Vector2.new(0.5, 0),
-        Position = UDim2.new(0.5, 0, 1, 3),
-        BackgroundColor3 = spotifyGreen,
-        BorderSizePixel = 0,
-        Visible = false,
-        ZIndex = 45,
-    })
-    corner(FavPage.ShuffleDot, 999)
-
-    FavPage.SearchBox = mk("Frame", {
-        Parent = FavPage.Actions,
-        Size = UDim2.fromOffset(190, 32),
-        AnchorPoint = Vector2.new(1, 0.5),
-        Position = UDim2.new(1, -20, 0.5, 0),
-        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
-        BackgroundTransparency = 0.9,
-        BorderSizePixel = 0,
-        ZIndex = 44,
-    })
-    corner(FavPage.SearchBox, 6)
-    mk("ImageLabel", {
-        Parent = FavPage.SearchBox,
-        Size = UDim2.fromOffset(16, 16),
-        Position = UDim2.new(0, 9, 0.5, -8),
-        BackgroundTransparency = 1,
-        Image = FavPage.SEARCH,
-        ImageColor3 = Color3.fromRGB(179, 179, 179),
-        ScaleType = Enum.ScaleType.Fit,
-        ZIndex = 45,
-    })
-    FavPage.SearchInput = mk("TextBox", {
-        Parent = FavPage.SearchBox,
-        Size = UDim2.new(1, -36, 1, 0),
-        Position = UDim2.new(0, 32, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "",
-        ClearTextOnFocus = false,
-        PlaceholderText = "",
-        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
-        TextColor3 = spotifyText,
-        Font = Enum.Font.GothamMedium,
-        TextSize = 13,
-        TextXAlignment = Enum.TextXAlignment.Left,
-        TextTruncate = Enum.TextTruncate.AtEnd,
-        ZIndex = 45,
-    })
-    FavPage.SearchInput:SetAttribute("PlaceholderSpanish", "Buscar en favoritos")
-    FavPage.SearchInput:SetAttribute("PlaceholderEnglish", "Search in Liked Songs")
-    FavPage.SearchInput.PlaceholderText = GetText("Buscar en favoritos", "Search in Liked Songs")
-
-    FavPage.TableHead = mk("Frame", {
-        Parent = FavPage.Scroll,
-        Size = UDim2.new(1, 0, 0, 36),
-        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
-        BackgroundTransparency = 0.55,
-        BorderSizePixel = 0,
-        LayoutOrder = 3,
-        ZIndex = 41,
-    })
-    FavPage.HeadNum = mk("TextLabel", {
-        Parent = FavPage.TableHead,
-        Size = UDim2.fromOffset(24, 30),
-        Position = UDim2.new(0, 24, 0, 0),
-        BackgroundTransparency = 1,
-        Text = "#",
-        Font = Enum.Font.GothamMedium,
-        TextSize = 13,
-        TextColor3 = Color3.fromRGB(179, 179, 179),
-        ZIndex = 42,
-    })
-    FavPage.H
+        Bac

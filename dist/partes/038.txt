@@ -1,4 +1,202 @@
- local pct = getSeekPercent(input.Position.X)
+Alignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local PlayerSongArtist = mk("TextLabel", {
+        Parent = InfoFrame,
+        Size = UDim2.new(1, 0, 0, 20),
+        Position = UDim2.new(0, 0, 0, 32),
+        BackgroundTransparency = 1,
+        Text = GetText("El catálogo se carga desde GitHub", "The catalog loads from GitHub"),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 14,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local PlayerMeta = mk("TextLabel", {
+        Parent = InfoFrame,
+        Size = UDim2.new(1, 0, 0, 16),
+        Position = UDim2.new(0, 0, 0, 56),
+        BackgroundTransparency = 1,
+        Text = GetText("Esperando canción", "Waiting for a song"),
+        Font = Enum.Font.GothamMedium,
+        TextSize = 11,
+        TextColor3 = spotifyDim,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 12,
+    })
+
+    local ProgressTrack = mk("Frame", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 5),
+        Position = UDim2.new(0, 14, 0, 306),
+        BackgroundColor3 = Color3.fromRGB(58, 58, 58),
+        BorderSizePixel = 0,
+        ZIndex = 12,
+    })
+    corner(ProgressTrack, 999)
+
+    local SeekThumb = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.fromOffset(13, 13),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0, 0, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BorderSizePixel = 0,
+        ZIndex = 15,
+        Visible = false,
+    })
+    corner(SeekThumb, 999)
+
+    local SeekTooltip = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.fromOffset(52, 26),
+        AnchorPoint = Vector2.new(0.5, 1),
+        Position = UDim2.new(0, 0, 0, -8),
+        BackgroundTransparency = 1,
+        BorderSizePixel = 0,
+        ZIndex = 16,
+        Visible = false,
+    })
+    corner(SeekTooltip, 6)
+    local SeekTooltipLabel = mk("TextLabel", {
+        Parent = SeekTooltip,
+        Size = UDim2.new(1, 0, 1, 0),
+        BackgroundTransparency = 1,
+        Text = "0:00",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 14,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Center,
+        ZIndex = 17,
+    })
+
+    local ProgressFill = mk("Frame", {
+        Parent = ProgressTrack,
+        Size = UDim2.new(0, 0, 1, 0),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        ZIndex = 13,
+    })
+    corner(ProgressFill, 999)
+
+    SeekHitbox = mk("TextButton", {
+        Parent = NowPlayingCard,
+        Size = UDim2.new(1, -28, 0, 28),
+        Position = UDim2.new(0, 14, 0, 295),
+        BackgroundTransparency = 1,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 22,
+    })
+
+    isSeeking = false
+    local seekInput = nil
+
+    local spotifySwipe = {
+        input = nil,
+        start = nil,
+        moved = false,
+        threshold = 24,
+    }
+
+    track(UserInputService.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+        local pos = SpotifyShell.AbsolutePosition
+        local size = SpotifyShell.AbsoluteSize
+        if input.Position.X < pos.X or input.Position.X > pos.X + size.X
+            or input.Position.Y < pos.Y or input.Position.Y > pos.Y + size.Y then
+            return
+        end
+        local seekPos = SeekHitbox.AbsolutePosition
+        local seekSize = SeekHitbox.AbsoluteSize
+        if input.Position.X >= seekPos.X and input.Position.X <= seekPos.X + seekSize.X
+            and input.Position.Y >= seekPos.Y and input.Position.Y <= seekPos.Y + seekSize.Y then
+            return
+        end
+        spotifySwipe.input = input
+        spotifySwipe.start = input.Position
+        spotifySwipe.moved = false
+    end))
+
+    track(UserInputService.InputChanged:Connect(function(input)
+        if not spotifySwipe.input or not spotifySwipe.start then
+            return
+        end
+        if input.UserInputType ~= Enum.UserInputType.Touch and input.UserInputType ~= Enum.UserInputType.MouseMovement then
+            return
+        end
+        local delta = input.Position - spotifySwipe.start
+        if math.abs(delta.X) >= spotifySwipe.threshold and math.abs(delta.X) > math.abs(delta.Y) * 1.15 then
+            spotifySwipe.moved = true
+        end
+    end))
+
+    track(UserInputService.InputEnded:Connect(function(input)
+        if not spotifySwipe.input or not spotifySwipe.start then
+            return
+        end
+        if input ~= spotifySwipe.input and input.UserInputType ~= Enum.UserInputType.MouseButton1 then
+            return
+        end
+
+        local delta = input.Position - spotifySwipe.start
+        local horizontal = math.abs(delta.X)
+        local vertical = math.abs(delta.Y)
+        if not isSeeking and not SpotifyState.BlockSwipe and (spotifySwipe.moved or (horizontal >= spotifySwipe.threshold and horizontal > vertical * 1.15)) then
+            if delta.X < 0 then
+                SpotifyPages:Next()
+            else
+                SpotifyPages:Previous()
+            end
+        end
+
+        spotifySwipe.input = nil
+        spotifySwipe.start = nil
+        spotifySwipe.moved = false
+    end))
+
+    local function getSeekPercent(inputX)
+        local trackPos = ProgressTrack.AbsolutePosition.X
+        local trackWidth = ProgressTrack.AbsoluteSize.X
+        if trackWidth <= 0 then return 0 end
+        return math.clamp((inputX - trackPos) / trackWidth, 0, 1)
+    end
+
+    local function applySeekVisuals(pct)
+        SeekThumb.Position = UDim2.new(pct, 0, 0.5, 0)
+        SeekTooltip.Position = UDim2.new(pct, 0, 0, -8)
+        local total = 0
+        if SpotifyState.CurrentSound and SpotifyState.CurrentSound.TimeLength > 0 then
+            total = SpotifyState.CurrentSound.TimeLength
+        elseif SpotifyState.CurrentTrack then
+            total = durationToSeconds(SpotifyState.CurrentTrack.Duration)
+        end
+        local seekSec = math.floor(pct * math.max(total, 1))
+        SeekTooltipLabel.Text = secondsToClock(seekSec)
+    end
+
+    SeekHitbox.InputBegan:Connect(function(input)
+        if input.UserInputType ~= Enum.UserInputType.MouseButton1 and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        isSeeking = true
+        seekInput = input
+        SeekThumb.Visible = true
+        SeekTooltip.Visible = true
+        local pct = getSeekPercent(input.Position.X)
+        applySeekVisuals(pct)
+    end)
+
+    UserInputService.InputChanged:Connect(function(input)
+        if not isSeeking then return end
+        if input.UserInputType ~= Enum.UserInputType.MouseMovement and input.UserInputType ~= Enum.UserInputType.Touch then return end
+        local pct = getSeekPercent(input.Position.X)
         applySeekVisuals(pct)
         ProgressFill.Size = UDim2.new(pct, 0, 1, 0)
     end)
@@ -949,185 +1147,4 @@
         end
         SavedConfig.SpotifyFavorites = type(SavedConfig.SpotifyFavorites) == "table" and SavedConfig.SpotifyFavorites or {}
         local id = tostring(track.Id)
-        if SpotifyState.CurrentLiked[index] == true then
-            SavedConfig.SpotifyFavorites[id] = true
-        else
-            SavedConfig.SpotifyFavorites[id] = nil
-        end
-        SaveConfig()
-    end
-
-    local function updateTrackRow(rowData, index)
-        local track = SpotifyState.Catalog[index]
-        if not rowData or not rowData.Row or not track then
-            return
-        end
-
-        applySpotifyRowLayout(rowData)
-
-        local active = (index == SpotifyState.SelectedIndex)
-        rowData.Row.BackgroundColor3 = active and Color3.fromRGB(38, 38, 44) or Color3.fromRGB(22, 22, 26)
-
-        if rowData.Accent then
-            rowData.Accent.Visible = active
-        end
-
-        if rowData.Cover then
-            rowData.Cover.Image = resolveTrackCoverImage(track)
-        end
-
-        if rowData.Title then
-            rowData.Title.Text = track.Name
-            rowData.Title.TextColor3 = active and spotifyGreen or spotifyText
-        end
-
-        if rowData.Artist then
-            rowData.Artist.Text = track.Artist
-            rowData.Artist.TextColor3 = active and Color3.fromRGB(100, 220, 120) or spotifyDim
-        end
-
-        if rowData.Duration then
-            rowData.Duration.Text = track.Duration
-        end
-
-        if rowData.Plus then
-            pcall(function()
-                rowData.Plus.BackgroundTransparency = 1
-                rowData.Plus.Image = asset(116559368303288)
-                rowData.Plus.ImageColor3 = spotifyText
-            end)
-        end
-
-        if rowData.Play then
-            pcall(function()
-                rowData.Play.Image = asset(135609604299893)
-                rowData.Play.ImageTransparency = 0
-                rowData.Play.BackgroundTransparency = 1
-                rowData.Play.ImageColor3 = spotifyText
-            end)
-        end
-    end
-
-    local function refreshAllRows()
-        for i, rowData in pairs(SpotifyState.RowButtons) do
-            updateTrackRow(rowData, i)
-        end
-    end
-
-    renderSongRows = function()
-        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
-        local order = getVisibleRenderOrder()
-        local displayOrder = 1
-        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
-        local showTiles = not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == ""
-        local visible = {}
-        for _, index in ipairs(order) do visible[index] = true end
-
-        for index, rowData in pairs(SpotifyState.RowButtons) do
-            if rowData.Row and rowData.Row.Parent then
-                local shouldShow = visible[index] == true and not SpotifyState.HiddenRows[index]
-                if rowData.Row.Visible ~= shouldShow then rowData.Row.Visible = shouldShow end
-            end
-        end
-
-        local function tile(key, create, position)
-            local card = SpotifyState[key]
-            if showTiles and (not card or not card.Parent) then
-                local ok, result = pcall(create, position)
-                if ok then
-                    card = result
-                    SpotifyState[key] = card
-                else
-                    warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
-                end
-            end
-            if card and card.Parent then
-                card.Visible = showTiles
-                if showTiles then card.LayoutOrder = position end
-            end
-            return card
-        end
-
-        tile("_FavoritesTile", createFavoritesTile, 1)
-        local mySongsTile = tile("_MySongsTile", createMySongsTile, 2)
-        if showTiles then
-            displayOrder = 3
-            if mySongsTile then
-                local countLabel = mySongsTile:FindFirstChild("MySongsCount")
-                if countLabel then
-                    local count = tostring(#SpotifyState.UserSongs)
-                    countLabel.Text = GetText(count .. " canciones propias", count .. " personal songs")
-                    countLabel:SetAttribute("TextSpanish", count .. " canciones propias")
-                    countLabel:SetAttribute("TextEnglish", count .. " personal songs")
-                end
-            end
-        end
-
-        for _, index in ipairs(order) do
-            local track = SpotifyState.Catalog[index]
-            if track and not SpotifyState.HiddenRows[index] then
-                local rowData = SpotifyState.RowButtons[index]
-                if rowData and rowData.Row and rowData.Row.Parent then
-                    rowData.Row.LayoutOrder = displayOrder
-                    if not rowData.Row.Visible then rowData.Row.Visible = true end
-                else
-                    pcall(createSongRow, track, index, displayOrder)
-                end
-                displayOrder = displayOrder + 1
-            end
-        end
-        updateSongListCanvas()
-        updateSpotifyCanvas()
-        task.defer(function()
-            pcall(updateSongListCanvas)
-            pcall(updateSpotifyCanvas)
-        end)
-    end
-
-    local function updatePlayerFromTrack(track, index, statusText)
-        if not track then
-            return
-        end
-
-        local seed = tostring(track.Id or track.Name or index or "spotify")
-        local hash = 0
-        for i = 1, #seed do
-            hash = (hash * 31 + string.byte(seed, i)) % 360
-        end
-        local fallbackColor = Color3.fromHSV(hash / 360, 0.52, 0.28)
-        local resolvedCover = resolveTrackCoverImage(track)
-        local hasCover = trim(resolvedCover or "") ~= ""
-
-        NowPlayingBackdrop.Image = hasCover and resolvedCover or ""
-        NowPlayingBackdrop.ImageTransparency = hasCover and 0.55 or 1
-        NowPlayingBackdrop.BackgroundColor3 = hasCover and Color3.fromRGB(8, 8, 10) or fallbackColor
-        NowPlayingBackdrop.BackgroundTransparency = hasCover and 0.12 or 0.06
-        NowPlayingShade.BackgroundTransparency = hasCover and 0.52 or 0.30
-        AlbumArt.Image = hasCover and resolvedCover or ""
-        AlbumArt.BackgroundColor3 = hasCover and Color3.fromRGB(0, 0, 0) or fallbackColor
-        AlbumFallback.Visible = not hasCover
-        if Window._SpotifyAmbient then Window._SpotifyAmbient.SetCover(resolvedCover) end
-
-        PlayerSongTitle.Text = track.Name
-        PlayerSongArtist.Text = track.Artist
-        PlayerMeta.Text = statusText or (SpotifyState.IsPlaying and "Reproducción activa" or "Reproducción lista")
-        ProgressTimeRight.Text = track.Duration
-
-        if index and SpotifyState.Catalog[index] then
-            SpotifyState.SelectedIndex = index
-        end
-
-        refreshAllRows()
-        refreshSpotifyFloatingPlayer()
-        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
-    end
-
-    local function destroyCurrentSound()
-        if SpotifyState.SoundProgressConnection then
-            pcall(function()
-                SpotifyState.SoundProgressConnection:Disconnect()
-            end)
-            SpotifyState.SoundProgressConnection = nil
-        end
-
-        if Spotify
+        if SpotifyState.CurrentLiked[index] == 

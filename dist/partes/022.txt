@@ -1,4 +1,13 @@
-       SyncFavoritesToConfig()
+         end
+                syncFavoriteRow()
+
+                FavBtn.MouseButton1Click:Connect(function()
+                    playSound(Sounds.Click, 0.5)
+                    isFavorite = not isFavorite
+                    FavBtn.Image = isFavorite and "rbxassetid://113655648685815" or "rbxassetid://90877976276431"
+                    SavedFavoriteIds[favId] = isFavorite or nil
+                    syncFavoriteRow()
+                    SyncFavoritesToConfig()
                 end)
             end
 
@@ -1002,12 +1011,4 @@
                 Viewport.Parent = ViewportWrap
                 Viewport.Size = UDim2.new(1, 0, 1, 0)
                 Viewport.Position = UDim2.new(0, 0, 0, 0)
-                Viewport.BackgroundTransparency = 1
-                Viewport.BorderSizePixel = 0
-                Viewport.ZIndex = 11
-                Viewport.Ambient = Color3.fromRGB(255, 255, 255)
-                pcall(function() Viewport.LightColor = Color3.fromRGB(255, 255, 255) end)
-                pcall(function() Viewport.LightDirection = Vector3.new(-0.3, -1, -0.2) end)
-
-                local World = Instance.new("WorldModel")
-                World.Parent = Viewpor
+                Viewport.BackgroundTranspar

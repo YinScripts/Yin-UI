@@ -1,4 +1,16 @@
-indFirstChild(CONFIG.NAME .. "_UI")
+                    end
+                end)
+                return {
+                    Success = ok,
+                    Body = ok and tostring(result or "") or "",
+                    StatusCode = ok and 200 or 0,
+                }
+            end
+    end
+    local request = getRequest()
+    local OverlayParent = ctx.OverlayParent or LocalPlayer:WaitForChild("PlayerGui")
+    pcall(function()
+        local old = OverlayParent:FindFirstChild(CONFIG.NAME .. "_UI")
         if old then old:Destroy() end
     end)
     local PlayerGui = LocalPlayer:WaitForChild("PlayerGui")
@@ -1076,16 +1088,4 @@ indFirstChild(CONFIG.NAME .. "_UI")
     })
     Chat.applyRainbow = function(label)
         label.TextColor3 = Color3.new(1, 1, 1)
-        local g = mk("UIGradient", {Color = Chat.RAINBOW, Rotation = 0, Offset = Vector2.new(-0.5, 0)}, label)
-        task.spawn(function()
-            local t = 0
-            while label.Parent do
-                t = (t + 0.02) % 1
-                g.Offset = Vector2.new(t - 0.5, 0)
-                task.wait(0.05)
-            end
-        end)
-        return g
-    end
-    Chat.ownerNameFx = function(label)
-        mk("UIStroke", {Color = Color3.new(1, 1, 1), Thickness = 1.2, Transparency = 0.72, ApplyStrokeMode = Enu
+        local g = mk("UIGradient", {Color = Chat.RAINBOW, Rotation = 0, Offset = Vector2

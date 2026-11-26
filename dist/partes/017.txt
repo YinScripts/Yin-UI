@@ -1,4 +1,13 @@
-    (Theme.TitleText or Theme.Accent).B * sine
+Color3.new(
+                    (Theme.TitleText or Theme.Accent).R * sine,
+                    (Theme.TitleText or Theme.Accent).G * sine,
+                    (Theme.TitleText or Theme.Accent).B * sine
+                )
+            else
+                TitleLabel.TextColor3 = Color3.new(
+                    (Theme.TitleText or Theme.Accent).R * sine,
+                    (Theme.TitleText or Theme.Accent).G * sine,
+                    (Theme.TitleText or Theme.Accent).B * sine
                 )
             end
         end))
@@ -985,16 +994,3 @@
 
         local platformMode = SavedConfig.PlatformMode or "Auto"
         if platformMode == "Auto" then
-            if Window.DetectPlatformType() == "PC" then
-                effectiveMode = "PC"
-            end
-        elseif platformMode == "PC" then
-            effectiveMode = "PC"
-        end
-
-        local preset = LibrarySizePresets[effectiveMode] or LibrarySizePresets.Small
-        local screen  = ScreenGui.AbsoluteSize
-        local width   = preset.Width
-        local height  = preset.Height
-
-        if screen.X > 0 and sc

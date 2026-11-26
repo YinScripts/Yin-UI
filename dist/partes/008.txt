@@ -1,4 +1,9 @@
-   local G = {Frame = list, Chips = {}}
+xel = 0, ScrollBarThickness = 3, ScrollBarImageColor3 = Kit.Palette().Accent, CanvasSize = UDim2.new(),
+            AutomaticCanvasSize = Enum.AutomaticSize.Y}, self.Frame, {bg = "Secondary"})
+        Kit.Corner(list, 10)
+        Kit.Pad(list, 6, 6, 6, 6)
+        Kit.New("UIGridLayout", {CellSize = UDim2.new(1 / (o.Columns or 2), -4, 0, 26), CellPadding = UDim2.fromOffset(6, 6), SortOrder = Enum.SortOrder.LayoutOrder}, list)
+        local G = {Frame = list, Chips = {}}
         function G:Set(items, selected, onPick)
             for _, c in ipairs(G.Chips) do c:Destroy() end
             table.clear(G.Chips)
@@ -686,8 +691,4 @@ do
             BorderSizePixel = 0, ZIndex = 11}, card)
         badge:SetAttribute("ThemeRole", "AccentOff")
         Kit.Corner(badge, 8)
-        local num = new("TextLabel", {Size = UDim2.new(1, 0, 1, 0), BackgroundTransparency = 1, Text = tostring(number), TextColor3 = p.Text,
-            TextSize = 13, Font = Enum.Font.GothamBlack, ZIndex = 12}, badge)
-        num:SetAttribute("ThemeTextRole", "Text")
-        num:SetAttribute("IgnoreTextEffect", true)
-        local caption = Page.Label(card, {Text = o.Caption, Es = o.CaptionEs, En = o.CaptionEn, TextSize = 10, Font = Enum
+        l

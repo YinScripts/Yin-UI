@@ -1,4 +1,15 @@
+sparentTabs and 1 or 0)}):Play()
+                end
+            end
+        end)
 
+        table.insert(Window.Tabs, Tab)
+        Tab.Select = Select
+        if Window._RegisterCompactTab then Window._RegisterCompactTab(Tab) end
+        Window._RegisterCarouselTab(Tab, TabButton, Select)
+        if #Window.Tabs == 1 then Select() end
+        if SavedConfig.TabIconLayout == "Carousel" then
+            Window._RefreshTabIconLayout()
         end
 
 
@@ -900,14 +911,4 @@
 
             local LabelTxt = mk("TextLabel", {
                 Parent = Holder,
-                Size = UDim2.new(1, -170, 0, 18),
-                Position = UDim2.new(0, 48, 0, 8),
-                BackgroundTransparency = 1,
-                Text = displayText,
-                TextColor3 = Theme.Text,
-                Font = Enum.Font.GothamBlack,
-                TextSize = 13,
-                TextXAlignment = Enum.TextXAlignment.Left,
-                TextTruncate = Enum.TextTruncate.AtEnd,
-                ZIndex = 10
-      
+              

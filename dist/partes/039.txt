@@ -1,4 +1,185 @@
-State.SoundEndedConnection then
+true then
+            SavedConfig.SpotifyFavorites[id] = true
+        else
+            SavedConfig.SpotifyFavorites[id] = nil
+        end
+        SaveConfig()
+    end
+
+    local function updateTrackRow(rowData, index)
+        local track = SpotifyState.Catalog[index]
+        if not rowData or not rowData.Row or not track then
+            return
+        end
+
+        applySpotifyRowLayout(rowData)
+
+        local active = (index == SpotifyState.SelectedIndex)
+        rowData.Row.BackgroundColor3 = active and Color3.fromRGB(38, 38, 44) or Color3.fromRGB(22, 22, 26)
+
+        if rowData.Accent then
+            rowData.Accent.Visible = active
+        end
+
+        if rowData.Cover then
+            rowData.Cover.Image = resolveTrackCoverImage(track)
+        end
+
+        if rowData.Title then
+            rowData.Title.Text = track.Name
+            rowData.Title.TextColor3 = active and spotifyGreen or spotifyText
+        end
+
+        if rowData.Artist then
+            rowData.Artist.Text = track.Artist
+            rowData.Artist.TextColor3 = active and Color3.fromRGB(100, 220, 120) or spotifyDim
+        end
+
+        if rowData.Duration then
+            rowData.Duration.Text = track.Duration
+        end
+
+        if rowData.Plus then
+            pcall(function()
+                rowData.Plus.BackgroundTransparency = 1
+                rowData.Plus.Image = asset(116559368303288)
+                rowData.Plus.ImageColor3 = spotifyText
+            end)
+        end
+
+        if rowData.Play then
+            pcall(function()
+                rowData.Play.Image = asset(135609604299893)
+                rowData.Play.ImageTransparency = 0
+                rowData.Play.BackgroundTransparency = 1
+                rowData.Play.ImageColor3 = spotifyText
+            end)
+        end
+    end
+
+    local function refreshAllRows()
+        for i, rowData in pairs(SpotifyState.RowButtons) do
+            updateTrackRow(rowData, i)
+        end
+    end
+
+    renderSongRows = function()
+        -- Reutilizar tarjetas evita destruir y reconstruir todo el catálogo al cambiar de vista.
+        local order = getVisibleRenderOrder()
+        local displayOrder = 1
+        local query = normalizeSearchText(SpotifyState.SearchQuery or "")
+        local showTiles = not SpotifyState.FavoritesView and not SpotifyState.MySongsView and query == ""
+        local visible = {}
+        for _, index in ipairs(order) do visible[index] = true end
+
+        for index, rowData in pairs(SpotifyState.RowButtons) do
+            if rowData.Row and rowData.Row.Parent then
+                local shouldShow = visible[index] == true and not SpotifyState.HiddenRows[index]
+                if rowData.Row.Visible ~= shouldShow then rowData.Row.Visible = shouldShow end
+            end
+        end
+
+        local function tile(key, create, position)
+            local card = SpotifyState[key]
+            if showTiles and (not card or not card.Parent) then
+                local ok, result = pcall(create, position)
+                if ok then
+                    card = result
+                    SpotifyState[key] = card
+                else
+                    warn("[YinYang Spotify] No se pudo crear la tarjeta: " .. tostring(result))
+                end
+            end
+            if card and card.Parent then
+                card.Visible = showTiles
+                if showTiles then card.LayoutOrder = position end
+            end
+            return card
+        end
+
+        tile("_FavoritesTile", createFavoritesTile, 1)
+        local mySongsTile = tile("_MySongsTile", createMySongsTile, 2)
+        if showTiles then
+            displayOrder = 3
+            if mySongsTile then
+                local countLabel = mySongsTile:FindFirstChild("MySongsCount")
+                if countLabel then
+                    local count = tostring(#SpotifyState.UserSongs)
+                    countLabel.Text = GetText(count .. " canciones propias", count .. " personal songs")
+                    countLabel:SetAttribute("TextSpanish", count .. " canciones propias")
+                    countLabel:SetAttribute("TextEnglish", count .. " personal songs")
+                end
+            end
+        end
+
+        for _, index in ipairs(order) do
+            local track = SpotifyState.Catalog[index]
+            if track and not SpotifyState.HiddenRows[index] then
+                local rowData = SpotifyState.RowButtons[index]
+                if rowData and rowData.Row and rowData.Row.Parent then
+                    rowData.Row.LayoutOrder = displayOrder
+                    if not rowData.Row.Visible then rowData.Row.Visible = true end
+                else
+                    pcall(createSongRow, track, index, displayOrder)
+                end
+                displayOrder = displayOrder + 1
+            end
+        end
+        updateSongListCanvas()
+        updateSpotifyCanvas()
+        task.defer(function()
+            pcall(updateSongListCanvas)
+            pcall(updateSpotifyCanvas)
+        end)
+    end
+
+    local function updatePlayerFromTrack(track, index, statusText)
+        if not track then
+            return
+        end
+
+        local seed = tostring(track.Id or track.Name or index or "spotify")
+        local hash = 0
+        for i = 1, #seed do
+            hash = (hash * 31 + string.byte(seed, i)) % 360
+        end
+        local fallbackColor = Color3.fromHSV(hash / 360, 0.52, 0.28)
+        local resolvedCover = resolveTrackCoverImage(track)
+        local hasCover = trim(resolvedCover or "") ~= ""
+
+        NowPlayingBackdrop.Image = hasCover and resolvedCover or ""
+        NowPlayingBackdrop.ImageTransparency = hasCover and 0.55 or 1
+        NowPlayingBackdrop.BackgroundColor3 = hasCover and Color3.fromRGB(8, 8, 10) or fallbackColor
+        NowPlayingBackdrop.BackgroundTransparency = hasCover and 0.12 or 0.06
+        NowPlayingShade.BackgroundTransparency = hasCover and 0.52 or 0.30
+        AlbumArt.Image = hasCover and resolvedCover or ""
+        AlbumArt.BackgroundColor3 = hasCover and Color3.fromRGB(0, 0, 0) or fallbackColor
+        AlbumFallback.Visible = not hasCover
+        if Window._SpotifyAmbient then Window._SpotifyAmbient.SetCover(resolvedCover) end
+
+        PlayerSongTitle.Text = track.Name
+        PlayerSongArtist.Text = track.Artist
+        PlayerMeta.Text = statusText or (SpotifyState.IsPlaying and "Reproducción activa" or "Reproducción lista")
+        ProgressTimeRight.Text = track.Duration
+
+        if index and SpotifyState.Catalog[index] then
+            SpotifyState.SelectedIndex = index
+        end
+
+        refreshAllRows()
+        refreshSpotifyFloatingPlayer()
+        if SpotifyState.RefreshMiniPlayer then SpotifyState.RefreshMiniPlayer() end
+    end
+
+    local function destroyCurrentSound()
+        if SpotifyState.SoundProgressConnection then
+            pcall(function()
+                SpotifyState.SoundProgressConnection:Disconnect()
+            end)
+            SpotifyState.SoundProgressConnection = nil
+        end
+
+        if SpotifyState.SoundEndedConnection then
             pcall(function()
                 SpotifyState.SoundEndedConnection:Disconnect()
             end)
@@ -952,129 +1133,4 @@ State.SoundEndedConnection then
         N.openCatalog.Activated:Connect(function() SpotifyPages:JumpTo(CatalogPage) end)
 
         -- Título de la canción: mientras suena, una ola oscurece las letras UNA POR UNA (pasan a negro, sin
-        -- bordes) y vuelven. Se dibuja en una copia con RichText encima del título real,
-        -- así PlayerSongTitle.Text sigue siendo texto plano para el resto del reproductor.
-        N.titleFx = mk("TextLabel", {
-            Parent = PlayerSongTitle, Name = "YYTitleWave", Size = UDim2.fromScale(1, 1),
-            BackgroundTransparency = 1, Text = "", RichText = true, Font = PlayerSongTitle.Font,
-            TextSize = PlayerSongTitle.TextSize, TextColor3 = spotifyText,
-            TextXAlignment = PlayerSongTitle.TextXAlignment, TextTruncate = PlayerSongTitle.TextTruncate,
-            Visible = false, ZIndex = PlayerSongTitle.ZIndex + 1,
-        })
-        N.escapar = function(c)
-            if c == "<" then return "&lt;" elseif c == ">" then return "&gt;" elseif c == "&" then return "&amp;"
-            elseif c == "\"" then return "&quot;" elseif c == "'" then return "&apos;" end
-            return c
-        end
-        N.hex = function(c)
-            return string.format("#%02X%02X%02X", math.floor(c.R * 255 + 0.5), math.floor(c.G * 255 + 0.5), math.floor(c.B * 255 + 0.5))
-        end
-        N.NEGRO = Color3.fromRGB(12, 12, 14)
-        N.fxAcc, N.fxTime, N.fxOn = 0, 0, false
-        N.fxConn = RunService.Heartbeat:Connect(function(dt)
-            N.fxAcc = N.fxAcc + dt
-            N.fxTime = N.fxTime + dt
-            if N.fxAcc < 1 / 30 then return end
-            N.fxAcc = 0
-            if not N.openCatalog.Parent then
-                N.fxConn:Disconnect()
-                return
-            end
-            local t = N.fxTime
-            local playing = SpotifyState.IsPlaying == true and SpotifyState.CurrentTrack ~= nil
-            -- botón: las barras bailan solo si suena
-            for i, bar in ipairs(N.catBars) do
-                local h = playing and (3 + (math.sin(t * (7 + i * 2.3) + i * 1.7) * 0.5 + 0.5) * 8) or 3
-                bar.Size = UDim2.fromOffset(2, math.floor(h + 0.5))
-            end
-            -- título: ola de letras negras
-            if playing and PlayerSongTitle.Visible then
-                if not N.fxOn then
-                    N.fxOn = true
-                    N.titleFx.Visible = true
-                    PlayerSongTitle.TextTransparency = 1
-                end
-                local texto = PlayerSongTitle.Text
-                if not utf8.len(texto) then texto = texto:gsub("[\128-\255]", "?") end -- texto raro: no romper la ola
-                local partes, i = {}, 0
-                for _, cp in utf8.codes(texto) do
-                    i = i + 1
-                    local ch = utf8.char(cp)
-                    if ch == " " then
-                        partes[#partes + 1] = " "
-                    else
-                        -- la ola avanza ~4 letras por segundo; cada letra se oscurece y vuelve suave (sin bordes)
-                        local fase = (t * 4 - i) % 24
-                        local k = 0
-                        if fase < 6 then k = math.sin(fase / 6 * math.pi) end
-                        local col = spotifyText:Lerp(N.NEGRO, k)
-                        partes[#partes + 1] = string.format('<font color="%s">%s</font>', N.hex(col), N.escapar(ch))
-                    end
-                end
-                N.titleFx.Text = table.concat(partes)
-            elseif N.fxOn then
-                N.fxOn = false
-                N.titleFx.Visible = false
-                PlayerSongTitle.TextTransparency = 0
-            end
-        end)
-
-        N.root = mk("Frame", {
-            Parent = CatalogPage, Name = "SpotifyBottomNavigation",
-            Size = UDim2.new(1, 0, 0, 90), AnchorPoint = Vector2.new(0, 1),
-            Position = UDim2.new(0, 0, 1, 0), BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-            BackgroundTransparency = 0.35, BorderSizePixel = 0, ZIndex = 55,
-        })
-        N.mini = mk("TextButton", {
-            Parent = N.root, Size = UDim2.new(1, -16, 0, 48), Position = UDim2.fromOffset(8, 2),
-            BackgroundColor3 = Color3.fromRGB(32, 32, 36), BackgroundTransparency = 0.24, BorderSizePixel = 0,
-            Text = "", AutoButtonColor = false, ClipsDescendants = true, ZIndex = 56,
-        })
-        corner(N.mini, 8)
-        spotifyGlass(N.mini, 56)
-        N.cover = mk("ImageLabel", {
-            Parent = N.mini, Size = UDim2.fromOffset(38, 38), Position = UDim2.fromOffset(5, 5),
-            BackgroundColor3 = Color3.fromRGB(25, 25, 28), BorderSizePixel = 0,
-            Image = "", ScaleType = Enum.ScaleType.Crop, ZIndex = 57,
-        })
-        corner(N.cover, 5)
-        N.title = mk("TextLabel", {
-            Parent = N.mini, Size = UDim2.new(1, -100, 0, 20), Position = UDim2.fromOffset(51, 5),
-            BackgroundTransparency = 1, Text = GetText("Selecciona una canción", "Select a song"),
-            Font = Enum.Font.GothamBold, TextColor3 = spotifyText, TextSize = 12,
-            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
-        })
-        N.artist = mk("TextLabel", {
-            Parent = N.mini, Size = UDim2.new(1, -100, 0, 16), Position = UDim2.fromOffset(51, 24),
-            BackgroundTransparency = 1, Text = "", Font = Enum.Font.GothamMedium,
-            TextColor3 = Color3.fromRGB(205, 205, 210), TextSize = 10,
-            TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 57,
-        })
-        N.play = mk("ImageButton", {
-            Parent = N.mini, Size = UDim2.fromOffset(28, 28), AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -10, 0.5, -1), BackgroundTransparency = 1,
-            Image = asset(135609604299893), ImageColor3 = spotifyText, AutoButtonColor = false, ZIndex = 59,
-        })
-        N.progress = mk("Frame", {
-            Parent = N.mini, Size = UDim2.fromOffset(0, 2), Position = UDim2.new(0, 0, 1, -2),
-            BackgroundColor3 = Color3.fromRGB(255, 255, 255), BorderSizePixel = 0, ZIndex = 58,
-        })
-        N.mini.Activated:Connect(function() SpotifyPages:JumpTo(PlayerPage) end)
-        N.play.Activated:Connect(togglePlayback)
-
-        N.nav = mk("Frame", {
-            Parent = N.root, Size = UDim2.new(1, -16, 0, 36), Position = UDim2.new(0, 8, 0, 53),
-            BackgroundTransparency = 1, ZIndex = 56,
-        })
-        function N.button(index, iconName, fallback, es, en)
-            local button = mk("TextButton", {
-                Parent = N.nav, Size = UDim2.new(1/3, 0, 1, 0), Position = UDim2.new((index-1)/3, 0, 0, 0),
-                BackgroundTransparency = 1, Text = "", AutoButtonColor = false, ZIndex = 57,
-            })
-            local content = mk("Frame", {
-                Parent = button, Size = UDim2.fromScale(1, 1), BackgroundTransparency = 1, ZIndex = 57,
-            })
-            mk("UIListLayout", {
-                Parent = content, FillDirection = Enum.FillDirection.Horizontal,
-                HorizontalAlignment = Enum.HorizontalAlignment.Center, VerticalAlignment = Enum.VerticalAlignment.Center,
-                SortOrder = Enum.SortOrder.LayoutOrder, P
+        -- bordes) y vuelven. Se dibuja en un

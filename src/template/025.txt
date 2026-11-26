@@ -236,6 +236,94 @@ local draggingPicker, draggingHue = false, false
     local ThemeImageInput = createEditorInput("ID de imagen (opcional)", "Image ID (optional)", "123456789", "123456789", 21)
     local ThemeSoundInput = createEditorInput("ID de sonido (opcional)", "Sound ID (optional)", "123456789", "123456789", 22)
 
+    -- Íconos propios para cada pestaña (opcional): una fila por pestaña con su ícono actual y un ID nuevo
+    local TabIconEditor = {rows = {}}
+    TabIconEditor.holder = mk("Frame", {
+        Parent = EditorContent, Size = UDim2.new(1, -4, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1, LayoutOrder = 23, ZIndex = 202,
+    })
+    mk("UIListLayout", {Parent = TabIconEditor.holder, Padding = UDim.new(0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    TabIconEditor.title = mk("TextLabel", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 18), BackgroundTransparency = 1, LayoutOrder = 0,
+        Text = GetText("Íconos de las pestañas (opcional)", "Tab icons (optional)"), TextColor3 = Theme.Text,
+        TextSize = 11, Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 203,
+    })
+    TabIconEditor.title:SetAttribute("ThemeTextRole", "Text")
+    TabIconEditor.title:SetAttribute("TextSpanish", "Íconos de las pestañas (opcional)")
+    TabIconEditor.title:SetAttribute("TextEnglish", "Tab icons (optional)")
+    TabIconEditor.hint = mk("TextLabel", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 14), BackgroundTransparency = 1, LayoutOrder = 1,
+        Text = GetText("Pegá el ID de una imagen para cambiar el ícono de esa pestaña. Vacío = el de siempre.", "Paste an image ID to change that tab's icon. Empty = default."),
+        TextColor3 = Theme.TextDim, TextSize = 10, Font = Enum.Font.GothamMedium, TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 203,
+    })
+    TabIconEditor.hint:SetAttribute("ThemeTextRole", "TextDim")
+    TabIconEditor.hint:SetAttribute("TextSpanish", "Pegá el ID de una imagen para cambiar el ícono de esa pestaña. Vacío = el de siempre.")
+    TabIconEditor.hint:SetAttribute("TextEnglish", "Paste an image ID to change that tab's icon. Empty = default.")
+    TabIconEditor.grid = mk("Frame", {
+        Parent = TabIconEditor.holder, Size = UDim2.new(1, 0, 0, 0), AutomaticSize = Enum.AutomaticSize.Y,
+        BackgroundTransparency = 1, LayoutOrder = 2, ZIndex = 202,
+    })
+    mk("UIGridLayout", {Parent = TabIconEditor.grid, CellSize = UDim2.new(0.5, -4, 0, 40), CellPadding = UDim2.new(0, 8, 0, 6), SortOrder = Enum.SortOrder.LayoutOrder})
+    -- arma una fila por pestaña de la ventana (con los íconos del tema que se está editando)
+    TabIconEditor.build = function(saved)
+        for _, r in ipairs(TabIconEditor.rows) do r.frame:Destroy() end
+        TabIconEditor.rows = {}
+        local tabs = {}
+        for _, t in pairs(Window.Tabs or {}) do
+            if t.NameEnglish then table.insert(tabs, t) end
+        end
+        table.sort(tabs, function(a, b)
+            local la = a.Button and a.Button.LayoutOrder or 0
+            local lb = b.Button and b.Button.LayoutOrder or 0
+            return la < lb
+        end)
+        for i, t in ipairs(tabs) do
+            local f = mk("Frame", {Parent = TabIconEditor.grid, BackgroundColor3 = Theme.Secondary, BackgroundTransparency = 0.25, LayoutOrder = i, ZIndex = 203})
+            f:SetAttribute("ThemeRole", "Secondary")
+            corner(f, 9)
+            local icon = mk("ImageLabel", {
+                Parent = f, Size = UDim2.fromOffset(24, 24), Position = UDim2.new(0, 8, 0.5, -12), BackgroundTransparency = 1,
+                Image = t.DefaultIconAsset or t.IconAsset or "", ScaleType = Enum.ScaleType.Fit, ZIndex = 204,
+            })
+            mk("TextLabel", {
+                Parent = f, Size = UDim2.new(0.4, -36, 1, 0), Position = UDim2.new(0, 38, 0, 0), BackgroundTransparency = 1,
+                Text = GetText(t.NameSpanish or t.NameEnglish, t.NameEnglish), TextColor3 = Theme.Text, TextSize = 11,
+                Font = Enum.Font.GothamBold, TextXAlignment = Enum.TextXAlignment.Left, TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 204,
+            }):SetAttribute("ThemeTextRole", "Text")
+            local box = mk("TextBox", {
+                Parent = f, AnchorPoint = Vector2.new(1, 0.5), Size = UDim2.new(0.6, -8, 0, 28), Position = UDim2.new(1, -6, 0.5, 0),
+                BackgroundColor3 = Theme.Background, BackgroundTransparency = 0.3, BorderSizePixel = 0,
+                Text = saved and saved[t.NameEnglish] and tostring(saved[t.NameEnglish]):match("(%d+)") or "",
+                PlaceholderText = "ID", PlaceholderColor3 = Theme.TextDim, TextColor3 = Theme.Text, ClearTextOnFocus = false,
+                TextSize = 11, Font = Enum.Font.GothamMedium, ZIndex = 204,
+            })
+            box:SetAttribute("ThemeRole", "Background")
+            box:SetAttribute("ThemeTextRole", "Text")
+            corner(box, 7)
+            local function vistaPrevia()
+                local id = normalizeAssetId(box.Text)
+                icon.Image = (id and id ~= "") and id or (t.DefaultIconAsset or t.IconAsset or "")
+            end
+            box:GetPropertyChangedSignal("Text"):Connect(vistaPrevia)
+            vistaPrevia()
+            table.insert(TabIconEditor.rows, {frame = f, key = t.NameEnglish, box = box})
+        end
+    end
+    -- lee lo escrito: nil si no hay ninguno, o false + nombre de la pestaña si un ID no es válido
+    TabIconEditor.collect = function()
+        local icons, any = {}, false
+        for _, r in ipairs(TabIconEditor.rows) do
+            if r.box.Text:match("%S") then
+                local id = normalizeAssetId(r.box.Text)
+                if not id or id == "" then return false, r.key end
+                icons[r.key] = id
+                any = true
+            end
+        end
+        return any and icons or nil
+    end
+
     local EditorStatus = mk("TextLabel", {
         Parent = EditorPanel,
         Size = UDim2.new(1, -290, 0, 34),
@@ -325,6 +413,7 @@ local draggingPicker, draggingHue = false, false
         ThemeNameInput.TextEditable = not themeName
         ThemeImageInput.Text = data and (data.Background or "") or ""
         ThemeSoundInput.Text = data and (data.Sound or "") or ""
+        TabIconEditor.build(data and data.TabIcons or nil)
 
         for _, info in ipairs(colorRoles) do
             local color = palette[info[1]]
@@ -391,11 +480,22 @@ local draggingPicker, draggingHue = false, false
             return
         end
 
+        local tabIcons, badTab = TabIconEditor.collect()
+        if tabIcons == false then
+            local errES = "El ID del ícono de " .. tostring(badTab) .. " no es válido."
+            local errEN = "The icon ID for " .. tostring(badTab) .. " is invalid."
+            EditorStatus:SetAttribute("TextSpanish", errES)
+            EditorStatus:SetAttribute("TextEnglish", errEN)
+            EditorStatus.Text = GetText(errES, errEN)
+            return
+        end
+
         local finalName = editingThemeName or name
         CustomThemes[finalName] = {
             Palette = paletteData,
             Background = image or "",
             Sound = sound or "",
+            TabIcons = tabIcons, -- íconos propios de las pestañas (nil = los de siempre)
         }
         if not editingThemeName then
             table.insert(CustomThemeOrder, finalName)
@@ -582,12 +682,14 @@ local draggingPicker, draggingHue = false, false
     EffectsUI.Hero = mk("Frame", {
         Parent = EffectsRoot,
         Size = UDim2.new(1, 0, 0, 96),
-        BackgroundColor3 = Color3.fromRGB(12, 12, 16),
+        BackgroundColor3 = Theme.Secondary, -- antes negro fijo: ahora sigue al tema
+        BackgroundTransparency = 0.12,
         BorderSizePixel = 0,
         ClipsDescendants = true,
         LayoutOrder = 0,
         ZIndex = 10,
     })
+    EffectsUI.Hero:SetAttribute("ThemeRole", "Secondary")
     corner(EffectsUI.Hero, 16)
     EffectsUI.HeroStroke = mk("UIStroke", {Parent = EffectsUI.Hero, Thickness = 1.5, Transparency = 0.35, Color = Theme.Accent})
     EffectsUI.HeroGlow = mk("Frame", {
@@ -851,12 +953,13 @@ local draggingPicker, draggingHue = false, false
             Parent = parent,
             Size = UDim2.new(1, -12, 0, 64),
             Position = UDim2.new(0, 6, 0, 6),
-            BackgroundColor3 = Color3.fromRGB(12, 12, 16),
-            BackgroundTransparency = 0,
+            BackgroundColor3 = Theme.Background, -- antes negro fijo: ahora sigue al tema
+            BackgroundTransparency = 0.25,
             BorderSizePixel = 0,
             ClipsDescendants = true,
             ZIndex = 11,
         })
+        preview:SetAttribute("ThemeRole", "Background")
         corner(preview, 11)
 
         local glow = mk("Frame", {

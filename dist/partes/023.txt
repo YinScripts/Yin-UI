@@ -1,4 +1,12 @@
-t
+ency = 1
+                Viewport.BorderSizePixel = 0
+                Viewport.ZIndex = 11
+                Viewport.Ambient = Color3.fromRGB(255, 255, 255)
+                pcall(function() Viewport.LightColor = Color3.fromRGB(255, 255, 255) end)
+                pcall(function() Viewport.LightDirection = Vector3.new(-0.3, -1, -0.2) end)
+
+                local World = Instance.new("WorldModel")
+                World.Parent = Viewport
 
                 local Camera = Instance.new("Camera")
                 Camera.Parent = Viewport
@@ -755,13 +763,4 @@ t
             end
 
             local function shorten(text)
-                text = tostring(text or "")
-                if #text <= 14 then
-                    return text
-                end
-                return text:sub(1, 10) .. "..."
-            end
-
-            local hourNow = tonumber(os.date("%H")) or 12
-            local greetES = (hourNow >= 5 and hourNow < 12) and "Buenos días," or ((hourNow >= 12 and hourNow < 20) and "Buenas tardes," or "Buenas noches,")
-            local greetEN = (hourNow >= 5 
+                text 

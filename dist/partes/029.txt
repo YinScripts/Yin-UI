@@ -1,4 +1,152 @@
-ultiplier(part)
+   MirrorScanElapsed = 0,
+        MirrorStepElapsed = 0,
+        MirrorFloorTransparency = 0.38,
+        MirrorBacking = nil,
+        MirrorLostAt = nil,
+        MirrorLast = {},
+        TextureOriginal = {},
+        ShadowEnabled = false,
+        ShadowStrength = 0.30,
+        ShadowRig = nil,
+        ShadowParts = {},
+        ShadowElapsed = 0,
+        ShadowConnection = nil,
+        Original = {},
+        Applied = {},
+        Connection = nil,
+        CharacterConn = nil,
+        SceneAnchor = nil,
+        Elapsed = 0,
+    }
+
+    function ShaderReflections:_root()
+        local character = LocalPlayer and LocalPlayer.Character
+        return character, character and (character:FindFirstChild("HumanoidRootPart") or character.PrimaryPart)
+    end
+
+    function ShaderReflections:_scan(origin, radius, character)
+        local ok, parts = pcall(function()
+            local params = OverlapParams.new()
+            params.FilterType = Enum.RaycastFilterType.Exclude
+            params.FilterDescendantsInstances = character and {character} or {}
+            return workspace:GetPartBoundsInRadius(origin, radius, params)
+        end)
+        if ok and type(parts) == "table" then return parts end
+        return {}
+    end
+
+    function ShaderReflections:_surfaceMultiplier(part)
+        local material = part.Material
+        if material == Enum.Material.Neon or material == Enum.Material.ForceField then return nil end
+        if material == Enum.Material.Glass or material == Enum.Material.Ice then return 1 end
+        if material == Enum.Material.Metal or material == Enum.Material.DiamondPlate then return 0.94 end
+        if material == Enum.Material.Marble or material == Enum.Material.SmoothPlastic or material == Enum.Material.Plastic then return 0.88 end
+        if material == Enum.Material.Water then return 0.96 end
+        if material == Enum.Material.Fabric or material == Enum.Material.Grass or material == Enum.Material.Sand then return 0.46 end
+        return 0.72
+    end
+
+    function ShaderReflections:_isSkyMirrorFloor(part, inModel)
+        return self.SkyMirrorEnabled
+            and not inModel
+            and math.abs(part.CFrame.UpVector.Y) >= 0.75
+            and part.Size.X >= 4
+            and part.Size.Z >= 4
+    end
+
+    function ShaderReflections:_applySkyMirrorSurface(part)
+        if not self.SkyMirrorEnabled or not part or not part.Parent then return end
+        if self.SkyMirrorOriginal[part] == nil then
+            local ok, topSurface = pcall(function() return part.TopSurface end)
+            self.SkyMirrorOriginal[part] = {TopSurface = ok and topSurface or nil}
+        end
+        pcall(function()
+            part.TopSurface = Enum.SurfaceType.Smooth
+        end)
+        self.SkyMirrorApplied[part] = true
+    end
+
+    function ShaderReflections:_restoreSkyMirror()
+        for part, original in pairs(self.SkyMirrorOriginal) do
+            if part and part.Parent and original and original.TopSurface ~= nil then
+                pcall(function() part.TopSurface = original.TopSurface end)
+            end
+        end
+        self.SkyMirrorOriginal, self.SkyMirrorApplied = {}, {}
+    end
+
+    -- Quita texturas de una parte de forma reversible (guarda todo para restaurarlo): SurfaceAppearance, MaterialVariant,
+    -- TextureID de MeshPart y Texture/Decal hijos. No toca modelos con Humanoid (avatares) para no borrar caras/ropa.
+    function ShaderReflections:_stripPartTextures(part)
+        if self.TextureOriginal[part] ~= nil then return end
+        local owner = part:FindFirstAncestorOfClass("Model")
+        if owner and owner:FindFirstChildOfClass("Humanoid") then return end
+        local record = {children = {}}
+        local touched = false
+        local okVariant, variant = pcall(function() return part.MaterialVariant end)
+        if okVariant and variant ~= "" then
+            record.variant = variant
+            pcall(function() part.MaterialVariant = "" end)
+            touched = true
+        end
+        if part:IsA("MeshPart") then
+            local okTexture, textureId = pcall(function() return part.TextureID end)
+            if okTexture and textureId ~= "" then
+                record.textureId = textureId
+                pcall(function() part.TextureID = "" end)
+                touched = true
+            end
+        end
+        for _, child in ipairs(part:GetChildren()) do
+            if child:IsA("SurfaceAppearance") then
+                table.insert(record.children, {kind = "appearance", instance = child})
+                pcall(function() child.Parent = nil end)
+                touched = true
+            elseif child:IsA("Texture") or child:IsA("Decal") then
+                local okAlpha, alpha = pcall(function() return child.Transparency end)
+                if okAlpha and alpha < 1 then
+                    table.insert(record.children, {kind = "decal", instance = child, transparency = alpha})
+                    pcall(function() child.Transparency = 1 end)
+                    touched = true
+                end
+            end
+        end
+        if touched then self.TextureOriginal[part] = record end
+    end
+
+    function ShaderReflections:_restoreTextures()
+        for part, record in pairs(self.TextureOriginal) do
+            if part and part.Parent then
+                if record.variant ~= nil then pcall(function() part.MaterialVariant = record.variant end) end
+                if record.textureId ~= nil then pcall(function() part.TextureID = record.textureId end) end
+            end
+            for _, item in ipairs(record.children) do
+                if item.kind == "appearance" then
+                    if part and part.Parent and item.instance then pcall(function() item.instance.Parent = part end) end
+                elseif item.instance and item.instance.Parent then
+                    pcall(function() item.instance.Transparency = item.transparency end)
+                end
+            end
+        end
+        self.TextureOriginal = {}
+    end
+
+    function ShaderReflections:_applyWetPart(part)
+        if not part or not part.Parent or not part:IsA("BasePart") then return false end
+        if part.Transparency >= 0.96 or part.Size.Magnitude < 1.2 then return false end
+        local ancestor = part
+        while ancestor do
+            if string.sub(ancestor.Name or "", 1, 14) == "YinYangShader_" then return false end
+            ancestor = ancestor.Parent
+        end
+        local ownerModel = part:FindFirstAncestorOfClass("Model")
+        local isLocalCharacter = ownerModel == (LocalPlayer and LocalPlayer.Character)
+        if isLocalCharacter and (self.ExcludeLocalAvatar or not self.CharacterSpecularEnabled) then return false end
+        local inModel = ownerModel ~= nil
+        if inModel and not self.ModelDetailEnabled then return false end
+        local floorOnly = self.SurfaceMode == "Floors"
+        if floorOnly and math.abs(part.CFrame.UpVector.Y) < 0.42 then return false end
+        local multiplier = self:_surfaceMultiplier(part)
         if not multiplier then return false end
         if self.StripTextures then self:_stripPartTextures(part) end
         local ok, current = pcall(function() return part.Reflectance end)
@@ -801,185 +949,4 @@ ultiplier(part)
         self:SetSurfaceMode("All")
         self:SetModelDetailEnabled(true)
         self:SetCharacterSpecularEnabled(true)
-        self:SetSkyMirrorEnabled(true)
-        self:SetStripTexturesEnabled(true)
-        self:SetIntensity(0.60)
-        self:SetWetness(1)
-        self:SetContactStrength(0.45)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.46)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    -- Espejo realista sin aceite (Ciudad Neón): piso espejo con copias sólidas, sin quitar texturas
-    function ShaderReflections:ApplyMirrorFinish()
-        self.OilSheen = false
-        self:SetSceneCoverage(false)
-        self:SetSurfaceMode("All")
-        self:SetModelDetailEnabled(true)
-        self:SetCharacterSpecularEnabled(true)
-        self:SetStripTexturesEnabled(false)
-        self:SetSkyMirrorEnabled(true)
-        self:SetIntensity(0.50)
-        self:SetWetness(1)
-        self:SetContactStrength(0.40)
-        self:SetContactEnabled(true)
-        self:SetShadowStrength(0.40)
-        self:SetShadowEnabled(true)
-        self:SetObjectMirrorEnabled(true)
-        self:SetEnabled(true)
-    end
-
-    local ShaderSolarTone = {
-        Hue = 0.10,
-        Saturation = 0.38,
-        Strength = 0.42,
-    }
-
-    function ShaderSolarTone:Apply()
-        local tint = Color3.fromHSV(self.Hue, self.Saturation, 1)
-        local top = Color3.new(1, 1, 1):Lerp(tint, self.Strength)
-        local bottomBase = Color3.fromRGB(176, 194, 226)
-        local bottom = bottomBase:Lerp(tint, self.Strength * 0.44)
-        return ShaderManager:Apply({Lighting = {ColorShift_Top = top, ColorShift_Bottom = bottom}}, {tween = true, duration = 0.28})
-    end
-
-    function ShaderSolarTone:SetHue(value)
-        self.Hue = math.clamp(tonumber(value) or self.Hue, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetSaturation(value)
-        self.Saturation = math.clamp(tonumber(value) or self.Saturation, 0, 1)
-        return self:Apply()
-    end
-
-    function ShaderSolarTone:SetStrength(value)
-        self.Strength = math.clamp(tonumber(value) or self.Strength, 0, 1)
-        return self:Apply()
-    end
-
-    local ShaderManualLighting = {
-        Brightness = ShaderLightingService.Brightness,
-        ExposureCompensation = ShaderLightingService.ExposureCompensation,
-    }
-
-    local ShaderSilhouette = {
-        Enabled = false,
-        Original = {},
-        ClothingOriginal = {},
-        TerrainOriginal = {},
-        TerrainWaterColor = nil,
-        Connection = nil,
-        ScanToken = 0,
-    }
-
-    function ShaderSilhouette:_applyPart(part)
-        if not self.Enabled or not part or not part.Parent or not part:IsA("BasePart") then return end
-        if string.sub(part.Name or "", 1, 14) == "YinYangShader_" then return end
-
-        if self.Original[part] == nil then
-            self.Original[part] = {}
-            pcall(function() self.Original[part].Color = part.Color end)
-            pcall(function() self.Original[part].Reflectance = part.Reflectance end)
-        end
-
-        pcall(function() part.Color = Color3.fromRGB(0, 0, 0) end)
-        pcall(function() part.Reflectance = 0 end)
-
-        for _, child in ipairs(part:GetChildren()) do
-            if child:IsA("SurfaceAppearance") then
-                if self.Original[child] == nil then
-                    self.Original[child] = {}
-                    pcall(function() self.Original[child].Color = child.Color end)
-                end
-                pcall(function() child.Color = Color3.fromRGB(0, 0, 0) end)
-            end
-        end
-    end
-
-    function ShaderSilhouette:_applyClothing(instance)
-        if not self.Enabled or not instance or not instance.Parent then return end
-        local property
-        if instance:IsA("Shirt") then
-            property = "ShirtTemplate"
-        elseif instance:IsA("Pants") then
-            property = "PantsTemplate"
-        elseif instance:IsA("ShirtGraphic") then
-            property = "Graphic"
-        else
-            return
-        end
-
-        if self.ClothingOriginal[instance] == nil then
-            self.ClothingOriginal[instance] = {}
-            pcall(function() self.ClothingOriginal[instance][property] = instance[property] end)
-        end
-        pcall(function() instance[property] = "" end)
-    end
-
-    function ShaderSilhouette:_applyTerrain()
-        if not self.Enabled then return end
-        if self.TerrainWaterColor == nil then
-            pcall(function() self.TerrainWaterColor = ShaderTerrain.WaterColor end)
-        end
-        for _, material in ipairs(Enum.Material:GetEnumItems()) do
-            if self.TerrainOriginal[material] == nil then
-                local ok, color = pcall(function() return ShaderTerrain:GetMaterialColor(material) end)
-                if ok then
-                    self.TerrainOriginal[material] = color
-                end
-            end
-            pcall(function() ShaderTerrain:SetMaterialColor(material, Color3.fromRGB(0, 0, 0)) end)
-        end
-        pcall(function() ShaderTerrain.WaterColor = Color3.fromRGB(0, 0, 0) end)
-    end
-
-    function ShaderSilhouette:_scan()
-        if not self.Enabled then return end
-        self.ScanToken = self.ScanToken + 1
-        local token = self.ScanToken
-        task.spawn(function()
-            local descendants = workspace:GetDescendants()
-            for index, instance in ipairs(descendants) do
-                if not self.Enabled or token ~= self.ScanToken then return end
-                if instance:IsA("BasePart") then
-                    self:_applyPart(instance)
-                elseif instance:IsA("Shirt") or instance:IsA("Pants") or instance:IsA("ShirtGraphic") then
-                    self:_applyClothing(instance)
-                end
-                if index % 300 == 0 then task.wait() end
-            end
-        end)
-        self:_applyTerrain()
-    end
-
-    function ShaderSilhouette:_restore()
-        self.ScanToken = self.ScanToken + 1
-        for instance, original in pairs(self.Original) do
-            if instance and instance.Parent and original then
-                if original.Color ~= nil then pcall(function() instance.Color = original.Color end) end
-                if original.Reflectance ~= nil then pcall(function() instance.Reflectance = original.Reflectance end) end
-            end
-        end
-        self.Original = {}
-
-        for instance, original in pairs(self.ClothingOriginal) do
-            if instance and instance.Parent and original then
-                for property, value in pairs(original) do
-                    if value ~= nil then pcall(function() instance[property] = value end) end
-                end
-            end
-        end
-        self.ClothingOriginal = {}
-
-        for material, color in pairs(self.TerrainOriginal) do
-            pcall(function() ShaderTerrain:SetMaterialColor(material, color) end)
-        end
-        if self.TerrainWaterColor ~= nil then
-            pcall(function() ShaderTerrain.WaterColor = self.TerrainWaterColor end)
-        end
-        self.TerrainOriginal = {}
-        self.TerrainWater
+        self:SetSkyMirrorEnabled(true

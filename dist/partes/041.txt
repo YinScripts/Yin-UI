@@ -1,4 +1,201 @@
-eadTitle = mk("TextLabel", {
+kgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamBlack,
+        TextSize = 34,
+        TextWrapped = true,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextYAlignment = Enum.TextYAlignment.Center,
+        ZIndex = 43,
+    })
+    FavPage.text(FavPage.Title, "Canciones que te gustan", "Liked Songs")
+    FavPage.Meta = mk("Frame", {
+        Parent = FavPage.Info,
+        Size = UDim2.new(1, 0, 0, 22),
+        Position = UDim2.new(0, 0, 1, -22),
+        BackgroundTransparency = 1,
+        ZIndex = 43,
+    })
+    mk("UIListLayout", {
+        Parent = FavPage.Meta,
+        FillDirection = Enum.FillDirection.Horizontal,
+        VerticalAlignment = Enum.VerticalAlignment.Center,
+        Padding = UDim.new(0, 6),
+        SortOrder = Enum.SortOrder.LayoutOrder,
+    })
+    FavPage.Avatar = mk("ImageLabel", {
+        Parent = FavPage.Meta,
+        Size = UDim2.fromOffset(22, 22),
+        BackgroundColor3 = Color3.fromRGB(40, 40, 40),
+        BorderSizePixel = 0,
+        Image = ("rbxthumb://type=AvatarHeadShot&id=%d&w=48&h=48"):format(tonumber(LocalPlayer.UserId) or 0),
+        LayoutOrder = 1,
+        ZIndex = 44,
+    })
+    corner(FavPage.Avatar, 999)
+    FavPage.Owner = mk("TextLabel", {
+        Parent = FavPage.Meta,
+        Size = UDim2.fromOffset(0, 22),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = tostring(LocalPlayer.Name),
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(255, 255, 255),
+        LayoutOrder = 2,
+        ZIndex = 44,
+    })
+    FavPage.Count = mk("TextLabel", {
+        Parent = FavPage.Meta,
+        Size = UDim2.fromOffset(0, 22),
+        AutomaticSize = Enum.AutomaticSize.X,
+        BackgroundTransparency = 1,
+        Text = "",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(220, 215, 235),
+        LayoutOrder = 3,
+        ZIndex = 44,
+    })
+
+    FavPage.Actions = mk("Frame", {
+        Parent = FavPage.Scroll,
+        Size = UDim2.new(1, 0, 0, 84),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.80,
+        BorderSizePixel = 0,
+        LayoutOrder = 2,
+        ZIndex = 41,
+    })
+    mk("UIGradient", {
+        Parent = FavPage.Actions,
+        Rotation = 90,
+        Color = ColorSequence.new(Color3.fromRGB(34, 24, 66), Color3.fromRGB(18, 18, 18)),
+    })
+    FavPage.PlayAll = mk("TextButton", {
+        Parent = FavPage.Actions,
+        Size = UDim2.fromOffset(56, 56),
+        Position = UDim2.new(0, 20, 0.5, -28),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        Text = "",
+        AutoButtonColor = false,
+        ZIndex = 44,
+    })
+    corner(FavPage.PlayAll, 999)
+    FavPage.PlayIcon = mk("ImageLabel", {
+        Parent = FavPage.PlayAll,
+        Size = UDim2.fromOffset(24, 24),
+        AnchorPoint = Vector2.new(0.5, 0.5),
+        Position = UDim2.new(0.5, 0, 0.5, 0),
+        BackgroundTransparency = 1,
+        Image = FavPage.PLAY,
+        ImageColor3 = Color3.fromRGB(0, 0, 0),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 45,
+    })
+    FavPage.PlayScale = mk("UIScale", {Parent = FavPage.PlayAll, Scale = 1})
+    FavPage.PlayAll.MouseEnter:Connect(function()
+        FavPage.tween(FavPage.PlayScale, 0.12, {Scale = 1.06})
+        FavPage.PlayAll.BackgroundColor3 = Color3.fromRGB(30, 215, 96)
+    end)
+    FavPage.PlayAll.MouseLeave:Connect(function()
+        FavPage.tween(FavPage.PlayScale, 0.12, {Scale = 1})
+        FavPage.PlayAll.BackgroundColor3 = spotifyGreen
+    end)
+
+    FavPage.ShuffleBtn = mk("TextButton", {
+        Parent = FavPage.Actions,
+        Size = UDim2.fromOffset(0, 32),
+        AutomaticSize = Enum.AutomaticSize.X,
+        Position = UDim2.new(0, 92, 0.5, -16),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.92,
+        BorderSizePixel = 0,
+        Text = "",
+        Font = Enum.Font.GothamBold,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(179, 179, 179),
+        AutoButtonColor = false,
+        ZIndex = 44,
+    })
+    corner(FavPage.ShuffleBtn, 999)
+    mk("UIPadding", {Parent = FavPage.ShuffleBtn, PaddingLeft = UDim.new(0, 14), PaddingRight = UDim.new(0, 14)})
+    FavPage.text(FavPage.ShuffleBtn, "Aleatorio", "Shuffle")
+    FavPage.ShuffleDot = mk("Frame", {
+        Parent = FavPage.ShuffleBtn,
+        Size = UDim2.fromOffset(4, 4),
+        AnchorPoint = Vector2.new(0.5, 0),
+        Position = UDim2.new(0.5, 0, 1, 3),
+        BackgroundColor3 = spotifyGreen,
+        BorderSizePixel = 0,
+        Visible = false,
+        ZIndex = 45,
+    })
+    corner(FavPage.ShuffleDot, 999)
+
+    FavPage.SearchBox = mk("Frame", {
+        Parent = FavPage.Actions,
+        Size = UDim2.fromOffset(190, 32),
+        AnchorPoint = Vector2.new(1, 0.5),
+        Position = UDim2.new(1, -20, 0.5, 0),
+        BackgroundColor3 = Color3.fromRGB(255, 255, 255),
+        BackgroundTransparency = 0.9,
+        BorderSizePixel = 0,
+        ZIndex = 44,
+    })
+    corner(FavPage.SearchBox, 6)
+    mk("ImageLabel", {
+        Parent = FavPage.SearchBox,
+        Size = UDim2.fromOffset(16, 16),
+        Position = UDim2.new(0, 9, 0.5, -8),
+        BackgroundTransparency = 1,
+        Image = FavPage.SEARCH,
+        ImageColor3 = Color3.fromRGB(179, 179, 179),
+        ScaleType = Enum.ScaleType.Fit,
+        ZIndex = 45,
+    })
+    FavPage.SearchInput = mk("TextBox", {
+        Parent = FavPage.SearchBox,
+        Size = UDim2.new(1, -36, 1, 0),
+        Position = UDim2.new(0, 32, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "",
+        ClearTextOnFocus = false,
+        PlaceholderText = "",
+        PlaceholderColor3 = Color3.fromRGB(150, 150, 150),
+        TextColor3 = spotifyText,
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextXAlignment = Enum.TextXAlignment.Left,
+        TextTruncate = Enum.TextTruncate.AtEnd,
+        ZIndex = 45,
+    })
+    FavPage.SearchInput:SetAttribute("PlaceholderSpanish", "Buscar en favoritos")
+    FavPage.SearchInput:SetAttribute("PlaceholderEnglish", "Search in Liked Songs")
+    FavPage.SearchInput.PlaceholderText = GetText("Buscar en favoritos", "Search in Liked Songs")
+
+    FavPage.TableHead = mk("Frame", {
+        Parent = FavPage.Scroll,
+        Size = UDim2.new(1, 0, 0, 36),
+        BackgroundColor3 = Color3.fromRGB(18, 18, 18),
+        BackgroundTransparency = 0.55,
+        BorderSizePixel = 0,
+        LayoutOrder = 3,
+        ZIndex = 41,
+    })
+    FavPage.HeadNum = mk("TextLabel", {
+        Parent = FavPage.TableHead,
+        Size = UDim2.fromOffset(24, 30),
+        Position = UDim2.new(0, 24, 0, 0),
+        BackgroundTransparency = 1,
+        Text = "#",
+        Font = Enum.Font.GothamMedium,
+        TextSize = 13,
+        TextColor3 = Color3.fromRGB(179, 179, 179),
+        ZIndex = 42,
+    })
+    FavPage.HeadTitle = mk("TextLabel", {
         Parent = FavPage.TableHead,
         Size = UDim2.new(0.5, 0, 0, 30),
         Position = UDim2.new(0, 64, 0, 0),
@@ -960,141 +1157,4 @@ clearSongRows = function()
             TextTruncate = Enum.TextTruncate.AtEnd, ZIndex = 10,
         })
         heroSub:SetAttribute("ThemeTextRole", "TextDim")
-        heroSub:SetAttribute("TextSpanish", "Arte de la comunidad de Yin Yang")
-        heroSub:SetAttribute("TextEnglish", "Art from the Yin Yang community")
-        local countES = #FanArt_Items .. (#FanArt_Items == 1 and " obra" or " obras")
-        local countEN = #FanArt_Items .. (#FanArt_Items == 1 and " piece" or " pieces")
-        local heroCount = mk("TextLabel", {
-            Parent = FA.hero, Size = UDim2.new(0, 0, 0, 24), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(1, 0.5),
-            Position = UDim2.new(1, -14, 0.5, 0), BackgroundColor3 = Theme.Accent, BackgroundTransparency = 0.8,
-            Text = GetText(countES, countEN), TextColor3 = Theme.Accent, Font = Enum.Font.GothamBlack, TextSize = 11, ZIndex = 10,
-        })
-        heroCount:SetAttribute("ThemeRole", "Accent")
-        heroCount:SetAttribute("ThemeTextRole", "Accent")
-        heroCount:SetAttribute("TextSpanish", countES)
-        heroCount:SetAttribute("TextEnglish", countEN)
-        heroCount:SetAttribute("IgnoreTextEffect", true)
-        corner(heroCount, 999)
-        mk("UIPadding", {Parent = heroCount, PaddingLeft = UDim.new(0, 10), PaddingRight = UDim.new(0, 10)})
-
-        -- Visor a pantalla completa (se crea una sola vez)
-        FA.viewer = mk("Frame", {
-            Parent = Main,
-            Size = UDim2.new(1, 0, 1, 0),
-            BackgroundColor3 = Color3.fromRGB(0, 0, 0),
-            BackgroundTransparency = 0.12,
-            BorderSizePixel = 0,
-            Active = true,
-            Visible = false,
-            ZIndex = 400,
-        })
-        corner(FA.viewer, 10)
-        FA.viewerImage = mk("ImageButton", {
-            Parent = FA.viewer, Size = UDim2.new(1, -40, 1, -90), Position = UDim2.new(0, 20, 0, 50),
-            BackgroundTransparency = 1, Image = "", ScaleType = Enum.ScaleType.Fit, AutoButtonColor = false, ZIndex = 401,
-        })
-        corner(FA.viewerImage, 10)
-        FA.viewerTitle = mk("TextLabel", {
-            Parent = FA.viewer, Size = UDim2.new(1, -80, 0, 30), Position = UDim2.new(0, 20, 0, 10), BackgroundTransparency = 1,
-            Text = "", TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBlack, TextSize = 16,
-            TextXAlignment = Enum.TextXAlignment.Left, ZIndex = 402,
-        })
-        FA.viewerTitle:SetAttribute("IgnoreTextEffect", true)
-        FA.viewerHint = mk("TextLabel", {
-            Parent = FA.viewer, Size = UDim2.new(1, -40, 0, 20), Position = UDim2.new(0, 20, 1, -32), BackgroundTransparency = 1,
-            Text = GetText("Tocá la imagen para acercar / alejar", "Tap the image to zoom in / out"), TextColor3 = Color3.fromRGB(190, 190, 190),
-            Font = Enum.Font.GothamMedium, TextSize = 11, ZIndex = 402,
-        })
-        FA.viewerHint:SetAttribute("TextSpanish", "Tocá la imagen para acercar / alejar")
-        FA.viewerHint:SetAttribute("TextEnglish", "Tap the image to zoom in / out")
-        FA.viewerHint:SetAttribute("IgnoreTextEffect", true)
-        FA.viewerClose = mk("TextButton", {
-            Parent = FA.viewer, Size = UDim2.fromOffset(34, 34), AnchorPoint = Vector2.new(1, 0), Position = UDim2.new(1, -14, 0, 8),
-            BackgroundColor3 = Color3.fromRGB(40, 40, 46), Text = "×", TextColor3 = Color3.new(1, 1, 1),
-            Font = Enum.Font.GothamBold, TextSize = 20, AutoButtonColor = false, ZIndex = 403,
-        })
-        corner(FA.viewerClose, 999)
-        FA.viewerScale = mk("UIScale", {Parent = FA.viewerImage, Scale = 1})
-        FA.viewerClose.MouseButton1Click:Connect(function()
-            playSound(Sounds.Click, 0.45)
-            FA.viewer.Visible = false
-        end)
-        FA.viewerImage.MouseButton1Click:Connect(function()
-            local zoomed = FA.viewerImage.ScaleType == Enum.ScaleType.Fit
-            FA.viewerImage.ScaleType = zoomed and Enum.ScaleType.Crop or Enum.ScaleType.Fit
-            FA.viewerScale.Scale = 0.96
-            TweenService:Create(FA.viewerScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        end)
-        function FA.open(image, titleText)
-            FA.viewerImage.Image = image
-            FA.viewerImage.ScaleType = Enum.ScaleType.Fit
-            FA.viewerTitle.Text = titleText
-            FA.viewer.Visible = true
-            FA.viewer.BackgroundTransparency = 1
-            TweenService:Create(FA.viewer, TweenInfo.new(0.22, Enum.EasingStyle.Quad, Enum.EasingDirection.Out), {BackgroundTransparency = 0.12}):Play()
-            FA.viewerScale.Scale = 0.9
-            TweenService:Create(FA.viewerScale, TweenInfo.new(0.35, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {Scale = 1}):Play()
-        end
-
-        for artIndex, art in ipairs(FanArt_Items) do
-            local Card = mk("Frame", {
-                Parent = FanArtPage,
-                Size = UDim2.new(1, 0, 0, 320),
-                BackgroundColor3 = Color3.fromRGB(10, 10, 12),
-                BackgroundTransparency = 0,
-                BorderSizePixel = 0,
-                ClipsDescendants = true,
-                ZIndex = 9,
-            })
-            corner(Card, 16)
-            local cardStroke = stroke(Card, Theme.Accent, 1.5, 0.45)
-            cardStroke:SetAttribute("ThemeRole", "Accent")
-
-            local Ambient = mk("ImageLabel", {
-                Parent = Card,
-                Size = UDim2.new(1, 0, 1, 0),
-                BackgroundTransparency = 1,
-                Image = "",
-                ImageTransparency = 0.78,
-                ScaleType = Enum.ScaleType.Crop,
-                ZIndex = 9,
-            })
-            corner(Ambient, 16)
-
-            local Skeleton = mk("Frame", {
-                Parent = Card,
-                Size = UDim2.new(1, -28, 1, -70),
-                Position = UDim2.new(0, 14, 0, 14),
-                BackgroundColor3 = Color3.fromRGB(40, 40, 46),
-                BorderSizePixel = 0,
-                ZIndex = 10,
-            })
-            corner(Skeleton, 12)
-            local shimmer = mk("UIGradient", {
-                Parent = Skeleton,
-                Rotation = 20,
-                Offset = Vector2.new(-1, 0),
-                Transparency = NumberSequence.new({
-                    NumberSequenceKeypoint.new(0, 0.6),
-                    NumberSequenceKeypoint.new(0.5, 0),
-                    NumberSequenceKeypoint.new(1, 0.6),
-                }),
-            })
-            local shimmerTween = TweenService:Create(shimmer, TweenInfo.new(1.2, Enum.EasingStyle.Linear, Enum.EasingDirection.InOut, -1, false), {Offset = Vector2.new(1, 0)})
-            shimmerTween:Play()
-
-            local ArtImage = mk("ImageLabel", {
-                Parent = Card,
-                Size = UDim2.new(1, -28, 1, -70),
-                Position = UDim2.new(0, 14, 0, 14),
-                BackgroundTransparency = 1,
-                Image = "",
-                ScaleType = Enum.ScaleType.Fit,
-                Visible = false,
-                ZIndex = 11,
-            })
-            corner(ArtImage, 12)
-
-            local ArtStatus = mk("TextLabel", {
-                Parent = Card,
-         
+        heroSub:SetAttribute("TextSpanish", "Arte de la comunidad de Yin Ya

@@ -1,4 +1,13 @@
-n = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
+able.remove(list) end
+            changed = true
+        end
+        if changed then Chat.saveSettings() end
+    end
+    do
+        UI.BackButton = UI.iconButton(Header, UI.ICON.back, 34, 22, {Position = UDim2.fromOffset(8, 12), Visible = false, ZIndex = 3})
+        UI.BackCount = mk("TextLabel", {
+            Size = UDim2.fromOffset(0, 18), AutomaticSize = Enum.AutomaticSize.X, AnchorPoint = Vector2.new(0, 0),
+            Position = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, Text = "",
             TextColor3 = Color3.new(1, 1, 1), Font = Enum.Font.GothamBold, TextSize = 11, Visible = false, ZIndex = 5,
         }, UI.BackButton)
         corner(UI.BackCount, 9)
@@ -829,18 +838,4 @@ n = UDim2.fromOffset(28, 4), BackgroundColor3 = UI.C.blue, BorderSizePixel = 0, 
         Chat.settings.DMLastSeen[room] = lastMs
         Chat.settings.HiddenDMs[tostring(uid)] = lastMs
         Chat.previews[room] = nil
-        Chat.unread[room] = nil
-        Chat.saveSettings()
-        if Chat.view == "chat" and Chat.room == room then
-            Chat.goHome()
-        else
-            Chat.updateBadge()
-            Chat.refreshHome(true)
-        end
-        Chat.flash("Chat eliminado")
-    end
-    Chat.openChat = function(kind, uid, name, user)
-        hideMessageActions()
-        cancelReply()
-        StickerPanel.Visible = false
-        reactionPickerTar
+        Cha
